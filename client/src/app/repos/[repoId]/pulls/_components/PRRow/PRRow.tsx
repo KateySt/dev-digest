@@ -6,18 +6,40 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, Avatar, Badge, CircularScore } from "@devdigest/ui";
 import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsTooltip, SeverityCountBadges } from "@/components/findings-tooltip";
+import { usePrReviews } from "@/lib/hooks/reviews";
+import { latestReview } from "@/lib/findings";
 import type { PrMeta } from "@/lib/types";
 import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
 
-export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
+const EMPTY_FINDINGS_COUNTS = { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 } as const;
+
+export function PRRow({
+  pr,
+  repoId,
+  repoFullName,
+}: {
+  pr: PrMeta;
+  repoId: string;
+  repoFullName?: string | null;
+}) {
   const t = useTranslations("prReview");
   const router = useRouter();
   const [h, setH] = React.useState(false);
   const st = STATUS_META[pr.status] ?? STATUS_META.needs_review!;
   const { size, lines } = sizeOf(pr);
   const reviewed = pr.score != null; // null score ⇒ PR has never been reviewed
+
+  const [hasHoveredFindings, setHasHoveredFindings] = React.useState(false);
+  const { data: reviews } = usePrReviews(hasHoveredFindings ? pr.id : null);
+  const hoveredFindings = reviews ? latestReview(reviews)?.findings : undefined;
+  const findingsCounts = pr.findings ?? EMPTY_FINDINGS_COUNTS;
+  const totalFindings = findingsCounts.CRITICAL + findingsCounts.WARNING + findingsCounts.SUGGESTION;
+  const handleFindingsOpenChange = React.useCallback((open: boolean) => {
+    if (open) setHasHoveredFindings(true);
+  }, []);
   return (
     <div
       onMouseEnter={() => setH(true)}
@@ -50,6 +72,20 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
       <div style={s.scoreCell}>
         {reviewed ? (
           <CircularScore score={pr.score!} size={34} stroke={3} />
+        ) : (
+          <span style={s.muted}>—</span>
+        )}
+      </div>
+      <div onClick={(e) => e.stopPropagation()}>
+        {totalFindings > 0 ? (
+          <FindingsTooltip
+            trigger={<SeverityCountBadges counts={findingsCounts} />}
+            findings={hoveredFindings}
+            loading={hasHoveredFindings && !reviews}
+            repoFullName={repoFullName}
+            headSha={pr.head_sha}
+            onOpenChange={handleFindingsOpenChange}
+          />
         ) : (
           <span style={s.muted}>—</span>
         )}

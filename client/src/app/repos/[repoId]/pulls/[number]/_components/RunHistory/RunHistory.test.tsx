@@ -5,10 +5,11 @@
  * and shows the review score ring.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { RunSummary } from "@devdigest/shared";
+import type { RunSummary, FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import { githubBlobUrl } from "@/lib/github-urls";
 import { RunHistory } from "./RunHistory";
 
 afterEach(cleanup);
@@ -35,10 +36,17 @@ function run(o: Partial<RunSummary>): RunSummary {
   };
 }
 
-function renderRuns(runs: RunSummary[]) {
+function renderRuns(
+  runs: RunSummary[],
+  extra?: {
+    findingsByRunId?: Map<string, FindingRecord[]>;
+    repoFullName?: string | null;
+    headSha?: string | null;
+  },
+) {
   return render(
     <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
-      <RunHistory runs={runs} onOpenTrace={() => {}} />
+      <RunHistory runs={runs} onOpenTrace={() => {}} {...extra} />
     </NextIntlClientProvider>,
   );
 }
@@ -85,5 +93,63 @@ describe("RunHistory — cost badge", () => {
   it("a running run shows no cost badge yet", () => {
     renderRuns([run({ status: "running", score: null, blockers: null })]);
     expect(screen.queryByText(/tok/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RunHistory — findings tooltip", () => {
+  const FINDING: FindingRecord = {
+    id: "f1",
+    severity: "CRITICAL",
+    category: "security",
+    title: "Hardcoded Stripe secret key in commit",
+    file: "src/config.ts",
+    start_line: 12,
+    end_line: 12,
+    rationale: "because",
+    suggestion: null,
+    confidence: 0.98,
+    kind: "finding",
+    trifecta_components: null,
+    evidence: null,
+    review_id: "r1",
+    accepted_at: null,
+    dismissed_at: null,
+  };
+
+  it("shows a severity badge cluster (matching the PR list) and opens a tooltip with a working GitHub link on hover", () => {
+    renderRuns(
+      [run({ run_id: "run-1", status: "done", findings_count: 1, blockers: 0, score: 61 })],
+      {
+        findingsByRunId: new Map([["run-1", [FINDING]]]),
+        repoFullName: "acme/payments-api",
+        headSha: "a1b2c3d4e5f6",
+      },
+    );
+
+    const badgeCount = screen.getByText("1");
+    fireEvent.mouseEnter(badgeCount);
+
+    expect(screen.getByText("Hardcoded Stripe secret key in commit")).toBeInTheDocument();
+    const link = screen.getByText(/src\/config\.ts/).closest("a");
+    expect(link).toHaveAttribute(
+      "href",
+      githubBlobUrl("acme/payments-api", "a1b2c3d4e5f6", "src/config.ts", 12, 12),
+    );
+  });
+
+  it("renders no findings line at all for a clean run with zero findings", () => {
+    const { container } = renderRuns(
+      [run({ run_id: "run-2", status: "done", findings_count: 0, blockers: 0, score: 95 })],
+      { findingsByRunId: new Map([["run-2", []]]) },
+    );
+
+    expect(container.querySelector("[aria-haspopup]")).not.toBeInTheDocument();
+  });
+
+  it("still shows the blockers count even when per-run finding details aren't loaded", () => {
+    // findingsByRunId omitted entirely — must degrade gracefully instead of
+    // hiding the blockers text (which doesn't depend on the lazy detail).
+    renderRuns([run({ run_id: "run-3", status: "done", findings_count: 2, blockers: 2, score: 20 })]);
+    expect(screen.getByText(/2 blockers/)).toBeInTheDocument();
   });
 });
