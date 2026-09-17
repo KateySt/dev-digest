@@ -3,7 +3,10 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import type { RunSummary, PrCommit } from "@devdigest/shared";
+import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsTooltip, SeverityCountBadges } from "@/components/findings-tooltip";
+import { countBySeverity } from "@/lib/findings";
+import type { RunSummary, PrCommit, FindingRecord } from "@devdigest/shared";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -87,12 +90,18 @@ function tsOf(s: string | null | undefined): number {
 export function RunHistory({
   runs,
   commits = [],
+  findingsByRunId,
+  repoFullName,
+  headSha,
   onOpenTrace,
   onGoToReview,
   onDelete,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
+  findingsByRunId?: Map<string, FindingRecord[]>;
+  repoFullName?: string | null;
+  headSha?: string | null;
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
   /** Jump to this run's inline review accordion below (clicking the agent name). */
@@ -149,6 +158,7 @@ export function RunHistory({
         const r = item.run;
         const o = outcomeOf(r);
         const settled = r.status === "done";
+        const runFindings = findingsByRunId?.get(r.run_id);
         return (
           <div key={`run:${r.run_id}`} style={rowStyle}>
             <Badge color={o.color} bg={o.bg} icon={o.icon}>
@@ -188,15 +198,30 @@ export function RunHistory({
                   {r.error}
                 </div>
               )}
-              {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
+              {settled && ((runFindings?.length ?? 0) > 0 || (r.blockers ?? 0) > 0) && (
+                <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+                  {(runFindings?.length ?? 0) > 0 && (
+                    <FindingsTooltip
+                      trigger={<SeverityCountBadges counts={countBySeverity(runFindings!)} />}
+                      findings={runFindings}
+                      repoFullName={repoFullName}
+                      headSha={headSha}
+                    />
+                  )}
                   {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
                 </div>
               )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
               {r.ran_at && <span>{new Date(r.ran_at).toLocaleTimeString()}</span>}
+              {settled && (
+                <RunCostBadge
+                  variant="timeline"
+                  costUsd={r.cost_usd}
+                  tokensIn={r.tokens_in}
+                  tokensOut={r.tokens_out}
+                />
+              )}
             </div>
             <button
               type="button"

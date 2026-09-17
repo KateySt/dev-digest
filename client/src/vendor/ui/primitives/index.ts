@@ -7,6 +7,8 @@ export { Chip } from "./Chip";
 export { Avatar } from "./Avatar";
 export { ConfidenceNum } from "./ConfidenceNum";
 export { MonoLink } from "./MonoLink";
+export { HoverPopover } from "./HoverPopover";
+export type { HoverPopoverProps } from "./HoverPopover";
 export { ProgressBar, PercentProgress } from "./ProgressBar";
 export { CircularScore } from "./CircularScore";
 export { Toggle } from "./Toggle";
