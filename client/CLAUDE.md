@@ -30,6 +30,12 @@ for i18n (`messages/<locale>/*.json`). UI primitives vendored under
 - Tests mock `fetch` — no real API or browser needed. Real browser journeys
   live in `../e2e`, not here.
 
+## Naming conventions
+
+- Component folders (`src/components/<name>/`, `_components/<Name>/`) are
+  kebab-case; the React component files inside are PascalCase
+  (`FindingsTooltip.tsx`), each re-exported from an `index.ts` barrel.
+
 ## Gotchas
 
 Read `INSIGHTS.md` before starting work here — treat entries as

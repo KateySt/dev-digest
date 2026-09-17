@@ -26,6 +26,12 @@ the exact runner invocation (`run.ts`).
 - Flows should stay order-independent where possible (see the comment in
   `specs/01-app-boot.flow.json`).
 
+## Naming conventions
+
+- `specs/*.flow.json` files are named `NN-kebab-description.flow.json`, `NN`
+  = the order the flow was added (not an execution-order guarantee — see
+  above).
+
 ## Gotchas
 
 Read `INSIGHTS.md` before starting work here — treat entries as

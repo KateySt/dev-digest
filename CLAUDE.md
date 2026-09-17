@@ -37,7 +37,18 @@ put them in the module's own `CLAUDE.md` instead.
 - DB migrations never run on boot — always `pnpm db:migrate` by hand after
   pulling schema changes.
 
+## Naming conventions
+
+- Commit messages follow Conventional Commits with a scope: `feat(reviews):
+  …`, `fix(db): …`, `docs(insights): …`, `chore: …`. Match the existing scope
+  for the module you're touching (`reviews`, `db`, `conventions`, `dev`, …).
+
 ## Do-not-touch
 
 - `server/src/vendor/shared`, `client/src/vendor/shared`, `client/src/vendor/ui`
   — vendored copies. Check the owning package before editing.
+- Lock files (`package-lock.json`, `pnpm-lock.yaml`) in any module — generated
+  by the package manager, never hand-edit; regenerate via `pnpm install`.
+  `client/` and `server/` currently carry **both** lock files — `pnpm-lock.yaml`
+  is canonical (README requires pnpm); don't "fix" this by editing
+  `package-lock.json`.
