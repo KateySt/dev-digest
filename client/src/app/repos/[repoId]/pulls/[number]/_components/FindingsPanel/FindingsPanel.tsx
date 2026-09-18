@@ -38,6 +38,14 @@ export function FindingsPanel({
 
   const shown = React.useMemo(() => visibleFindings(findings, hideLow), [findings, hideLow]);
 
+  const lastTargetRef = React.useRef<string | null>(targetFindingId ?? null);
+  React.useEffect(() => {
+    if (!targetFindingId || lastTargetRef.current === targetFindingId) return;
+    lastTargetRef.current = targetFindingId;
+    const idx = shown.findIndex((f) => f.id === targetFindingId);
+    if (idx >= 0) setFocusIdx(idx);
+  }, [targetFindingId, shown]);
+
   // j/k navigation + a/d shortcuts on the focused finding (keyboard).
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -68,7 +76,7 @@ export function FindingsPanel({
         ) : (
           shown.map((f, i) => (
             <FindingCard
-              key={f.id}
+              key={f.id === targetFindingId ? `${f.id}:target` : f.id}
               f={f}
               focused={i === focusIdx}
               defaultExpanded={i === 0 || f.id === targetFindingId}
