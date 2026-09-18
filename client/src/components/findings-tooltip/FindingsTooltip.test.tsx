@@ -86,4 +86,29 @@ describe("FindingsTooltip", () => {
     expect(screen.getByText("Findings")).toBeInTheDocument();
     expect(screen.queryByText("No findings.")).not.toBeInTheDocument();
   });
+
+  it("links a finding's title to its card on the PR's Agent runs tab when repoId + prNumber are given", () => {
+    const findings = [finding({ id: "f42", title: "Hardcoded Stripe secret key in commit" })];
+    render(
+      <FindingsTooltip
+        trigger={<span>trigger</span>}
+        findings={findings}
+        repoId="repo1"
+        prNumber={482}
+      />,
+    );
+    fireEvent.mouseEnter(screen.getByText("trigger"));
+
+    const link = screen.getByText("Hardcoded Stripe secret key in commit").closest("a");
+    expect(link).toHaveAttribute("href", "/repos/repo1/pulls/482?tab=findings&finding=f42");
+  });
+
+  it("leaves the title as plain text when repoId/prNumber are not given", () => {
+    const findings = [finding({ title: "Hardcoded Stripe secret key in commit" })];
+    render(<FindingsTooltip trigger={<span>trigger</span>} findings={findings} />);
+    fireEvent.mouseEnter(screen.getByText("trigger"));
+
+    const title = screen.getByText("Hardcoded Stripe secret key in commit");
+    expect(title.closest("a")).not.toBeInTheDocument();
+  });
 });
