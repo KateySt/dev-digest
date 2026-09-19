@@ -23,5 +23,14 @@ export const s = {
   } satisfies CSSProperties,
   communityInfo: { flex: 1, minWidth: 0 } satisfies CSSProperties,
   communityName: { fontSize: 13.5, fontWeight: 600 } satisfies CSSProperties,
-  communityDesc: { fontSize: 12.5, color: "var(--text-secondary)" } satisfies CSSProperties,
+  communityMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 12,
+    color: "var(--text-muted)",
+    marginTop: 1,
+  } satisfies CSSProperties,
+  communityDesc: { fontSize: 12.5, color: "var(--text-secondary)", marginTop: 3 } satisfies CSSProperties,
+  langPills: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 } satisfies CSSProperties,
 } as const;

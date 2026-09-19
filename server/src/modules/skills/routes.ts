@@ -18,6 +18,9 @@ import { SkillsService } from './service.js';
  *   POST   /skills/import-url       → server-side fetch, stored disabled
  *   GET    /skills/community        → search the fixture catalog
  *   POST   /skills/import-community → import a fixture catalog entry, disabled
+ *   GET    /skills/:id/versions             → version history (Versions tab)
+ *   POST   /skills/:id/versions/:version/restore → restore a past body as a new version
+ *   GET    /skills/:id/stats                → Stats tab aggregate
  */
 
 const CreateSkillBody = z.object({
@@ -42,6 +45,8 @@ const ImportUrlBody = z.object({ url: z.string().min(1) });
 const CommunityQuery = z.object({ q: z.string().optional(), lang: z.string().optional() });
 
 const ImportCommunityBody = z.object({ name: z.string().min(1) });
+
+const VersionParams = z.object({ id: z.string(), version: z.coerce.number().int() });
 
 export default async function skillsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
@@ -102,4 +107,23 @@ export default async function skillsRoutes(appBase: FastifyInstance) {
       return skill;
     },
   );
+
+  app.get('/skills/:id/versions', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.listVersions(workspaceId, req.params.id);
+  });
+
+  app.post(
+    '/skills/:id/versions/:version/restore',
+    { schema: { params: VersionParams } },
+    async (req) => {
+      const { workspaceId } = await getContext(app.container, req);
+      return service.restoreVersion(workspaceId, req.params.id, req.params.version);
+    },
+  );
+
+  app.get('/skills/:id/stats', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.stats(workspaceId, req.params.id);
+  });
 }

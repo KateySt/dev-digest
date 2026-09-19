@@ -7,10 +7,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import type { CommunitySkill, Skill, SkillType } from "@devdigest/shared";
 
+/** GET /skills' list item — the `Skill` DTO plus a lightweight usage summary
+ *  ("N agents · X% pull · Y% accept") for the card, batched server-side
+ *  across every agent using each skill (see the server's
+ *  `computeSkillUsageSummaries` doc comment for the approximation). */
+export interface SkillListItem extends Skill {
+  usage: {
+    used_by_agents: number;
+    pull_frequency: number | null;
+    accept_rate: number | null;
+  };
+}
+
 export function useSkills() {
   return useQuery({
     queryKey: ["skills"],
-    queryFn: () => api.get<Skill[]>("/skills"),
+    queryFn: () => api.get<SkillListItem[]>("/skills"),
   });
 }
 
@@ -92,5 +104,57 @@ export function useImportCommunitySkill() {
   return useMutation({
     mutationFn: (name: string) => api.post<Skill>("/skills/import-community", { name }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["skills"] }),
+  });
+}
+
+/** The Versions tab's history list — GET /skills/:id/versions. Ad-hoc (not a
+ *  shared contract, display-only, mirrors the server's `SkillVersionListItem`). */
+export interface SkillVersionListItem {
+  version: number;
+  created_at: string;
+  body: string;
+  current: boolean;
+}
+
+export function useSkillVersions(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ["skill-versions", id],
+    queryFn: () => api.get<SkillVersionListItem[]>(`/skills/${id}/versions`),
+    enabled: !!id,
+  });
+}
+
+export function useRestoreSkillVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, version }: { id: string; version: number }) =>
+      api.post<Skill>(`/skills/${id}/versions/${version}/restore`),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["skills"] });
+      qc.invalidateQueries({ queryKey: ["skill-versions", data.id] });
+      qc.setQueryData(["skill", data.id], data);
+    },
+  });
+}
+
+/** The Stats tab's aggregate — GET /skills/:id/stats. Ad-hoc (not a shared
+ *  contract, display-only, mirrors the server's `SkillStats`). An
+ *  APPROXIMATION: findings aren't attributed to a specific skill, only to
+ *  the agent that produced them, so this rolls up every agent currently
+ *  linked to the skill (see the server's `computeSkillStats` doc comment). */
+export interface SkillStats {
+  used_by_agents: number;
+  agents: { id: string; name: string }[];
+  pull_frequency: number | null;
+  accept_rate: number | null;
+  findings_30d: number;
+  findings_by_category: { category: string; count: number }[];
+}
+
+export function useSkillStats(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ["skill-stats", id],
+    queryFn: () => api.get<SkillStats>(`/skills/${id}/stats`),
+    enabled: !!id,
   });
 }

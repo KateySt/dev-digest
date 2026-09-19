@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, FormField, Modal, Tabs, TextInput, Textarea, Toggle } from "@devdigest/ui";
-import type { EvalCaseListItem } from "@devdigest/shared";
+import type { EvalCaseListItem, EvalOwnerKind } from "@devdigest/shared";
 import {
   useCreateEvalCase,
   useRunEvalCase,
@@ -26,11 +26,13 @@ interface InputMeta {
  *  immediately (so it always runs the latest edits, not a stale save); the
  *  "Run on save" toggle makes plain "Save" behave like "Run case" too. */
 export function EvalCaseEditorModal({
-  agentId,
+  ownerKind,
+  ownerId,
   initialCase,
   onClose,
 }: {
-  agentId: string;
+  ownerKind: EvalOwnerKind;
+  ownerId: string;
   initialCase?: EvalCaseListItem;
   onClose: () => void;
 }) {
@@ -64,14 +66,14 @@ export function EvalCaseEditorModal({
       const saved = await update.mutateAsync({
         id: initialCase.id,
         patch: { name, input_diff: diff, input_meta, expected_output },
-        ownerKind: "agent",
-        ownerId: agentId,
+        ownerKind,
+        ownerId,
       });
       return saved.id;
     }
     const created = await create.mutateAsync({
-      owner_kind: "agent",
-      owner_id: agentId,
+      owner_kind: ownerKind,
+      owner_id: ownerId,
       name: name.trim() || t("caseEditor.namePlaceholder"),
       input_diff: diff,
       input_meta,
@@ -83,7 +85,7 @@ export function EvalCaseEditorModal({
   const handleSave = async () => {
     const id = await persist();
     if (runOnSave) {
-      const result = await run.mutateAsync({ id, ownerKind: "agent", ownerId: agentId });
+      const result = await run.mutateAsync({ id, ownerKind, ownerId });
       setLastRun(result);
     } else {
       onClose();
@@ -92,7 +94,7 @@ export function EvalCaseEditorModal({
 
   const handleRunCase = async () => {
     const id = await persist();
-    const result = await run.mutateAsync({ id, ownerKind: "agent", ownerId: agentId });
+    const result = await run.mutateAsync({ id, ownerKind, ownerId });
     setLastRun(result);
   };
 

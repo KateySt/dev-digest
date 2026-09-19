@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Drawer, ErrorState, FormField, SelectInput, Tabs, TextInput, Textarea } from "@devdigest/ui";
+import { Button, Chip, Drawer, ErrorState, FormField, Icon, SelectInput, Tabs, TextInput, Textarea } from "@devdigest/ui";
 import type { SkillType } from "@devdigest/shared";
 import {
   useCommunitySkills,
@@ -131,8 +131,14 @@ function CommunityImportTab({ onClose }: { onClose: () => void }) {
   const t = useTranslations("skills");
   const toast = useToast();
   const [query, setQuery] = React.useState("");
-  const { data: results, isLoading, isError, refetch } = useCommunitySkills(query);
+  const [lang, setLang] = React.useState<string | null>(null);
+  // Unfiltered catalog just to derive the language pills — so picking a pill
+  // never removes OTHER pills from view as the result set narrows.
+  const { data: allResults } = useCommunitySkills("");
+  const { data: results, isLoading, isError, refetch } = useCommunitySkills(query, lang ?? undefined);
   const importCommunity = useImportCommunitySkill();
+
+  const languages = [...new Set((allResults ?? []).map((r) => r.lang))].sort();
 
   const submit = (name: string) =>
     importCommunity.mutate(name, {
@@ -144,6 +150,18 @@ function CommunityImportTab({ onClose }: { onClose: () => void }) {
       <FormField label={t("community.searchPlaceholder")}>
         <TextInput value={query} onChange={setQuery} placeholder={t("community.searchPlaceholder")} />
       </FormField>
+      {languages.length > 1 && (
+        <div style={s.langPills}>
+          <Chip active={lang === null} onClick={() => setLang(null)}>
+            {t("community.allLanguages")}
+          </Chip>
+          {languages.map((l) => (
+            <Chip key={l} active={lang === l} onClick={() => setLang(l)}>
+              {l}
+            </Chip>
+          ))}
+        </div>
+      )}
       {isError && <ErrorState body={t("community.loadError")} onRetry={() => refetch()} />}
       {!isLoading && !isError && (results ?? []).length === 0 && (
         <div style={s.noMatch}>
@@ -156,6 +174,12 @@ function CommunityImportTab({ onClose }: { onClose: () => void }) {
           <div key={r.name} style={s.communityRow}>
             <div style={s.communityInfo}>
               <div style={s.communityName}>{r.name}</div>
+              <div style={s.communityMeta}>
+                <Icon.Star size={11} />
+                {r.stars}
+                <span>·</span>
+                {r.repo}
+              </div>
               <div style={s.communityDesc}>{r.desc}</div>
             </div>
             <Button

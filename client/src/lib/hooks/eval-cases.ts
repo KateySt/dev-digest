@@ -4,17 +4,21 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { EvalCase, EvalCaseListItem, EvalCaseRun, EvalOwnerKind } from "@devdigest/shared";
+import type { EvalCase, EvalCaseListItem, EvalCaseRun, EvalOwnerKind, EvalRun } from "@devdigest/shared";
 
-/** The Evals tab's header rollup — GET /agents/:id/eval-stats. Not a shared
- *  contract type (ad-hoc aggregate, display-only, no cross-module reuse). */
-export interface AgentEvalStats {
+/** The Evals tab's header rollup — GET /agents/:id/eval-stats or
+ *  GET /skills/:id/eval-stats. Not a shared contract type (ad-hoc aggregate,
+ *  display-only, no cross-module reuse). Same shape for either owner kind. */
+export interface EvalStats {
   cases_total: number;
   recall: number | null;
   precision: number | null;
   citation_accuracy: number | null;
   cases_evaluated: number;
 }
+
+const evalStatsPath = (ownerKind: EvalOwnerKind, ownerId: string) =>
+  ownerKind === "agent" ? `/agents/${ownerId}/eval-stats` : `/skills/${ownerId}/eval-stats`;
 
 export function useEvalCases(ownerKind: EvalOwnerKind, ownerId: string | null | undefined) {
   return useQuery({
@@ -32,11 +36,11 @@ export function useEvalCase(id: string | null | undefined) {
   });
 }
 
-export function useAgentEvalStats(agentId: string | null | undefined) {
+export function useEvalStats(ownerKind: EvalOwnerKind, ownerId: string | null | undefined) {
   return useQuery({
-    queryKey: ["agent-eval-stats", agentId],
-    queryFn: () => api.get<AgentEvalStats>(`/agents/${agentId}/eval-stats`),
-    enabled: !!agentId,
+    queryKey: ["eval-stats", ownerKind, ownerId],
+    queryFn: () => api.get<EvalStats>(evalStatsPath(ownerKind, ownerId!)),
+    enabled: !!ownerId,
   });
 }
 
@@ -95,7 +99,22 @@ export function useRunEvalCase() {
       api.post<EvalCaseRun>(`/eval-cases/${id}/run`),
     onSuccess: (_d, { ownerKind, ownerId }) => {
       qc.invalidateQueries({ queryKey: ["eval-cases", ownerKind, ownerId] });
-      qc.invalidateQueries({ queryKey: ["agent-eval-stats", ownerId] });
+      qc.invalidateQueries({ queryKey: ["eval-stats", ownerKind, ownerId] });
+    },
+  });
+}
+
+/** "Run all evals" on a skill's Evals tab — POST /skills/:id/eval-cases/run-all.
+ *  Runs every case owned by that skill server-side, sequentially (see the
+ *  server's `runBatch`), and returns the same `EvalRun` batch summary shape
+ *  the global Eval Dashboard's "Run eval (N)" uses. */
+export function useRunAllSkillEvalCases() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (skillId: string) => api.post<EvalRun>(`/skills/${skillId}/eval-cases/run-all`),
+    onSuccess: (_d, skillId) => {
+      qc.invalidateQueries({ queryKey: ["eval-cases", "skill", skillId] });
+      qc.invalidateQueries({ queryKey: ["eval-stats", "skill", skillId] });
     },
   });
 }

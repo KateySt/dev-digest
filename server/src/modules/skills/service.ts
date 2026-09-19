@@ -1,7 +1,16 @@
 import type { Container } from '../../platform/container.js';
 import type { CommunitySkill, Skill, SkillType } from '@devdigest/shared';
 import { SkillsRepository } from './repository.js';
-import { toSkillDto, nameFromMarkdown } from './helpers.js';
+import {
+  computeSkillStats,
+  computeSkillUsageSummaries,
+  nameFromMarkdown,
+  toSkillDto,
+  toSkillVersionListItem,
+  type SkillStats,
+  type SkillUsageSummary,
+  type SkillVersionListItem,
+} from './helpers.js';
 import { COMMUNITY_SKILLS, IMPORT_URL_MAX_BYTES, IMPORT_URL_TIMEOUT_MS } from './constants.js';
 import { ExternalServiceError, NotFoundError, ValidationError } from '../../platform/errors.js';
 
@@ -10,6 +19,10 @@ import { ExternalServiceError, NotFoundError, ValidationError } from '../../plat
  * drawer's URL/Community tabs. File import needs no server call — the client
  * reads the File via `File.text()` and hits plain `create`.
  */
+
+/** GET /skills' list item — the `Skill` DTO plus the card's usage summary
+ *  (see `computeSkillUsageSummaries`'s doc comment for the approximation). */
+export type SkillListItem = Skill & { usage: SkillUsageSummary };
 
 export interface CreateSkillInput {
   name?: string;
@@ -35,9 +48,22 @@ export class SkillsService {
     this.repo = new SkillsRepository(container.db);
   }
 
-  async list(workspaceId: string): Promise<Skill[]> {
+  async list(workspaceId: string): Promise<SkillListItem[]> {
     const rows = await this.repo.list(workspaceId);
-    return rows.map(toSkillDto);
+    const skillIds = rows.map((r) => r.id);
+
+    const links = await this.repo.agentSkillLinksForWorkspace(workspaceId);
+    const agentIds = [...new Set(links.map((l) => l.agentId))];
+    const [runs, findingRows] = await Promise.all([
+      this.repo.runsForAgents(workspaceId, agentIds),
+      this.repo.findingOutcomesForAgents(workspaceId, agentIds),
+    ]);
+    const usageBySkill = computeSkillUsageSummaries(skillIds, links, runs, findingRows);
+
+    return rows.map((row) => ({
+      ...toSkillDto(row),
+      usage: usageBySkill.get(row.id) ?? { used_by_agents: 0, pull_frequency: null, accept_rate: null },
+    }));
   }
 
   async get(workspaceId: string, id: string): Promise<Skill | undefined> {
@@ -66,6 +92,39 @@ export class SkillsService {
   async update(workspaceId: string, id: string, patch: UpdateSkillInput): Promise<Skill | undefined> {
     const row = await this.repo.update(workspaceId, id, patch);
     return row ? toSkillDto(row) : undefined;
+  }
+
+  /** Version history for the Versions tab, newest first. */
+  async listVersions(workspaceId: string, id: string): Promise<SkillVersionListItem[]> {
+    const skill = await this.repo.getById(workspaceId, id);
+    if (!skill) throw new NotFoundError('Skill not found');
+    const rows = await this.repo.listVersions(id);
+    return rows.map((r) => toSkillVersionListItem(r, skill.version));
+  }
+
+  /** Restore a past version's body as a new version (git-revert style — the
+   *  existing `update()` body-change path already bumps + snapshots). */
+  async restoreVersion(workspaceId: string, id: string, version: number): Promise<Skill> {
+    const rows = await this.repo.listVersions(id);
+    const target = rows.find((r) => r.version === version);
+    if (!target) throw new NotFoundError('Skill version not found');
+    const row = await this.repo.update(workspaceId, id, { body: target.body });
+    if (!row) throw new NotFoundError('Skill not found');
+    return toSkillDto(row);
+  }
+
+  /** Stats tab aggregate — see `computeSkillStats`'s doc comment for the
+   *  approximation this relies on (attribution via agents using the skill). */
+  async stats(workspaceId: string, id: string): Promise<SkillStats> {
+    const skill = await this.repo.getById(workspaceId, id);
+    if (!skill) throw new NotFoundError('Skill not found');
+    const agents = await this.container.agentsRepo.agentsForSkill(workspaceId, id);
+    const agentIds = agents.map((a) => a.id);
+    const [runs, findingRows] = await Promise.all([
+      this.repo.runsForAgents(workspaceId, agentIds),
+      this.repo.findingOutcomesForAgents(workspaceId, agentIds),
+    ]);
+    return computeSkillStats(agents, runs, findingRows);
   }
 
   /**

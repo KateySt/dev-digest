@@ -3,18 +3,29 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, EmptyState, ErrorState, IconBtn, MetricCard, Skeleton } from "@devdigest/ui";
-import type { Agent, EvalCaseListItem } from "@devdigest/shared";
-import { useAgentEvalStats, useDeleteEvalCase, useEvalCases, useRunEvalCase } from "../../../../../../../lib/hooks/eval-cases";
+import type { EvalCaseListItem, EvalOwnerKind } from "@devdigest/shared";
+import { useDeleteEvalCase, useEvalCases, useEvalStats, useRunEvalCase } from "../../../../../../../lib/hooks/eval-cases";
 import { EvalCaseEditorModal } from "./_components/EvalCaseEditorModal";
 import { s } from "./styles";
 
-/** Evals tab — a metrics rollup (display only, no "run all" here — that's
- *  the global Eval Dashboard's job) plus this agent's eval cases with
- *  per-case Run/Edit/Delete. */
-export function EvalsTab({ agent }: { agent: Agent }) {
+/** Evals tab — a metrics rollup plus this owner's (agent or skill) eval cases
+ *  with per-case Run/Edit/Delete. An agent owner has no batch action here
+ *  (that's the global Eval Dashboard's job); a skill owner gets an optional
+ *  "Run all evals" button via `onRunAll` (there's no per-skill dashboard). */
+export function EvalsTab({
+  ownerKind,
+  ownerId,
+  onRunAll,
+  runAllPending,
+}: {
+  ownerKind: EvalOwnerKind;
+  ownerId: string;
+  onRunAll?: () => void;
+  runAllPending?: boolean;
+}) {
   const t = useTranslations("eval");
-  const { data: stats } = useAgentEvalStats(agent.id);
-  const { data: cases, isLoading, isError, refetch } = useEvalCases("agent", agent.id);
+  const { data: stats } = useEvalStats(ownerKind, ownerId);
+  const { data: cases, isLoading, isError, refetch } = useEvalCases(ownerKind, ownerId);
   const runCase = useRunEvalCase();
   const deleteCase = useDeleteEvalCase();
   const [editing, setEditing] = React.useState<EvalCaseListItem | "new" | null>(null);
@@ -23,7 +34,8 @@ export function EvalsTab({ agent }: { agent: Agent }) {
     <div style={s.wrap}>
       {editing && (
         <EvalCaseEditorModal
-          agentId={agent.id}
+          ownerKind={ownerKind}
+          ownerId={ownerId}
           initialCase={editing === "new" ? undefined : editing}
           onClose={() => setEditing(null)}
         />
@@ -54,7 +66,12 @@ export function EvalsTab({ agent }: { agent: Agent }) {
       <div>
         <div style={s.header}>
           <div style={s.sectionTitle}>{t("evalsTab.casesHeading")}</div>
-          <div style={{ marginLeft: "auto" }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            {onRunAll && (
+              <Button kind="secondary" size="sm" icon="Play" onClick={onRunAll} disabled={runAllPending}>
+                {runAllPending ? t("evalsTab.running") : t("evalsTab.runAll")}
+              </Button>
+            )}
             <Button kind="primary" size="sm" icon="Plus" onClick={() => setEditing("new")}>
               {t("evalsTab.newCase")}
             </Button>
@@ -92,7 +109,7 @@ export function EvalsTab({ agent }: { agent: Agent }) {
                   <IconBtn
                     icon="Play"
                     label={runCase.isPending ? t("evalsTab.running") : t("evalsTab.run")}
-                    onClick={() => runCase.mutate({ id: c.id, ownerKind: "agent", ownerId: agent.id })}
+                    onClick={() => runCase.mutate({ id: c.id, ownerKind, ownerId })}
                   />
                   <IconBtn icon="Edit" label={t("evalsTab.edit")} onClick={() => setEditing(c)} />
                   <IconBtn
@@ -101,7 +118,7 @@ export function EvalsTab({ agent }: { agent: Agent }) {
                     danger
                     onClick={() => {
                       if (window.confirm(`Delete eval case "${c.name}"? This cannot be undone.`)) {
-                        deleteCase.mutate({ id: c.id, ownerKind: "agent", ownerId: agent.id });
+                        deleteCase.mutate({ id: c.id, ownerKind, ownerId });
                       }
                     }}
                   />

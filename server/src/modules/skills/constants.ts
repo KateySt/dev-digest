@@ -5,6 +5,9 @@ import type { CommunitySkill } from '@devdigest/shared';
 /** Initial version recorded for a newly-created skill. */
 export const INITIAL_SKILL_VERSION = 1;
 
+/** Rolling window for the Stats tab's "Findings 30D" tile. */
+export const STATS_WINDOW_DAYS = 30;
+
 /** Server-side fetch guard for `importFromUrl` — a fetched skill body is
  *  read as plain text, so cap both wait time and size before it ever reaches
  *  the DB / prompt. */

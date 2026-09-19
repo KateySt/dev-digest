@@ -34,7 +34,7 @@ export const s = {
   } satisfies CSSProperties,
   grid: { display: "grid", gridTemplateColumns: CARD_GRID_COLS, gap: 14 } satisfies CSSProperties,
   right: {
-    width: 420,
+    width: 560,
     flexShrink: 0,
     borderLeft: "1px solid var(--border)",
     background: "var(--bg-surface)",

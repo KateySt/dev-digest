@@ -7,7 +7,8 @@ import { Button, Dropdown, EmptyState, ErrorState, Icon, Skeleton } from "@devdi
 import { AppShell } from "../../../../components/app-shell";
 import { useSkills, useUpdateSkill } from "../../../../lib/hooks/skills";
 import { SkillCard } from "./_components/SkillCard";
-import { SkillPreviewPanel } from "./_components/SkillPreviewPanel";
+import { SkillEditor } from "./_components/SkillEditor";
+import { VALID_SKILL_TABS } from "./_components/SkillEditor/constants";
 import { AddSkillDrawer } from "./_components/AddSkillDrawer";
 import { filterSkills } from "./helpers";
 import { s } from "./styles";
@@ -22,10 +23,17 @@ export function SkillsListView() {
   const [query, setQuery] = React.useState("");
 
   const selected = search.get("skill");
+  const tab = VALID_SKILL_TABS.includes(search.get("tab") ?? "") ? search.get("tab")! : "config";
+
   const selectSkill = (id: string | null) => {
     const sp = new URLSearchParams(search.toString());
     if (id) sp.set("skill", id);
     else sp.delete("skill");
+    router.replace(`/skills?${sp.toString()}`);
+  };
+  const setTab = (tabKey: string) => {
+    const sp = new URLSearchParams(search.toString());
+    sp.set("tab", tabKey);
     router.replace(`/skills?${sp.toString()}`);
   };
 
@@ -99,7 +107,7 @@ export function SkillsListView() {
 
         <div style={s.right}>
           {selected ? (
-            <SkillPreviewPanel skillId={selected} onClosed={() => selectSkill(null)} />
+            <SkillEditor skillId={selected} tab={tab} onTab={setTab} onClosed={() => selectSkill(null)} />
           ) : (
             <div style={s.selectPrompt}>
               <Icon.Sparkles size={22} />

@@ -15,9 +15,11 @@ import { EvalService } from './service.js';
  *   PUT    /eval-cases/:id                    → update
  *   DELETE /eval-cases/:id                    → delete
  *   POST   /eval-cases/:id/run                → run ONE case → EvalCaseRun
- *   GET    /agents/:id/eval-stats             → Evals tab header rollup
+ *   GET    /agents/:id/eval-stats             → Evals tab header rollup (agent)
+ *   GET    /skills/:id/eval-stats             → Evals tab header rollup (skill)
+ *   POST   /skills/:id/eval-cases/run-all     → "Run all evals" → EvalRun (batch, this skill's cases)
  *   GET    /eval-dashboard                    → global Eval Dashboard
- *   POST   /eval-dashboard/run-all            → "Run eval (N)" → EvalRun (batch)
+ *   POST   /eval-dashboard/run-all            → "Run eval (N)" → EvalRun (batch, whole workspace)
  */
 
 const ListQuery = z.object({ owner_kind: EvalOwnerKind, owner_id: z.string() });
@@ -90,7 +92,17 @@ export default async function evalRoutes(appBase: FastifyInstance) {
 
   app.get('/agents/:id/eval-stats', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
-    return service.statsForAgent(workspaceId, req.params.id);
+    return service.statsForOwner(workspaceId, 'agent', req.params.id);
+  });
+
+  app.get('/skills/:id/eval-stats', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.statsForOwner(workspaceId, 'skill', req.params.id);
+  });
+
+  app.post('/skills/:id/eval-cases/run-all', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.runAllForOwner(workspaceId, 'skill', req.params.id);
   });
 
   app.get('/eval-dashboard', async (req) => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { Agent, EvalCaseListItem } from "@devdigest/shared";
+import type { EvalCaseListItem } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/eval.json";
 
 const CASES: EvalCaseListItem[] = [
@@ -43,7 +43,7 @@ const CASES: EvalCaseListItem[] = [
 ];
 
 vi.mock("../../../../../../../lib/hooks/eval-cases", () => ({
-  useAgentEvalStats: () => ({
+  useEvalStats: () => ({
     data: { cases_total: 2, recall: 1, precision: 1, citation_accuracy: 0.5, cases_evaluated: 1 },
   }),
   useEvalCases: () => ({ data: CASES, isLoading: false, isError: false, refetch: vi.fn() }),
@@ -55,12 +55,10 @@ import { EvalsTab } from "./EvalsTab";
 
 afterEach(cleanup);
 
-const AGENT = { id: "ag1", name: "Security Reviewer" } as Agent;
-
 function renderWithIntl() {
   return render(
     <NextIntlClientProvider locale="en" messages={{ eval: messages }}>
-      <EvalsTab agent={AGENT} />
+      <EvalsTab ownerKind="agent" ownerId="ag1" />
     </NextIntlClientProvider>,
   );
 }
