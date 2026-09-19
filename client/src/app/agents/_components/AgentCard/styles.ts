@@ -48,4 +48,9 @@ export const s = {
     padding: "1px 8px",
     borderRadius: 4,
   }),
+  statsRow: {
+    fontSize: 12,
+    color: "var(--text-muted)",
+    marginTop: 8,
+  } satisfies CSSProperties,
 } as const;

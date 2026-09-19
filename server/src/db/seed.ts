@@ -6,7 +6,10 @@ import {
   GENERAL_REVIEWER_PROMPT,
   SECURITY_REVIEWER_PROMPT,
   PERFORMANCE_REVIEWER_PROMPT,
+  TEST_QUALITY_REVIEWER_PROMPT,
+  API_CONTRACT_REVIEWER_PROMPT,
 } from './seed-prompts.js';
+import { SEED_SKILLS } from './seed-skills.js';
 
 /** Default provider/model for the built-in reviewer agents. */
 const DEFAULT_PROVIDER = 'openrouter' as const;
@@ -175,6 +178,150 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
     ]);
   }
 
+  // ---- PR #483 (test-coverage-gaps control experiment fixture) ----
+  // retryWebhook() has an untested exhausted-retries branch; the accompanying
+  // test only covers the first-attempt-succeeds happy path. Run Test Quality
+  // Reviewer on this PR with its skills unlinked (misses it) vs linked
+  // (flags the untested branch) to see the difference.
+  let [prTestGap] = await db
+    .select()
+    .from(t.pullRequests)
+    .where(and(eq(t.pullRequests.repoId, repoId), eq(t.pullRequests.number, 483)));
+  if (!prTestGap) {
+    [prTestGap] = await db
+      .insert(t.pullRequests)
+      .values({
+        workspaceId,
+        repoId,
+        number: 483,
+        title: 'Add webhook retry helper',
+        author: 'devon.ash',
+        branch: 'feat/webhook-retry',
+        base: 'main',
+        headSha: 'b2c3d4e5f6a1',
+        additions: 33,
+        deletions: 0,
+        filesCount: 2,
+        status: 'needs_review',
+        body: 'Adds retryWebhook() with exponential backoff so webhook delivery survives transient failures.',
+      })
+      .returning();
+
+    await db.insert(t.prFiles).values([
+      {
+        prId: prTestGap!.id,
+        path: 'src/lib/webhook-retry.ts',
+        additions: 19,
+        deletions: 0,
+        patch:
+          '@@ -0,0 +1,19 @@\n' +
+          "+export async function retryWebhook(\n" +
+          '+  send: () => Promise<Response>,\n' +
+          '+  maxAttempts = 3,\n' +
+          '+): Promise<Response> {\n' +
+          '+  let lastError: unknown;\n' +
+          '+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {\n' +
+          '+    try {\n' +
+          '+      const res = await send();\n' +
+          '+      if (res.ok) return res;\n' +
+          "+      lastError = new Error('webhook responded ' + res.status);\n" +
+          '+    } catch (err) {\n' +
+          '+      lastError = err;\n' +
+          '+    }\n' +
+          '+    if (attempt < maxAttempts) {\n' +
+          '+      await new Promise((r) => setTimeout(r, 200 * attempt));\n' +
+          '+    }\n' +
+          '+  }\n' +
+          "+  throw new Error('webhook delivery failed after ' + maxAttempts + ' attempts');\n" +
+          '+}',
+      },
+      {
+        prId: prTestGap!.id,
+        path: 'test/webhook-retry.test.ts',
+        additions: 14,
+        deletions: 0,
+        patch:
+          '@@ -0,0 +1,14 @@\n' +
+          "+import { describe, it, expect } from 'vitest';\n" +
+          "+import { retryWebhook } from '../src/lib/webhook-retry';\n" +
+          '+\n' +
+          "+describe('retryWebhook', () => {\n" +
+          "+  it('returns the response on the first successful attempt', async () => {\n" +
+          '+    const send = async () => new Response(null, { status: 200 });\n' +
+          '+    const res = await retryWebhook(send, 3);\n' +
+          '+    expect(res.status).toBe(200);\n' +
+          '+  });\n' +
+          '+});',
+      },
+    ]);
+    await db.insert(t.prCommits).values({
+      prId: prTestGap!.id,
+      sha: 'b2c3d4e5f6a1',
+      message: 'Add retryWebhook() with backoff',
+      author: 'devon.ash',
+    });
+  }
+
+  // ---- PR #484 (breaking-route-signature control experiment fixture) ----
+  // Changes the GET /users/:id response shape: drops `email`, renames
+  // `created_at` -> `createdAt` — a breaking change with no compat path. Run
+  // API Contract Reviewer with its skill unlinked (misses it) vs linked
+  // (flags the breaking change) to see the difference.
+  let [prApiBreak] = await db
+    .select()
+    .from(t.pullRequests)
+    .where(and(eq(t.pullRequests.repoId, repoId), eq(t.pullRequests.number, 484)));
+  if (!prApiBreak) {
+    [prApiBreak] = await db
+      .insert(t.pullRequests)
+      .values({
+        workspaceId,
+        repoId,
+        number: 484,
+        title: 'Simplify user lookup response',
+        author: 'marisa.koch',
+        branch: 'chore/simplify-user-response',
+        base: 'main',
+        headSha: 'c3d4e5f6a1b2',
+        additions: 4,
+        deletions: 5,
+        filesCount: 1,
+        status: 'needs_review',
+        body: 'Trims the user lookup response down to the fields the dashboard actually renders.',
+      })
+      .returning();
+
+    await db.insert(t.prFiles).values({
+      prId: prApiBreak!.id,
+      path: 'src/api/users.ts',
+      additions: 4,
+      deletions: 5,
+      patch:
+        '@@ -40,10 +40,9 @@\n' +
+        " app.get('/users/:id', async (req, reply) => {\n" +
+        '   const user = await db.getUser(req.params.id);\n' +
+        "   if (!user) return reply.status(404).send({ error: 'not found' });\n" +
+        '-  return {\n' +
+        '-    id: user.id,\n' +
+        '-    email: user.email,\n' +
+        '-    name: user.name,\n' +
+        '-    created_at: user.createdAt,\n' +
+        '-  };\n' +
+        '+  return {\n' +
+        '+    id: user.id,\n' +
+        '+    name: user.name,\n' +
+        '+    createdAt: user.createdAt,\n' +
+        '+  };\n' +
+        ' });',
+    });
+    await db.insert(t.prCommits).values({
+      prId: prApiBreak!.id,
+      sha: 'c3d4e5f6a1b2',
+      message: 'Trim user lookup response fields',
+      author: 'marisa.koch',
+    });
+  }
+
   // ---- built-in agents (the three starter presets) ----
   // Prompt bodies live in ./seed-prompts.ts (mirrored in docs/agent-prompts/*.md).
   const seedAgents: Array<typeof t.agents.$inferInsert> = [
@@ -211,13 +358,83 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       version: 1,
       createdBy: userId,
     },
+    {
+      workspaceId,
+      name: 'Test Quality Reviewer',
+      description: 'Checks test quality: uncovered branches, missed corner cases, excessive mocking, flakiness.',
+      provider: DEFAULT_PROVIDER,
+      model: DEFAULT_MODEL,
+      systemPrompt: TEST_QUALITY_REVIEWER_PROMPT,
+      enabled: true,
+      version: 1,
+      createdBy: userId,
+    },
+    {
+      workspaceId,
+      name: 'API Contract Reviewer',
+      description: 'Flags breaking changes to route signatures — method, path, request/response shape, status codes.',
+      provider: DEFAULT_PROVIDER,
+      model: DEFAULT_MODEL,
+      systemPrompt: API_CONTRACT_REVIEWER_PROMPT,
+      enabled: true,
+      version: 1,
+      createdBy: userId,
+    },
   ];
+  const agentIds = new Map<string, string>();
   for (const a of seedAgents) {
     const [existing] = await db
       .select()
       .from(t.agents)
       .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.name, a.name)));
-    if (!existing) await db.insert(t.agents).values(a);
+    const row = existing ?? (await db.insert(t.agents).values(a).returning())[0];
+    agentIds.set(a.name, row!.id);
+  }
+
+  // ---- skills for the two new agents + the links between them -------------
+  // Idempotent by (workspaceId, name), same pattern as the built-in agents.
+  const skillIds = new Map<string, string>();
+  for (const s of SEED_SKILLS) {
+    const [existing] = await db
+      .select()
+      .from(t.skills)
+      .where(and(eq(t.skills.workspaceId, workspaceId), eq(t.skills.name, s.name)));
+    const row =
+      existing ??
+      (
+        await db
+          .insert(t.skills)
+          .values({
+            workspaceId,
+            name: s.name,
+            description: s.description,
+            type: s.type,
+            source: 'manual',
+            body: s.body,
+            enabled: true,
+            version: 1,
+          })
+          .returning()
+      )[0];
+    skillIds.set(s.name, row!.id);
+    if (!existing) {
+      await db.insert(t.skillVersions).values({ skillId: row!.id, version: 1, body: s.body });
+    }
+  }
+
+  const skillLinks: Array<{ agent: string; skills: string[] }> = [
+    { agent: 'Test Quality Reviewer', skills: ['test-coverage-gaps', 'mock-overuse'] },
+    { agent: 'API Contract Reviewer', skills: ['breaking-route-signature'] },
+  ];
+  for (const link of skillLinks) {
+    const agentId = agentIds.get(link.agent)!;
+    for (const [order, skillName] of link.skills.entries()) {
+      const skillId = skillIds.get(skillName)!;
+      await db
+        .insert(t.agentSkills)
+        .values({ agentId, skillId, order })
+        .onConflictDoNothing();
+    }
   }
 
   return { workspaceId, userId };

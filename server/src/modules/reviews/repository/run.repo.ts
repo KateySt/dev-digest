@@ -52,6 +52,7 @@ export async function listRunsForPull(
     run_id: run.id,
     agent_id: run.agentId,
     agent_name: agentName ?? null,
+    pr_number: null,
     provider: run.provider,
     model: run.model,
     status: run.status,

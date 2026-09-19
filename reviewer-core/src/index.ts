@@ -54,6 +54,9 @@ export {
   type ToReviewOptions,
 } from './output/to-review.js';
 
+// Eval scoring — expected findings vs. a real review's grounded findings.
+export { scoreEvalCase, type EvalExpectedFinding, type EvalScore } from './output/eval-score.js';
+
 // The single OpenAI-compatible structured provider (OpenRouter), shared by the
 // CI runner and the server's openrouter path. Owns session grouping + guards.
 export { OpenRouterProvider, type OpenRouterProviderOptions } from './llm/openrouter.js';
