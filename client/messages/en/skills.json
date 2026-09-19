@@ -103,6 +103,10 @@
     "bodyHint": "Saving a changed body creates a new immutable version.",
     "version": "v{version}"
   },
+  "previewTab": {
+    "title": "Preview",
+    "subtitle": "Rendered as the reviewing agent receives it."
+  },
   "editor": {
     "runOnEvals": "Run on evals",
     "tabs": {

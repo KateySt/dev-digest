@@ -424,7 +424,10 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
 
   const skillLinks: Array<{ agent: string; skills: string[] }> = [
     { agent: 'Test Quality Reviewer', skills: ['test-coverage-gaps', 'mock-overuse'] },
-    { agent: 'API Contract Reviewer', skills: ['breaking-route-signature'] },
+    {
+      agent: 'API Contract Reviewer',
+      skills: ['breaking-route-signature', 'response-schema', 'semver-discipline'],
+    },
   ];
   for (const link of skillLinks) {
     const agentId = agentIds.get(link.agent)!;

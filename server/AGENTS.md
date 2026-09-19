@@ -39,6 +39,9 @@ Fastify 5 + Drizzle ORM + Postgres/pgvector. Zod contracts from
 - Each `src/modules/<name>/` uses fixed, role-based filenames —
   `routes.ts`, `service.ts`, `repository.ts`, `constants.ts`, `helpers.ts` —
   not domain-specific names. Follow the pattern when adding a module.
+- A module that calls an LLM keeps its prompt text in its own `prompts.ts`
+  (e.g. `modules/conventions/prompts.ts`), never inlined in `service.ts` —
+  same separation `db/seed-prompts.ts` already uses for agent prompts.
 
 ## Do-not-touch
 

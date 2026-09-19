@@ -12,6 +12,13 @@ in the DB). The canonical, reviewable copies live next to this file:
 - [`test-quality-reviewer.md`](./test-quality-reviewer.md)
 - [`api-contract-reviewer.md`](./api-contract-reviewer.md)
 
+API Contract Reviewer's skills (attached, not baked into the prompt above) are
+mirrored in [`skills/`](./skills/): [`response-schema.md`](./skills/response-schema.md),
+[`semver-discipline.md`](./skills/semver-discipline.md), and
+[`deprecation-policy.skill.md`](./skills/deprecation-policy.skill.md) — the
+latter is deliberately NOT seeded; import it via Skills Lab → Add Skill →
+From file to exercise that path, then link it to the agent in its Skills tab.
+
 > The DB is the source of truth at run time. These files are the human-readable
 > originals — when you change a prompt, edit the file here **and** push it to the
 > agent (`PUT /agents/:id`, which versions the change into `agent_versions`).
