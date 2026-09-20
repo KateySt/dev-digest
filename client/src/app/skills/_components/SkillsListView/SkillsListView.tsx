@@ -19,7 +19,7 @@ export function SkillsListView() {
   const search = useSearchParams();
   const { data: skills, isLoading, isError, refetch } = useSkills();
   const update = useUpdateSkill();
-  const [adding, setAdding] = React.useState(false);
+  const [addingTab, setAddingTab] = React.useState<"file" | "url" | "community" | null>(null);
   const [query, setQuery] = React.useState("");
 
   const selected = search.get("skill");
@@ -41,7 +41,7 @@ export function SkillsListView() {
 
   return (
     <AppShell crumb={[{ label: t("page.crumbLab") }, { label: t("page.crumbSkills") }]}>
-      {adding && <AddSkillDrawer onClose={() => setAdding(false)} />}
+      {addingTab && <AddSkillDrawer initialTab={addingTab} onClose={() => setAddingTab(null)} />}
       <div style={s.page}>
         <div style={s.left}>
           <div style={s.header}>
@@ -66,9 +66,9 @@ export function SkillsListView() {
                 </Button>
               }
               items={[
-                { label: t("page.menu.fromFile"), icon: "Upload", onClick: () => setAdding(true) },
-                { label: t("page.menu.fromUrl"), icon: "Link", onClick: () => setAdding(true) },
-                { label: t("page.menu.community"), icon: "Search", onClick: () => setAdding(true) },
+                { label: t("page.menu.fromFile"), icon: "Upload", onClick: () => setAddingTab("file") },
+                { label: t("page.menu.fromUrl"), icon: "Link", onClick: () => setAddingTab("url") },
+                { label: t("page.menu.community"), icon: "Search", onClick: () => setAddingTab("community") },
               ]}
             />
           </div>
@@ -87,7 +87,7 @@ export function SkillsListView() {
               title={t("page.empty.title")}
               body={t("page.empty.body")}
               cta={t("page.empty.cta")}
-              onCta={() => setAdding(true)}
+              onCta={() => setAddingTab("file")}
             />
           )}
           {list.length > 0 && (

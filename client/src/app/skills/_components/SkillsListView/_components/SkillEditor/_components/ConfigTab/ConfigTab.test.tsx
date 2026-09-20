@@ -44,7 +44,7 @@ describe("ConfigTab", () => {
     expect(screen.getByDisplayValue("Rubric for evaluating overall PR quality.")).toBeInTheDocument();
   });
 
-  it("saves the current form state", () => {
+  it("saves the current form state (enabled isn't part of the draft)", () => {
     renderWithIntl();
     fireEvent.click(screen.getByText("Save"));
     expect(updateMutate).toHaveBeenCalledWith(
@@ -55,17 +55,24 @@ describe("ConfigTab", () => {
           description: "Rubric for evaluating overall PR quality.",
           type: "rubric",
           body: "# PR quality rubric",
-          enabled: true,
         },
       },
       expect.anything(),
     );
   });
 
-  it("deletes the skill after confirming", () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+  it("commits the enabled toggle immediately, without waiting for Save", () => {
     renderWithIntl();
+    fireEvent.click(screen.getByRole("switch"));
+    expect(updateMutate).toHaveBeenCalledWith({ id: "sk1", patch: { enabled: false } });
+  });
+
+  it("closes the editor before the delete request resolves", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onDeleted = vi.fn();
+    renderWithIntl(onDeleted);
     fireEvent.click(screen.getByText("Delete"));
+    expect(onDeleted).toHaveBeenCalled();
     expect(deleteMutate).toHaveBeenCalledWith("sk1", expect.anything());
   });
 });

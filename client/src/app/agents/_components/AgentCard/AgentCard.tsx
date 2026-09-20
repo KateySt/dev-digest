@@ -17,6 +17,7 @@ export function AgentCard({
   perf,
   onClick,
   onToggle,
+  onDeleted,
 }: {
   ag: Agent;
   active?: boolean;
@@ -24,6 +25,7 @@ export function AgentCard({
   perf?: AgentPerfRow;
   onClick?: () => void;
   onToggle?: (enabled: boolean) => void;
+  onDeleted?: () => void;
 }) {
   const t = useTranslations("agents");
   const del = useDeleteAgent();
@@ -44,7 +46,9 @@ export function AgentCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (window.confirm(`Delete agent "${ag.name}"? This cannot be undone.`)) del.mutate(ag.id);
+            if (!window.confirm(`Delete agent "${ag.name}"? This cannot be undone.`)) return;
+            onDeleted?.();
+            del.mutate(ag.id);
           }}
           disabled={del.isPending}
           title="Delete agent"

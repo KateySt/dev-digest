@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, SelectInput, TextInput, Textarea, Toggle } from "@devdigest/ui";
+import { Button, FormField, Select, TextInput, Textarea, Toggle } from "@devdigest/ui";
 import type { Skill, SkillType } from "@devdigest/shared";
 import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
@@ -22,40 +22,40 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
   const [description, setDescription] = React.useState(skill.description);
   const [type, setType] = React.useState<SkillType>(skill.type);
   const [body, setBody] = React.useState(skill.body);
-  const [enabled, setEnabled] = React.useState(skill.enabled);
 
-  // Reset local form when switching skills.
   React.useEffect(() => {
     setName(skill.name);
     setDescription(skill.description);
     setType(skill.type);
     setBody(skill.body);
-    setEnabled(skill.enabled);
   }, [skill.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const typeOptions = SKILL_TYPES.map((v) => ({ value: v, label: t(`listItem.type.${v}`) }));
 
   const save = () =>
     update.mutate(
-      { id: skill.id, patch: { name, description, type, body, enabled } },
+      { id: skill.id, patch: { name, description, type, body } },
       { onSuccess: (data) => toast.success(t("preview.version", { version: data.version })) },
     );
 
+  const toggleEnabled = (enabled: boolean) => update.mutate({ id: skill.id, patch: { enabled } });
+
   const remove = () => {
     if (!window.confirm(`Delete skill "${skill.name}"? This cannot be undone.`)) return;
-    del.mutate(skill.id, { onSuccess: onDeleted });
+    onDeleted();
+    del.mutate(skill.id, { onError: () => toast.error(t("preview.deleteError")) });
   };
 
   return (
     <div style={s.wrap}>
       <FormField label={t("preview.enabled")}>
-        <Toggle on={enabled} onChange={setEnabled} size={16} />
+        <Toggle on={skill.enabled} onChange={toggleEnabled} size={16} />
       </FormField>
       <FormField label={t("file.nameLabel")} required>
         <TextInput value={name} onChange={setName} />
       </FormField>
       <FormField label={t("preview.typeLabel")}>
-        <SelectInput value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+        <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
       </FormField>
       <FormField label={t("preview.descriptionLabel")} hint={t("preview.descriptionHint")}>
         <TextInput value={description} onChange={setDescription} />

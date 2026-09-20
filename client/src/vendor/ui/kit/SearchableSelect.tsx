@@ -6,7 +6,7 @@ const optValue = (o: SelectOption) => (typeof o === "string" ? o : o.value);
 const optLabel = (o: SelectOption) => (typeof o === "string" ? o : o.label);
 
 /**
- * Searchable single-select — same options API as SelectInput, but with a filter
+ * Searchable single-select — same options API as Select, but with a filter
  * box + keyboard nav, for long lists (e.g. the 300+ OpenRouter models). Filters
  * by value and label; Enter selects, ↑/↓ move, Esc closes.
  */

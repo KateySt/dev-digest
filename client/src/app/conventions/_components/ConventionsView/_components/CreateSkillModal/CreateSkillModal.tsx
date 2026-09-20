@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Modal, SelectInput, TextInput, Textarea, Toggle } from "@devdigest/ui";
+import { Button, FormField, Modal, Select, TextInput, Textarea, Toggle } from "@devdigest/ui";
 import type { ConventionCandidate, SkillType } from "@devdigest/shared";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
@@ -65,7 +65,7 @@ export function CreateSkillModal({
         </FormField>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           <FormField label={t("modal.typeLabel")}>
-            <SelectInput value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+            <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
           </FormField>
           <FormField label={t("modal.enabledLabel")} hint={t("modal.enabledHint")}>
             <Toggle on={enabled} onChange={setEnabled} size={16} />

@@ -94,6 +94,7 @@
     "disabled": "Disabled",
     "save": "Save",
     "delete": "Delete",
+    "deleteError": "Failed to delete skill. Please try again.",
     "edit": "Edit",
     "untrustedNotice": "This skill came from an untrusted source. Its body is stored as data (delimiter-wrapped) and must be vetted before it is enabled for an agent.",
     "typeLabel": "Type",

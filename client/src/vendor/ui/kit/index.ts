@@ -5,7 +5,7 @@ export { Tabs } from "./Tabs";
 export { Dropdown } from "./Dropdown";
 export { FormField } from "./FormField";
 export { TextInput } from "./TextInput";
-export { SelectInput } from "./SelectInput";
+export { Select } from "./Select";
 export { SearchableSelect } from "./SearchableSelect";
 export { Textarea } from "./Textarea";
 export { Checkbox } from "./Checkbox";

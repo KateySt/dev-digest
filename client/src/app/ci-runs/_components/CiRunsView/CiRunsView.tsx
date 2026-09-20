@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, EmptyState, ErrorState, SelectInput, Skeleton, TextInput, Toggle } from "@devdigest/ui";
+import { Badge, EmptyState, ErrorState, Select, Skeleton, TextInput, Toggle } from "@devdigest/ui";
 import { AppShell } from "../../../../components/app-shell";
 import { useCiRuns } from "../../../../lib/hooks/ci";
 import { useAgents } from "../../../../lib/hooks/agents";
@@ -60,13 +60,13 @@ export function CiRunsView() {
 
         <div style={s.filterBar}>
           <div style={s.filterItem}>
-            <SelectInput value={agentId} onChange={setAgentId} options={agentOptions} />
+            <Select value={agentId} onChange={setAgentId} options={agentOptions} />
           </div>
           <div style={s.filterItem}>
             <TextInput value={repo} onChange={setRepo} placeholder={t("runs.filters.allRepos")} />
           </div>
           <div style={s.filterItem}>
-            <SelectInput value={status} onChange={setStatus} options={statusOptions} />
+            <Select value={status} onChange={setStatus} options={statusOptions} />
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <Toggle on={last7Days} onChange={setLast7Days} size={14} />

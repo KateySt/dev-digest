@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Donut, ErrorState, MetricCard, SelectInput, Skeleton, Sparkline } from "@devdigest/ui";
+import { Donut, ErrorState, MetricCard, Select, Skeleton, Sparkline } from "@devdigest/ui";
 import { AppShell } from "../../../../components/app-shell";
 import { useAgentPerformance } from "../../../../lib/hooks/agent-performance";
 import { formatRunCost } from "../../../../components/run-cost-badge";
@@ -78,7 +78,7 @@ export function AgentPerformanceView() {
                 <div style={s.tableHeader}>
                   <div style={s.sectionTitle}>{t("perAgent")}</div>
                   <div style={s.sortWrap}>
-                    <SelectInput
+                    <Select
                       value={sortKey}
                       onChange={(v) => setSortKey(v as SortKey)}
                       options={SORT_KEYS.map((k) => ({ value: k, label: t(`sort.${k}`) }))}
