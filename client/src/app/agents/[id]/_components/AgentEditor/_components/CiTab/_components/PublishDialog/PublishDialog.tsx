@@ -32,41 +32,12 @@ export function PublishDialog({
   };
 
   return (
-    <Modal
-      width={620}
-      title={t("publishDialog.title")}
-      subtitle={t("publishDialog.subtitle", { agentName: agent.name, repo: repo || t("exportWizard.ownerRepo") })}
-      onClose={onClose}
-      footer={
-        result ? (
-          <div style={s.footer}>
-            <div style={{ flex: 1 }} />
-            <Button kind="ghost" onClick={onClose}>
-              {t("publishDialog.close")}
-            </Button>
-          </div>
-        ) : (
-          <div style={s.footer}>
-            <div style={{ flex: 1 }} />
-            <Button kind="ghost" onClick={onClose}>
-              {t("publishDialog.cancel")}
-            </Button>
-            <Button
-              kind="primary"
-              icon="GitPullRequest"
-              onClick={handlePublish}
-              disabled={!repo.trim() || publish.isPending}
-            >
-              {publish.isPending
-                ? t("publishDialog.publishing")
-                : defaultRepo
-                  ? t("publishDialog.republish")
-                  : t("publishDialog.publish")}
-            </Button>
-          </div>
-        )
-      }
-    >
+    <Modal width={620} onClose={onClose}>
+      <Modal.Header
+        title={t("publishDialog.title")}
+        subtitle={t("publishDialog.subtitle", { agentName: agent.name, repo: repo || t("exportWizard.ownerRepo") })}
+        onClose={onClose}
+      />
       <div style={s.body}>
         {result ? (
           <div style={s.doneWrap}>
@@ -106,6 +77,36 @@ export function PublishDialog({
           </>
         )}
       </div>
+
+      <Modal.Footer>
+        {result ? (
+          <div style={s.footer}>
+            <div style={{ flex: 1 }} />
+            <Button kind="ghost" onClick={onClose}>
+              {t("publishDialog.close")}
+            </Button>
+          </div>
+        ) : (
+          <div style={s.footer}>
+            <div style={{ flex: 1 }} />
+            <Button kind="ghost" onClick={onClose}>
+              {t("publishDialog.cancel")}
+            </Button>
+            <Button
+              kind="primary"
+              icon="GitPullRequest"
+              onClick={handlePublish}
+              disabled={!repo.trim() || publish.isPending}
+            >
+              {publish.isPending
+                ? t("publishDialog.publishing")
+                : defaultRepo
+                  ? t("publishDialog.republish")
+                  : t("publishDialog.publish")}
+            </Button>
+          </div>
+        )}
+      </Modal.Footer>
     </Modal>
   );
 }

@@ -8,7 +8,7 @@ export const s = {
     gap: 10,
     borderLeft:
       "3px solid " +
-      (status === "accepted" ? "var(--ok)" : status === "rejected" ? "var(--border)" : "var(--border)"),
+      (status === "accepted" ? "var(--ok)" : status === "rejected" ? "var(--failed)" : "var(--border)"),
     opacity: status === "rejected" ? 0.65 : 1,
   }),
   header: { display: "flex", alignItems: "flex-start", gap: 12 } satisfies CSSProperties,

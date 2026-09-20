@@ -41,22 +41,8 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal
-      width={MODAL_WIDTH}
-      title={t("create.title")}
-      subtitle={t("create.subtitle")}
-      onClose={onClose}
-      footer={
-        <div style={s.footer}>
-          <Button kind="ghost" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button kind="primary" icon="Plus" onClick={submit} disabled={create.isPending}>
-            {create.isPending ? t("create.creating") : t("create.create")}
-          </Button>
-        </div>
-      }
-    >
+    <Modal width={MODAL_WIDTH} onClose={onClose}>
+      <Modal.Header title={t("create.title")} subtitle={t("create.subtitle")} onClose={onClose} />
       <div style={s.body}>
         <FormField label={t("create.fields.name")} required>
           <TextInput value={name} onChange={setName} placeholder={t("create.fields.namePlaceholder")} />
@@ -90,6 +76,17 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
           <Textarea value={systemPrompt} onChange={setSystemPrompt} rows={6} mono />
         </FormField>
       </div>
+
+      <Modal.Footer>
+        <div style={s.footer}>
+          <Button kind="ghost" onClick={onClose}>
+            {t("create.cancel")}
+          </Button>
+          <Button kind="primary" icon="Plus" onClick={submit} disabled={create.isPending}>
+            {create.isPending ? t("create.creating") : t("create.create")}
+          </Button>
+        </div>
+      </Modal.Footer>
     </Modal>
   );
 }

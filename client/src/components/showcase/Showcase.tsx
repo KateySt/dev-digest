@@ -256,7 +256,8 @@ export function Gallery() {
         </Drawer>
       )}
       {modal && (
-        <Modal title="Example Modal" subtitle="centered" onClose={() => setModal(false)} width={480}>
+        <Modal onClose={() => setModal(false)} width={480}>
+          <Modal.Header title="Example Modal" subtitle="centered" onClose={() => setModal(false)} />
           <div style={s.modalBody}>Modal body content.</div>
         </Modal>
       )}

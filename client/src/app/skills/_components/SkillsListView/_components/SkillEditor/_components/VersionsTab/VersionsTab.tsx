@@ -43,7 +43,8 @@ export function VersionsTab({ skill }: { skill: Skill }) {
   return (
     <div style={s.wrap}>
       {diffing && (
-        <Modal width={860} title={t("versions.diffTitle", { version: diffing.version })} onClose={() => setDiffing(null)}>
+        <Modal width={860} onClose={() => setDiffing(null)}>
+          <Modal.Header title={t("versions.diffTitle", { version: diffing.version })} onClose={() => setDiffing(null)} />
           <div style={s.diffPane}>
             <div style={s.diffCol}>
               <div style={s.diffLabel}>{t("versions.diffOld", { version: diffing.version })}</div>

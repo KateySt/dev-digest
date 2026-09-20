@@ -64,3 +64,11 @@ fails CI. When you add or change a component, add it to the showcase.
 - **Inline styles** keyed off CSS variables (no per-component stylesheet).
 - Prop types are exported alongside the component when consumers need them
   (e.g. `ButtonProps`, `Command`, `ChartSeries`).
+- **Compound slots over config props.** When a component has a section with
+  its own chrome (e.g. `Modal`'s title row and action row), expose it as a
+  static sub-component — `Modal.Header`, `Modal.Footer` — placed as a child,
+  not as a `title`/`subtitle`/`footer`-style prop. `Modal` detects them via
+  `child.type === Modal.Header` / `Modal.Footer` and renders them outside the
+  scrollable body. `Modal`'s own `onClose` prop still drives the backdrop
+  click; pass it again to `Modal.Header` to wire its close button. Follow this
+  pattern for any new slot rather than adding another render-prop.

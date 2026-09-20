@@ -71,17 +71,14 @@ export function PromptBlock({ label, text, color }: { label: string; text: strin
         </pre>
       )}
       {full && (
-        <Modal
-          width={1200}
-          title={label}
-          onClose={() => setFull(false)}
-          footer={
+        <Modal width={1200} onClose={() => setFull(false)}>
+          <Modal.Header title={label} onClose={() => setFull(false)} />
+          <PromptModalBody text={text} />
+          <Modal.Footer>
             <Button kind="secondary" size="sm" icon={copied ? "Check" : "Copy"} onClick={copy}>
               {copied ? t("drawer.copied") : t("trace.prompt.copy")}
             </Button>
-          }
-        >
-          <PromptModalBody text={text} />
+          </Modal.Footer>
         </Modal>
       )}
     </div>

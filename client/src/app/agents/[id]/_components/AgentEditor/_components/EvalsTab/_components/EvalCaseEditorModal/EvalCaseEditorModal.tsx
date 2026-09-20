@@ -99,44 +99,11 @@ export function EvalCaseEditorModal({
   };
 
   return (
-    <Modal
-      width={760}
-      title={initialCase ? t("caseEditor.caseTitle", { name: initialCase.name }) : t("caseEditor.newCase")}
-      onClose={onClose}
-      footer={
-        <div style={s.footer}>
-          <label style={s.runOnSave}>
-            <Toggle on={runOnSave} onChange={setRunOnSave} size={14} />
-            Run on save
-          </label>
-          {lastRun && (
-            <span style={s.resultNote}>
-              {lastRun.pass ? t("caseEditor.lastRunPassed") : t("caseEditor.lastRunFailed")}
-              {lastRun.recall != null && lastRun.duration_ms != null && (
-                <>
-                  {" · "}
-                  {t("caseEditor.resultSummary", {
-                    recall: Math.round((lastRun.recall ?? 0) * 100),
-                    precision: Math.round((lastRun.precision ?? 0) * 100),
-                    citation: Math.round((lastRun.citation_accuracy ?? 0) * 100),
-                    duration: (lastRun.duration_ms / 1000).toFixed(1),
-                  })}
-                </>
-              )}
-            </span>
-          )}
-          <Button kind="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button kind="secondary" icon="Play" onClick={handleRunCase} disabled={saving || running}>
-            {running ? t("caseEditor.running") : t("caseEditor.runCase")}
-          </Button>
-          <Button kind="primary" icon="Check" onClick={handleSave} disabled={saving || running}>
-            {saving ? t("caseEditor.saving") : t("caseEditor.save")}
-          </Button>
-        </div>
-      }
-    >
+    <Modal width={760} onClose={onClose}>
+      <Modal.Header
+        title={initialCase ? t("caseEditor.caseTitle", { name: initialCase.name }) : t("caseEditor.newCase")}
+        onClose={onClose}
+      />
       <div style={s.body}>
         <FormField label={t("caseEditor.nameLabel")} required>
           <TextInput value={name} onChange={setName} placeholder={t("caseEditor.namePlaceholder")} />
@@ -176,6 +143,40 @@ export function EvalCaseEditorModal({
           <Textarea value={expectedText} onChange={setExpectedText} rows={8} mono />
         </FormField>
       </div>
+
+      <Modal.Footer>
+        <div style={s.footer}>
+          <label style={s.runOnSave}>
+            <Toggle on={runOnSave} onChange={setRunOnSave} size={14} />
+            Run on save
+          </label>
+          {lastRun && (
+            <span style={s.resultNote}>
+              {lastRun.pass ? t("caseEditor.lastRunPassed") : t("caseEditor.lastRunFailed")}
+              {lastRun.recall != null && lastRun.duration_ms != null && (
+                <>
+                  {" · "}
+                  {t("caseEditor.resultSummary", {
+                    recall: Math.round((lastRun.recall ?? 0) * 100),
+                    precision: Math.round((lastRun.precision ?? 0) * 100),
+                    citation: Math.round((lastRun.citation_accuracy ?? 0) * 100),
+                    duration: (lastRun.duration_ms / 1000).toFixed(1),
+                  })}
+                </>
+              )}
+            </span>
+          )}
+          <Button kind="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button kind="secondary" icon="Play" onClick={handleRunCase} disabled={saving || running}>
+            {running ? t("caseEditor.running") : t("caseEditor.runCase")}
+          </Button>
+          <Button kind="primary" icon="Check" onClick={handleSave} disabled={saving || running}>
+            {saving ? t("caseEditor.saving") : t("caseEditor.save")}
+          </Button>
+        </div>
+      </Modal.Footer>
     </Modal>
   );
 }
