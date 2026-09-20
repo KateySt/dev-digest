@@ -38,7 +38,16 @@ export interface AgentSkillLinkRow {
   agentId: string;
 }
 
-export interface InsertSkill {
+/** Content-scan result fields, shared by insert (initial scan) and update
+ *  (re-scan on body change, or a standalone re-scan). See
+ *  `helpers.ts`'s `isScanBlocking` for how these gate enabling/serving. */
+export interface ScanResultFields {
+  scanStatus?: 'pending' | 'clean' | 'flagged' | 'error';
+  scanFindings?: unknown[] | null;
+  scannedAt?: Date | null;
+}
+
+export interface InsertSkill extends ScanResultFields {
   workspaceId: string;
   name: string;
   description: string;
@@ -49,7 +58,7 @@ export interface InsertSkill {
   evidenceFiles?: string[];
 }
 
-export interface UpdateSkill {
+export interface UpdateSkill extends ScanResultFields {
   name?: string;
   description?: string;
   type?: 'rubric' | 'convention' | 'security' | 'custom';
@@ -96,6 +105,9 @@ export class SkillsRepository {
         enabled: values.enabled ?? true,
         version: INITIAL_SKILL_VERSION,
         evidenceFiles: values.evidenceFiles ?? null,
+        ...(values.scanStatus !== undefined ? { scanStatus: values.scanStatus } : {}),
+        scanFindings: values.scanFindings ?? null,
+        scannedAt: values.scannedAt ?? null,
       })
       .returning();
     await this.snapshotVersion(row!.id, INITIAL_SKILL_VERSION, row!.body);
@@ -123,6 +135,9 @@ export class SkillsRepository {
         ...(patch.body !== undefined ? { body: patch.body } : {}),
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
         ...(bodyChanged ? { version: nextVersion } : {}),
+        ...(patch.scanStatus !== undefined ? { scanStatus: patch.scanStatus } : {}),
+        ...(patch.scanFindings !== undefined ? { scanFindings: patch.scanFindings } : {}),
+        ...(patch.scannedAt !== undefined ? { scannedAt: patch.scannedAt } : {}),
       })
       .where(and(eq(t.skills.workspaceId, workspaceId), eq(t.skills.id, id)))
       .returning();

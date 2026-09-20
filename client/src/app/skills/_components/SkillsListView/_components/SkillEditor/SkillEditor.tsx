@@ -3,8 +3,10 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, ErrorState, Skeleton, Tabs } from "@devdigest/ui";
-import { useSkill } from "@/lib/hooks/skills";
+import { useScanSkill, useSkill } from "@/lib/hooks/skills";
+import { useToast } from "@/lib/toast";
 import { ApiError } from "@/lib/api";
+import { SCAN_SEVERITY_COLOR } from "@/app/skills/_components/SkillsListView/constants";
 import { ConfigTab } from "./_components/ConfigTab";
 import { PreviewTab } from "./_components/PreviewTab";
 import { EvalsTab } from "./_components/EvalsTab";
@@ -30,7 +32,9 @@ export function SkillEditor({
   onClosed: () => void;
 }) {
   const t = useTranslations("skills");
+  const toast = useToast();
   const { data: skill, isLoading, isError, error, refetch } = useSkill(skillId);
+  const rescan = useScanSkill();
 
   if (isLoading || !skill) {
     return (
@@ -64,9 +68,47 @@ export function SkillEditor({
         <Button kind="secondary" size="sm" icon="FlaskConical" onClick={() => onTab("evals")}>
           {t("editor.runOnEvals")}
         </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          icon="RefreshCw"
+          disabled={rescan.isPending}
+          onClick={() =>
+            rescan.mutate(skill.id, { onError: () => toast.error(t("preview.rescanError")) })
+          }
+        >
+          {t("editor.rescan")}
+        </Button>
       </div>
 
-      {skill.source !== "manual" && <div style={s.untrustedNotice}>{t("preview.untrustedNotice")}</div>}
+      {skill.scan_status === "flagged" ? (
+        <div style={s.scanAlert}>
+          <div style={s.scanAlertHeader}>
+            <Badge color="var(--crit)" icon="AlertOctagon">
+              {t("preview.scanFlaggedNotice", { count: skill.scan_findings?.length ?? 0 })}
+            </Badge>
+          </div>
+          <ul style={s.findingsList}>
+            {(skill.scan_findings ?? []).map((f, i) => (
+              <li key={i} style={s.findingItem}>
+                <div style={s.findingHeader}>
+                  <Badge color={SCAN_SEVERITY_COLOR[f.severity]}>{t(`preview.severity.${f.severity}`)}</Badge>
+                  <span style={s.findingCategory}>{t(`preview.category.${f.category}`)}</span>
+                </div>
+                <blockquote style={s.findingExcerpt}>{f.excerpt}</blockquote>
+                <div style={s.findingExplanation}>{f.explanation}</div>
+                <div style={s.findingLocation}>{f.location}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : skill.scan_status === "error" ? (
+        <div style={s.untrustedNotice}>{t("preview.scanErrorNotice")}</div>
+      ) : skill.scan_status === "pending" ? (
+        <div style={s.untrustedNotice}>{t("preview.scanPendingNotice")}</div>
+      ) : (
+        skill.source !== "manual" && <div style={s.untrustedNotice}>{t("preview.untrustedNotice")}</div>
+      )}
 
       <div style={s.tabsBar}>
         <Tabs tabs={tabs} value={tab} onChange={onTab} pad="0 24px" />

@@ -1,4 +1,10 @@
-import type { Skill, SkillSource, SkillType } from '@devdigest/shared';
+import type {
+  Skill,
+  SkillScanFinding,
+  SkillScanStatus,
+  SkillSource,
+  SkillType,
+} from '@devdigest/shared';
 import type { AgentRunRow, SkillRow, SkillVersionRow } from '../../db/rows.js';
 import type { AgentSkillLinkRow, SkillFindingOutcomeRow } from './repository.js';
 import { STATS_WINDOW_DAYS } from './constants.js';
@@ -20,7 +26,33 @@ export function toSkillDto(row: SkillRow): Skill {
     enabled: row.enabled,
     version: row.version,
     evidence_files: row.evidenceFiles ?? null,
+    scan_status: row.scanStatus as SkillScanStatus,
+    scan_findings: (row.scanFindings as SkillScanFinding[] | null) ?? null,
+    scanned_at: row.scannedAt ? row.scannedAt.toISOString() : null,
   };
+}
+
+/** True when at least one finding is severe enough to hard-block enabling /
+ *  serving the skill (critical or high) — medium/low findings only need an
+ *  explicit "enable anyway" acknowledgment, never a hard block. */
+export function hasBlockingFindings(findings: SkillScanFinding[] | null | undefined): boolean {
+  return (findings ?? []).some((f) => f.severity === 'critical' || f.severity === 'high');
+}
+
+/**
+ * Fail-closed gate used both when enabling a skill (service.update) and when
+ * assembling a reviewing agent's active skillset (eval/ci/run-executor): a
+ * skill never reviewed (`pending`) or whose scan errored (`error`) is treated
+ * as blocking, same as one with an unacknowledged critical/high finding.
+ * Only `clean`, or `flagged` with nothing worse than medium/low, passes.
+ */
+export function isScanBlocking(
+  status: SkillScanStatus,
+  findings?: SkillScanFinding[] | null,
+): boolean {
+  if (status === 'error' || status === 'pending') return true;
+  if (status === 'flagged') return hasBlockingFindings(findings);
+  return false;
 }
 
 /** True when a patch changes `body` relative to the existing row — only a

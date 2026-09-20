@@ -1,10 +1,12 @@
 import { eq, and } from 'drizzle-orm';
 import type { Container } from '../../platform/container.js';
+import type { SkillScanFinding, SkillScanStatus } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
 import { CiRepository, type CiRunFilters } from './repository.js';
 import { buildAgentConfig, buildWorkflowYaml, slugify } from './helpers.js';
 import { CI_TARGET_TYPE, DEFAULT_BASE_BRANCH, PR_TITLE, ciBranch, configPath, workflowPath } from './constants.js';
 import { ExternalServiceError, NotFoundError, ValidationError } from '../../platform/errors.js';
+import { isScanBlocking } from '../skills/helpers.js';
 
 export interface CiFile {
   path: string;
@@ -115,7 +117,9 @@ export class CiService {
     const agent = await this.container.agentsRepo.getById(workspaceId, agentId);
     if (!agent) throw new NotFoundError('Agent not found');
     const linkedSkills = await this.container.agentsRepo.linkedSkills(agentId);
-    const skillBodies = linkedSkills.filter((l) => l.skill.enabled).map((l) => l.skill.body);
+    const skillBodies = linkedSkills
+      .filter((l) => l.skill.enabled && !isScanBlocking(l.skill.scanStatus as SkillScanStatus, l.skill.scanFindings as SkillScanFinding[] | null))
+      .map((l) => l.skill.body);
     return { agent, skillBodies };
   }
 

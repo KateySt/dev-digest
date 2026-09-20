@@ -74,6 +74,9 @@
   "listItem": {
     "needsVetting": "needs vetting",
     "vettingTitle": "Untrusted source — vet before enabling",
+    "scanFlagged": "{count, plural, one {# issue found} other {# issues found}}",
+    "scanFlaggedTitle": "Content scan flagged this skill — open it to see what and why",
+    "scanning": "scanning…",
     "type": {
       "rubric": "rubric",
       "convention": "convention",
@@ -97,6 +100,27 @@
     "deleteError": "Failed to delete skill. Please try again.",
     "edit": "Edit",
     "untrustedNotice": "This skill came from an untrusted source. Its body is stored as data (delimiter-wrapped) and must be vetted before it is enabled for an agent.",
+    "scanPendingNotice": "Content scan in progress — this skill can't be enabled until it finishes.",
+    "scanErrorNotice": "Content scan failed and could not confirm this skill is safe. It's treated as unsafe until re-scanned — use \"Re-scan\" above.",
+    "scanFlaggedNotice": "Content scan flagged {count, plural, one {# issue} other {# issues}} in this skill's body — reasons below.",
+    "severity": {
+      "critical": "critical",
+      "high": "high",
+      "medium": "medium",
+      "low": "low"
+    },
+    "category": {
+      "instruction_override": "instruction override",
+      "exfiltration": "data exfiltration",
+      "bias_injection": "bias injection",
+      "obfuscation": "obfuscation",
+      "external_fetch": "external fetch",
+      "delimiter_escape": "delimiter escape"
+    },
+    "enableBlockedHint": "Blocked by the content scan — a critical/high finding (or a scan that hasn't completed/failed) must be resolved or re-scanned clean before this skill can be enabled.",
+    "enableBlockedError": "Could not enable this skill — the content scan blocks it.",
+    "enableOverrideConfirm": "This skill's content scan found lower-severity issues (not critical/high). Enable it anyway?",
+    "rescanError": "Re-scan failed. Please try again.",
     "typeLabel": "Type",
     "descriptionLabel": "Description",
     "descriptionHint": "This is the skill's interface — phrase it directively (what the agent should do with it), not as a summary.",
@@ -110,6 +134,7 @@
   },
   "editor": {
     "runOnEvals": "Run on evals",
+    "rescan": "Re-scan",
     "tabs": {
       "config": "Config",
       "preview": "Preview",

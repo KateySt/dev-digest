@@ -7,6 +7,7 @@ import type { Skill, SkillType } from "@devdigest/shared";
 import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { SKILL_TYPES } from "@/app/skills/_components/SkillsListView/constants";
+import { isScanBlocking } from "@/app/skills/_components/SkillsListView/scan";
 import { s } from "./styles";
 
 /** Config tab — name/description/type/body + enabled toggle. Save bumps the
@@ -38,7 +39,17 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
       { onSuccess: (data) => toast.success(t("preview.version", { version: data.version })) },
     );
 
-  const toggleEnabled = (enabled: boolean) => update.mutate({ id: skill.id, patch: { enabled } });
+  const blocked = isScanBlocking(skill.scan_status, skill.scan_findings);
+  const needsOverride = skill.scan_status === "flagged" && !blocked;
+
+  const toggleEnabled = (enabled: boolean) => {
+    if (enabled && blocked) return;
+    if (enabled && needsOverride && !window.confirm(t("preview.enableOverrideConfirm"))) return;
+    update.mutate(
+      { id: skill.id, patch: { enabled, ...(needsOverride ? { override: true } : {}) } },
+      { onError: () => toast.error(t("preview.enableBlockedError")) },
+    );
+  };
 
   const remove = () => {
     if (!window.confirm(`Delete skill "${skill.name}"? This cannot be undone.`)) return;
@@ -48,8 +59,13 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
 
   return (
     <div style={s.wrap}>
-      <FormField label={t("preview.enabled")}>
-        <Toggle on={skill.enabled} onChange={toggleEnabled} size={16} />
+      <FormField label={t("preview.enabled")} hint={blocked && !skill.enabled ? t("preview.enableBlockedHint") : undefined}>
+        <div
+          title={blocked && !skill.enabled ? t("preview.enableBlockedHint") : undefined}
+          style={blocked && !skill.enabled ? { opacity: 0.5, pointerEvents: "none" } : undefined}
+        >
+          <Toggle on={skill.enabled} onChange={toggleEnabled} size={16} />
+        </div>
       </FormField>
       <FormField label={t("file.nameLabel")} required>
         <TextInput value={name} onChange={setName} />

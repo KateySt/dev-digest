@@ -53,7 +53,9 @@ export function useCreateSkill() {
 
 export interface UpdateSkillInput {
   id: string;
-  patch: Partial<Pick<Skill, "name" | "description" | "type" | "body" | "enabled">>;
+  patch: Partial<Pick<Skill, "name" | "description" | "type" | "body" | "enabled">> & {
+    override?: boolean;
+  };
 }
 
 export function useUpdateSkill() {
@@ -64,6 +66,19 @@ export function useUpdateSkill() {
       qc.invalidateQueries({ queryKey: ["skills"] });
       qc.setQueryData(["skill", data.id], data);
       qc.invalidateQueries({ queryKey: ["skill-versions", data.id] });
+    },
+  });
+}
+
+/** Re-run the content-malware scan against the skill's current body (Skill
+ *  Editor's "Re-scan" action) — see server `POST /skills/:id/scan`. */
+export function useScanSkill() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<Skill>(`/skills/${id}/scan`),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["skills"] });
+      qc.setQueryData(["skill", data.id], data);
     },
   });
 }

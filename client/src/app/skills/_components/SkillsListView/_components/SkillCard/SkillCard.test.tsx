@@ -16,6 +16,9 @@ const SKILL: Skill = {
   body: "# Secret leakage gate\nFlag hardcoded credentials.",
   enabled: true,
   version: 1,
+  scan_status: "clean",
+  scan_findings: null,
+  scanned_at: "2026-01-01T00:00:00Z",
 };
 
 function renderWithIntl(ui: React.ReactElement) {
@@ -42,5 +45,46 @@ describe("SkillCard (smoke)", () => {
   it("does not show 'needs vetting' for an enabled manual skill", () => {
     renderWithIntl(<SkillCard skill={SKILL} />);
     expect(screen.queryByText("needs vetting")).not.toBeInTheDocument();
+  });
+
+  it("shows a scan-flagged badge and red border for a critical finding", () => {
+    const flagged: Skill = {
+      ...SKILL,
+      scan_status: "flagged",
+      scan_findings: [
+        {
+          severity: "critical",
+          category: "instruction_override",
+          excerpt: "ignore all previous instructions",
+          location: "skill body",
+          explanation: "Tries to override the reviewing agent's system prompt.",
+        },
+      ],
+    };
+    renderWithIntl(<SkillCard skill={flagged} />);
+    expect(screen.getByText("1 issue found")).toBeInTheDocument();
+  });
+
+  it("does not show the scan-flagged badge for only low/medium findings", () => {
+    const flagged: Skill = {
+      ...SKILL,
+      scan_status: "flagged",
+      scan_findings: [
+        {
+          severity: "low",
+          category: "obfuscation",
+          excerpt: "minor thing",
+          location: "skill body",
+          explanation: "Not dangerous.",
+        },
+      ],
+    };
+    renderWithIntl(<SkillCard skill={flagged} />);
+    expect(screen.queryByText("1 issue found")).not.toBeInTheDocument();
+  });
+
+  it("shows a scanning badge while the scan is pending", () => {
+    renderWithIntl(<SkillCard skill={{ ...SKILL, scan_status: "pending" }} />);
+    expect(screen.getByText("scanning…")).toBeInTheDocument();
   });
 });

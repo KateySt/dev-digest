@@ -1,1 +1,1 @@
-ALTER TABLE "agent_runs" ADD COLUMN "cost_usd" double precision;
+ALTER TABLE "agent_runs" ADD COLUMN IF NOT EXISTS "cost_usd" double precision;

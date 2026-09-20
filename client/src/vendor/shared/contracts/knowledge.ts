@@ -144,6 +144,35 @@ export type SkillType = z.infer<typeof SkillType>;
 export const SkillSource = z.enum(['manual', 'imported_url', 'extracted', 'community']);
 export type SkillSource = z.infer<typeof SkillSource>;
 
+// ---- Skill content scan (malicious-content / prompt-injection gate) ----
+// Every skill body is scanned before it can be enabled and pulled into a
+// reviewing agent's prompt — see server `modules/skills/prompts.ts` for the
+// scanner's system prompt and `service.ts` for when scans run.
+export const SkillScanStatus = z.enum(['pending', 'clean', 'flagged', 'error']);
+export type SkillScanStatus = z.infer<typeof SkillScanStatus>;
+
+export const SkillScanSeverity = z.enum(['critical', 'high', 'medium', 'low']);
+export type SkillScanSeverity = z.infer<typeof SkillScanSeverity>;
+
+export const SkillScanCategory = z.enum([
+  'instruction_override',
+  'exfiltration',
+  'bias_injection',
+  'obfuscation',
+  'external_fetch',
+  'delimiter_escape',
+]);
+export type SkillScanCategory = z.infer<typeof SkillScanCategory>;
+
+export const SkillScanFinding = z.object({
+  severity: SkillScanSeverity,
+  category: SkillScanCategory,
+  excerpt: z.string(),
+  location: z.string(),
+  explanation: z.string(),
+});
+export type SkillScanFinding = z.infer<typeof SkillScanFinding>;
+
 export const Skill = z.object({
   id: z.string(),
   name: z.string(),
@@ -154,6 +183,9 @@ export const Skill = z.object({
   enabled: z.boolean(),
   version: z.number().int(),
   evidence_files: z.array(z.string()).nullish(),
+  scan_status: SkillScanStatus,
+  scan_findings: z.array(SkillScanFinding).nullish(),
+  scanned_at: z.string().nullish(),
 });
 export type Skill = z.infer<typeof Skill>;
 

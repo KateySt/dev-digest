@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, jsonb, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, primaryKey } from 'drizzle-orm/pg-core';
 import { now } from './_shared';
 import { workspaces } from './core';
 
@@ -17,6 +17,13 @@ export const skills = pgTable('skills', {
   enabled: boolean('enabled').notNull().default(true),
   version: integer('version').notNull().default(1),
   evidenceFiles: jsonb('evidence_files').$type<string[]>(),
+  // Content-scan gate (prompt-injection / malicious-skill detection) — every
+  // skill is scanned before it can be enabled; see modules/skills/service.ts.
+  scanStatus: text('scan_status', { enum: ['pending', 'clean', 'flagged', 'error'] })
+    .notNull()
+    .default('pending'),
+  scanFindings: jsonb('scan_findings').$type<unknown[]>(),
+  scannedAt: timestamp('scanned_at', { withTimezone: true }),
   createdAt: now(),
 });
 
