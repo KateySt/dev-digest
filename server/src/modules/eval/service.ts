@@ -9,11 +9,14 @@ import type {
   LLMProvider,
   Provider,
   ReviewStrategy,
+  SkillScanFinding,
+  SkillScanStatus,
   UnifiedDiff,
 } from '@devdigest/shared';
 import { reviewPullRequest, scoreEvalCase } from '@devdigest/reviewer-core';
 import { parseUnifiedDiff } from '../../adapters/git/diff-parser.js';
 import { resolveFeatureModel } from '../settings/feature-models.js';
+import { isScanBlocking } from '../skills/helpers.js';
 import { EvalRepository } from './repository.js';
 import type { EvalCaseRow } from '../../db/rows.js';
 import {
@@ -146,7 +149,9 @@ export class EvalService {
     const agent = await this.container.agentsRepo.getById(workspaceId, row.ownerId);
     if (!agent) throw new NotFoundError('Owning agent not found');
     const linkedSkills = await this.container.agentsRepo.linkedSkills(agent.id);
-    const skillBodies = linkedSkills.filter((l) => l.skill.enabled).map((l) => l.skill.body);
+    const skillBodies = linkedSkills
+      .filter((l) => l.skill.enabled && !isScanBlocking(l.skill.scanStatus as SkillScanStatus, l.skill.scanFindings as SkillScanFinding[] | null))
+      .map((l) => l.skill.body);
     const llm = await this.container.llm(agent.provider as Provider);
     return { systemPrompt: agent.systemPrompt, model: agent.model, llm, strategy: agent.strategy ?? 'auto', skillBodies };
   }

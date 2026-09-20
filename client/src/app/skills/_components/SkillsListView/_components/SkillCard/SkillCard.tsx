@@ -6,6 +6,7 @@ import { Badge, Icon, Toggle } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
 import type { SkillListItem } from "@/lib/hooks/skills";
 import { SKILL_TYPE_COLOR } from "../../constants";
+import { hasBlockingFindings } from "../../scan";
 import { s } from "./styles";
 
 export function SkillCard({
@@ -21,9 +22,11 @@ export function SkillCard({
 }) {
   const t = useTranslations("skills");
   const needsVetting = skill.source !== "manual" && !skill.enabled;
+  const flagged = skill.scan_status === "flagged" && hasBlockingFindings(skill.scan_findings);
+  const scanning = skill.scan_status === "pending";
   const usage = skill.usage;
   return (
-    <div onClick={onClick} style={s.card(!!active)}>
+    <div onClick={onClick} style={s.card(!!active, flagged)}>
       <div style={s.headerRow}>
         <div style={s.iconBox}>
           <Icon.Sparkles size={15} />
@@ -38,6 +41,18 @@ export function SkillCard({
       <div style={s.description}>{skill.description}</div>
       <div style={s.metaRow}>
         <Badge color={SKILL_TYPE_COLOR[skill.type]}>{t(`listItem.type.${skill.type}`)}</Badge>
+        {flagged && (
+          <span title={t("listItem.scanFlaggedTitle")}>
+            <Badge color="var(--crit)" icon="AlertOctagon">
+              {t("listItem.scanFlagged", { count: skill.scan_findings?.length ?? 0 })}
+            </Badge>
+          </span>
+        )}
+        {scanning && (
+          <Badge color="var(--text-secondary)" icon="Clock">
+            {t("listItem.scanning")}
+          </Badge>
+        )}
         {needsVetting && (
           <span title={t("listItem.vettingTitle")}>
             <Badge color="var(--warn)" icon="AlertTriangle">

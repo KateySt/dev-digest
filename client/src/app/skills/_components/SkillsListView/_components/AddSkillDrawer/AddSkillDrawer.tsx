@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Chip, Drawer, ErrorState, FormField, Icon, SelectInput, Tabs, TextInput, Textarea } from "@devdigest/ui";
+import { Button, Chip, Drawer, ErrorState, FormField, Icon, Select, Tabs, TextInput, Textarea } from "@devdigest/ui";
 import type { SkillType } from "@devdigest/shared";
 import {
   useCommunitySkills,
@@ -22,9 +22,15 @@ const TABS = [
   { key: "community", label: "Community" },
 ];
 
-export function AddSkillDrawer({ onClose }: { onClose: () => void }) {
+export function AddSkillDrawer({
+  onClose,
+  initialTab = "file",
+}: {
+  onClose: () => void;
+  initialTab?: "file" | "url" | "community";
+}) {
   const t = useTranslations("skills");
-  const [tab, setTab] = React.useState<"file" | "url" | "community">("file");
+  const [tab, setTab] = React.useState<"file" | "url" | "community">(initialTab);
   const tabs = TABS.map((tb) => ({ ...tb, label: t(`drawer.tabs.${tb.key}`) }));
 
   return (
@@ -84,7 +90,7 @@ function FileImportTab({ onClose }: { onClose: () => void }) {
         <TextInput value={name} onChange={setName} placeholder={t("file.namePlaceholder")} />
       </FormField>
       <FormField label={t("preview.typeLabel")}>
-        <SelectInput value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+        <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
       </FormField>
       <FormField label={t("file.bodyLabel")} hint={t("file.bodyHint")}>
         <Textarea value={body} onChange={setBody} rows={10} mono placeholder={t("file.bodyPlaceholder")} />

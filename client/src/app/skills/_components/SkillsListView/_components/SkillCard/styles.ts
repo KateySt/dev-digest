@@ -2,10 +2,10 @@ import type { CSSProperties } from "react";
 
 /** Co-located styles for SkillCard. */
 export const s = {
-  card: (active: boolean): CSSProperties => ({
+  card: (active: boolean, flagged?: boolean): CSSProperties => ({
     padding: 16,
     borderRadius: 10,
-    border: "1px solid " + (active ? "var(--accent)" : "var(--border)"),
+    border: "1px solid " + (flagged ? "var(--crit)" : active ? "var(--accent)" : "var(--border)"),
     background: "var(--bg-surface)",
     cursor: "pointer",
     display: "flex",

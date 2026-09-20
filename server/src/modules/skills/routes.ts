@@ -21,6 +21,7 @@ import { SkillsService } from './service.js';
  *   GET    /skills/:id/versions             → version history (Versions tab)
  *   POST   /skills/:id/versions/:version/restore → restore a past body as a new version
  *   GET    /skills/:id/stats                → Stats tab aggregate
+ *   POST   /skills/:id/scan                 → re-run the content-malware scan
  */
 
 const CreateSkillBody = z.object({
@@ -38,6 +39,7 @@ const UpdateSkillBody = z.object({
   type: SkillType.optional(),
   body: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
+  override: z.boolean().optional(),
 });
 
 const ImportUrlBody = z.object({ url: z.string().min(1) });
@@ -125,5 +127,10 @@ export default async function skillsRoutes(appBase: FastifyInstance) {
   app.get('/skills/:id/stats', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     return service.stats(workspaceId, req.params.id);
+  });
+
+  app.post('/skills/:id/scan', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.scanSkill(workspaceId, req.params.id);
   });
 }

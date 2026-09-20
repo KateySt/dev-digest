@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import type { Provider, Review, RunTrace, UnifiedDiff } from '@devdigest/shared';
+import type { Provider, Review, RunTrace, SkillScanFinding, SkillScanStatus, UnifiedDiff } from '@devdigest/shared';
 import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
 import { RunLogger } from '../../platform/run-logger.js';
 import * as schema from '../../db/schema.js';
@@ -8,6 +8,7 @@ import type { ReviewRepository, FindingRow, PullRow, ReviewRow } from './reposit
 import { REVIEW_STRATEGY } from './constants.js';
 import { taskLine } from './helpers.js';
 import { loadDiff } from './diff-loader.js';
+import { isScanBlocking } from '../skills/helpers.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -188,7 +189,9 @@ export class ReviewRunExecutor {
       // A skill unlinked or disabled after being linked has zero effect on the
       // prompt — resolved fresh on every run, never cached on the agent row.
       const linkedSkills = await this.agents.linkedSkills(agent.id);
-      const skillBodies = linkedSkills.filter((l) => l.skill.enabled).map((l) => l.skill.body);
+      const skillBodies = linkedSkills
+        .filter((l) => l.skill.enabled && !isScanBlocking(l.skill.scanStatus as SkillScanStatus, l.skill.scanFindings as SkillScanFinding[] | null))
+        .map((l) => l.skill.body);
       if (skillBodies.length > 0) {
         runLog.info(`${skillBodies.length} skill(s) attached to prompt`);
       }

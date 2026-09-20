@@ -31,7 +31,8 @@ import {
   Dropdown,
   FormField,
   TextInput,
-  SelectInput,
+  Select,
+  SearchableSelect,
   Textarea,
   Checkbox,
   Sparkline,
@@ -159,7 +160,12 @@ export function Gallery() {
         </div>
         <div style={s.w220}>
           <FormField label="Model">
-            <SelectInput value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
+            <Select value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
+          </FormField>
+        </div>
+        <div style={s.w220}>
+          <FormField label="Model (searchable)">
+            <SearchableSelect value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
           </FormField>
         </div>
         <div style={s.w280}>
@@ -250,7 +256,8 @@ export function Gallery() {
         </Drawer>
       )}
       {modal && (
-        <Modal title="Example Modal" subtitle="centered" onClose={() => setModal(false)} width={480}>
+        <Modal onClose={() => setModal(false)} width={480}>
+          <Modal.Header title="Example Modal" subtitle="centered" onClose={() => setModal(false)} />
           <div style={s.modalBody}>Modal body content.</div>
         </Modal>
       )}

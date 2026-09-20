@@ -87,6 +87,9 @@ export default function AgentEditorPage() {
                 active={a.id === id}
                 onClick={() => router.push(`/agents/${a.id}?tab=${tab}`)}
                 onToggle={(enabled) => update.mutate({ id: a.id, patch: { enabled } })}
+                onDeleted={() => {
+                  if (a.id === id) router.push("/agents");
+                }}
               />
             ))}
           </div>

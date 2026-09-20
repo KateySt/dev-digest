@@ -14,6 +14,10 @@ export const STATS_WINDOW_DAYS = 30;
 export const IMPORT_URL_TIMEOUT_MS = 5000;
 export const IMPORT_URL_MAX_BYTES = 200_000;
 
+/** Structured-output schema name for the content-scan LLM call (see
+ *  `service.ts`'s `scanBody`). */
+export const SKILL_SCAN_SCHEMA_NAME = 'SkillScan';
+
 /**
  * Fixture "community skills" catalog. No live external index exists in this
  * repo (same fixture-not-live-service pattern as the seeded demo repo/PR) —

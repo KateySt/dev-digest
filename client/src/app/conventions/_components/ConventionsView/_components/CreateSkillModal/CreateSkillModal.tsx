@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Modal, SelectInput, TextInput, Textarea, Toggle } from "@devdigest/ui";
+import { Button, FormField, Modal, Select, TextInput, Textarea, Toggle } from "@devdigest/ui";
 import type { ConventionCandidate, SkillType } from "@devdigest/shared";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
@@ -51,7 +51,8 @@ export function CreateSkillModal({
     );
 
   return (
-    <Modal width={720} title={t("modal.title")} subtitle={name} onClose={onClose}>
+    <Modal width={720} onClose={onClose}>
+      <Modal.Header title={t("modal.title")} subtitle={name} onClose={onClose} />
       <div style={s.form}>
         <div style={s.banner}>
           {t("modal.mergedFrom", { count: accepted.length, repo: repoFullName })}
@@ -65,7 +66,7 @@ export function CreateSkillModal({
         </FormField>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           <FormField label={t("modal.typeLabel")}>
-            <SelectInput value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+            <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
           </FormField>
           <FormField label={t("modal.enabledLabel")} hint={t("modal.enabledHint")}>
             <Toggle on={enabled} onChange={setEnabled} size={16} />
@@ -76,14 +77,16 @@ export function CreateSkillModal({
         </FormField>
       </div>
 
-      <div style={s.footer}>
-        <Button kind="ghost" onClick={onClose}>
-          {t("modal.cancel")}
-        </Button>
-        <Button kind="primary" icon="Sparkles" onClick={submit} disabled={!name.trim() || !body.trim() || create.isPending}>
-          {create.isPending ? t("modal.creating") : t("modal.create")}
-        </Button>
-      </div>
+      <Modal.Footer>
+        <div style={s.footer}>
+          <Button kind="ghost" onClick={onClose}>
+            {t("modal.cancel")}
+          </Button>
+          <Button kind="primary" icon="Sparkles" onClick={submit} disabled={!name.trim() || !body.trim() || create.isPending}>
+            {create.isPending ? t("modal.creating") : t("modal.create")}
+          </Button>
+        </div>
+      </Modal.Footer>
     </Modal>
   );
 }
