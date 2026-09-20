@@ -17,6 +17,8 @@ export function FindingsTooltip({
   loading,
   repoFullName,
   headSha,
+  repoId,
+  prNumber,
   onOpenChange,
 }: {
   trigger: React.ReactNode;
@@ -24,6 +26,8 @@ export function FindingsTooltip({
   loading?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
+  repoId?: string | null;
+  prNumber?: number | null;
   onOpenChange?: (open: boolean) => void;
 }) {
   const sorted = React.useMemo(() => sortBySeverity(findings ?? []), [findings]);
@@ -55,7 +59,14 @@ export function FindingsTooltip({
           </div>
         ) : (
           sorted.map((f) => (
-            <FindingSummaryRow key={f.id} finding={f} repoFullName={repoFullName} headSha={headSha} />
+            <FindingSummaryRow
+              key={f.id}
+              finding={f}
+              repoFullName={repoFullName}
+              headSha={headSha}
+              repoId={repoId}
+              prNumber={prNumber}
+            />
           ))
         )}
       </div>

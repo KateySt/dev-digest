@@ -13,11 +13,15 @@ export function Donut({
   size = 130,
   stroke = 22,
   valuePrefix = "$",
+  valueFormat,
 }: {
   segments: DonutSegment[];
   size?: number;
   stroke?: number;
   valuePrefix?: string;
+  /** Overrides the default `{valuePrefix}{value.toFixed(2)}` legend format —
+   *  e.g. an integer count chart has no `$` and no decimals. */
+  valueFormat?: (value: number) => string;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -46,8 +50,7 @@ export function Donut({
             <span style={{ width: 9, height: 9, borderRadius: 2, background: s.color }} />
             <span style={{ color: "var(--text-secondary)", flex: 1 }}>{s.label}</span>
             <span className="mono tnum" style={{ color: "var(--text-primary)", fontWeight: 600 }}>
-              {valuePrefix}
-              {s.value.toFixed(2)}
+              {valueFormat ? valueFormat(s.value) : `${valuePrefix}${s.value.toFixed(2)}`}
             </span>
           </div>
         ))}

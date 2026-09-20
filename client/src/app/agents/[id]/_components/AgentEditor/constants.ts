@@ -7,7 +7,11 @@ export interface EditorTab {
   icon: IconName;
 }
 
-/** Editor tabs. Part-0 ships Config only; later lessons add the rest. */
+/** Editor tabs — Config, Skills, Evals, Stats, CI are all wired. */
 export const TABS: readonly EditorTab[] = [
   { key: "config", labelKey: "editor.tabs.config", icon: "Settings" },
+  { key: "skills", labelKey: "editor.tabs.skills", icon: "Sparkles" },
+  { key: "evals", labelKey: "editor.tabs.evals", icon: "FlaskConical" },
+  { key: "stats", labelKey: "editor.tabs.stats", icon: "Gauge" },
+  { key: "ci", labelKey: "editor.tabs.ci", icon: "GitPullRequest" },
 ];

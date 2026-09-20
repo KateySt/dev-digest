@@ -17,18 +17,34 @@ export function FindingsPanel({
   prId,
   repoFullName,
   headSha,
+  targetFindingId,
 }: {
   findings: FindingRecord[];
   prId: string;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** Deep-linked finding (e.g. from the PR-list tooltip) — expanded and
+   *  keyboard-focused on mount instead of the usual first row. */
+  targetFindingId?: string | null;
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
   const [hideLow, setHideLow] = React.useState(false);
-  const [focusIdx, setFocusIdx] = React.useState(0);
+  const [focusIdx, setFocusIdx] = React.useState(() => {
+    if (!targetFindingId) return 0;
+    const idx = visibleFindings(findings, false).findIndex((f) => f.id === targetFindingId);
+    return idx >= 0 ? idx : 0;
+  });
 
   const shown = React.useMemo(() => visibleFindings(findings, hideLow), [findings, hideLow]);
+
+  const lastTargetRef = React.useRef<string | null>(targetFindingId ?? null);
+  React.useEffect(() => {
+    if (!targetFindingId || lastTargetRef.current === targetFindingId) return;
+    lastTargetRef.current = targetFindingId;
+    const idx = shown.findIndex((f) => f.id === targetFindingId);
+    if (idx >= 0) setFocusIdx(idx);
+  }, [targetFindingId, shown]);
 
   // j/k navigation + a/d shortcuts on the focused finding (keyboard).
   React.useEffect(() => {
@@ -60,10 +76,10 @@ export function FindingsPanel({
         ) : (
           shown.map((f, i) => (
             <FindingCard
-              key={f.id}
+              key={f.id === targetFindingId ? `${f.id}:target` : f.id}
               f={f}
               focused={i === focusIdx}
-              defaultExpanded={i === 0}
+              defaultExpanded={i === 0 || f.id === targetFindingId}
               pending={action.isPending}
               repoFullName={repoFullName}
               headSha={headSha}

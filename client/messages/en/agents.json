@@ -1,7 +1,10 @@
 {
   "card": {
     "noDescription": "No description",
-    "skillCount": "{count} skills"
+    "skillCount": "{count} skills",
+    "runsCount": "{count, plural, one {# run} other {# runs}}",
+    "acceptRate": "{pct}% accept",
+    "avgCost": "{cost} avg"
   },
   "list": {
     "breadcrumbLab": "Skills Lab",
@@ -91,7 +94,38 @@
     "title": "Skills",
     "enabledCount": "{linked} of {total} enabled",
     "filterPlaceholder": "Filter skills…",
-    "orderHint": "Order matters — earlier skills appear earlier in the assembled prompt. Toggle to attach."
+    "orderHint": "Order matters — earlier skills appear earlier in the assembled prompt. Toggle to attach.",
+    "noMatch": "No skills match your filter."
+  },
+  "stats": {
+    "loadError": "Could not load stats.",
+    "tiles": {
+      "totalRuns": "Total runs",
+      "avgCost": "Avg cost / run",
+      "avgDuration": "Avg duration",
+      "acceptRate": "Accept rate"
+    },
+    "findingsBySeverity": "Findings by severity",
+    "noFindings": "No findings yet.",
+    "severity": {
+      "CRITICAL": "Critical",
+      "WARNING": "Warning",
+      "SUGGESTION": "Suggestion"
+    },
+    "runHistory": "Run history",
+    "table": {
+      "timestamp": "Timestamp",
+      "pr": "PR",
+      "tokens": "Tokens",
+      "cost": "Cost",
+      "findings": "Findings",
+      "source": "Source"
+    },
+    "viewTrace": "View trace",
+    "empty": {
+      "title": "No runs yet",
+      "body": "Run this agent on a PR to start collecting stats."
+    }
   },
   "mount": {
     "body": "Mount point for {owner}. The Agent Editor shell + tab routing are wired by A2 — {owner} renders this tab."

@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Agent } from "@devdigest/shared";
+import type { Agent, AgentPerfRow } from "@devdigest/shared";
 import messages from "../../../../../messages/en/agents.json";
 import { AgentCard } from "./AgentCard";
 
@@ -21,6 +21,26 @@ const AGENT: Agent = {
   repo_intel: true,
   enabled: true,
   version: 1,
+};
+
+const PERF: AgentPerfRow = {
+  agent_id: "ag1",
+  agent_name: "Security Reviewer",
+  provider: "openai",
+  model: "gpt-4.1",
+  runs: 142,
+  findings_total: 60,
+  accepted: 46,
+  dismissed: 13,
+  accept_rate: 46 / 59,
+  dismiss_rate: 13 / 59,
+  avg_findings_per_run: 0.42,
+  total_cost_usd: 5.68,
+  avg_cost_usd: 0.04,
+  avg_latency_ms: 6200,
+  last_run_at: "2026-06-01T09:14:00.000Z",
+  findings_by_severity: { CRITICAL: 5, WARNING: 20, SUGGESTION: 35 },
+  trend: [1, 2, 0, 3, 1],
 };
 
 function renderWithIntl(ui: React.ReactElement) {
@@ -45,5 +65,15 @@ describe("AgentCard (smoke)", () => {
   it("falls back to a translated placeholder when description is empty", () => {
     renderWithIntl(<AgentCard ag={{ ...AGENT, description: "" }} />);
     expect(screen.getByText("No description")).toBeInTheDocument();
+  });
+
+  it("renders the perf line (runs, accept rate, avg cost) when perf data is present", () => {
+    renderWithIntl(<AgentCard ag={AGENT} perf={PERF} />);
+    expect(screen.getByText("142 runs · 78% accept · $0.04 avg")).toBeInTheDocument();
+  });
+
+  it("renders no perf line when the agent has zero runs", () => {
+    renderWithIntl(<AgentCard ag={AGENT} perf={{ ...PERF, runs: 0 }} />);
+    expect(screen.queryByText(/runs/)).not.toBeInTheDocument();
   });
 });

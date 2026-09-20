@@ -17,6 +17,7 @@ export const FeatureModelId = z.enum([
   'risk_brief',
   'conformance',
   'conventions',
+  'skill_eval',
 ]);
 export type FeatureModelId = z.infer<typeof FeatureModelId>;
 
@@ -75,6 +76,13 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     description: 'Extracts coding conventions from the repo.',
     defaultProvider: 'openai',
     defaultModel: 'gpt-5.4',
+  },
+  {
+    id: 'skill_eval',
+    label: 'Skill Evals',
+    description: 'Runs skill-only eval cases in the Skill Editor.',
+    defaultProvider: 'openai',
+    defaultModel: 'gpt-4.1',
   },
 ];
 

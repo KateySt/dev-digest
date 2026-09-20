@@ -91,6 +91,8 @@ export function RunHistory({
   runs,
   commits = [],
   findingsByRunId,
+  repoId,
+  prNumber,
   repoFullName,
   headSha,
   onOpenTrace,
@@ -100,6 +102,8 @@ export function RunHistory({
   runs: RunSummary[];
   commits?: PrCommit[];
   findingsByRunId?: Map<string, FindingRecord[]>;
+  repoId?: string | null;
+  prNumber?: number | null;
   repoFullName?: string | null;
   headSha?: string | null;
   /** Open the trace + log drawer for a run (the logs icon). */
@@ -206,6 +210,8 @@ export function RunHistory({
                       findings={runFindings}
                       repoFullName={repoFullName}
                       headSha={headSha}
+                      repoId={repoId}
+                      prNumber={prNumber}
                     />
                   )}
                   {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}

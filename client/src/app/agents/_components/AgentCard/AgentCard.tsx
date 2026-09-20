@@ -5,27 +5,30 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon, Badge, Toggle } from "@devdigest/ui";
-import type { Agent } from "@devdigest/shared";
+import type { Agent, AgentPerfRow } from "@devdigest/shared";
 import { useDeleteAgent } from "../../../../lib/hooks/agents";
-import { modelColor } from "./helpers";
+import { modelColor, perfLine } from "./helpers";
 import { s } from "./styles";
 
 export function AgentCard({
   ag,
   active,
   skillCount,
+  perf,
   onClick,
   onToggle,
 }: {
   ag: Agent;
   active?: boolean;
   skillCount?: number;
+  perf?: AgentPerfRow;
   onClick?: () => void;
   onToggle?: (enabled: boolean) => void;
 }) {
   const t = useTranslations("agents");
   const del = useDeleteAgent();
   const color = modelColor(ag.model);
+  const stats = perf ? perfLine(perf, t) : null;
   return (
     <div onClick={onClick} style={s.card(!!active, ag.enabled)}>
       <div style={s.headerRow}>
@@ -69,6 +72,7 @@ export function AgentCard({
           </Badge>
         )}
       </div>
+      {stats && <div style={s.statsRow}>{stats}</div>}
     </div>
   );
 }

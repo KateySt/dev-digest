@@ -6,23 +6,55 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Dropdown, EmptyState, ErrorState, Skeleton, Icon } from "@devdigest/ui";
+import type { Agent, AgentPerfRow } from "@devdigest/shared";
 import { AppShell } from "../../../../components/app-shell";
-import { useAgents, useUpdateAgent } from "../../../../lib/hooks/agents";
+import { useAgents, useAgentSkillLinks, useUpdateAgent } from "../../../../lib/hooks/agents";
+import { useAgentPerformance } from "../../../../lib/hooks/agent-performance";
 import { AgentCard } from "../AgentCard";
 import { CreateAgentModal } from "./_components/CreateAgentModal";
 import { TEMPLATES } from "./constants";
 import { filterAgents } from "./helpers";
 import { s } from "./styles";
 
+/** Wraps AgentCard with its own skill-link count (AgentCard itself stays a
+ *  dumb, prop-driven component — hooks can't run inside a .map() callback).
+ *  Perf rows come from ONE workspace-wide query at the list level (below),
+ *  not one query per card — unlike the skill-link count, which is genuinely
+ *  per-agent data with no batched endpoint today. */
+function AgentCardWithExtras({
+  agent,
+  perf,
+  onClick,
+  onToggle,
+}: {
+  agent: Agent;
+  perf?: AgentPerfRow;
+  onClick: () => void;
+  onToggle: (enabled: boolean) => void;
+}) {
+  const { data: links } = useAgentSkillLinks(agent.id);
+  return (
+    <AgentCard
+      ag={agent}
+      skillCount={links?.length}
+      perf={perf}
+      onClick={onClick}
+      onToggle={onToggle}
+    />
+  );
+}
+
 export function AgentsListView() {
   const t = useTranslations("agents");
   const router = useRouter();
   const { data: agents, isLoading, isError, refetch } = useAgents();
+  const { data: perf } = useAgentPerformance();
   const update = useUpdateAgent();
   const [creating, setCreating] = React.useState(false);
   const [search, setSearch] = React.useState("");
 
   const list = filterAgents(agents ?? [], search);
+  const perfByAgentId = new Map((perf?.agents ?? []).map((row) => [row.agent_id, row]));
 
   return (
     <AppShell crumb={[{ label: t("list.breadcrumbLab") }, { label: t("list.breadcrumb") }]}>
@@ -83,9 +115,10 @@ export function AgentsListView() {
         {list.length > 0 && (
           <div style={s.grid}>
             {list.map((a) => (
-              <AgentCard
+              <AgentCardWithExtras
                 key={a.id}
-                ag={a}
+                agent={a}
+                perf={perfByAgentId.get(a.id)}
                 onClick={() => router.push(`/agents/${a.id}?tab=config`)}
                 onToggle={(enabled) => update.mutate({ id: a.id, patch: { enabled } })}
               />

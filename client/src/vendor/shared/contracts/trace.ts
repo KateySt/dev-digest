@@ -95,6 +95,7 @@ export const RunSummary = z.object({
   run_id: z.string(),
   agent_id: z.string().nullable(),
   agent_name: z.string().nullable(),
+  pr_number: z.number().int().nullable(),
   provider: z.string().nullable(),
   model: z.string().nullable(),
   status: z.string().nullable(), // running | done | failed | cancelled

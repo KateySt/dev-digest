@@ -83,6 +83,32 @@ export const EvalCase = z.object({
 });
 export type EvalCase = z.infer<typeof EvalCase>;
 
+/** One `eval_runs` row — the result of running a SINGLE eval case once (`POST
+ *  /eval-cases/:id/run`). Distinct from `EvalRun` above, which is a
+ *  workspace-wide BATCH result ("Run eval (N)" on the Eval Dashboard) —
+ *  that one aggregates many of these into `per_trace[]`. */
+export const EvalCaseRun = z.object({
+  id: z.string(),
+  case_id: z.string(),
+  ran_at: z.string(),
+  actual_output: z.unknown(),
+  pass: z.boolean().nullable(),
+  recall: z.number().min(0).max(1).nullable(),
+  precision: z.number().min(0).max(1).nullable(),
+  citation_accuracy: z.number().min(0).max(1).nullable(),
+  duration_ms: z.number().int().nullable(),
+  cost_usd: z.number().nullable(),
+});
+export type EvalCaseRun = z.infer<typeof EvalCaseRun>;
+
+/** An eval case with its most recent run embedded — what the Evals tab's
+ *  case list actually renders (pass/fail/never-run + recall%) without a
+ *  second round-trip per case. */
+export const EvalCaseListItem = EvalCase.extend({
+  last_run: EvalCaseRun.nullable(),
+});
+export type EvalCaseListItem = z.infer<typeof EvalCaseListItem>;
+
 // ---- Memory ----
 export const MemoryScope = z.enum(['repo', 'global', 'team']);
 export type MemoryScope = z.infer<typeof MemoryScope>;
@@ -141,13 +167,31 @@ export const CommunitySkill = z.object({
 export type CommunitySkill = z.infer<typeof CommunitySkill>;
 
 // ---- Conventions ----
+export const ConventionCategory = z.enum([
+  'naming',
+  'structure',
+  'errors',
+  'testing',
+  'imports',
+  'typing',
+  'api',
+  'general',
+]);
+export type ConventionCategory = z.infer<typeof ConventionCategory>;
+
+export const ConventionStatus = z.enum(['pending', 'accepted', 'rejected']);
+export type ConventionStatus = z.infer<typeof ConventionStatus>;
+
 export const ConventionCandidate = z.object({
   id: z.string(),
+  category: ConventionCategory,
   rule: z.string(),
+  rationale: z.string().nullish(),
   evidence_path: z.string(),
   evidence_snippet: z.string(),
+  evidence_line: z.number().int().nullish(),
   confidence: z.number().min(0).max(1),
-  accepted: z.boolean(),
+  status: ConventionStatus,
 });
 export type ConventionCandidate = z.infer<typeof ConventionCandidate>;
 

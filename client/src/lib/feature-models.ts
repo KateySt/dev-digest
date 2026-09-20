@@ -46,4 +46,11 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     defaultProvider: "openai",
     defaultModel: "gpt-5.4",
   },
+  {
+    id: "skill_eval",
+    label: "Skill Evals",
+    description: "Runs skill-only eval cases in the Skill Editor.",
+    defaultProvider: "openai",
+    defaultModel: "gpt-4.1",
+  },
 ];

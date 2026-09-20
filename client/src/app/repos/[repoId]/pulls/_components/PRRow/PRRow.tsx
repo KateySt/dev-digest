@@ -84,6 +84,8 @@ export function PRRow({
             loading={hasHoveredFindings && !reviews}
             repoFullName={repoFullName}
             headSha={pr.head_sha}
+            repoId={repoId}
+            prNumber={pr.number}
             onOpenChange={handleFindingsOpenChange}
           />
         ) : (
