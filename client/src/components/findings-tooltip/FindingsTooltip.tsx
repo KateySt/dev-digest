@@ -47,7 +47,7 @@ export function FindingsTooltip({
       >
         {loading ? "Findings" : `${sorted.length} finding${sorted.length === 1 ? "" : "s"}`}
       </div>
-      <div style={{ maxHeight: 320, overflowY: "auto" }}>
+      <div style={{ maxHeight: 320, overflowY: "auto", overflowX: "hidden" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "4px 10px 10px" }}>
             <Skeleton height={32} />

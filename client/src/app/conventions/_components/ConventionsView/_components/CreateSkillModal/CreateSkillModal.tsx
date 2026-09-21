@@ -2,10 +2,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Modal, Select, TextInput, Textarea, Toggle } from "@devdigest/ui";
+import { Button, CodeField, FormField, Modal, Select, TextInput, Toggle } from "@devdigest/ui";
 import type { ConventionCandidate, SkillType } from "@devdigest/shared";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
+import { slugify } from "@/lib/slug";
 import { SKILL_TYPES } from "@/app/skills/_components/SkillsListView/constants";
 import { buildSkillBody, buildSkillDescription, buildSkillName } from "../../helpers";
 import { s } from "./styles";
@@ -73,7 +74,7 @@ export function CreateSkillModal({
           </FormField>
         </div>
         <FormField label={t("modal.bodyLabel")}>
-          <Textarea value={body} onChange={setBody} rows={14} mono />
+          <CodeField value={body} onChange={setBody} filename={`${slugify(name) || "skill"}.md`} />
         </FormField>
       </div>
 
