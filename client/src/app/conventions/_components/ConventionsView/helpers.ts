@@ -1,17 +1,11 @@
 import type { ConventionCandidate } from "@devdigest/shared";
+import { slugify } from "@/lib/slug";
 
 /** Pure helpers for the Conventions Lab page — filtering + the "merge
  *  accepted candidates into one skill" draft builder for CreateSkillModal. */
 
 export function acceptedCandidates(list: ConventionCandidate[]): ConventionCandidate[] {
   return list.filter((c) => c.status === "accepted");
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }
 
 function shortRepoName(repoFullName: string): string {

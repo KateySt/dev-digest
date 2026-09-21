@@ -2,10 +2,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Select, TextInput, Textarea, Toggle } from "@devdigest/ui";
+import { Button, CodeField, FormField, Select, TextInput, Toggle } from "@devdigest/ui";
 import type { Skill, SkillType } from "@devdigest/shared";
 import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
+import { slugify } from "@/lib/slug";
 import { SKILL_TYPES } from "@/app/skills/_components/SkillsListView/constants";
 import { isScanBlocking } from "@/app/skills/_components/SkillsListView/scan";
 import { s } from "./styles";
@@ -77,7 +78,12 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
         <TextInput value={description} onChange={setDescription} />
       </FormField>
       <FormField label={t("preview.bodyLabel")} hint={t("preview.bodyHint")}>
-        <Textarea value={body} onChange={setBody} rows={14} mono />
+        <CodeField
+          value={body}
+          onChange={setBody}
+          filename={`${slugify(name) || "skill"}.md`}
+          dirty={body !== skill.body}
+        />
       </FormField>
 
       <div style={s.actions}>

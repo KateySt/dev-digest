@@ -20,6 +20,20 @@ const titleStyle: React.CSSProperties = {
   overflow: "hidden",
 };
 
+const descriptionStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 12,
+  color: "var(--text-muted)",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
+
+const fileLinkStyle: React.CSSProperties = {
+  overflowWrap: "anywhere",
+};
+
 export function FindingSummaryRow({
   finding,
   repoFullName,
@@ -64,10 +78,13 @@ export function FindingSummaryRow({
           <span style={titleStyle}>{finding.title}</span>
         )}
       </div>
+      <p style={descriptionStyle}>{finding.rationale}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <MonoLink href={fileHref}>
-          {finding.file}:{lineLabel(finding)}
-        </MonoLink>
+        <span style={fileLinkStyle}>
+          <MonoLink href={fileHref}>
+            {finding.file}:{lineLabel(finding)}
+          </MonoLink>
+        </span>
         <CategoryTag category={finding.category as Category} />
       </div>
     </div>

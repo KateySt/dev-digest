@@ -8,4 +8,5 @@ export { TextInput } from "./TextInput";
 export { Select } from "./Select";
 export { SearchableSelect } from "./SearchableSelect";
 export { Textarea } from "./Textarea";
+export { CodeField } from "./CodeField";
 export { Checkbox } from "./Checkbox";
