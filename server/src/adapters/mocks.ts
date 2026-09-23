@@ -132,6 +132,8 @@ export class MockGitHubClient implements GitHubClient {
   public openedPrs: OpenPrPayload[] = [];
   public committed: CommitFilesPayload[] = [];
   public createdComments: CreateReviewCommentInput[] = [];
+  public updatedComments: { id: number; body: string }[] = [];
+  public deletedCommentIds: number[] = [];
 
   constructor(private opts: MockGitHubOptions = {}) {}
 
@@ -213,6 +215,27 @@ export class MockGitHubClient implements GitHubClient {
       in_reply_to_id: input.inReplyTo ?? null,
       is_outdated: false,
     };
+  }
+
+  async updateReviewComment(_repo: RepoRef, commentId: number, body: string): Promise<PrReviewComment> {
+    this.updatedComments.push({ id: commentId, body });
+    return {
+      id: commentId,
+      path: 'unknown',
+      line: null,
+      original_line: null,
+      side: 'RIGHT',
+      body,
+      user: this.opts.login ?? 'mock-user',
+      created_at: '2026-06-01T00:00:00Z',
+      html_url: `https://github.com/mock/mock/pull/1#discussion_r${commentId}`,
+      in_reply_to_id: null,
+      is_outdated: false,
+    };
+  }
+
+  async deleteReviewComment(_repo: RepoRef, commentId: number): Promise<void> {
+    this.deletedCommentIds.push(commentId);
   }
 
   async openPullRequest(_repo: RepoRef, payload: OpenPrPayload): Promise<{ url: string }> {

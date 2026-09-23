@@ -9,6 +9,8 @@ import { REVIEW_STRATEGY } from './constants.js';
 import { taskLine } from './helpers.js';
 import { loadDiff } from './diff-loader.js';
 import { isScanBlocking } from '../skills/helpers.js';
+import { IntentService } from '../intent/service.js';
+import { renderIntentDigest } from '../intent/helpers.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -106,6 +108,21 @@ export class ReviewRunExecutor {
     }
     runLog.info(`Diff ready — ${diff.files.length} changed file(s); starting ${jobs.length} agent run(s)`);
 
+    // Best-effort, non-fatal: intent derivation is advisory. A failure here
+    // (e.g. the cheap model's provider key missing) must never fail the runs
+    // it's shared across — just log it and continue without an intent digest.
+    let intentDigest: string | undefined;
+    try {
+      const intent = await runLog.step(
+        'Deriving PR intent',
+        () => new IntentService(this.container).getOrCompute(workspaceId, pull, repo, runLog),
+        { kind: 'tool' },
+      );
+      intentDigest = renderIntentDigest(intent);
+    } catch (err) {
+      runLog.info(`Failed to derive PR intent: ${(err as Error).message} — continuing without it`);
+    }
+
     for (const { agent, runId } of jobs) {
       const agentStart = Date.now();
       logger?.info(
@@ -113,7 +130,7 @@ export class ReviewRunExecutor {
         `review: agent "${agent.name}" started (${agent.provider}/${agent.model})`,
       );
       try {
-        const outcome = await this.runOneAgent(workspaceId, pull, repo, diff, agent, runId, runLog);
+        const outcome = await this.runOneAgent(workspaceId, pull, repo, diff, intentDigest, agent, runId, runLog);
         logger?.info(
           {
             runId,
@@ -142,6 +159,7 @@ export class ReviewRunExecutor {
     pull: PullRow,
     repo: typeof schema.repos.$inferSelect,
     diff: UnifiedDiff,
+    intentDigest: string | undefined,
     agent: AgentRow,
     runId: string,
     parentLog: RunLogger,
@@ -218,6 +236,9 @@ export class ReviewRunExecutor {
         // PR author's description/body — untrusted; assemblePrompt wraps +
         // truncates it. Omitted when the PR has no body.
         ...(pull.body ? { prDescription: pull.body } : {}),
+        // Derived intent (shared pre-work, once per PR) — untrusted; omitted
+        // when derivation failed (advisory-only, never fails the run).
+        ...(intentDigest ? { intent: intentDigest } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),

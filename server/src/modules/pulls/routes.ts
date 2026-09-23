@@ -1,13 +1,19 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { PrMeta, PrDetail, GitHubClient, PrReviewComment } from '@devdigest/shared';
-import { PrCommentInput } from '@devdigest/shared';
+import { PrCommentInput, PrCommentUpdateInput } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import { deriveReviewStatus } from './status.js';
+
+/** `/pulls/:id/comments/:commentId` — `id` is our uuid, `commentId` is
+ *  GitHub's numeric review-comment id (not ours to generate — coerce from
+ *  the URL string). */
+const CommentParams = z.object({ id: z.string().uuid(), commentId: z.coerce.number().int() });
 
 /**
  * F1 — pulls module. PR import via Octokit (list + per-PR detail).
@@ -361,6 +367,55 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       } catch (err) {
         // GitHub rejects comments on lines outside the diff / on closed PRs (422).
         const msg = err instanceof Error ? err.message : 'Failed to post the comment to GitHub.';
+        throw new AppError('github_comment_failed', msg, 400, { cause: String(err) });
+      }
+    },
+  );
+
+  app.patch(
+    '/pulls/:id/comments/:commentId',
+    { schema: { params: CommentParams, body: PrCommentUpdateInput } },
+    async (req): Promise<PrReviewComment> => {
+      const { workspaceId } = await getContext(container, req);
+      const { repo } = await resolvePrAndRepo(req.params.id, workspaceId);
+      let gh: GitHubClient;
+      try {
+        gh = await container.github();
+      } catch {
+        throw new AppError('github_unavailable', 'Connect a GitHub token to edit comments.', 400);
+      }
+      try {
+        return await gh.updateReviewComment(
+          { owner: repo.owner, name: repo.name },
+          req.params.commentId,
+          req.body.body,
+        );
+      } catch (err) {
+        // GitHub rejects editing a comment you didn't author (403).
+        const msg = err instanceof Error ? err.message : 'Failed to update the comment on GitHub.';
+        throw new AppError('github_comment_failed', msg, 400, { cause: String(err) });
+      }
+    },
+  );
+
+  app.delete(
+    '/pulls/:id/comments/:commentId',
+    { schema: { params: CommentParams } },
+    async (req): Promise<{ ok: true }> => {
+      const { workspaceId } = await getContext(container, req);
+      const { repo } = await resolvePrAndRepo(req.params.id, workspaceId);
+      let gh: GitHubClient;
+      try {
+        gh = await container.github();
+      } catch {
+        throw new AppError('github_unavailable', 'Connect a GitHub token to delete comments.', 400);
+      }
+      try {
+        await gh.deleteReviewComment({ owner: repo.owner, name: repo.name }, req.params.commentId);
+        return { ok: true };
+      } catch (err) {
+        // GitHub rejects deleting a comment you didn't author (403).
+        const msg = err instanceof Error ? err.message : 'Failed to delete the comment on GitHub.';
         throw new AppError('github_comment_failed', msg, 400, { cause: String(err) });
       }
     },

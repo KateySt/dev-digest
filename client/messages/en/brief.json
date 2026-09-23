@@ -10,6 +10,12 @@
   "overlap": "{count} overlap",
   "unavailable": "Brief not available yet.",
   "unavailableHint": "Run a review or open the PR to compute it.",
+  "intent": {
+    "lowConfidence": "Low confidence — derived from indirect signals (no clear PR description or ticket)",
+    "inScope": "In scope",
+    "outOfScope": "Out of scope",
+    "specRef": "Derived in part from {path}"
+  },
   "why": {
     "title": "git-why",
     "blame": "blame",

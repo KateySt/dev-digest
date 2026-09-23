@@ -262,6 +262,12 @@ export const PrCommentInput = z.object({
 });
 export type PrCommentInput = z.infer<typeof PrCommentInput>;
 
+/** Body for PATCH /pulls/:id/comments/:commentId (edit an inline comment). */
+export const PrCommentUpdateInput = z.object({
+  body: z.string().min(1),
+});
+export type PrCommentUpdateInput = z.infer<typeof PrCommentUpdateInput>;
+
 // ---- Project Context ----
 export const SpecFile = z.object({
   path: z.string(),

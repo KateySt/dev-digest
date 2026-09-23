@@ -12,6 +12,9 @@ import conventions from './conventions/routes.js';
 import agentPerformance from './agent-performance/routes.js';
 import evalModule from './eval/routes.js';
 import ci from './ci/routes.js';
+import intent from './intent/routes.js';
+import smartDiff from './smart-diff/routes.js';
+import risks from './risks/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -40,4 +43,7 @@ export const modules: Record<string, FastifyPluginAsync> = {
   agentPerformance,
   eval: evalModule,
   ci,
+  intent,
+  smartDiff,
+  risks,
 };

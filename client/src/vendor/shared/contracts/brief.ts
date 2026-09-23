@@ -6,10 +6,28 @@ import { z } from 'zod';
  */
 
 // ---- Intent ----
+/** Which signals actually fed the derived intent — computed in code from what
+ *  was available, never self-reported by the model. */
+export const IntentSource = z.enum([
+  'description',
+  'linked_issue',
+  'spec_ref',
+  'diff_shape',
+  'commit_messages',
+]);
+export type IntentSource = z.infer<typeof IntentSource>;
+
 export const Intent = z.object({
   intent: z.string(),
   in_scope: z.array(z.string()),
   out_of_scope: z.array(z.string()),
+  /** 'low' when the PR body had no real documentation (derived from indirect
+   *  signals only) — code-derived, never asked of the model. */
+  confidence: z.enum(['high', 'low']),
+  /** Which of the available signals were actually used, code-derived. */
+  sources: z.array(IntentSource),
+  /** Same-repo spec/plan doc path the intent was partly derived from, if any. */
+  spec_ref: z.string().nullable().optional(),
 });
 export type Intent = z.infer<typeof Intent>;
 
@@ -78,7 +96,7 @@ export const PrHistory = z.object({
 export type PrHistory = z.infer<typeof PrHistory>;
 
 // ---- Smart Diff ----
-export const SmartDiffRole = z.enum(['core', 'wiring', 'boilerplate']);
+export const SmartDiffRole = z.enum(['core', 'tests', 'wiring', 'docs', 'boilerplate']);
 export type SmartDiffRole = z.infer<typeof SmartDiffRole>;
 
 export const SmartDiffFile = z.object({

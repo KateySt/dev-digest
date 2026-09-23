@@ -8,11 +8,14 @@ import { api, API_BASE } from "../api";
 import { notify } from "../toast";
 import type {
   FindingActionKind,
+  Intent,
   PrReviewComment,
   ReviewRecord,
   ReviewRunResponse,
+  Risks,
   RunEvent,
   RunSummary,
+  SmartDiff,
 } from "@devdigest/shared";
 
 // ---- Active (in-flight) runs — server-side source of truth ----
@@ -52,6 +55,42 @@ export function usePrReviews(prId: string | null | undefined) {
   return useQuery({
     queryKey: ["reviews", prId],
     queryFn: () => api.get<ReviewRecord[]>(`/pulls/${prId}/reviews`),
+    enabled: !!prId,
+  });
+}
+
+// ---- Derived PR intent (computed + cached server-side, keyed by head sha) --
+/** The PR's derived intent/scope — computed on first request by a separate
+   cheap model, cached until the PR's head sha moves. */
+export function useIntent(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pr-intent", prId],
+    queryFn: () => api.get<Intent>(`/pulls/${prId}/intent`),
+    enabled: !!prId,
+  });
+}
+
+// ---- Derived PR risk brief (computed + cached server-side, keyed by head sha) --
+/** The PR's derived merge-risk brief — computed on first request by a
+   separate cheap model, cached until the PR's head sha moves. Mirrors
+   `useIntent`. */
+export function useRisks(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pr-risks", prId],
+    queryFn: () => api.get<Risks>(`/pulls/${prId}/risks`),
+    enabled: !!prId,
+  });
+}
+
+// ---- Smart Diff: files grouped by role for the Files-changed tab ----------
+/** Grouping/ordering only — every findings-derived bit of the diff-viewer UI
+   (counters, dot indicator, inline cards) derives from `usePrReviews` instead,
+   so it auto-updates after Run Review / accept-dismiss without waiting on
+   this query too, and grouping still works before any review has run. */
+export function useSmartDiff(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["smart-diff", prId],
+    queryFn: () => api.get<SmartDiff>(`/pulls/${prId}/smart-diff`),
     enabled: !!prId,
   });
 }
@@ -110,6 +149,25 @@ export function useCreatePrComment(prId: string | null | undefined) {
   return useMutation({
     mutationFn: (input: CreateCommentInput) =>
       api.post<PrReviewComment>(`/pulls/${prId}/comments`, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-comments", prId] }),
+  });
+}
+
+/** Edit an inline comment's body on GitHub; refreshes the thread list. */
+export function useUpdatePrComment(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId, body }: { commentId: number; body: string }) =>
+      api.patch<PrReviewComment>(`/pulls/${prId}/comments/${commentId}`, { body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-comments", prId] }),
+  });
+}
+
+/** Delete an inline comment from GitHub; refreshes the thread list. */
+export function useDeletePrComment(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: number) => api.del<{ ok: boolean }>(`/pulls/${prId}/comments/${commentId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-comments", prId] }),
   });
 }

@@ -67,7 +67,13 @@ describe('AI contracts parse fixtures', () => {
 
   it('Intent / BlastRadius / Risks / PrHistory', () => {
     expect(() =>
-      Intent.parse({ intent: 'x', in_scope: ['a'], out_of_scope: ['b'] }),
+      Intent.parse({
+        intent: 'x',
+        in_scope: ['a'],
+        out_of_scope: ['b'],
+        confidence: 'high',
+        sources: ['description'],
+      }),
     ).not.toThrow();
     expect(() =>
       BlastRadius.parse({
@@ -111,10 +117,22 @@ describe('AI contracts parse fixtures', () => {
           role: 'core',
           files: [{ path: 'a.ts', additions: 84, deletions: 0, finding_lines: [28, 52] }],
         },
+        // SmartDiffRole was widened from 3 to 5 values (core/wiring/boilerplate →
+        // + tests/docs) — exercise two of the new roles here so the fixture
+        // actually covers the widened enum, not just the original 3.
+        {
+          role: 'tests',
+          files: [{ path: 'a.test.ts', additions: 12, deletions: 0, finding_lines: [] }],
+        },
+        {
+          role: 'docs',
+          files: [{ path: 'README.md', additions: 3, deletions: 1, finding_lines: [] }],
+        },
       ],
       split_suggestion: { too_big: false, total_lines: 285, proposed_splits: [] },
     });
     expect(d.groups[0]!.role).toBe('core');
+    expect(d.groups.map((g) => g.role)).toEqual(['core', 'tests', 'docs']);
   });
 
   it('Conformance / Onboarding / EvalRun / MemoryItem', () => {

@@ -152,6 +152,10 @@ export interface GitHubClient {
     n: number,
     input: CreateReviewCommentInput,
   ): Promise<PrReviewComment>;
+  /** Edit an existing inline review comment's body. */
+  updateReviewComment(repo: RepoRef, commentId: number, body: string): Promise<PrReviewComment>;
+  /** Delete an inline review comment. */
+  deleteReviewComment(repo: RepoRef, commentId: number): Promise<void>;
   openPullRequest(repo: RepoRef, payload: OpenPrPayload): Promise<{ url: string }>;
   /**
    * Commit `files` onto `branch` as ONE atomic commit (Git Data API: blobs →
