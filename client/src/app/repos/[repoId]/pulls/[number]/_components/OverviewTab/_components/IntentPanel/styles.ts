@@ -21,6 +21,17 @@ export const s = {
     // badge drop to its own line instead of crushing the paragraph.
     flexWrap: "wrap",
   } satisfies CSSProperties,
+  // Badge (vendor/ui) hardcodes `white-space: nowrap` for short pill labels —
+  // fine for "CRITICAL", not for a full low-confidence sentence. Override via
+  // Badge's own `style` prop rather than editing the vendored component:
+  // `flex: 1 1 100%` makes it claim the full wrapped row (headRow already
+  // wraps the badge onto its own line below intentText) so long text has
+  // real width to wrap into instead of hugging its own content width.
+  lowConfidenceBadge: {
+    whiteSpace: "normal",
+    flex: "1 1 100%",
+    textAlign: "left",
+  } satisfies CSSProperties,
   intentText: {
     margin: 0,
     flex: "1 1 260px",

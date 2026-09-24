@@ -16,6 +16,11 @@ export interface BlastSlice {
   /** The head sha this slice was computed against — staleness detection
    *  only, NOT part of the public `BlastRadius` contract. */
   headSha: string;
+  /** `repo_index_state.last_indexed_sha` at compute time — staleness
+   *  detection for the REPO's index, independent of the PR's head sha (a
+   *  resync/reindex doesn't change `pull.headSha` but can change every
+   *  downstream caller/endpoint fact). See `BlastService.getOrCompute`. */
+  indexedSha: string;
   /** Whether this slice was computed from a degraded repo-intel result.
    *  A degraded slice is never treated as a fresh cache hit (see
    *  `BlastService.getOrCompute`), even when `headSha` still matches. */

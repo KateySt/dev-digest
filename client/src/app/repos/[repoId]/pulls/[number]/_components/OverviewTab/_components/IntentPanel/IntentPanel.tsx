@@ -27,7 +27,12 @@ export function IntentPanel({ prId }: { prId: string | null | undefined }) {
           <div style={s.headRow}>
             <p style={s.intentText}>{intent.intent}</p>
             {intent.confidence === "low" && (
-              <Badge color="var(--warn)" bg="var(--warn-bg)" icon="AlertTriangle">
+              <Badge
+                color="var(--warn)"
+                bg="var(--warn-bg)"
+                icon="AlertTriangle"
+                style={s.lowConfidenceBadge}
+              >
                 {t("intent.lowConfidence")}
               </Badge>
             )}

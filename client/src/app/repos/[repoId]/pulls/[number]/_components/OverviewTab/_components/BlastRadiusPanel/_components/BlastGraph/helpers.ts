@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import type { BlastRadius } from "@devdigest/shared";
 
@@ -22,6 +23,37 @@ const COLUMN_X_CALLER = 280;
 const COLUMN_X_TARGET = 560;
 const ROW_HEIGHT = 56;
 
+/**
+ * Explicit per-node inline styles, keyed to this app's dark-theme CSS vars.
+ * React Flow's own default node CSS (white bg, dark text) reads as blank
+ * boxes here — the app's global stylesheet cascade overrides its text color
+ * without also overriding the background, so labels go invisible. An inline
+ * `style` on the node wins over any cascade, so we set it explicitly instead
+ * of fighting specificity.
+ */
+const NODE_STYLE_BASE: CSSProperties = {
+  background: "var(--bg-elevated)",
+  color: "var(--text-primary)",
+  fontFamily: "var(--font-mono, monospace)",
+  fontSize: 12,
+  padding: "6px 10px",
+  borderRadius: 6,
+};
+const NODE_STYLE_SYMBOL: CSSProperties = {
+  ...NODE_STYLE_BASE,
+  border: "1.5px solid var(--accent)",
+  fontWeight: 600,
+};
+const NODE_STYLE_CALLER: CSSProperties = {
+  ...NODE_STYLE_BASE,
+  border: "1px solid var(--border-strong)",
+};
+const NODE_STYLE_TARGET: CSSProperties = {
+  ...NODE_STYLE_BASE,
+  border: "1px solid var(--accent)",
+};
+const EDGE_STYLE: CSSProperties = { stroke: "var(--border-strong)" };
+
 export interface BlastGraphModel {
   nodes: Node[];
   edges: Edge[];
@@ -44,6 +76,7 @@ export function buildGraphModel(radius: BlastRadius): BlastGraphModel {
       type: "input",
       position: { x: COLUMN_X_SYMBOL, y: symbolRow * ROW_HEIGHT },
       data: { label: symbol.name },
+      style: NODE_STYLE_SYMBOL,
     });
     symbolRow += 1;
 
@@ -60,10 +93,16 @@ export function buildGraphModel(radius: BlastRadius): BlastGraphModel {
           id: callerId,
           position: { x: COLUMN_X_CALLER, y: callerRow * ROW_HEIGHT },
           data: { label: caller.name },
+          style: NODE_STYLE_CALLER,
         });
         callerRow += 1;
       }
-      edges.push({ id: `${symbolId}->${callerId}`, source: symbolId, target: callerId });
+      edges.push({
+        id: `${symbolId}->${callerId}`,
+        source: symbolId,
+        target: callerId,
+        style: EDGE_STYLE,
+      });
     }
 
     for (const endpoint of impact.endpoints_affected) {
@@ -77,10 +116,16 @@ export function buildGraphModel(radius: BlastRadius): BlastGraphModel {
           type: "output",
           position: { x: COLUMN_X_TARGET, y: targetRow * ROW_HEIGHT },
           data: { label: endpoint },
+          style: NODE_STYLE_TARGET,
         });
         targetRow += 1;
       }
-      edges.push({ id: `${symbolId}->${targetId}`, source: symbolId, target: targetId });
+      edges.push({
+        id: `${symbolId}->${targetId}`,
+        source: symbolId,
+        target: targetId,
+        style: EDGE_STYLE,
+      });
     }
 
     for (const cron of impact.crons_affected) {
@@ -94,10 +139,16 @@ export function buildGraphModel(radius: BlastRadius): BlastGraphModel {
           type: "output",
           position: { x: COLUMN_X_TARGET, y: targetRow * ROW_HEIGHT },
           data: { label: cron },
+          style: NODE_STYLE_TARGET,
         });
         targetRow += 1;
       }
-      edges.push({ id: `${symbolId}->${targetId}`, source: symbolId, target: targetId });
+      edges.push({
+        id: `${symbolId}->${targetId}`,
+        source: symbolId,
+        target: targetId,
+        style: EDGE_STYLE,
+      });
     }
   }
 

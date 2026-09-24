@@ -71,12 +71,11 @@ export function BlastTree({
               <div style={s.detail}>
                 <div style={s.callerList}>
                   {callers.map((caller, ci) => (
-                    <MonoLink
-                      key={ci}
-                      onClick={() => onNavigateToFile(caller.file, caller.line)}
-                    >
-                      {caller.file}:{caller.line} — {caller.name}
-                    </MonoLink>
+                    <div key={ci} style={s.callerItem}>
+                      <MonoLink onClick={() => onNavigateToFile(caller.file, caller.line)}>
+                        {caller.file}:{caller.line} — {caller.name}
+                      </MonoLink>
+                    </div>
                   ))}
                 </div>
 

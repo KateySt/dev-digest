@@ -13,7 +13,12 @@ export const s = {
   } satisfies CSSProperties,
   grid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    // minmax(0, 1fr), not bare 1fr — a bare `1fr` track's minimum width is
+    // its content's max-content size, so an unbreakable long monospace path
+    // (file:line, `white-space: nowrap`) inside a column blows the track
+    // past the panel width instead of triggering the child's own
+    // text-overflow: ellipsis. minmax(0, 1fr) makes the fraction win.
+    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
     gap: 20,
     alignItems: "start",
   } satisfies CSSProperties,
@@ -21,5 +26,6 @@ export const s = {
     display: "flex",
     flexDirection: "column",
     gap: 20,
+    minWidth: 0,
   } satisfies CSSProperties,
 } as const;

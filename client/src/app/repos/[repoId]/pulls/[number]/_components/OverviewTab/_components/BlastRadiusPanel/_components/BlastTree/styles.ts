@@ -53,6 +53,15 @@ export const s = {
     flexDirection: "column",
     gap: 4,
   } satisfies CSSProperties,
+  // A caller line (`file:line — name`) has no spaces, so a plain flex item
+  // won't wrap it — the browser treats it as one unbreakable "word" and lets
+  // it run past the panel edge instead. minWidth: 0 lets the flex item
+  // actually shrink; overflowWrap/wordBreak give it somewhere to break.
+  callerItem: {
+    minWidth: 0,
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  } satisfies CSSProperties,
   chipRow: {
     display: "flex",
     flexWrap: "wrap",

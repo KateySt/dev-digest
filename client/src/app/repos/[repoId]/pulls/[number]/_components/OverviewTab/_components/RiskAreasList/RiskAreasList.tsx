@@ -103,12 +103,13 @@ export function RiskAreasList({
             {active.file_refs.map((ref, i) => {
               const target = parseFileRef(ref);
               return (
-                <MonoLink
-                  key={i}
-                  onClick={target ? () => onNavigateToFile(target.path, target.line) : undefined}
-                >
-                  {ref}
-                </MonoLink>
+                <div key={i} style={s.detailRefItem}>
+                  <MonoLink
+                    onClick={target ? () => onNavigateToFile(target.path, target.line) : undefined}
+                  >
+                    {ref}
+                  </MonoLink>
+                </div>
               );
             })}
           </div>

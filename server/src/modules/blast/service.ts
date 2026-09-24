@@ -23,22 +23,34 @@ export class BlastService {
   }
 
   /**
-   * Cache check: reuse the persisted slice when the head sha matches AND the
-   * slice wasn't computed on the degraded path. A degraded result is always
-   * treated as a cache miss, even when `headSha` still matches, so the panel
-   * recomputes once the repo-intel index catches up (resolved open question).
+   * Cache check: reuse the persisted slice when the head sha matches, the
+   * repo's index hasn't advanced since (`indexedSha` still matches
+   * `repo_index_state.last_indexed_sha`), AND the slice wasn't computed on
+   * the degraded path. A resync/incremental reindex doesn't change
+   * `pull.headSha` but CAN change every downstream caller/endpoint fact
+   * (e.g. resolving `references.decl_file` for the first time), so pinning
+   * the cache to headSha alone would serve a stale blast radius forever
+   * after a reindex — hence the extra `indexedSha` check. A degraded result
+   * is always treated as a cache miss too, even when both shas match, so the
+   * panel recomputes once the repo-intel index catches up.
    */
   // `workspaceId` is unused here (no model call, so no feature-model resolution
   // to scope) but kept for signature parity with sibling services (RisksService,
   // IntentService) that DO need it.
   async getOrCompute(workspaceId: string, pull: PullRow, runLog?: RunLogger): Promise<BlastRadius> {
+    const indexState = await this.container.repoIntel.getIndexState(pull.repoId);
     const existing = await this.repo.getSlice(pull.id);
-    if (existing && existing.headSha === pull.headSha && !existing.degraded) {
-      runLog?.info('Blast radius cache hit — head_sha unchanged, reusing persisted blast radius (no recompute)');
+    if (
+      existing &&
+      existing.headSha === pull.headSha &&
+      existing.indexedSha === indexState.lastIndexedSha &&
+      !existing.degraded
+    ) {
+      runLog?.info('Blast radius cache hit — head_sha and repo index unchanged, reusing persisted blast radius (no recompute)');
       return existing.blast;
     }
     runLog?.info(
-      'Blast radius cache miss — head_sha changed, no prior blast radius, or prior result was degraded; recomputing',
+      'Blast radius cache miss — head_sha changed, repo was reindexed, no prior blast radius, or prior result was degraded; recomputing',
     );
 
     const files = await this.reviews.getPrFiles(pull.id);
@@ -47,7 +59,12 @@ export class BlastService {
     // fresh (non-degraded) slice instead of calling the facade on nothing.
     if (files.length === 0) {
       const blast: BlastRadius = { changed_symbols: [], downstream: [], summary: buildSummary({ changed_symbols: [], downstream: [] }) };
-      await this.repo.upsertSlice(pull.id, { blast, headSha: pull.headSha, degraded: false });
+      await this.repo.upsertSlice(pull.id, {
+        blast,
+        headSha: pull.headSha,
+        indexedSha: indexState.lastIndexedSha,
+        degraded: false,
+      });
       return blast;
     }
 
@@ -62,6 +79,7 @@ export class BlastService {
     await this.repo.upsertSlice(pull.id, {
       blast,
       headSha: pull.headSha,
+      indexedSha: indexState.lastIndexedSha,
       degraded: result.degraded ?? false,
     });
 

@@ -24,7 +24,7 @@ export function BlastGraph({ radius }: { radius: BlastRadius }) {
     <div style={s.wrap} aria-label={t("graph.ariaLabel")}>
       <ReactFlow nodes={nodes} edges={edges} fitView nodesDraggable={false} nodesConnectable={false}>
         <Background />
-        <Controls showInteractive={false} />
+        <Controls showInteractive={false} style={s.controls} />
       </ReactFlow>
     </div>
   );
