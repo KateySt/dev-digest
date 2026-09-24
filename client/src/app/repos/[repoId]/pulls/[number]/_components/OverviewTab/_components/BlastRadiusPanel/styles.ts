@@ -15,13 +15,20 @@ export const s = {
     fontSize: 13,
     color: "var(--text-secondary)",
     display: "inline-flex",
-    alignItems: "baseline",
+    alignItems: "center",
     gap: 4,
   } satisfies CSSProperties,
   statValue: {
     fontSize: 14,
     fontWeight: 700,
     color: "var(--text-primary)",
+  } satisfies CSSProperties,
+  // Leading icon per stat (symbols/callers/endpoints/crons) — decorative only,
+  // the text label right next to it already conveys the meaning, so callers
+  // mark it `aria-hidden` at the call site.
+  statIcon: {
+    color: "var(--text-muted)",
+    flexShrink: 0,
   } satisfies CSSProperties,
   toggleRow: {
     display: "flex",

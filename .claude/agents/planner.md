@@ -44,6 +44,23 @@ more thorough.
    `client/src/vendor/shared`, `client/src/vendor/ui`) — a plan must never
    ask implementer to edit these directly.
 
+3a. **Design reference grounding.** If the task includes a design
+   mockup/screenshot, don't just paraphrase it into prose ("build a tree and
+   a graph view") — that loses exactly the details a screenshot conveys and
+   prose doesn't (colors/contrast, what happens when text is longer than its
+   box, control sizing). Save the reference image(s) to a stable repo path
+   (`docs/design/<feature>/*.png`) if they aren't already a file, then:
+     - Look at the image yourself (`Read` supports images) and extract
+       concrete, checkable details into the plan's Steps/Test plan as
+       explicit acceptance criteria — not just the information architecture.
+       Long unbroken strings (paths, ids) must be called out explicitly:
+       state whether they should wrap or truncate (see
+       `client/INSIGHTS.md`'s 2026-09-24 entry for why this needs to be
+       stated, not assumed).
+     - Tell implementer to `Read` the same reference path itself before
+       building the matching component — don't rely on your prose relay
+       being the only thing implementer sees of the design.
+
 4. **Skill matching.** Determine which project skills implementer will need,
    using the same procedure `pr-self-review` uses to match skills to files:
    read `.claude/skills/README.md`'s catalog table for the `Scope` column as
@@ -80,6 +97,12 @@ question would.
 ```
 # Development Plan: <task>
 
+## Design reference
+- path to the saved mockup/screenshot(s), or "none — no design reference
+  provided". If present, list the concrete visual details extracted from it
+  (colors, overflow/wrap behavior, control sizing) that Steps/Test plan below
+  must satisfy — not just a structural description.
+
 ## Scope & modules
 - server/... | client/... | reviewer-core/... — what and why it's touched
 
@@ -100,6 +123,10 @@ question would.
 
 ## Test plan
 - which TESTING.md suites are affected; new/updated tests needed
+- if a design reference exists: implementer must do a live visual check
+  (`agent-browser` against the running dev stack — see `e2e/README.md` for
+  the CLI) comparing the real rendered page to the reference before calling
+  the task done, not just tests + typecheck
 
 ## Open questions / risks
 - anything not resolved by this plan that implementer or the user should

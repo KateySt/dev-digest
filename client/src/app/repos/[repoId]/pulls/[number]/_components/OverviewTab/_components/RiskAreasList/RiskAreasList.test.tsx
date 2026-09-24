@@ -1,7 +1,8 @@
 /**
- * RiskAreasList: the "Risk areas" cards on the Overview tab — a selectable
- * list (icon by kind, colored by severity) with a shared detail panel below,
- * whose file refs jump to that file:line on the Files-changed tab.
+ * RiskAreasList: the "Risk Areas" cards on the Overview tab — an accordion
+ * (icon+color by kind) where each row expands independently, inline, and
+ * multiple rows can be open at once. File refs (row preview or a row's own
+ * expanded detail) jump to that file:line on the Files-changed tab.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -52,7 +53,7 @@ describe("RiskAreasList", () => {
     expect(screen.getByText("No notable risks flagged.")).toBeInTheDocument();
   });
 
-  it("selects the first risk by default and shows its explanation + file refs", () => {
+  it("renders every risk's title collapsed by default (no shared/default-open detail)", () => {
     const risks: Risk[] = [
       risk({ title: "Auth surface touched" }),
       risk({ title: "New dependency: ioredis", kind: "dependency", file_refs: ["package.json:34"] }),
@@ -63,11 +64,11 @@ describe("RiskAreasList", () => {
     expect(screen.getByText("Auth surface touched")).toBeInTheDocument();
     expect(screen.getByText("New dependency: ioredis")).toBeInTheDocument();
     expect(
-      screen.getByText("Middleware sits in front of /api/public/* and reads the Authorization header."),
-    ).toBeInTheDocument();
+      screen.queryByText("Middleware sits in front of /api/public/* and reads the Authorization header."),
+    ).not.toBeInTheDocument();
   });
 
-  it("clicking a different risk card swaps the detail panel to that risk", () => {
+  it("clicking a risk row expands it inline to show its explanation + file refs", () => {
     const risks: Risk[] = [
       risk({ title: "Auth surface touched" }),
       risk({
@@ -80,23 +81,58 @@ describe("RiskAreasList", () => {
     useRisksMock.mockReturnValue({ data: { risks }, isLoading: false });
     renderList();
 
-    fireEvent.click(screen.getByText("New dependency: ioredis"));
+    const row = screen.getByText("New dependency: ioredis").closest('[role="button"]')!;
+    expect(row).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(row);
     expect(screen.getByText("Adds a new runtime dependency on ioredis.")).toBeInTheDocument();
+    expect(row).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("clicking a file ref in the detail panel navigates to that file:line", () => {
+  it("each row expands independently; expanding a second row does not collapse the first", () => {
+    const risks: Risk[] = [
+      risk({ title: "Auth surface touched" }),
+      risk({
+        title: "New dependency: ioredis",
+        kind: "dependency",
+        explanation: "Adds a new runtime dependency on ioredis.",
+        file_refs: ["package.json:34"],
+      }),
+    ];
+    useRisksMock.mockReturnValue({ data: { risks }, isLoading: false });
+    renderList();
+
+    fireEvent.click(screen.getByText("Auth surface touched"));
+    expect(
+      screen.getByText("Middleware sits in front of /api/public/* and reads the Authorization header."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("New dependency: ioredis"));
+    expect(screen.getByText("Adds a new runtime dependency on ioredis.")).toBeInTheDocument();
+    // The first row's detail is still there — expanding the second didn't
+    // collapse it (this is the behavior that would break a single-select
+    // implementation).
+    expect(
+      screen.getByText("Middleware sits in front of /api/public/* and reads the Authorization header."),
+    ).toBeInTheDocument();
+  });
+
+  it("clicking a file ref inside a row's own expanded detail navigates to that file:line", () => {
     useRisksMock.mockReturnValue({
       data: { risks: [risk({ file_refs: ["src/middleware/ratelimit.ts:12-18"] })] },
       isLoading: false,
     });
     const { onNavigateToFile } = renderList();
 
-    // The same ref text also renders as a clickable preview on the card
-    // itself (see next test) — the detail-panel one is the second match.
-    const [, detailPanelLink] = screen.getAllByRole("button", {
+    // Expand the row first — the detail block only renders while open.
+    fireEvent.click(screen.getByText("Auth surface touched"));
+
+    // The same ref text also renders as a clickable preview on the row
+    // itself (see next test) — the expanded-detail one is the second match.
+    const [, detailLink] = screen.getAllByRole("button", {
       name: "src/middleware/ratelimit.ts:12-18",
     });
-    fireEvent.click(detailPanelLink!);
+    fireEvent.click(detailLink!);
     expect(onNavigateToFile).toHaveBeenCalledWith("src/middleware/ratelimit.ts", 12);
   });
 

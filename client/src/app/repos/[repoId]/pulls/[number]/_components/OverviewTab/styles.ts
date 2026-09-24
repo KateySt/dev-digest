@@ -28,4 +28,12 @@ export const s = {
     gap: 20,
     minWidth: 0,
   } satisfies CSSProperties,
+  // Separates the Intent and Risk Areas sections inside their merged Card
+  // (see OverviewTab.tsx) — same subtle border token as the rest of the dark
+  // theme's hairlines (Card's own border, descriptionBox's border, etc).
+  divider: {
+    border: "none",
+    borderTop: "1px solid var(--border)",
+    margin: "18px 0",
+  } satisfies CSSProperties,
 } as const;

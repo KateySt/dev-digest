@@ -1,33 +1,21 @@
-/* RiskAreasList — the "Risk areas" block on the PR Overview tab: a list of
-   selectable risk cards (icon by kind, colored by severity) with a shared
-   detail panel below showing the selected risk's explanation + file refs.
-   Clicking a file ref (in the card preview OR the detail panel) jumps to
-   that file:line on the Files-changed tab — DiffTab renders every risk's
+/* RiskAreasList — the "Risk Areas" block on the PR Overview tab: an
+   accordion of risk rows (icon+color by kind — see ./constants) where each
+   row expands independently, inline, directly under itself; multiple rows
+   can be open at once. Follows the same Set<string> toggle pattern as
+   BlastTree.tsx (`.../BlastRadiusPanel/_components/BlastTree`). Clicking a
+   file ref (in the row preview OR its own expanded detail) jumps to that
+   file:line on the Files-changed tab — DiffTab renders every risk's
    annotation inline on its own (see `buildRiskAnnotations`), so this jump is
    scroll+highlight only, not a data handoff. */
 "use client";
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon, MonoLink, type IconName } from "@devdigest/ui";
-import type { RiskSeverity } from "@devdigest/shared";
+import { Icon, MonoLink } from "@devdigest/ui";
 import { useRisks } from "@/lib/hooks/reviews";
 import { parseFileRef } from "@/components/diff-viewer";
+import { KIND_ICON, KIND_COLOR, type RiskKind } from "./constants";
 import { s } from "./styles";
-
-const KIND_ICON: Record<string, IconName> = {
-  security: "Shield",
-  dependency: "Boxes",
-  performance: "Zap",
-  reliability: "Activity",
-  other: "AlertOctagon",
-};
-
-const SEVERITY_COLOR: Record<RiskSeverity, string> = {
-  high: "var(--crit)",
-  medium: "var(--warn)",
-  low: "var(--text-muted)",
-};
 
 export function RiskAreasList({
   prId,
@@ -38,7 +26,16 @@ export function RiskAreasList({
 }) {
   const t = useTranslations("brief");
   const { data, isLoading } = useRisks(prId);
-  const [selected, setSelected] = React.useState(0);
+  const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
+
+  const toggle = (key: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   if (isLoading) return null;
 
@@ -47,74 +44,78 @@ export function RiskAreasList({
     return <div style={s.placeholderHint}>{t("noRisks")}</div>;
   }
 
-  const activeIndex = Math.min(selected, risks.length - 1);
-  const active = risks[activeIndex];
-
   return (
     <div style={s.wrap}>
       {risks.map((risk, i) => {
-        const IconComp = Icon[KIND_ICON[risk.kind] ?? "AlertOctagon"];
-        const isSelected = i === activeIndex;
-        const color = SEVERITY_COLOR[risk.severity];
+        const kind = (risk.kind in KIND_ICON ? risk.kind : "other") as RiskKind;
+        const color = KIND_COLOR[kind];
+        const IconComp = Icon[KIND_ICON[kind]];
+        // Title+kind is stable across re-fetches of the same review; index is
+        // only a tiebreaker for the (rare) case of two risks sharing both.
+        const key = `${risk.kind}:${risk.title}:${i}`;
+        const isOpen = expanded.has(key);
         const firstRef = risk.file_refs[0];
         const firstTarget = firstRef ? parseFileRef(firstRef) : null;
+
         return (
-          <div
-            key={i}
-            role="button"
-            tabIndex={0}
-            onClick={() => setSelected(i)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") setSelected(i);
-            }}
-            style={s.card(isSelected, color)}
-          >
-            <span style={s.iconBox(color)}>
-              <IconComp size={14} />
-            </span>
-            <span style={s.cardBody}>
-              <span style={s.cardTitle}>{risk.title}</span>
-              {firstRef && (
-                <span style={s.cardRef}>
-                  {firstTarget ? (
-                    <MonoLink
-                      onClick={(e?: React.MouseEvent) => {
-                        e?.stopPropagation();
-                        onNavigateToFile(firstTarget.path, firstTarget.line);
-                      }}
-                    >
-                      {firstRef}
-                    </MonoLink>
-                  ) : (
-                    <span className="mono">{firstRef}</span>
-                  )}
-                </span>
-              )}
-            </span>
-            <Icon.ChevronDown size={14} style={s.chevron(isSelected)} />
+          <div key={key}>
+            <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={isOpen}
+              onClick={() => toggle(key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") toggle(key);
+              }}
+              style={s.card(isOpen, color)}
+            >
+              <span style={s.iconBox(color)}>
+                <IconComp size={14} />
+              </span>
+              <span style={s.cardBody}>
+                <span style={s.cardTitle}>{risk.title}</span>
+                {firstRef && (
+                  <span style={s.cardRef}>
+                    {firstTarget ? (
+                      <MonoLink
+                        onClick={(e?: React.MouseEvent) => {
+                          e?.stopPropagation();
+                          onNavigateToFile(firstTarget.path, firstTarget.line);
+                        }}
+                      >
+                        {firstRef}
+                      </MonoLink>
+                    ) : (
+                      <span className="mono">{firstRef}</span>
+                    )}
+                  </span>
+                )}
+              </span>
+              <Icon.ChevronDown size={14} style={s.chevron(isOpen)} />
+            </div>
+
+            {isOpen && (
+              <div style={s.detail}>
+                <p style={s.detailText}>{risk.explanation}</p>
+                <div style={s.detailRefs}>
+                  {risk.file_refs.map((ref, ri) => {
+                    const target = parseFileRef(ref);
+                    return (
+                      <div key={ri} style={s.detailRefItem}>
+                        <MonoLink
+                          onClick={target ? () => onNavigateToFile(target.path, target.line) : undefined}
+                        >
+                          {ref}
+                        </MonoLink>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
-
-      {active && (
-        <div style={s.detail}>
-          <p style={s.detailText}>{active.explanation}</p>
-          <div style={s.detailRefs}>
-            {active.file_refs.map((ref, i) => {
-              const target = parseFileRef(ref);
-              return (
-                <div key={i} style={s.detailRefItem}>
-                  <MonoLink
-                    onClick={target ? () => onNavigateToFile(target.path, target.line) : undefined}
-                  >
-                    {ref}
-                  </MonoLink>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

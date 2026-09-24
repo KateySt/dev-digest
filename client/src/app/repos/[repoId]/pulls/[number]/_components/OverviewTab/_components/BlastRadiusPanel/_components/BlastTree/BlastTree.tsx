@@ -59,12 +59,19 @@ export function BlastTree({
               }
               style={s.symbolRow(hasCallers)}
             >
-              {hasCallers && <Icon.ChevronDown size={14} style={s.chevron(isOpen)} />}
+              {/* Fixed-width slot reserves the chevron's horizontal space even
+                 on rows with no callers, so the code icon/name/file columns
+                 stay aligned across rows regardless of whether a chevron
+                 renders. */}
+              <span style={s.chevronSlot}>
+                {hasCallers && <Icon.ChevronDown size={14} style={s.chevron(isOpen)} />}
+              </span>
+              <Icon.Code size={13} aria-hidden style={s.codeIcon} />
               <span style={s.symbolName}>{symbol.name}</span>
               <span className="mono" style={s.symbolFile}>
                 {symbol.file}
               </span>
-              <Badge>{t("callerCount", { count: callers.length })}</Badge>
+              <span style={s.callerCount}>{t("callerCount", { count: callers.length })}</span>
             </div>
 
             {isOpen && (
@@ -82,13 +89,27 @@ export function BlastTree({
                 {((impact?.endpoints_affected.length ?? 0) > 0 ||
                   (impact?.crons_affected.length ?? 0) > 0) && (
                   <div style={s.chipRow}>
+                    {/* Outline styling (transparent bg, colored border/text)
+                       differentiates endpoint (blue) from cron (orange) chips
+                       — both used the same uniform gray Badge fill before.
+                       Badge's own `style` prop also overrides its hardcoded
+                       `white-space: nowrap`, which otherwise runs a long
+                       endpoint path/cron name past the chip's edge instead of
+                       wrapping (see client/INSIGHTS.md's unbreakable
+                       file:line entry — same fix). */}
                     {impact?.endpoints_affected.map((ep) => (
-                      <Badge key={ep} icon="Globe">
+                      <Badge
+                        key={ep}
+                        icon="Globe"
+                        color="var(--accent-text)"
+                        bg="transparent"
+                        style={s.endpointBadge}
+                      >
                         {ep}
                       </Badge>
                     ))}
                     {impact?.crons_affected.map((cron) => (
-                      <Badge key={cron} icon="Clock">
+                      <Badge key={cron} icon="Clock" color="var(--warn)" bg="transparent" style={s.cronBadge}>
                         {cron}
                       </Badge>
                     ))}

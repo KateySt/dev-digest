@@ -2,11 +2,12 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { SectionLabel, EmptyState } from "@devdigest/ui";
+import { SectionLabel, EmptyState, Card } from "@devdigest/ui";
 import type { ReviewRecord, RunSummary, Verdict } from "@devdigest/shared";
 import { useRefreshPrBrief } from "@/lib/hooks/reviews";
 import { IntentPanel } from "./_components/IntentPanel";
 import { RiskAreasList } from "./_components/RiskAreasList";
+import { ReviewFocusList } from "./_components/ReviewFocusList";
 import { BlastRadiusPanel } from "./_components/BlastRadiusPanel";
 import { CommitHistoryPanel } from "./_components/CommitHistoryPanel";
 import { VerdictBanner } from "../VerdictBanner";
@@ -88,19 +89,38 @@ export function OverviewTab({
         )}
       </section>
 
+      {/* Full-width, above the two-column grid — "what to focus on" reads
+         before the detailed Intent/Risk Areas/Blast Radius panels. `null`
+         (not `[]`) when there's no review yet, so ReviewFocusList can tell
+         "not yet resolved" apart from "reviewed, nothing to flag" (see
+         client/INSIGHTS.md). */}
+      <ReviewFocusList
+        findings={latestReview ? latestReview.findings : null}
+        onNavigateToFile={onNavigateToFile}
+      />
+
       <div style={s.grid}>
         <div style={s.gridCol}>
-          <IntentPanel prId={prId} />
-          <section>
+          {/* Merged card: Intent + Risk Areas share one border/Card (see
+             client/INSIGHTS.md's "not yet resolved vs confirmed empty" —
+             both headers render unconditionally so the card shell never
+             looks like an empty box with just a divider while intent is
+             still loading; each section's own body independently renders
+             its own loading/empty state, same as before the merge). */}
+          <Card>
+            <SectionLabel icon="Target">{t("block.intent")}</SectionLabel>
+            <IntentPanel prId={prId} />
+            <div style={s.divider} />
             <SectionLabel icon="AlertTriangle">{t("block.risks")}</SectionLabel>
             <RiskAreasList prId={prId} onNavigateToFile={onNavigateToFile} />
-          </section>
+          </Card>
         </div>
         <div style={s.gridCol}>
-          <section>
-            <SectionLabel icon="GitBranch">{t("block.blast")}</SectionLabel>
-            <BlastRadiusPanel prId={prId} onNavigateToFile={onNavigateToFile} />
-          </section>
+          {/* BlastRadiusPanel renders its own "BLAST RADIUS" header as the
+             first row inside its Card (in all three of its states — see
+             BlastRadiusPanel.tsx) rather than as a sibling SectionLabel here,
+             so the header stays inside the bordered panel like the mockup. */}
+          <BlastRadiusPanel prId={prId} onNavigateToFile={onNavigateToFile} />
         </div>
       </div>
 

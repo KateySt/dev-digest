@@ -2,9 +2,11 @@
   "block": {
     "intent": "Intent",
     "blast": "Blast radius",
-    "risks": "Risks"
+    "risks": "Risk Areas",
+    "reviewFocus": "Review Focus — Read These First"
   },
   "noRisks": "No notable risks flagged.",
+  "reviewFocusEmpty": "No findings need review.",
   "overlap": "{count} overlap",
   "unavailable": "Brief not available yet.",
   "unavailableHint": "Run a review or open the PR to compute it.",

@@ -17,12 +17,25 @@ export const s = {
     cursor: interactive ? "pointer" : "default",
     opacity: interactive ? 1 : 0.65,
   }),
+  // Reserves the chevron's own width on every row (even non-expandable ones,
+  // where nothing renders inside it) so the code icon/name/file columns line
+  // up across rows regardless of whether a chevron is present.
+  chevronSlot: {
+    width: 14,
+    display: "inline-flex",
+    justifyContent: "center",
+    flexShrink: 0,
+  } satisfies CSSProperties,
   chevron: (open: boolean): CSSProperties => ({
     color: "var(--text-muted)",
     transform: open ? "rotate(180deg)" : "none",
     transition: "transform .15s",
     flexShrink: 0,
   }),
+  codeIcon: {
+    color: "var(--text-muted)",
+    flexShrink: 0,
+  } satisfies CSSProperties,
   symbolName: {
     fontSize: 13,
     fontWeight: 600,
@@ -62,9 +75,37 @@ export const s = {
     overflowWrap: "anywhere",
     wordBreak: "break-word",
   } satisfies CSSProperties,
+  // Plain muted text, not a filled Badge pill — matches the stat row's
+  // plain-text style elsewhere in this panel rather than looking like an
+  // interactive/emphasized chip.
+  callerCount: {
+    fontSize: 12,
+    color: "var(--text-muted)",
+    flexShrink: 0,
+  } satisfies CSSProperties,
   chipRow: {
     display: "flex",
     flexWrap: "wrap",
     gap: 6,
+  } satisfies CSSProperties,
+  // Outline chip overrides for Badge's default filled-gray look, applied via
+  // Badge's own `bg`/`style` props (Badge itself is vendored/do-not-touch).
+  // `whiteSpace: "normal"` + overflowWrap/wordBreak/minWidth: 0 override
+  // Badge's hardcoded `white-space: nowrap` — see client/INSIGHTS.md's
+  // unbreakable file:line entry; without this a long endpoint path or cron
+  // name runs past the chip's edge instead of wrapping.
+  endpointBadge: {
+    border: "1px solid var(--accent)",
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+  } satisfies CSSProperties,
+  cronBadge: {
+    border: "1px solid var(--warn)",
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
   } satisfies CSSProperties,
 } as const;

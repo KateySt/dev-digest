@@ -1,11 +1,10 @@
 import type { CSSProperties } from "react";
 
 export const s = {
-  box: {
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    background: "var(--bg-elevated)",
-    padding: 18,
+  // No border/background/padding here — the parent Card (OverviewTab.tsx)
+  // owns the single border for the merged Intent + Risk Areas card; this is
+  // layout-only for IntentPanel's own content.
+  content: {
     display: "flex",
     flexDirection: "column",
     gap: 14,
@@ -36,6 +35,7 @@ export const s = {
     margin: 0,
     flex: "1 1 260px",
     fontSize: 14,
+    fontStyle: "italic",
     color: "var(--text-primary)",
     lineHeight: 1.55,
   } satisfies CSSProperties,

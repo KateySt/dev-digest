@@ -70,6 +70,7 @@ describe("BlastRadiusPanel", () => {
   it("shows the unavailable state when data failed to load / was never computed", () => {
     useBlastMock.mockReturnValue({ data: undefined, isLoading: false });
     renderPanel();
+    expect(screen.getByText("Blast radius")).toBeInTheDocument(); // header renders even without data
     expect(screen.getByText("Brief not available yet.")).toBeInTheDocument();
   });
 
@@ -83,7 +84,20 @@ describe("BlastRadiusPanel", () => {
       isLoading: false,
     });
     renderPanel();
+    expect(screen.getByText("Blast radius")).toBeInTheDocument(); // header renders in this branch too
     expect(screen.getByText("1 changed symbol(s), no downstream callers found.")).toBeInTheDocument();
+  });
+
+  it("shows the header as the first row inside the Card in the populated view too", () => {
+    useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
+    renderPanel();
+
+    // SectionLabel's own wrapper div must be the Card's first child — i.e.
+    // the header lives INSIDE the bordered panel, not as a sibling
+    // SectionLabel rendered above it (the pre-Group-B layout).
+    const headerRow = screen.getByText("Blast radius").parentElement;
+    const card = headerRow?.parentElement;
+    expect(card?.firstElementChild).toBe(headerRow);
   });
 
   it("shows the stat row counts derived from the data", () => {
@@ -95,6 +109,35 @@ describe("BlastRadiusPanel", () => {
     expect(screen.getByText("callers")).toBeInTheDocument();
     expect(screen.getByText("endpoints")).toBeInTheDocument();
     expect(screen.getByText("cron/jobs")).toBeInTheDocument();
+  });
+
+  it("renders the caller count as plain text, not a Badge pill", () => {
+    useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
+    renderPanel();
+
+    const callerCountEl = screen.getByText("2 callers");
+    // Badge always renders `display: inline-flex`; the plain-text style used
+    // here is a bare `<span>` with no background — asserting the tag name and
+    // absence of a background distinguishes it from the old pill.
+    expect(callerCountEl.tagName).toBe("SPAN");
+    expect(callerCountEl.style.background).toBe("");
+  });
+
+  it("gives endpoint and cron chips distinct, queryable outline styling", () => {
+    useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
+    renderPanel();
+
+    fireEvent.click(screen.getByText("computeTotal"));
+    const endpointChip = screen.getByText("POST /checkout").closest("span");
+    const cronChip = screen.getByText("nightly-reconcile").closest("span");
+
+    expect(endpointChip).not.toBeNull();
+    expect(cronChip).not.toBeNull();
+    // Both are transparent-background outline chips (not the old uniform
+    // gray fill) with different border colors from each other.
+    expect(endpointChip?.style.background).toBe("transparent");
+    expect(cronChip?.style.background).toBe("transparent");
+    expect(endpointChip?.style.border).not.toBe(cronChip?.style.border);
   });
 
   it("defaults to the tree view and lets expanding a symbol jump to a caller via file:line", () => {

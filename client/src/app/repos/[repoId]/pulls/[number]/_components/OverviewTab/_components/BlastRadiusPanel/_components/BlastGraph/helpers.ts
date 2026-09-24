@@ -1,6 +1,6 @@
-import type { CSSProperties } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import type { BlastRadius } from "@devdigest/shared";
+import { NODE_STYLE_SYMBOL, NODE_STYLE_CALLER, NODE_STYLE_TARGET, EDGE_STYLE } from "./constants";
 
 /**
  * Pure `BlastRadius` → React Flow node/edge model. 3 columns, left to right:
@@ -22,37 +22,6 @@ const COLUMN_X_SYMBOL = 0;
 const COLUMN_X_CALLER = 280;
 const COLUMN_X_TARGET = 560;
 const ROW_HEIGHT = 56;
-
-/**
- * Explicit per-node inline styles, keyed to this app's dark-theme CSS vars.
- * React Flow's own default node CSS (white bg, dark text) reads as blank
- * boxes here — the app's global stylesheet cascade overrides its text color
- * without also overriding the background, so labels go invisible. An inline
- * `style` on the node wins over any cascade, so we set it explicitly instead
- * of fighting specificity.
- */
-const NODE_STYLE_BASE: CSSProperties = {
-  background: "var(--bg-elevated)",
-  color: "var(--text-primary)",
-  fontFamily: "var(--font-mono, monospace)",
-  fontSize: 12,
-  padding: "6px 10px",
-  borderRadius: 6,
-};
-const NODE_STYLE_SYMBOL: CSSProperties = {
-  ...NODE_STYLE_BASE,
-  border: "1.5px solid var(--accent)",
-  fontWeight: 600,
-};
-const NODE_STYLE_CALLER: CSSProperties = {
-  ...NODE_STYLE_BASE,
-  border: "1px solid var(--border-strong)",
-};
-const NODE_STYLE_TARGET: CSSProperties = {
-  ...NODE_STYLE_BASE,
-  border: "1px solid var(--accent)",
-};
-const EDGE_STYLE: CSSProperties = { stroke: "var(--border-strong)" };
 
 export interface BlastGraphModel {
   nodes: Node[];

@@ -177,7 +177,7 @@ describe("OverviewTab — refresh PR brief", () => {
 });
 
 describe("OverviewTab — placeholders", () => {
-  it("renders the Blast radius section label, the Risks and Commits sections", () => {
+  it("renders the Blast radius section label, the Risk Areas and Commits sections", () => {
     renderTab({ reviews: [review()] });
 
     // BlastRadiusPanel/CommitHistoryPanel are unit-tested separately; here
@@ -186,8 +186,59 @@ describe("OverviewTab — placeholders", () => {
     // like the other brief hooks).
     expect(screen.getByText("Blast radius")).toBeInTheDocument();
     expect(screen.getAllByText("Brief not available yet.").length).toBeGreaterThan(0);
-    expect(screen.getByText("Risks")).toBeInTheDocument();
+    expect(screen.getByText("Risk Areas")).toBeInTheDocument();
     expect(screen.getByText("No notable risks flagged.")).toBeInTheDocument();
     expect(screen.getByText("Commits")).toBeInTheDocument();
+  });
+
+  it("merges Intent and Risk Areas into one card sharing a common container", () => {
+    renderTab({ reviews: [review()] });
+
+    const intentHeading = screen.getByText("Intent");
+    const risksHeading = screen.getByText("Risk Areas");
+    // Don't assert exact DOM nesting (brittle) — just that both headers sit
+    // inside the same ancestor container, i.e. one merged Card rather than
+    // two independent sibling sections.
+    expect(intentHeading.closest("div")?.parentElement).toBe(
+      risksHeading.closest("div")?.parentElement,
+    );
+  });
+
+  it("does not render the merged Intent/Risk Areas card as an empty shell while intent is still loading", () => {
+    useIntentMock.mockReturnValue({ data: undefined, isLoading: true });
+    renderTab({ reviews: [review()] });
+
+    // Both section headers still render even though IntentPanel itself
+    // renders null while loading (see client/INSIGHTS.md) — the card shell
+    // never looks broken/empty, and Risk Areas' own state renders normally.
+    expect(screen.getByText("Intent")).toBeInTheDocument();
+    expect(screen.getByText("Risk Areas")).toBeInTheDocument();
+    expect(screen.getByText("No notable risks flagged.")).toBeInTheDocument();
+  });
+});
+
+describe("OverviewTab — Review Focus", () => {
+  it("renders the Review Focus card above the two-column grid when a review exists", () => {
+    renderTab({ reviews: [review()] });
+
+    expect(screen.getByText("Review Focus — Read These First")).toBeInTheDocument();
+    // finding() defaults to file "src/core.ts", start_line 3.
+    expect(screen.getByText("src/core.ts:3")).toBeInTheDocument();
+  });
+
+  it("shows the not-yet-reviewed empty state (not a confirmed-empty state) when no review has run", () => {
+    renderTab({ reviews: [] });
+
+    expect(screen.getByText("Review Focus — Read These First")).toBeInTheDocument();
+    expect(screen.getAllByText("Brief not available yet.").length).toBeGreaterThan(0);
+  });
+
+  it("excludes dismissed findings from the Review Focus shortlist", () => {
+    const dismissed = finding({ id: "f2", title: "Dismissed issue", dismissed_at: "2026-01-02T00:00:00.000Z" });
+    renderTab({ reviews: [review({ findings: [dismissed] })] });
+
+    expect(screen.getByText("Review Focus — Read These First")).toBeInTheDocument();
+    expect(screen.queryByText("Dismissed issue")).not.toBeInTheDocument();
+    expect(screen.getByText("No findings need review.")).toBeInTheDocument();
   });
 });

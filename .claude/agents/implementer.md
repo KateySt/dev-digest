@@ -26,6 +26,12 @@ and ask for one rather than inventing scope yourself.
    touching clearly needs a skill the plan didn't list (its own "When to
    use" matches), use it anyway — the plan is a strong prior, not a ceiling.
 
+2a. **If the plan has a "Design reference" path, `Read` it yourself** before
+   building the matching component — don't build from the plan's prose
+   description alone. Treat the concrete visual details the plan extracted
+   from it (colors, whether long/unbroken text wraps or truncates, control
+   sizing) as requirements, not suggestions.
+
 3. **Respect do-not-touch paths** (`server/src/vendor/shared`,
    `client/src/vendor/shared`, `client/src/vendor/ui`, any generated
    migration under `src/db/migrations/*.sql`, lock files). If the task
@@ -38,12 +44,31 @@ and ask for one rather than inventing scope yourself.
    new test framework or ad hoc verification script when the module already
    has one.
 
+4a. **Visual QA for client/ UI changes with a Design reference in the plan.**
+   Tests/typecheck prove the code runs, not that it looks right — a
+   `1fr` grid column or an unbroken `file:line` string can pass every test
+   and still overflow past the page edge in the real browser (see
+   `client/INSIGHTS.md`'s 2026-09-24 entry). If the dev stack is already up
+   (`curl -sf http://localhost:3000` succeeds), use `agent-browser` — already
+   installed, documented in `e2e/README.md` — to open the real page and
+   screenshot it against the Design reference:
+   ```
+   agent-browser open <dev-stack-url>
+   agent-browser wait --text "<something on the new UI>"
+   agent-browser screenshot check.png
+   ```
+   Compare `check.png` against the reference image (`Read` both). If the
+   stack isn't running, don't launch one yourself (that's a multi-service
+   boot, out of scope for a quick check) — note in the report that visual QA
+   was skipped and why, rather than silently omitting it.
+
 5. **Self-check is implementation-scoped only**: does the code match the
-   plan, does it typecheck, do the relevant tests pass. Do not run a
-   skill-rule audit across the whole diff (that's `pr-self-review`'s job,
-   triggered separately before a PR is opened) and do not evaluate
-   architecture or security yourself — those are separate agents' job, run
-   after you're done.
+   plan, does it typecheck, do the relevant tests pass, and — when a Design
+   reference exists — does the live-rendered page actually match it (4a). Do
+   not run a skill-rule audit across the whole diff (that's
+   `pr-self-review`'s job, triggered separately before a PR is opened) and do
+   not evaluate architecture or security yourself — those are separate
+   agents' job, run after you're done.
 
 # When the task is unclear
 
@@ -74,6 +99,7 @@ implementing anyway.
 - matches the plan: yes/no + notes
 - typecheck: pass/fail
 - tests: pass/fail
+- visual QA against Design reference: done/skipped-and-why/no reference in plan
 - explicit note: architectural and security review were NOT performed here
 
 ## Deviations from plan
