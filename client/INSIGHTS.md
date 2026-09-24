@@ -14,7 +14,57 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
-### 2026-09-15 — findings-count triggers must reuse the icon-badge cluster, not a text string
+### 2026-09-24 — none of the seeded PRs have `endpoints_affected`/`crons_affected` data, so the Blast Radius panel's endpoint/cron chip styling can't be visually confirmed live
+
+Context, found while doing visual QA on the Blast Radius panel's endpoint
+(blue outline)/cron (orange outline) chip differentiation (`BlastTree.tsx`):
+`curl http://localhost:3001/pulls/<id>/blast` for every seeded PR (checked
+all 6) returns `"endpoints_affected":[]` and `"crons_affected":[]` on every
+`downstream` entry, for every PR — not just PR #5. So the live app can never
+render an endpoint or cron chip against current seed data, regardless of
+which PR you open; this isn't specific to one PR being the "wrong" one to
+check. Confirmed the *code path* is correct via `BlastRadiusPanel.test.tsx`
+(mocked data with `endpoints_affected: ["POST /checkout"]` /
+`crons_affected: ["nightly-reconcile"]`) instead. If a future task needs to
+visually verify this rendering path, seed a PR's blast-radius fixture with
+non-empty `endpoints_affected`/`crons_affected` first (check
+`server/` seed scripts) — don't assume any existing seeded PR has it.
+
+### 2026-09-24 — an unbreakable mono `file:line` string overflows its box unless you explicitly give it somewhere to break
+
+Mistake, caught by the user three separate times in one session (`BlastTree`
+caller rows, `IntentPanel`'s low-confidence `Badge`, `RiskAreasList`'s card
+ref and detail refs) before the pattern was recognized and generalized.
+
+A `file:line` (or `file:line — name`) string has no spaces, so the browser
+treats it as one unbreakable "word". Neither `Badge`'s hardcoded
+`white-space: nowrap` (vendor/ui, fine for short pill labels like
+"CRITICAL", wrong for a full sentence) nor a plain flex child's default
+`min-width: auto` will let it wrap — it just runs past the container edge
+instead, often past the actual page edge since these panels sit in a
+`grid-template-columns: 1fr 1fr` (see the `OverviewTab` fix below). Adding
+`text-overflow: ellipsis` alone does nothing here either: ellipsis only
+truncates on overflow, it doesn't create a wrap opportunity, and a `1fr`
+grid track's minimum width is its content's max-content size — so the
+"ellipsis" box just grows the whole column instead of clipping.
+
+Fix, applied per call site (three so far): give the text's own box
+`overflowWrap: "anywhere"` + `wordBreak: "break-word"` + `minWidth: 0`. For a
+`display: flex` **row** where items wrap between each other (`RiskAreasList`'s
+`detailRefs`), each individual item still needs its own wrap room — wrap it
+in a small `<div style={...}>` around the `MonoLink`, don't rely on the
+row's own `flexWrap: "wrap"` (that only wraps *between* items, not *within*
+one long one). For the surrounding CSS Grid (`OverviewTab`'s two-column
+layout), a bare `1fr` track also needs to become `minmax(0, 1fr)` or the
+track itself expands to the unbroken content's width before any child-level
+fix gets a chance to apply.
+
+**Not fixed at the primitive level.** `MonoLink`/the `.mono` class are used
+elsewhere (diff viewer, code snippets) where `nowrap` + horizontal scroll is
+the *correct* behavior, so this was intentionally left as a per-usage
+override via `Badge`'s existing `style` prop / a wrapping `div`, not a
+vendor/ui change. If a fourth call site needs this, consider a named
+opt-in variant (e.g. `<MonoLink wrap>`) instead of a fifth copy-paste.
 
 Decision, caught by the user comparing the live app to the design mockups:
 `RunHistory`'s findings-count `FindingsTooltip` trigger initially reused this

@@ -64,6 +64,48 @@ export const s = {
     color: "var(--text-primary)",
     paddingRight: 12,
   } satisfies CSSProperties,
+  // ---- Smart-diff role groups ----
+  groupWrap: { display: "flex", flexDirection: "column", gap: 8 } satisfies CSSProperties,
+  groupHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    cursor: "pointer",
+    padding: "8px 0",
+  } satisfies CSSProperties,
+  groupLabel: {
+    fontSize: 12.5,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    color: "var(--text-secondary)",
+    flexShrink: 0,
+  } satisfies CSSProperties,
+  groupDescription: {
+    fontSize: 12,
+    color: "var(--text-muted)",
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  } satisfies CSSProperties,
+  groupCount: { fontSize: 12, color: "var(--text-muted)", flexShrink: 0 } satisfies CSSProperties,
+  groupFindingsCount: { fontSize: 12, color: "var(--warn)", flexShrink: 0 } satisfies CSSProperties,
+  groupBody: { display: "flex", flexDirection: "column", gap: 10 } satisfies CSSProperties,
+  // ---- Inline findings ----
+  findingBlock: {
+    margin: "6px 14px 8px 58px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  } satisfies CSSProperties,
+  findingSeverityLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+  } satisfies CSSProperties,
 } as const;
 
 /** Chevron rotates 90deg when the file card is open. */

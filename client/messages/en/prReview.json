@@ -24,7 +24,10 @@
     "comment": "Comment",
     "findingsCount": "{count} findings",
     "blockers": " · {count} blockers",
-    "prScore": "PR SCORE"
+    "prScore": "PR SCORE",
+    "findingsInfo": "View findings",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…"
   },
   "panel": {
     "hideLowConfidence": "Hide low confidence",
@@ -52,13 +55,32 @@
   },
   "smartDiff": {
     "coreLabel": "Core",
+    "coreLabelDescription": "The substance of the change — review closely",
+    "testsLabel": "Tests",
+    "testsLabelDescription": "Test coverage for the changes",
     "wiringLabel": "Wiring",
+    "wiringLabelDescription": "Hooks the core into the app",
+    "docsLabel": "Docs",
+    "docsLabelDescription": "Documentation and comments",
     "boilerplateLabel": "Boilerplate",
+    "boilerplateLabelDescription": "Generated / mechanical — skim",
     "largeTitle": "This PR is large ({lines} changed lines)",
     "largeBody": "Consider splitting it into smaller, focused PRs for easier review:",
     "filesCount": "{count} files",
+    "filesWithFindings": "{count} with findings",
     "findingLines": "{count} finding-lines",
-    "groupedByRole": "Smart Diff · grouped by role"
+    "groupedByRole": "Smart Diff · grouped by role",
+    "smartOrder": "Smart order",
+    "originalOrder": "Original order",
+    "notRunYet": "Run a review to see inline findings here."
+  },
+  "diffFindings": {
+    "show": "Show findings & comments",
+    "hide": "Hide findings & comments",
+    "unanchored": "Findings not shown inline ({count})",
+    "severityBlocker": "blocker",
+    "severityWarning": "warning",
+    "severitySuggestion": "suggestion"
   },
   "list": {
     "breadcrumb": "Pull Requests",

@@ -125,6 +125,8 @@ export interface MockGitHubOptions {
   login?: string;
   /** Existing inline review comments returned by listReviewComments. */
   comments?: PrReviewComment[];
+  /** Fixture for `listCommitFiles`, keyed by sha — file paths that commit touched. */
+  commitFilesBySha?: Record<string, string[]>;
 }
 
 export class MockGitHubClient implements GitHubClient {
@@ -132,6 +134,8 @@ export class MockGitHubClient implements GitHubClient {
   public openedPrs: OpenPrPayload[] = [];
   public committed: CommitFilesPayload[] = [];
   public createdComments: CreateReviewCommentInput[] = [];
+  public updatedComments: { id: number; body: string }[] = [];
+  public deletedCommentIds: number[] = [];
 
   constructor(private opts: MockGitHubOptions = {}) {}
 
@@ -215,6 +219,27 @@ export class MockGitHubClient implements GitHubClient {
     };
   }
 
+  async updateReviewComment(_repo: RepoRef, commentId: number, body: string): Promise<PrReviewComment> {
+    this.updatedComments.push({ id: commentId, body });
+    return {
+      id: commentId,
+      path: 'unknown',
+      line: null,
+      original_line: null,
+      side: 'RIGHT',
+      body,
+      user: this.opts.login ?? 'mock-user',
+      created_at: '2026-06-01T00:00:00Z',
+      html_url: `https://github.com/mock/mock/pull/1#discussion_r${commentId}`,
+      in_reply_to_id: null,
+      is_outdated: false,
+    };
+  }
+
+  async deleteReviewComment(_repo: RepoRef, commentId: number): Promise<void> {
+    this.deletedCommentIds.push(commentId);
+  }
+
   async openPullRequest(_repo: RepoRef, payload: OpenPrPayload): Promise<{ url: string }> {
     this.openedPrs.push(payload);
     return { url: 'https://github.com/mock/mock/pull/1' };
@@ -232,6 +257,10 @@ export class MockGitHubClient implements GitHubClient {
 
   async getIssue(_repo: RepoRef, n: number): Promise<IssueMeta> {
     return { number: n, title: `Issue #${n}`, body: 'mock issue', state: 'open' };
+  }
+
+  async listCommitFiles(_repo: RepoRef, sha: string): Promise<string[]> {
+    return this.opts.commitFilesBySha?.[sha] ?? [];
   }
 
   async currentLogin(): Promise<string> {

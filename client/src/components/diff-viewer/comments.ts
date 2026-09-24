@@ -19,6 +19,12 @@ export interface DiffCommentApi {
     body: string;
     in_reply_to?: number;
   }) => Promise<unknown>;
+  /** Edit an existing comment's body. */
+  onUpdate: (commentId: number, body: string) => Promise<unknown>;
+  updating: boolean;
+  /** Delete an existing comment. */
+  onDelete: (commentId: number) => Promise<unknown>;
+  deleting: boolean;
 }
 
 /** One review-comment thread anchored to a diff line (or outdated). */
@@ -153,6 +159,7 @@ export const cs = {
     color: "var(--text-secondary)",
     wordBreak: "break-word",
   } satisfies CSSProperties,
+  composer: { display: "flex", flexDirection: "column", gap: 4 } satisfies CSSProperties,
   composerActions: { display: "flex", gap: 8, alignItems: "center", marginTop: 8 } satisfies CSSProperties,
   hint: { fontSize: 11.5, color: "var(--text-muted)" } satisfies CSSProperties,
   outdatedWrap: {

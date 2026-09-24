@@ -52,6 +52,21 @@ export const prIntent = pgTable('pr_intent', {
   intent: text('intent').notNull(),
   inScope: jsonb('in_scope').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   outOfScope: jsonb('out_of_scope').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  /** The head sha this row was computed against — staleness detection only,
+   *  NOT part of the public `Intent` contract. Null until first computed. */
+  headSha: text('head_sha'),
+  /** 'low' when derived from indirect signals only (no real PR documentation).
+   *  Code-derived, never asked of the model. */
+  confidence: text('confidence').notNull().default('low'),
+  /** Which signals actually fed the derived intent, code-derived. */
+  sources: jsonb('sources').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  /** Same-repo spec/plan doc path the intent was partly derived from, if any. */
+  specRefPath: text('spec_ref_path'),
+  provider: text('provider'),
+  model: text('model'),
+  tokensIn: integer('tokens_in'),
+  tokensOut: integer('tokens_out'),
+  costUsd: doublePrecision('cost_usd'),
 });
 
 export const prBrief = pgTable('pr_brief', {

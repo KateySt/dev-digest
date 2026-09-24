@@ -64,4 +64,66 @@ describe('routes (no DB)', () => {
     expect(res.json().error.code).toBe('validation_error');
     await app.close();
   });
+
+  it('GET /pulls/:id/smart-diff rejects a non-uuid :id with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({ method: 'GET', url: '/pulls/not-a-uuid/smart-diff' });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
+
+  it('GET /pulls/:id/risks rejects a non-uuid :id with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({ method: 'GET', url: '/pulls/not-a-uuid/risks' });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
+
+  it('GET /pulls/:id/risks rejects a non-boolean ?force with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/pulls/00000000-0000-0000-0000-000000000000/risks?force=notabool',
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
+
+  it('GET /pulls/:id/intent rejects a non-uuid :id with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({ method: 'GET', url: '/pulls/not-a-uuid/intent' });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
+
+  it('GET /pulls/:id/intent rejects a non-boolean ?force with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/pulls/00000000-0000-0000-0000-000000000000/intent?force=notabool',
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
+
+  it('GET /pulls/:id/blast rejects a non-uuid :id with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({ method: 'GET', url: '/pulls/not-a-uuid/blast' });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
+
+  it('GET /pulls/:id/commits rejects a non-uuid :id with 422 (no DB touch)', async () => {
+    const app = await buildApp({ config });
+    const res = await app.inject({ method: 'GET', url: '/pulls/not-a-uuid/commits' });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('validation_error');
+    await app.close();
+  });
 });

@@ -242,6 +242,38 @@ export class OctokitGitHubClient implements GitHubClient {
     );
   }
 
+  async updateReviewComment(repo: RepoRef, commentId: number, body: string): Promise<PrReviewComment> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.pulls.updateReviewComment({
+            owner: repo.owner,
+            repo: repo.name,
+            comment_id: commentId,
+            body,
+          });
+          return this.mapReviewComment(res.data);
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async deleteReviewComment(repo: RepoRef, commentId: number): Promise<void> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          await this.octokit.rest.pulls.deleteReviewComment({
+            owner: repo.owner,
+            repo: repo.name,
+            comment_id: commentId,
+          });
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
   async openPullRequest(repo: RepoRef, payload: OpenPrPayload): Promise<{ url: string }> {
     return withRetry(() =>
       withTimeout(
@@ -342,6 +374,22 @@ export class OctokitGitHubClient implements GitHubClient {
           });
           const pr = res.data[0];
           return pr ? { url: pr.html_url } : null;
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async listCommitFiles(repo: RepoRef, sha: string): Promise<string[]> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.repos.getCommit({
+            owner: repo.owner,
+            repo: repo.name,
+            ref: sha,
+          });
+          return res.data.files?.map((f) => f.filename) ?? [];
         })(),
         TIMEOUT,
       ),

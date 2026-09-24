@@ -40,6 +40,14 @@
     "reply": "Reply",
     "viewOnGitHub": "View on GitHub",
     "postedToGitHub": "Posts to GitHub immediately",
-    "outdatedTitle": "{count} comment(s) on older revisions"
+    "outdatedTitle": "{count} comment(s) on older revisions",
+    "edit": "Edit",
+    "editLabel": "Edit comment",
+    "save": "Save",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "deleteLabel": "Delete comment",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete this comment from GitHub? This can't be undone."
   }
 }

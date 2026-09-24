@@ -51,6 +51,12 @@ export const s = {
     alignItems: "center",
     gap: 6,
   } satisfies CSSProperties,
+  openedChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    cursor: "default",
+  } satisfies CSSProperties,
   branchMono: {
     fontSize: 12,
   } satisfies CSSProperties,

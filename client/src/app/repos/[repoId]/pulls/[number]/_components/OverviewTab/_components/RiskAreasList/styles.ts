@@ -1,0 +1,98 @@
+import type { CSSProperties } from "react";
+
+export const s = {
+  wrap: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  } satisfies CSSProperties,
+  card: (selected: boolean, color: string): CSSProperties => ({
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: `1px solid ${selected ? color : "var(--border)"}`,
+    borderLeft: `3px solid ${selected ? color : "var(--border)"}`,
+    background: "var(--bg-elevated)",
+    cursor: "pointer",
+  }),
+  iconBox: (color: string): CSSProperties => ({
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    display: "grid",
+    placeItems: "center",
+    background: "var(--bg-hover)",
+    color,
+    flexShrink: 0,
+  }),
+  cardBody: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    flex: 1,
+    minWidth: 0,
+  } satisfies CSSProperties,
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--text-primary)",
+  } satisfies CSSProperties,
+  // A file ref (`path:12-18`) has no spaces, so a plain box won't wrap it —
+  // the browser treats it as one unbreakable "word" and lets it run past the
+  // card edge instead. overflowWrap/wordBreak give it somewhere to break;
+  // minWidth: 0 (on top of cardBody's own minWidth: 0) lets it actually
+  // shrink to the card's width first.
+  cardRef: {
+    fontSize: 12,
+    color: "var(--accent-text)",
+    minWidth: 0,
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  } satisfies CSSProperties,
+  chevron: (open: boolean): CSSProperties => ({
+    color: "var(--text-muted)",
+    transform: open ? "rotate(180deg)" : "none",
+    transition: "transform .15s",
+    flexShrink: 0,
+  }),
+  detail: {
+    marginTop: 4,
+    padding: "12px 14px",
+    borderRadius: 8,
+    border: "1px solid var(--border)",
+    background: "var(--bg-surface)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  } satisfies CSSProperties,
+  detailText: {
+    margin: 0,
+    fontSize: 13,
+    lineHeight: 1.55,
+    color: "var(--text-secondary)",
+  } satisfies CSSProperties,
+  detailRefs: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 12,
+  } satisfies CSSProperties,
+  // Same unbreakable-path problem as cardRef, but detailRefs wraps BETWEEN
+  // items (flexWrap) — a single long ref still needs its own break-within
+  // room, since it can exceed the panel width on its own.
+  detailRefItem: {
+    minWidth: 0,
+    maxWidth: "100%",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  } satisfies CSSProperties,
+  placeholderHint: {
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    background: "var(--bg-elevated)",
+    padding: "13px 16px",
+    fontSize: 13,
+    color: "var(--text-muted)",
+  } satisfies CSSProperties,
+} as const;

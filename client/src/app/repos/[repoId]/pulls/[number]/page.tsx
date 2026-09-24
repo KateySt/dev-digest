@@ -60,6 +60,9 @@ export default function PRDetailPage() {
   const tab = search.get("tab") ?? "overview";
   const traceRunId = search.get("trace");
   const targetFindingId = search.get("finding");
+  const targetFile = search.get("file");
+  const targetLineRaw = search.get("line");
+  const targetLine = targetLineRaw ? Number(targetLineRaw) : null;
   const setParam = (key: string, val: string | null) => {
     const sp = new URLSearchParams(search.toString());
     if (val == null) sp.delete(key);
@@ -67,6 +70,19 @@ export default function PRDetailPage() {
     router.replace(`/repos/${repoId}/pulls/${number}${sp.toString() ? `?${sp.toString()}` : ""}`);
   };
   const setTab = (t: string) => setParam("tab", t);
+  // Jump from an Overview risk's file ref to that file:line on the
+  // Files-changed tab. Sets tab+file together (a bare setParam chain would
+  // apply each on top of the stale `search` snapshot). DiffTab independently
+  // fetches every risk and renders them inline wherever they land, so it
+  // doesn't need the risk's text handed along here — this is scroll+highlight
+  // only.
+  const navigateToFile = (path: string, line: number) => {
+    const sp = new URLSearchParams(search.toString());
+    sp.set("tab", "diff");
+    sp.set("file", path);
+    sp.set("line", String(line));
+    router.replace(`/repos/${repoId}/pulls/${number}?${sp.toString()}`);
+  };
 
   // Reviews come newest-first; each is its own run (grouped into accordions).
   const runs = reviews ?? [];
@@ -135,7 +151,20 @@ export default function PRDetailPage() {
       />
 
       <div style={{ padding: "24px 32px 44px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 1080, margin: "0 auto" }}>
-        {tab === "overview" && <OverviewTab prBody={pr.body} />}
+        {tab === "overview" && (
+          <OverviewTab
+            prBody={pr.body}
+            prId={prId}
+            reviews={runs}
+            onNavigateToFile={navigateToFile}
+            prRuns={prRuns}
+            reviewRunning={reviewRunning}
+            repoFullName={repoFullName}
+            headSha={pr.head_sha}
+            repoId={repoId}
+            prNumber={pr.number}
+          />
+        )}
 
         {tab === "findings" && (
           <FindingsTab
@@ -171,6 +200,10 @@ export default function PRDetailPage() {
             filesCount={pr.files_count}
             files={pr.files}
             canComment={pr.status === "open"}
+            repoFullName={repoFullName}
+            headSha={pr.head_sha}
+            targetFile={targetFile}
+            targetLine={targetLine}
           />
         )}
       </div>
