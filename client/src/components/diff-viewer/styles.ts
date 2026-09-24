@@ -69,9 +69,9 @@ export const s = {
   groupHeader: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     cursor: "pointer",
-    padding: "2px 0",
+    padding: "8px 0",
   } satisfies CSSProperties,
   groupLabel: {
     fontSize: 12.5,
@@ -79,9 +79,19 @@ export const s = {
     textTransform: "uppercase",
     letterSpacing: "0.04em",
     color: "var(--text-secondary)",
+    flexShrink: 0,
   } satisfies CSSProperties,
-  groupCount: { fontSize: 12, color: "var(--text-muted)" } satisfies CSSProperties,
-  groupFindingsCount: { fontSize: 12, color: "var(--warn)" } satisfies CSSProperties,
+  groupDescription: {
+    fontSize: 12,
+    color: "var(--text-muted)",
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  } satisfies CSSProperties,
+  groupCount: { fontSize: 12, color: "var(--text-muted)", flexShrink: 0 } satisfies CSSProperties,
+  groupFindingsCount: { fontSize: 12, color: "var(--warn)", flexShrink: 0 } satisfies CSSProperties,
   groupBody: { display: "flex", flexDirection: "column", gap: 10 } satisfies CSSProperties,
   // ---- Inline findings ----
   findingBlock: {

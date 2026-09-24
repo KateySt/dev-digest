@@ -161,8 +161,6 @@ describe("DiffTab — Smart Diff grouping", () => {
     expect(screen.getByText("src/core.ts")).toBeInTheDocument();
     expect(screen.getByText("src/core.test.ts")).toBeInTheDocument();
     expect(screen.getByText("src/wiring.ts")).toBeInTheDocument();
-    // ChangesOverview is now present, so we can't just check for 5 "1 files" messages
-    // Instead, verify the important behavior: expanded core/tests/wiring files are visible
     expect(screen.queryByText("README.md")).not.toBeInTheDocument();
   });
 
@@ -174,29 +172,9 @@ describe("DiffTab — Smart Diff grouping", () => {
     expect(screen.queryByText("README.md")).not.toBeInTheDocument();
     expect(screen.queryByText("vendor/lib.js")).not.toBeInTheDocument();
 
-    // Click on the Docs group header to expand it (second "Docs" after ChangesOverview one)
-    const allDocsLabels = screen.getAllByText("Docs");
-    // The FileGroup Docs header has textTransform: uppercase (fontWeight: 700)
-    const fileGroupDocsLabel = allDocsLabels.find((el) => {
-      const style = window.getComputedStyle(el);
-      return style.fontWeight === "700" && style.textTransform === "uppercase";
-    });
-
-    if (fileGroupDocsLabel) {
-      const parentDiv = fileGroupDocsLabel.closest("div");
-      if (parentDiv) {
-        fireEvent.click(parentDiv);
-      } else {
-        fireEvent.click(fileGroupDocsLabel);
-      }
-    } else {
-      // Fallback: click the second Docs (after ChangesOverview)
-      const secondDocs = allDocsLabels[1];
-      if (secondDocs) {
-        const parentDiv = secondDocs.closest("div");
-        fireEvent.click(parentDiv || secondDocs);
-      }
-    }
+    // Click the Docs group header to expand it.
+    const docsLabel = screen.getByText("Docs");
+    fireEvent.click(docsLabel.closest("div") || docsLabel);
 
     expect(screen.getByText("README.md")).toBeInTheDocument();
   });
@@ -220,7 +198,6 @@ describe("DiffTab — Smart Diff grouping", () => {
     renderTab({ files, filesCount: files.length });
 
     // 2 findings, but both on the same file → 1 file with findings.
-    // The FileGroup header shows "1 with findings" (not in ChangesOverview)
     const withFindingsElements = screen.getAllByText("1 with findings");
     expect(withFindingsElements.length).toBeGreaterThan(0);
   });
@@ -285,8 +262,6 @@ describe("DiffTab — order toggle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Original order" }));
 
     // In original order, FileGroup headers are gone, only file paths remain
-    // ChangesOverview still shows, but FileGroup headers don't
-    // Check that files are still visible in original order
     const paths = screen
       .getAllByText(/^(src\/core\.ts|src\/core\.test\.ts|src\/wiring\.ts|README\.md|vendor\/lib\.js)$/)
       .map((el) => el.textContent);

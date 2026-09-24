@@ -47,4 +47,15 @@ export const s = {
     color: "var(--text-muted)",
     letterSpacing: "0.04em",
   } satisfies CSSProperties,
+  infoTrigger: {
+    display: "inline-flex",
+    alignItems: "center",
+    color: "var(--text-muted)",
+    cursor: "default",
+  } satisfies CSSProperties,
+  actionsCol: {
+    display: "flex",
+    alignItems: "flex-start",
+    flexShrink: 0,
+  } satisfies CSSProperties,
 } as const;

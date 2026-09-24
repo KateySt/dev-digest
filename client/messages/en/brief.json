@@ -2,11 +2,9 @@
   "block": {
     "intent": "Intent",
     "blast": "Blast radius",
-    "risks": "Risks",
-    "history": "PR history"
+    "risks": "Risks"
   },
   "noRisks": "No notable risks flagged.",
-  "noHistory": "No prior PRs overlap these files.",
   "overlap": "{count} overlap",
   "unavailable": "Brief not available yet.",
   "unavailableHint": "Run a review or open the PR to compute it.",

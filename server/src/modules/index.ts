@@ -15,6 +15,8 @@ import ci from './ci/routes.js';
 import intent from './intent/routes.js';
 import smartDiff from './smart-diff/routes.js';
 import risks from './risks/routes.js';
+import blast from './blast/routes.js';
+import commits from './commits/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -46,4 +48,6 @@ export const modules: Record<string, FastifyPluginAsync> = {
   intent,
   smartDiff,
   risks,
+  blast,
+  commits,
 };

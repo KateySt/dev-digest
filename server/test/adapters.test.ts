@@ -32,6 +32,12 @@ describe('mock adapters (no network)', () => {
     expect(url).toContain('github.com');
   });
 
+  it('MockGitHubClient.listCommitFiles honors commitFilesBySha, defaulting to [] for unknown shas', async () => {
+    const gh = new MockGitHubClient({ commitFilesBySha: { sha1: ['src/a.ts', 'src/b.ts'] } });
+    expect(await gh.listCommitFiles({ owner: 'a', name: 'b' }, 'sha1')).toEqual(['src/a.ts', 'src/b.ts']);
+    expect(await gh.listCommitFiles({ owner: 'a', name: 'b' }, 'sha-unknown')).toEqual([]);
+  });
+
   it('MockCodeIndex + MockEmbedder return deterministic shapes', async () => {
     const ci = new MockCodeIndex();
     expect((await ci.symbols({ owner: 'a', name: 'b' }))[0]!.name).toBe('rateLimit');

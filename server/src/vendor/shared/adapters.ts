@@ -166,6 +166,13 @@ export interface GitHubClient {
   /** The open PR whose head is `branch`, if any (so re-publish reuses it). */
   findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string } | null>;
   getIssue(repo: RepoRef, n: number): Promise<IssueMeta>;
+  /**
+   * File paths changed by one commit. A commit's file set is immutable (a
+   * sha never changes what it touched), so callers may cache this result
+   * forever — no head-sha/staleness key needed, unlike the rest of this
+   * interface.
+   */
+  listCommitFiles(repo: RepoRef, sha: string): Promise<string[]>;
   /** GET /user — for "posting as @user". */
   currentLogin(): Promise<string>;
 }

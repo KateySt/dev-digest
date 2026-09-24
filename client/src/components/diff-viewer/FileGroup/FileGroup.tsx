@@ -8,7 +8,12 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@devdigest/ui";
 import type { PrFile, SmartDiffGroup } from "@/lib/types";
-import { AUTO_EXPAND_MAX_LINES, DEFAULT_COLLAPSED_ROLES, ROLE_LABEL_KEYS } from "../constants";
+import {
+  AUTO_EXPAND_MAX_LINES,
+  DEFAULT_COLLAPSED_ROLES,
+  ROLE_DESCRIPTION_KEYS,
+  ROLE_LABEL_KEYS,
+} from "../constants";
 import { s, chevronFor } from "../styles";
 import { FileCard } from "../FileCard";
 import { type DiffCommentApi } from "../comments";
@@ -65,6 +70,7 @@ export function FileGroup({
       <div onClick={() => setOpen((o) => !o)} style={s.groupHeader}>
         <Icon.ChevronRight size={13} style={chevronFor(open)} />
         <span style={s.groupLabel}>{t(`smartDiff.${ROLE_LABEL_KEYS[group.role]}`)}</span>
+        <span style={s.groupDescription}>{t(`smartDiff.${ROLE_DESCRIPTION_KEYS[group.role]}`)}</span>
         <span style={s.groupCount}>{t("smartDiff.filesCount", { count: files.length })}</span>
         {filesWithFindingsCount > 0 && (
           <span style={s.groupFindingsCount}>

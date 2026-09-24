@@ -42,14 +42,22 @@ export class RisksService {
   }
 
   /** Same cache-freshness contract as `IntentService.getOrCompute`: a cache
-   *  hit (row's head_sha matches the PR's current head) skips the model call. */
-  async getOrCompute(workspaceId: string, pull: PullRow, runLog?: RunLogger): Promise<Risks> {
+   *  hit (row's head_sha matches the PR's current head) skips the model call.
+   *  `force` (default falsy) bypasses that freshness check and always
+   *  re-derives — used by the PR Brief's manual refresh action; a forced
+   *  refresh on a binary-only diff still short-circuits to an empty brief
+   *  before any model call (see below). */
+  async getOrCompute(workspaceId: string, pull: PullRow, runLog?: RunLogger, force?: boolean): Promise<Risks> {
     const existing = await this.repo.getSlice(pull.id);
-    if (existing && existing.headSha === pull.headSha) {
+    if (!force && existing && existing.headSha === pull.headSha) {
       runLog?.info('Risk brief cache hit — head_sha unchanged, reusing persisted risks (no model call)');
       return { risks: existing.risks };
     }
-    runLog?.info('Risk brief cache miss — head_sha changed or no prior risk brief, deriving via model');
+    if (force) {
+      runLog?.info('Risk brief force-refresh requested — bypassing cache, deriving via model');
+    } else {
+      runLog?.info('Risk brief cache miss — head_sha changed or no prior risk brief, deriving via model');
+    }
 
     const files = await this.reviews.getPrFiles(pull.id);
     const diffBlocks = renderDiffBlocks(files);

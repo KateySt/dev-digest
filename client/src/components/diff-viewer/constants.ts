@@ -28,6 +28,16 @@ export const ROLE_LABEL_KEYS: Record<SmartDiffRole, string> = {
  *  review (generated/vendored diffs, docs prose). */
 export const DEFAULT_COLLAPSED_ROLES: ReadonlySet<SmartDiffRole> = new Set(["docs", "boilerplate"]);
 
+/** i18n key (under `prReview.smartDiff`) for each role's one-line description,
+ *  shown next to the label in the group header. */
+export const ROLE_DESCRIPTION_KEYS: Record<SmartDiffRole, string> = {
+  core: "coreLabelDescription",
+  tests: "testsLabelDescription",
+  wiring: "wiringLabelDescription",
+  docs: "docsLabelDescription",
+  boilerplate: "boilerplateLabelDescription",
+};
+
 /** i18n key (under `prReview.diffFindings`) for each severity's inline label
  *  (deliberately NOT the same copy as `SEV[severity].label` in
  *  `@devdigest/ui` — that's "Critical/Warning/Suggestion", this is the

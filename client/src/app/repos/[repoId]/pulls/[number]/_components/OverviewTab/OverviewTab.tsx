@@ -2,10 +2,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { SectionLabel, Card, EmptyState } from "@devdigest/ui";
-import type { ReviewRecord, Verdict } from "@devdigest/shared";
+import { SectionLabel, EmptyState } from "@devdigest/ui";
+import type { ReviewRecord, RunSummary, Verdict } from "@devdigest/shared";
+import { useRefreshPrBrief } from "@/lib/hooks/reviews";
 import { IntentPanel } from "./_components/IntentPanel";
 import { RiskAreasList } from "./_components/RiskAreasList";
+import { BlastRadiusPanel } from "./_components/BlastRadiusPanel";
+import { CommitHistoryPanel } from "./_components/CommitHistoryPanel";
 import { VerdictBanner } from "../VerdictBanner";
 import { s } from "./styles";
 
@@ -17,15 +20,39 @@ interface OverviewTabProps {
    *  ?tab=diff&file=&line=; DiffTab independently renders every risk inline,
    *  so this is scroll+highlight only, not a data handoff). */
   onNavigateToFile: (path: string, line: number) => void;
+  /** Every run's summary row (already fetched for the Findings tab) — matched
+   *  by run_id to the latest review to surface its cost/token line. */
+  prRuns?: RunSummary[];
+  /** True while any agent run is in flight — disables the refresh button so a
+   *  manual refresh can't overlap a run already underway. */
+  reviewRunning?: boolean;
+  repoFullName?: string | null;
+  headSha?: string | null;
+  repoId?: string | null;
+  prNumber?: number | null;
 }
 
-export function OverviewTab({ prBody, prId, reviews, onNavigateToFile }: OverviewTabProps) {
+export function OverviewTab({
+  prBody,
+  prId,
+  reviews,
+  onNavigateToFile,
+  prRuns,
+  reviewRunning,
+  repoFullName,
+  headSha,
+  repoId,
+  prNumber,
+}: OverviewTabProps) {
   const t = useTranslations("brief");
+  const tc = useTranslations("commits");
+  const { refresh, isPending: refreshing } = useRefreshPrBrief(prId);
   // Reviews arrive newest-first — the latest run is what "the PR brief" means.
   const latestReview = reviews[0] ?? null;
   const blockers = latestReview
     ? latestReview.findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length
     : 0;
+  const runSummary = prRuns?.find((r) => r.run_id === latestReview?.run_id) ?? null;
 
   return (
     <>
@@ -46,6 +73,15 @@ export function OverviewTab({ prBody, prId, reviews, onNavigateToFile }: Overvie
             findingsCount={latestReview.findings.length}
             blockers={blockers}
             agentName={latestReview.agent_name}
+            onRefresh={() => refresh()}
+            refreshing={refreshing}
+            disableRefresh={reviewRunning}
+            runSummary={runSummary}
+            findings={latestReview.findings}
+            repoFullName={repoFullName}
+            headSha={headSha}
+            repoId={repoId}
+            prNumber={prNumber}
           />
         ) : (
           <EmptyState icon="FileText" title={t("unavailable")} body={t("unavailableHint")} />
@@ -63,16 +99,14 @@ export function OverviewTab({ prBody, prId, reviews, onNavigateToFile }: Overvie
         <div style={s.gridCol}>
           <section>
             <SectionLabel icon="GitBranch">{t("block.blast")}</SectionLabel>
-            <Card>
-              <EmptyState icon="GitBranch" title={t("block.blast")} body={t("unavailableHint")} />
-            </Card>
+            <BlastRadiusPanel prId={prId} onNavigateToFile={onNavigateToFile} />
           </section>
         </div>
       </div>
 
       <section>
-        <SectionLabel icon="History">{t("block.history")}</SectionLabel>
-        <div style={s.placeholderHint}>{t("noHistory")}</div>
+        <SectionLabel icon="History">{tc("label")}</SectionLabel>
+        <CommitHistoryPanel prId={prId} onNavigateToFile={onNavigateToFile} />
       </section>
     </>
   );

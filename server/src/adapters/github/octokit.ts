@@ -380,6 +380,22 @@ export class OctokitGitHubClient implements GitHubClient {
     );
   }
 
+  async listCommitFiles(repo: RepoRef, sha: string): Promise<string[]> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.repos.getCommit({
+            owner: repo.owner,
+            repo: repo.name,
+            ref: sha,
+          });
+          return res.data.files?.map((f) => f.filename) ?? [];
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
   async getIssue(repo: RepoRef, n: number): Promise<IssueMeta> {
     const res = await withRetry(() =>
       withTimeout(

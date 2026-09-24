@@ -5,18 +5,27 @@
  * newest review (reviews arrive newest-first) for the brief + blocker count.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { FindingRecord, ReviewRecord } from "@devdigest/shared";
+import type { FindingRecord, ReviewRecord, RunSummary } from "@devdigest/shared";
 import briefMessages from "../../../../../../../../messages/en/brief.json";
 import prReviewMessages from "../../../../../../../../messages/en/prReview.json";
+import blastMessages from "../../../../../../../../messages/en/blast.json";
+import commitsMessages from "../../../../../../../../messages/en/commits.json";
 
 const useIntentMock = vi.fn();
 const useRisksMock = vi.fn();
+const useBlastMock = vi.fn();
+const usePrCommitsMock = vi.fn();
+const useRefreshPrBriefMock = vi.fn();
+const refreshMock = vi.fn();
 
 vi.mock("@/lib/hooks/reviews", () => ({
   useIntent: () => useIntentMock(),
   useRisks: () => useRisksMock(),
+  useBlast: () => useBlastMock(),
+  usePrCommits: () => usePrCommitsMock(),
+  useRefreshPrBrief: () => useRefreshPrBriefMock(),
 }));
 
 import { OverviewTab } from "./OverviewTab";
@@ -62,16 +71,46 @@ function review(overrides: Partial<ReviewRecord> = {}): ReviewRecord {
   };
 }
 
+function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
+  return {
+    run_id: "run1",
+    agent_id: "a1",
+    agent_name: "Security Reviewer",
+    pr_number: 42,
+    provider: "openai",
+    model: "gpt-4.1",
+    status: "done",
+    error: null,
+    duration_ms: 1200,
+    tokens_in: 8200,
+    tokens_out: 1300,
+    cost_usd: 0.014,
+    findings_count: 1,
+    grounding: null,
+    ran_at: "2026-01-01T00:00:00.000Z",
+    score: 61,
+    blockers: 1,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   useIntentMock.mockReturnValue({ data: undefined, isLoading: false });
   useRisksMock.mockReturnValue({ data: undefined, isLoading: false });
+  useBlastMock.mockReturnValue({ data: undefined, isLoading: false });
+  usePrCommitsMock.mockReturnValue({ data: undefined, isLoading: false });
+  refreshMock.mockReset();
+  useRefreshPrBriefMock.mockReturnValue({ refresh: refreshMock, isPending: false });
 });
 
 afterEach(cleanup);
 
 function renderTab(props: Partial<React.ComponentProps<typeof OverviewTab>> = {}) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ brief: briefMessages, prReview: prReviewMessages }}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={{ brief: briefMessages, prReview: prReviewMessages, blast: blastMessages, commits: commitsMessages }}
+    >
       <OverviewTab prBody={null} prId="pr1" reviews={[]} onNavigateToFile={() => {}} {...props} />
     </NextIntlClientProvider>,
   );
@@ -101,17 +140,54 @@ describe("OverviewTab — PR brief", () => {
 
     expect(screen.getByText(/2 findings · 1 blockers/)).toBeInTheDocument();
   });
+
+  it("matches the latest review's run summary by run_id when prRuns is supplied", () => {
+    const other = runSummary({ run_id: "run-other", tokens_in: 1, tokens_out: 1 });
+    const matching = runSummary({ run_id: "run1", tokens_in: 8200, tokens_out: 1300 });
+    renderTab({ reviews: [review({ run_id: "run1" })], prRuns: [other, matching] });
+
+    expect(screen.getByText(/8\.2K→1\.3K/)).toBeInTheDocument();
+  });
+
+  it("does not show a cost line when no prRuns entry matches the latest review's run_id", () => {
+    renderTab({ reviews: [review({ run_id: "run1" })], prRuns: [runSummary({ run_id: "run-other" })] });
+
+    expect(screen.queryByText(/→/)).not.toBeInTheDocument();
+  });
+});
+
+describe("OverviewTab — refresh PR brief", () => {
+  it("clicking the refresh button calls the useRefreshPrBrief mutation", () => {
+    renderTab({ reviews: [review()] });
+
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the refresh button while a review is running", () => {
+    renderTab({ reviews: [review()], reviewRunning: true });
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeDisabled();
+  });
+
+  it("disables the refresh button while the refresh mutation is pending", () => {
+    useRefreshPrBriefMock.mockReturnValue({ refresh: refreshMock, isPending: true });
+    renderTab({ reviews: [review()] });
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeDisabled();
+  });
 });
 
 describe("OverviewTab — placeholders", () => {
-  it("renders the not-yet-implemented Blast radius, Risks and PR history sections", () => {
+  it("renders the Blast radius section label, the Risks and Commits sections", () => {
     renderTab({ reviews: [review()] });
 
-    // The section label and the EmptyState title both read "Blast radius".
-    expect(screen.getAllByText("Blast radius").length).toBeGreaterThan(0);
+    // BlastRadiusPanel/CommitHistoryPanel are unit-tested separately; here
+    // just confirm each section is wired in (label + its own "not available
+    // yet" state, since useBlast/usePrCommits are mocked to `data: undefined`
+    // like the other brief hooks).
+    expect(screen.getByText("Blast radius")).toBeInTheDocument();
+    expect(screen.getAllByText("Brief not available yet.").length).toBeGreaterThan(0);
     expect(screen.getByText("Risks")).toBeInTheDocument();
     expect(screen.getByText("No notable risks flagged.")).toBeInTheDocument();
-    expect(screen.getByText("PR history")).toBeInTheDocument();
-    expect(screen.getByText("No prior PRs overlap these files.")).toBeInTheDocument();
+    expect(screen.getByText("Commits")).toBeInTheDocument();
   });
 });

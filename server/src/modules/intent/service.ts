@@ -50,15 +50,28 @@ export class IntentService {
    * optional (the GET route has no run to log against) — when supplied, emits
    * a distinct line for the cache-hit vs. cache-miss branch, so a Live Log
    * reader can tell "reused" apart from "called the model" instead of only
-   * inferring it from elapsed ms.
+   * inferring it from elapsed ms. `force` (default falsy) bypasses the
+   * cache-freshness check entirely and always re-derives — used by the PR
+   * Brief's manual refresh action; the review-run call site never passes it,
+   * so its own intent computation stays cache-respecting.
    */
-  async getOrCompute(workspaceId: string, pull: PullRow, repo: RepoRow, runLog?: RunLogger): Promise<Intent> {
+  async getOrCompute(
+    workspaceId: string,
+    pull: PullRow,
+    repo: RepoRow,
+    runLog?: RunLogger,
+    force?: boolean,
+  ): Promise<Intent> {
     const existing = await this.repo.getByPrId(pull.id);
-    if (existing && existing.headSha === pull.headSha) {
+    if (!force && existing && existing.headSha === pull.headSha) {
       runLog?.info('Intent cache hit — head_sha unchanged, reusing persisted intent (no model call)');
       return toIntentDto(existing);
     }
-    runLog?.info('Intent cache miss — head_sha changed or no prior intent, deriving via cheap model');
+    if (force) {
+      runLog?.info('Intent force-refresh requested — bypassing cache, deriving via cheap model');
+    } else {
+      runLog?.info('Intent cache miss — head_sha changed or no prior intent, deriving via cheap model');
+    }
 
     const repoRef: RepoRef = { owner: repo.owner, name: repo.name };
     const sources = new Set<IntentSource>();

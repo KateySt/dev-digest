@@ -16,7 +16,6 @@ import {
 } from "@/lib/hooks/reviews";
 import { notify } from "@/lib/toast";
 import { FindingCard } from "../FindingCard";
-import { ChangesOverview } from "./_components/ChangesOverview";
 import type { PrFile, FindingActionKind } from "@devdigest/shared";
 
 interface DiffTabProps {
@@ -183,10 +182,6 @@ export function DiffTab({
         <div style={{ padding: "0 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
           {t("smartDiff.notRunYet")}
         </div>
-      )}
-
-      {orderMode === "smart" && groups && (
-        <ChangesOverview groups={groups} findings={allFindings} />
       )}
 
       <DiffViewer

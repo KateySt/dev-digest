@@ -24,7 +24,10 @@
     "comment": "Comment",
     "findingsCount": "{count} findings",
     "blockers": " · {count} blockers",
-    "prScore": "PR SCORE"
+    "prScore": "PR SCORE",
+    "findingsInfo": "View findings",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…"
   },
   "panel": {
     "hideLowConfidence": "Hide low confidence",

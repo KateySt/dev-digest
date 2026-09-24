@@ -125,6 +125,8 @@ export interface MockGitHubOptions {
   login?: string;
   /** Existing inline review comments returned by listReviewComments. */
   comments?: PrReviewComment[];
+  /** Fixture for `listCommitFiles`, keyed by sha — file paths that commit touched. */
+  commitFilesBySha?: Record<string, string[]>;
 }
 
 export class MockGitHubClient implements GitHubClient {
@@ -255,6 +257,10 @@ export class MockGitHubClient implements GitHubClient {
 
   async getIssue(_repo: RepoRef, n: number): Promise<IssueMeta> {
     return { number: n, title: `Issue #${n}`, body: 'mock issue', state: 'open' };
+  }
+
+  async listCommitFiles(_repo: RepoRef, sha: string): Promise<string[]> {
+    return this.opts.commitFilesBySha?.[sha] ?? [];
   }
 
   async currentLogin(): Promise<string> {

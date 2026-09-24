@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Severity } from './findings.js';
 
 /**
  * PR Brief building blocks: Intent, Blast radius, Risks, PR History,
@@ -94,6 +95,31 @@ export const PrHistory = z.object({
   history: z.array(PrHistoryItem),
 });
 export type PrHistory = z.infer<typeof PrHistory>;
+
+// ---- Commit history (Overview tab "Commits" panel) ----
+/** One file touched by a commit, plus the worst (highest-severity) non-dismissed
+ *  finding on that file from the PR's latest review — `null`/`null` when the
+ *  file has no findings at all. */
+export const CommitFileRef = z.object({
+  path: z.string(),
+  severity: Severity.nullable(),
+  line: z.number().int().nullable(),
+});
+export type CommitFileRef = z.infer<typeof CommitFileRef>;
+
+export const CommitWithFiles = z.object({
+  sha: z.string(),
+  message: z.string(),
+  author: z.string(),
+  committed_at: z.string().nullish(),
+  files: z.array(CommitFileRef),
+});
+export type CommitWithFiles = z.infer<typeof CommitWithFiles>;
+
+export const PrCommitHistory = z.object({
+  commits: z.array(CommitWithFiles),
+});
+export type PrCommitHistory = z.infer<typeof PrCommitHistory>;
 
 // ---- Smart Diff ----
 export const SmartDiffRole = z.enum(['core', 'tests', 'wiring', 'docs', 'boilerplate']);

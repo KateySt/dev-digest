@@ -7,8 +7,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, API_BASE } from "../api";
 import { notify } from "../toast";
 import type {
+  BlastRadius,
   FindingActionKind,
   Intent,
+  PrCommitHistory,
   PrReviewComment,
   ReviewRecord,
   ReviewRunResponse,
@@ -78,6 +80,58 @@ export function useRisks(prId: string | null | undefined) {
   return useQuery({
     queryKey: ["pr-risks", prId],
     queryFn: () => api.get<Risks>(`/pulls/${prId}/risks`),
+    enabled: !!prId,
+  });
+}
+
+/** Force-refresh the PR's derived intent, bypassing the server's head-sha
+   cache. Writes the fresh result straight into the `useIntent` cache entry —
+   NOT `invalidateQueries`, which would just refetch via the plain (non-force)
+   queryFn and hand back the same cached value. Part of `useRefreshPrBrief`. */
+export function useForceIntent(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.get<Intent>(`/pulls/${prId}/intent?force=true`),
+    onSuccess: (data) => qc.setQueryData(["pr-intent", prId], data),
+  });
+}
+
+/** Force-refresh the PR's derived risk brief, bypassing the server's head-sha
+   cache. Mirrors `useForceIntent`. */
+export function useForceRisks(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.get<Risks>(`/pulls/${prId}/risks?force=true`),
+    onSuccess: (data) => qc.setQueryData(["pr-risks", prId], data),
+  });
+}
+
+// ---- Derived PR blast radius (computed + cached server-side, keyed by head sha) --
+/** The PR's derived blast radius — changed symbols, their downstream callers,
+   and the endpoints/crons they reach. Computed on first request, cached until
+   the PR's head sha moves. Unlike `useIntent`/`useRisks` this is NOT
+   model-derived — it's a pure structural read over the repo-intel index
+   (no LLM call on the server side). */
+export function useBlast(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pr-blast", prId],
+    queryFn: () => api.get<BlastRadius>(`/pulls/${prId}/blast`),
+    enabled: !!prId,
+  });
+}
+
+// ---- Commit history: commits → files → severity for the Overview tab ------
+/** The PR's commits, each with the files it touched and the worst finding
+   severity per file from the latest review. Commit→files is fetched from
+   GitHub once per (repo, sha) and cached FOREVER server-side (a commit's
+   file set never changes) — unlike `useIntent`/`useRisks`/`useBlast`, this is
+   NOT keyed by head sha, and there's no `?force` refresh: nothing to
+   invalidate. Deliberately not part of `useRefreshPrBrief`'s force-refresh
+   chain for the same reason. */
+export function usePrCommits(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pr-commits", prId],
+    queryFn: () => api.get<PrCommitHistory>(`/pulls/${prId}/commits`),
     enabled: !!prId,
   });
 }
@@ -191,6 +245,51 @@ export function useRunReview() {
       qc.invalidateQueries({ queryKey: ["reviews", prId] });
     },
   });
+}
+
+/**
+ * Orchestrates the Overview tab's "Refresh PR brief" action: force-refreshes
+ * intent + risks (bypassing their head-sha caches), THEN re-runs the review
+ * — deliberately sequential, not all three in parallel. Running the review
+ * first (or concurrently) would let `run-executor.ts`'s own unforced
+ * `IntentService.getOrCompute` call race the forced upsert above and
+ * possibly read a stale row; awaiting the force-refreshes first also means
+ * the review's internal intent lookup is a cheap cache-hit (the row is
+ * already fresh by the time it runs).
+ *
+ * `Promise.allSettled` on the intent/risks pair means one failing doesn't
+ * block the other (or the review re-run) from proceeding, but a genuine
+ * failure must still surface as a rejected mutation — swallowing it would
+ * hide it from `providers.tsx`'s global `MutationCache.onError` toast — so
+ * any rejection is re-thrown (after the review call) as an aggregate error.
+ */
+export function useRefreshPrBrief(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  const forceIntent = useForceIntent(prId);
+  const forceRisks = useForceRisks(prId);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const settled = await Promise.allSettled([forceIntent.mutateAsync(), forceRisks.mutateAsync()]);
+      const review = await api.post<ReviewRunResponse>(`/pulls/${prId}/review`, { all: true });
+      const rejected = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (rejected.length > 0) {
+        throw new Error(
+          `PR brief refresh partially failed: ${rejected
+            .map((r) => (r.reason instanceof Error ? r.reason.message : String(r.reason)))
+            .join("; ")}`,
+        );
+      }
+      return review;
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["reviews", prId] });
+      qc.invalidateQueries({ queryKey: ["pr-runs", prId] });
+      qc.invalidateQueries({ queryKey: ["pr-active-runs", prId] });
+    },
+  });
+
+  return { refresh: mutation.mutate, isPending: mutation.isPending };
 }
 
 // ---- Finding actions (accept/dismiss) ----
