@@ -16,6 +16,7 @@ import commitsMessages from "../../../../../../../../messages/en/commits.json";
 const useIntentMock = vi.fn();
 const useRisksMock = vi.fn();
 const useBlastMock = vi.fn();
+const usePrHistoryMock = vi.fn();
 const usePrCommitsMock = vi.fn();
 const useRefreshPrBriefMock = vi.fn();
 const refreshMock = vi.fn();
@@ -24,6 +25,7 @@ vi.mock("@/lib/hooks/reviews", () => ({
   useIntent: () => useIntentMock(),
   useRisks: () => useRisksMock(),
   useBlast: () => useBlastMock(),
+  usePrHistory: () => usePrHistoryMock(),
   usePrCommits: () => usePrCommitsMock(),
   useRefreshPrBrief: () => useRefreshPrBriefMock(),
 }));
@@ -98,6 +100,7 @@ beforeEach(() => {
   useIntentMock.mockReturnValue({ data: undefined, isLoading: false });
   useRisksMock.mockReturnValue({ data: undefined, isLoading: false });
   useBlastMock.mockReturnValue({ data: undefined, isLoading: false });
+  usePrHistoryMock.mockReturnValue({ data: undefined, isLoading: false });
   usePrCommitsMock.mockReturnValue({ data: undefined, isLoading: false });
   refreshMock.mockReset();
   useRefreshPrBriefMock.mockReturnValue({ refresh: refreshMock, isPending: false });

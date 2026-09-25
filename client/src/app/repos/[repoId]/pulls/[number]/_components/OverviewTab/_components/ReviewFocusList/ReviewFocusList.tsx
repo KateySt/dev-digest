@@ -81,18 +81,22 @@ export function ReviewFocusList({
                   style={s.row(isOpen)}
                 >
                   <Icon.ChevronRight size={14} aria-hidden style={s.chevron(isOpen)} />
-                  <div style={s.fileRef}>
-                    <MonoLink
-                      onClick={(e?: React.MouseEvent) => {
-                        e?.stopPropagation();
-                        onNavigateToFile(finding.file, finding.start_line);
-                      }}
-                    >
-                      {finding.file}:{finding.start_line}
-                    </MonoLink>
+                  <div style={s.content}>
+                    <div style={s.fileRef}>
+                      <MonoLink
+                        onClick={(e?: React.MouseEvent) => {
+                          e?.stopPropagation();
+                          onNavigateToFile(finding.file, finding.start_line);
+                        }}
+                      >
+                        {finding.file}:{finding.start_line}
+                      </MonoLink>
+                    </div>
+                    <div style={s.descriptionRow}>
+                      <span style={s.dash}>—</span>
+                      <span style={s.description}>{finding.title}</span>
+                    </div>
                   </div>
-                  <span style={s.dash}>—</span>
-                  <span style={s.description}>{finding.title}</span>
                 </div>
 
                 {isOpen && (

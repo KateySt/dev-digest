@@ -67,7 +67,10 @@ export function BlastTree({
                 {hasCallers && <Icon.ChevronDown size={14} style={s.chevron(isOpen)} />}
               </span>
               <Icon.Code size={13} aria-hidden style={s.codeIcon} />
-              <span style={s.symbolName}>{symbol.name}</span>
+              <span style={s.symbolName}>
+                {symbol.name}
+                {(symbol.kind === "function" || symbol.kind === "method") && "()"}
+              </span>
               <span className="mono" style={s.symbolFile}>
                 {symbol.file}
               </span>
@@ -79,6 +82,7 @@ export function BlastTree({
                 <div style={s.callerList}>
                   {callers.map((caller, ci) => (
                     <div key={ci} style={s.callerItem}>
+                      <Icon.CornerDownRight size={12} aria-hidden style={s.callerConnector} />
                       <MonoLink onClick={() => onNavigateToFile(caller.file, caller.line)}>
                         {caller.file}:{caller.line} — {caller.name}
                       </MonoLink>
@@ -102,14 +106,14 @@ export function BlastTree({
                         key={ep}
                         icon="Globe"
                         color="var(--accent-text)"
-                        bg="transparent"
+                        bg="var(--accent-bg)"
                         style={s.endpointBadge}
                       >
                         {ep}
                       </Badge>
                     ))}
                     {impact?.crons_affected.map((cron) => (
-                      <Badge key={cron} icon="Clock" color="var(--warn)" bg="transparent" style={s.cronBadge}>
+                      <Badge key={cron} icon="Clock" color="var(--warn)" bg="var(--warn-bg)" style={s.cronBadge}>
                         {cron}
                       </Badge>
                     ))}

@@ -13,9 +13,11 @@ import briefMessages from "../../../../../../../../../../messages/en/brief.json"
 import blastMessages from "../../../../../../../../../../messages/en/blast.json";
 
 const useBlastMock = vi.fn();
+const usePrHistoryMock = vi.fn();
 
 vi.mock("@/lib/hooks/reviews", () => ({
   useBlast: () => useBlastMock(),
+  usePrHistory: () => usePrHistoryMock(),
 }));
 
 import { BlastRadiusPanel } from "./BlastRadiusPanel";
@@ -45,6 +47,7 @@ function radius(overrides: Partial<BlastRadius> = {}): BlastRadius {
 
 beforeEach(() => {
   useBlastMock.mockReturnValue({ data: undefined, isLoading: false });
+  usePrHistoryMock.mockReturnValue({ data: undefined, isLoading: false });
 });
 
 afterEach(cleanup);
@@ -61,10 +64,18 @@ function renderPanel(onNavigateToFile = vi.fn()) {
 }
 
 describe("BlastRadiusPanel", () => {
-  it("renders nothing while loading", () => {
+  it("renders the header (and the independently-loading Prior-PRs section) while blast itself is loading, not a blank container", () => {
     useBlastMock.mockReturnValue({ data: undefined, isLoading: true });
     const { container } = renderPanel();
-    expect(container).toBeEmptyDOMElement();
+
+    expect(container).not.toBeEmptyDOMElement();
+    expect(screen.getByText("Blast radius")).toBeInTheDocument();
+    // No blast-specific content renders while blast is loading.
+    expect(screen.queryByText("symbols")).not.toBeInTheDocument();
+    expect(screen.queryByText("Brief not available yet.")).not.toBeInTheDocument();
+    // Prior-PRs is a separate section with its own loading state — it isn't
+    // hidden by blast's `isLoading`, so its header still renders.
+    expect(screen.getByText("Prior PRs touching these files")).toBeInTheDocument();
   });
 
   it("shows the unavailable state when data failed to load / was never computed", () => {
@@ -123,28 +134,28 @@ describe("BlastRadiusPanel", () => {
     expect(callerCountEl.style.background).toBe("");
   });
 
-  it("gives endpoint and cron chips distinct, queryable outline styling", () => {
+  it("gives endpoint and cron chips distinct, queryable pill styling", () => {
     useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
     renderPanel();
 
-    fireEvent.click(screen.getByText("computeTotal"));
+    fireEvent.click(screen.getByText("computeTotal()"));
     const endpointChip = screen.getByText("POST /checkout").closest("span");
     const cronChip = screen.getByText("nightly-reconcile").closest("span");
 
     expect(endpointChip).not.toBeNull();
     expect(cronChip).not.toBeNull();
-    // Both are transparent-background outline chips (not the old uniform
-    // gray fill) with different border colors from each other.
-    expect(endpointChip?.style.background).toBe("transparent");
-    expect(cronChip?.style.background).toBe("transparent");
-    expect(endpointChip?.style.border).not.toBe(cronChip?.style.border);
+    // Both are filled pill chips (not the old uniform gray fill) with
+    // different tinted backgrounds from each other.
+    expect(endpointChip?.style.background).toBe("var(--accent-bg)");
+    expect(cronChip?.style.background).toBe("var(--warn-bg)");
+    expect(endpointChip?.style.background).not.toBe(cronChip?.style.background);
   });
 
   it("defaults to the tree view and lets expanding a symbol jump to a caller via file:line", () => {
     useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
     const { onNavigateToFile } = renderPanel();
 
-    fireEvent.click(screen.getByText("computeTotal"));
+    fireEvent.click(screen.getByText("computeTotal()"));
     const link = screen.getByText("src/routes/checkout.ts:42 — checkout");
     fireEvent.click(link);
 
@@ -155,7 +166,7 @@ describe("BlastRadiusPanel", () => {
     useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
     renderPanel();
 
-    const row = screen.getByText("unusedHelper").closest('[role="button"]');
+    const row = screen.getByText("unusedHelper()").closest('[role="button"]');
     expect(row).toBeNull();
   });
 });

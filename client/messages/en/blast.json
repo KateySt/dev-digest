@@ -20,5 +20,11 @@
     "callers": "callers",
     "endpoints": "endpoints affected",
     "ariaLabel": "Blast radius graph legend"
+  },
+  "history": {
+    "label": "Prior PRs touching these files",
+    "empty": "No prior PRs touched these files.",
+    "unavailable": "Prior PRs not available yet.",
+    "unavailableHint": "Couldn't load prior PRs touching these files."
   }
 }

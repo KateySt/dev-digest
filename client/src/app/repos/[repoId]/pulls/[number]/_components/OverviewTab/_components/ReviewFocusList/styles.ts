@@ -26,6 +26,17 @@ export const s = {
     transition: "transform .15s",
     flexShrink: 0,
   }),
+  // fileRef + description used to share one flex line, so a long path left
+  // the description almost no width and it wrapped word-by-word in a
+  // cramped column. Stacking them (this wrapper) gives the description the
+  // full row width to wrap into instead.
+  content: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
+    flex: 1,
+  } satisfies CSSProperties,
   // A `file:line` string has no spaces, so a plain box won't wrap it — the
   // browser treats it as one unbreakable "word" and runs it past the row
   // edge instead (client/INSIGHTS.md's "unbreakable mono file:line" entry —
@@ -38,6 +49,11 @@ export const s = {
     overflowWrap: "anywhere",
     wordBreak: "break-word",
   } satisfies CSSProperties,
+  descriptionRow: {
+    display: "flex",
+    gap: 6,
+    minWidth: 0,
+  } satisfies CSSProperties,
   dash: {
     color: "var(--text-muted)",
     fontSize: 13,
@@ -48,7 +64,6 @@ export const s = {
     fontSize: 13,
     lineHeight: 1.5,
     minWidth: 0,
-    flex: 1,
   } satisfies CSSProperties,
   detail: {
     marginTop: 4,

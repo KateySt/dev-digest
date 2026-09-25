@@ -50,13 +50,14 @@ export const s = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   } satisfies CSSProperties,
+  // Plain indented area (no box/background) — a left guideline rule plus a
+  // per-caller connector icon (see callerItem) reads as a tree branch rather
+  // than a bordered card nested inside another bordered card.
   detail: {
     marginLeft: 24,
-    marginTop: -2,
-    padding: "10px 12px",
-    borderRadius: 7,
-    border: "1px solid var(--border)",
-    background: "var(--bg-elevated)",
+    marginTop: 2,
+    paddingLeft: 12,
+    borderLeft: "1px solid var(--border)",
     display: "flex",
     flexDirection: "column",
     gap: 8,
@@ -64,16 +65,24 @@ export const s = {
   callerList: {
     display: "flex",
     flexDirection: "column",
-    gap: 4,
+    gap: 6,
   } satisfies CSSProperties,
   // A caller line (`file:line — name`) has no spaces, so a plain flex item
   // won't wrap it — the browser treats it as one unbreakable "word" and lets
   // it run past the panel edge instead. minWidth: 0 lets the flex item
   // actually shrink; overflowWrap/wordBreak give it somewhere to break.
   callerItem: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 6,
     minWidth: 0,
     overflowWrap: "anywhere",
     wordBreak: "break-word",
+  } satisfies CSSProperties,
+  callerConnector: {
+    color: "var(--text-muted)",
+    flexShrink: 0,
+    marginTop: 3,
   } satisfies CSSProperties,
   // Plain muted text, not a filled Badge pill — matches the stat row's
   // plain-text style elsewhere in this panel rather than looking like an
@@ -88,21 +97,23 @@ export const s = {
     flexWrap: "wrap",
     gap: 6,
   } satisfies CSSProperties,
-  // Outline chip overrides for Badge's default filled-gray look, applied via
-  // Badge's own `bg`/`style` props (Badge itself is vendored/do-not-touch).
-  // `whiteSpace: "normal"` + overflowWrap/wordBreak/minWidth: 0 override
-  // Badge's hardcoded `white-space: nowrap` — see client/INSIGHTS.md's
-  // unbreakable file:line entry; without this a long endpoint path or cron
-  // name runs past the chip's edge instead of wrapping.
+  // Filled pill chip overrides for Badge's default gray look, applied via
+  // Badge's own `bg`/`color`/`style` props (Badge itself is
+  // vendored/do-not-touch) — tinted background instead of the earlier
+  // transparent+border outline. `whiteSpace: "normal"` + overflowWrap/
+  // wordBreak/minWidth: 0 override Badge's hardcoded `white-space: nowrap` —
+  // see client/INSIGHTS.md's unbreakable file:line entry; without this a
+  // long endpoint path or cron name runs past the chip's edge instead of
+  // wrapping.
   endpointBadge: {
-    border: "1px solid var(--accent)",
+    borderRadius: 999,
     whiteSpace: "normal",
     overflowWrap: "anywhere",
     wordBreak: "break-word",
     minWidth: 0,
   } satisfies CSSProperties,
   cronBadge: {
-    border: "1px solid var(--warn)",
+    borderRadius: 999,
     whiteSpace: "normal",
     overflowWrap: "anywhere",
     wordBreak: "break-word",
