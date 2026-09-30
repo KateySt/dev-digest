@@ -11,6 +11,7 @@ import type {
   FindingActionKind,
   Intent,
   PrCommitHistory,
+  PrHistory,
   PrReviewComment,
   ReviewRecord,
   ReviewRunResponse,
@@ -116,6 +117,20 @@ export function useBlast(prId: string | null | undefined) {
   return useQuery({
     queryKey: ["pr-blast", prId],
     queryFn: () => api.get<BlastRadius>(`/pulls/${prId}/blast`),
+    enabled: !!prId,
+  });
+}
+
+// ---- Prior PRs touching these files (no server-side caching) --------------
+/** Other merged/closed PRs in the same repo that touched at least one file
+   this PR also changed. Unlike `useBlast`/`useIntent`/`useRisks`, the server
+   route does NOT cache this (a cheap live join, see `HistoryService`'s doc
+   comment) — nothing to force-refresh, so this isn't part of
+   `useRefreshPrBrief`'s chain either. */
+export function usePrHistory(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pr-history", prId],
+    queryFn: () => api.get<PrHistory>(`/pulls/${prId}/history`),
     enabled: !!prId,
   });
 }

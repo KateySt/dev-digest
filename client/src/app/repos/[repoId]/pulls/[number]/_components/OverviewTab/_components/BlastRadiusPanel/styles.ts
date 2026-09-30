@@ -6,6 +6,16 @@ export const s = {
     flexDirection: "column",
     gap: 12,
   } satisfies CSSProperties,
+  // Stats and the Tree/Graph toggle share one row (space-between) rather than
+  // stacking as two rows — matches a single breadcrumb-style header bar
+  // instead of a stat line followed by a separate toggle line.
+  headerRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+  } satisfies CSSProperties,
   statRow: {
     display: "flex",
     flexWrap: "wrap",
@@ -33,6 +43,7 @@ export const s = {
   toggleRow: {
     display: "flex",
     gap: 8,
+    flexShrink: 0,
   } satisfies CSSProperties,
   placeholderHint: {
     border: "1px solid var(--border)",
@@ -41,5 +52,14 @@ export const s = {
     padding: "13px 16px",
     fontSize: 13,
     color: "var(--text-muted)",
+  } satisfies CSSProperties,
+  // Separates the blast body from the "Prior PRs touching these files"
+  // sub-section below it (see BlastRadiusPanel.tsx) — same token as
+  // `OverviewTab/styles.ts#divider`, colocated rather than cross-imported
+  // (each panel owns its own style tokens).
+  divider: {
+    border: "none",
+    borderTop: "1px solid var(--border)",
+    margin: "16px 0",
   } satisfies CSSProperties,
 } as const;
