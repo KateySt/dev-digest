@@ -210,6 +210,98 @@ p {
   margin: 0;
 }
 
+/* ---- markdown (Markdown.tsx) ----
+   Tailwind's Preflight resets headings to font-size/weight: inherit and lists
+   to list-style: none / padding: 0, so rendered markdown (Project Context
+   preview, skill preview, PR descriptions) needs its own scoped restoration —
+   Markdown.tsx only overrides p/strong/code/a, everything else falls through
+   to these rules via the .dd-md wrapper it already applies. */
+.dd-md h1,
+.dd-md h2,
+.dd-md h3,
+.dd-md h4,
+.dd-md h5,
+.dd-md h6 {
+  font-weight: 650;
+  color: var(--text-primary);
+  margin: 20px 0 10px;
+}
+.dd-md h1:first-child,
+.dd-md h2:first-child,
+.dd-md h3:first-child {
+  margin-top: 0;
+}
+.dd-md h1 {
+  font-size: 1.5em;
+}
+.dd-md h2 {
+  font-size: 1.25em;
+}
+.dd-md h3 {
+  font-size: 1.1em;
+}
+.dd-md h4,
+.dd-md h5,
+.dd-md h6 {
+  font-size: 1em;
+}
+.dd-md ul,
+.dd-md ol {
+  margin: 0 0 10px;
+  padding-left: 1.4em;
+}
+.dd-md ul {
+  list-style: disc;
+}
+.dd-md ol {
+  list-style: decimal;
+}
+.dd-md li {
+  margin-bottom: 4px;
+}
+.dd-md li > ul,
+.dd-md li > ol {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+.dd-md blockquote {
+  margin: 0 0 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+.dd-md hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.dd-md table {
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 0.95em;
+}
+.dd-md th,
+.dd-md td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.dd-md th {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+.dd-md pre {
+  margin: 0 0 10px;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  overflow-x: auto;
+}
+.dd-md pre code {
+  padding: 0;
+  background: none;
+}
+
 /* focus ring (WCAG AA) */
 :focus-visible {
   outline: 2px solid var(--accent);

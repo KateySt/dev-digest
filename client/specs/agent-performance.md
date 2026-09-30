@@ -1,5 +1,9 @@
 # Agent Performance — global page + Agent Editor "Stats" tab
 
+Spec ID: SPEC-02
+Status: implemented
+Supersedes: none
+
 **Status: implemented.** Built against `AgentStats`/`AgentPerf` (already
 defined in `server/src/vendor/shared/contracts/observability.ts` and
 `productionize.ts` before this spec was written), plus one small additive

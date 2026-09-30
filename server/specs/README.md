@@ -9,3 +9,5 @@ before or alongside implementation. Not test files; server tests live in
 | [`skills.md`](./skills.md) | Skill attachment, ordering, trust-by-source, versioning |
 | [`eval.md`](./eval.md) | Eval case scoring, single-run vs. workspace batch, agent-only ownership |
 | [`ci.md`](./ci.md) | Publish/re-publish idempotency, skills-as-bodies config, no runner yet |
+| [`project-context.md`](./project-context.md) | Project Context: markdown doc discovery, per-agent/per-skill attachment + order, token counts, run-time injection into the `## Project context` slot — **draft** (client side: [`../../client/specs/project-context.md`](../../client/specs/project-context.md)) |
+| [`pr-triage-queue.md`](./pr-triage-queue.md) | Bulk review trigger over a repo's `needs_review` set: batch cap, in-flight skip, bounded parallelism, independent per-PR failure, cost estimate, cached blast size on the PR list — **draft** (client side: [`../../client/specs/pr-triage-queue.md`](../../client/specs/pr-triage-queue.md)) |

@@ -25,3 +25,4 @@ test-results/
 .emdash.json
 
 .claude/.pr-self-review-stamp.json
+/.playwright-mcp/

@@ -138,10 +138,26 @@
     "tabs": {
       "config": "Config",
       "preview": "Preview",
+      "context": "Context",
       "evals": "Evals",
       "stats": "Stats",
       "versions": "Versions"
     }
+  },
+  "context": {
+    "title": "Context",
+    "attachedBadge": "{count, plural, one {# attached} other {# attached}}",
+    "inheritNote": "Any agent using this skill inherits these documents.",
+    "serializesAs": "SERIALIZES AS",
+    "filterPlaceholder": "Filter documents…",
+    "noMatch": "No documents match your filter.",
+    "empty": "No documents discovered in this repo yet.",
+    "loadError": "Could not load project context documents.",
+    "preview": "Preview",
+    "dragHandleLabel": "Reorder {name}",
+    "dragHandleInertLabel": "Reordering is disabled while the filter is active",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
   },
   "stats": {
     "loadError": "Could not load stats.",

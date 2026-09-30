@@ -9,6 +9,8 @@ colocated `*.test.tsx`, browser journeys live in `../e2e/specs/`.
 | [`agent-evals.md`](./agent-evals.md) | Agent Editor Evals tab + Eval Case Editor + Eval Dashboard — **implemented** |
 | [`agent-performance.md`](./agent-performance.md) | Agent Editor Stats tab + global Agent Performance page (one feature) — **implemented** |
 | [`agent-ci.md`](./agent-ci.md) | Agent Editor CI tab + Publish to CI + CI Runs — **implemented** (Publish only; the multi-target Export wizard stayed out of scope) |
+| [`project-context.md`](./project-context.md) | Project Context page + Agent/Skill Editor Context tabs + Prompt assembly "Project context" block — **draft** (server side: [`../../server/specs/project-context.md`](../../server/specs/project-context.md)) |
+| [`pr-triage-queue.md`](./pr-triage-queue.md) | PR list Triage queue toggle + "Highest risk" sort + per-row Run Review + "Review all" bulk action — **draft** (server side: [`../../server/specs/pr-triage-queue.md`](../../server/specs/pr-triage-queue.md)) |
 
 ## Known small gaps (not worth a dedicated spec)
 

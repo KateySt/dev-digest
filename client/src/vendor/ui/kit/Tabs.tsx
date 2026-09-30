@@ -14,7 +14,15 @@ export function Tabs({
   pad?: string;
 }) {
   return (
-    <div style={{ display: "flex", gap: 2, padding: pad, borderBottom: "1px solid var(--border)" }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 2,
+        padding: pad,
+        borderBottom: "1px solid var(--border)",
+        overflowX: "auto",
+      }}
+    >
       {tabs.map((t) => {
         const k = typeof t === "string" ? t : t.key;
         const label = typeof t === "string" ? t : t.label;
@@ -38,6 +46,8 @@ export function Tabs({
               fontSize: 14,
               fontWeight: on ? 600 : 500,
               color: on ? "var(--text-primary)" : "var(--text-secondary)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {I && <I size={14} style={{ color: on ? "var(--accent)" : "var(--text-muted)" }} />}

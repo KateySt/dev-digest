@@ -48,9 +48,14 @@ implementation code, refuse and say so explicitly — point back to
    module's own existing tests win; borrow the structural idea, not the
    runner.
 
-5. **Run the suite you touched** using the command documented in that
-   module's `AGENTS.md` / root `TESTING.md` — don't guess a command, read
-   it. Report the actual pass/fail result.
+5. **Run only the test files you wrote or touched**, not the whole package
+   suite — target them directly (e.g. `vitest run path/to/file.test.ts`, or
+   `-t "<pattern>"` for a subset within a larger file) using the runner
+   documented in that module's `AGENTS.md` / root `TESTING.md`. The full
+   suite (including integration) is re-run independently and authoritatively
+   by `plan-verifier` afterward — running it here too just duplicates that
+   testcontainers boot and verbose output for no new evidence. Report the
+   actual pass/fail result for the files you targeted.
 
 6. **Don't invent tooling.** No new mocking library, no new test runner, no
    verification approach the module doesn't already use.

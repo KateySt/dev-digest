@@ -42,8 +42,15 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
                 <span style={s.specsNone}>{t("trace.config.none")}</span>
               ) : (
                 trace.specs_read.map((sp, i) => (
-                  <span key={i} className="mono" style={s.spec}>
-                    {sp}
+                  <span key={i} style={s.specItem}>
+                    <span className="mono" style={s.spec}>
+                      {sp.path}
+                    </span>
+                    {sp.outcome !== "injected" && (
+                      <span style={s.specReason}>
+                        {t(`trace.config.specsReadReason.${sp.outcome}`)}
+                      </span>
+                    )}
                   </span>
                 ))
               )}
@@ -82,9 +89,15 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
         {trace.prompt_assembly.repo_map != null && (
           <PromptBlock label={t("trace.prompt.repoMap")} text={trace.prompt_assembly.repo_map} color={PROMPT_COLORS.repoMap} />
         )}
-        {trace.prompt_assembly.specs != null && (
-          <PromptBlock label={t("trace.prompt.specs")} text={trace.prompt_assembly.specs} color={PROMPT_COLORS.specs} />
-        )}
+        {/* SPEC-04 C-AC-23: PERMANENTLY present, unlike the sibling blocks
+            above which are conditional on `!= null` — an older trace with no
+            project-context data at all still renders this labeled block
+            with the explicit empty copy (C-AC-25), never a missing field. */}
+        <PromptBlock
+          label={t("trace.prompt.specs")}
+          text={trace.prompt_assembly.specs ?? t("trace.prompt.specsEmpty")}
+          color={PROMPT_COLORS.specs}
+        />
         {trace.prompt_assembly.callers != null && (
           <PromptBlock label={t("trace.prompt.callers")} text={trace.prompt_assembly.callers} color={PROMPT_COLORS.callers} />
         )}

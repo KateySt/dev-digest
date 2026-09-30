@@ -1,5 +1,9 @@
 # Skills
 
+Spec ID: SPEC-01
+Status: implemented
+Supersedes: none
+
 A Skill is a reusable, text-only rule/rubric block (markdown `body`) that gets
 attached to one or more Agents with an `order`. It cannot call tools or read
 files — it is prompt text, nothing else.

@@ -94,9 +94,24 @@ export const s = {
   configList: { display: "flex", flexDirection: "column", gap: 10, fontSize: 13 } satisfies CSSProperties,
   configModel: { color: "var(--accent-text)" } satisfies CSSProperties,
   configProvider: { color: "var(--text-secondary)" } satisfies CSSProperties,
-  specsWrap: { display: "flex", gap: 6, flexWrap: "wrap" } satisfies CSSProperties,
+  specsWrap: { display: "flex", flexDirection: "column", gap: 6, minWidth: 0 } satisfies CSSProperties,
   specsNone: { color: "var(--text-muted)" } satisfies CSSProperties,
-  spec: { fontSize: 12, color: "var(--text-secondary)" } satisfies CSSProperties,
+  // A repo-relative path has no spaces — give it its own wrap room rather
+  // than relying on the row (client/INSIGHTS.md 2026-09-24 / C-AC-27).
+  specItem: { display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 } satisfies CSSProperties,
+  spec: {
+    fontSize: 12,
+    color: "var(--text-secondary)",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+  } satisfies CSSProperties,
+  specReason: {
+    flexShrink: 0,
+    fontSize: 11,
+    fontWeight: 600,
+    color: "var(--warn)",
+  } satisfies CSSProperties,
   statsRow: { display: "flex", gap: 10 } satisfies CSSProperties,
   rawPre: {
     margin: 0,
