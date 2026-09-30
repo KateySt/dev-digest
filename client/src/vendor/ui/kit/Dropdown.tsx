@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "../icons";
 import { type DropdownItemDef } from "./types";
 
@@ -15,6 +16,7 @@ function DropdownItem({ it, onClose }: { it: DropdownItemDef; onClose: () => voi
       }}
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: 10,
         width: "100%",
@@ -30,8 +32,20 @@ function DropdownItem({ it, onClose }: { it: DropdownItemDef; onClose: () => voi
       }}
     >
       {I && <I size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />}
-      <span style={{ flex: 1 }}>{it.label}</span>
-      {it.hint && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{it.hint}</span>}
+      <span style={{ flex: 1, minWidth: 0 }}>{it.label}</span>
+      {it.hint && (
+        <span
+          style={{
+            flexBasis: "100%",
+            marginLeft: 24,
+            fontSize: 12,
+            color: "var(--text-muted)",
+            wordBreak: "break-word",
+          }}
+        >
+          {it.hint}
+        </span>
+      )}
       {it.onRemove && (
         <span
           role="button"
@@ -59,6 +73,16 @@ function DropdownItem({ it, onClose }: { it: DropdownItemDef; onClose: () => voi
   );
 }
 
+const GAP = 6;
+const VIEWPORT_MARGIN = 8;
+
+/**
+ * Portaled to <body> (like HoverPopover) so the menu escapes any ancestor's
+ * `overflow`/stacking context — e.g. a table row can't clip or bury it under
+ * later rows. Position is computed from the trigger's viewport rect and
+ * flips above the trigger, or caps its own height with an internal scroll,
+ * whichever keeps it fully on-screen without the page needing to scroll.
+ */
 export function Dropdown({
   trigger,
   items,
@@ -71,42 +95,95 @@ export function Dropdown({
   width?: number;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const [pos, setPos] = React.useState<{ top: number; left: number; maxHeight?: number } | null>(null);
   const ref = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => setMounted(true), []);
+
+  const reposition = React.useCallback(() => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const panelHeight = panelRef.current?.offsetHeight ?? 0;
+    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - VIEWPORT_MARGIN;
+    const openUp = panelHeight > spaceBelow && spaceAbove > spaceBelow;
+    const available = openUp ? spaceAbove : spaceBelow;
+    // Only cap height (and scroll internally) in the rare case the menu is
+    // taller than the larger of the two available gaps — normally it just fits.
+    const maxHeight = panelHeight > available ? Math.max(available, 80) : undefined;
+    const top = openUp ? rect.top - GAP - (maxHeight ?? panelHeight) : rect.bottom + GAP;
+    const rawLeft = align === "left" ? rect.left : rect.right - width;
+    const left = Math.min(Math.max(rawLeft, VIEWPORT_MARGIN), window.innerWidth - width - VIEWPORT_MARGIN);
+    setPos({ top: Math.max(top, VIEWPORT_MARGIN), left, maxHeight });
+  }, [align, width]);
+
+  // Measure-then-position: first layout pass renders the panel off-screen
+  // (but still measurable) so its real height is known before it's shown,
+  // avoiding a visible jump when it flips.
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    reposition();
+  }, [open, items, reposition]);
+
   React.useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", reposition, { passive: true, capture: true });
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [open, reposition]);
+
+  React.useEffect(() => {
+    if (!open) return;
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, []);
+  }, [open]);
+
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <div onClick={() => setOpen((o) => !o)}>{trigger}</div>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            [align]: 0,
-            width,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-strong)",
-            borderRadius: 9,
-            boxShadow: "var(--shadow-modal)",
-            padding: 6,
-            zIndex: 40,
-            animation: "ddpop .12s ease",
-          }}
-        >
-          {items.map((it, i) =>
-            it.divider ? (
-              <div key={i} style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
-            ) : (
-              <DropdownItem key={i} it={it} onClose={() => setOpen(false)} />
-            )
-          )}
-        </div>
-      )}
+      {mounted &&
+        open &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{
+              position: "fixed",
+              top: pos?.top ?? -9999,
+              left: pos?.left ?? -9999,
+              visibility: pos ? "visible" : "hidden",
+              width,
+              maxHeight: pos?.maxHeight,
+              overflowY: pos?.maxHeight ? "auto" : undefined,
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border-strong)",
+              borderRadius: 9,
+              boxShadow: "var(--shadow-modal)",
+              padding: 6,
+              zIndex: 40,
+              animation: "ddpop .12s ease",
+            }}
+          >
+            {items.map((it, i) =>
+              it.divider ? (
+                <div key={i} style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
+              ) : (
+                <DropdownItem key={i} it={it} onClose={() => setOpen(false)} />
+              )
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

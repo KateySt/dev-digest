@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { RunSummary, RunTrace } from '@devdigest/shared';
@@ -34,6 +34,49 @@ export async function activeRunsForPull(
     agent_name: r.agentName ?? null,
     ran_at: r.ranAt ? r.ranAt.toISOString() : null,
   }));
+}
+
+/** Which of the given PRs currently have at least one running agent_run —
+ *  batch form of `activeRunsForPull`'s in-flight check, for the bulk review
+ *  trigger's skip logic (SPEC-05 S-AC-4) and its cost estimate's skip count. */
+export async function prIdsWithActiveRun(
+  db: Db,
+  workspaceId: string,
+  prIds: string[],
+): Promise<Set<string>> {
+  if (prIds.length === 0) return new Set();
+  const rows = await db
+    .select({ prId: t.agentRuns.prId })
+    .from(t.agentRuns)
+    .where(
+      and(
+        eq(t.agentRuns.workspaceId, workspaceId),
+        inArray(t.agentRuns.prId, prIds),
+        eq(t.agentRuns.status, 'running'),
+      ),
+    );
+  return new Set(rows.map((r) => r.prId).filter((id): id is string => id != null));
+}
+
+/** Mean recorded cost of that repo's completed ('done') review runs — the
+ *  bulk review cost estimate's basis (SPEC-05 S-AC-13), scoped per repo so a
+ *  workspace mixing a cheap and an expensive model never blends across repos.
+ *  Returns null when the repo has no completed run with a recorded cost, so
+ *  the caller reports "unavailable" rather than substituting 0 (S-AC-14). */
+export async function meanCostForRepo(db: Db, repoId: string): Promise<number | null> {
+  const rows = await db
+    .select({ costUsd: t.agentRuns.costUsd })
+    .from(t.agentRuns)
+    .innerJoin(t.pullRequests, eq(t.pullRequests.id, t.agentRuns.prId))
+    .where(
+      and(
+        eq(t.pullRequests.repoId, repoId),
+        eq(t.agentRuns.status, 'done'),
+      ),
+    );
+  const costs = rows.map((r) => r.costUsd).filter((c): c is number => c != null);
+  if (costs.length === 0) return null;
+  return costs.reduce((sum, c) => sum + c, 0) / costs.length;
 }
 
 /** All runs for a PR (any status), newest first — the PR run history. */

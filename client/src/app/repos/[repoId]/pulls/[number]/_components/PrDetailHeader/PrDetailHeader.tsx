@@ -2,7 +2,7 @@
 
 import React, { useCallback } from "react";
 import { Icon, Avatar, Badge, Button, Tabs } from "@devdigest/ui";
-import { RunReviewDropdown } from "../RunReviewDropdown";
+import { RunReviewDropdown } from "@/components/run-review-dropdown";
 import { formatAbsoluteDateTime, fullRelativeTime } from "@/app/repos/[repoId]/pulls/helpers";
 import { s } from "./styles";
 import type { PrDetail } from "@/lib/types";

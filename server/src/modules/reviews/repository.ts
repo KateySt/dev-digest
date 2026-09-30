@@ -40,6 +40,11 @@ export class ReviewRepository {
     return pullRepo.getPrFiles(this.db, prId);
   }
 
+  /** Every PR row for a repo — bulk review's needs_review set derivation. */
+  listPullsForRepo(repoId: string): Promise<PullRow[]> {
+    return pullRepo.listPullsForRepo(this.db, repoId);
+  }
+
   // ---- reviews + findings -------------------------------------------------
 
   insertReview(values: {
@@ -76,6 +81,18 @@ export class ReviewRepository {
     prId: string,
   ): Promise<{ run_id: string; agent_id: string | null; agent_name: string | null; ran_at: string | null }[]> {
     return runRepo.activeRunsForPull(this.db, workspaceId, prId);
+  }
+
+  /** Batch in-flight check for the bulk review trigger's skip logic (SPEC-05
+   *  S-AC-4) and cost estimate's skip count. */
+  prIdsWithActiveRun(workspaceId: string, prIds: string[]): Promise<Set<string>> {
+    return runRepo.prIdsWithActiveRun(this.db, workspaceId, prIds);
+  }
+
+  /** Mean recorded cost of a repo's completed runs — the bulk cost estimate's
+   *  basis (SPEC-05 S-AC-13), null when that repo has no completed run yet. */
+  meanCostForRepo(repoId: string): Promise<number | null> {
+    return runRepo.meanCostForRepo(this.db, repoId);
   }
 
   /** All runs for a PR (any status), newest first — the PR run history. */

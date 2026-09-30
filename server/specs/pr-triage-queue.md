@@ -13,6 +13,15 @@ does not restate them.
 
 ## Changelog
 
+- 2026-09-30 — resolved the last open clarification: the cost estimate's mean
+  (AC-13, AC-14) is scoped per repo, never blended across other repos in the
+  workspace. No AC added or removed.
+- 2026-09-30 — resolved both blocking clarifications from the initial draft:
+  blast size is the downstream **caller** count from `BlastResult.callers`
+  (AC-17), chosen over impacted-endpoint count because it is always populated
+  on the non-degraded path; bounded parallelism is **3** concurrent runs
+  (AC-7). No AC was added or removed. The cost-estimate mean's scope stays
+  open and is deferred to planning.
 - 2026-09-30 — initial version
 
 ## Problem and user
@@ -87,9 +96,9 @@ spec.
 - AC-6: IF the derived set is empty, THEN the request shall be refused as
   having nothing to do and no run shall be created. (verify via: integration
   test)
-- AC-7: WHEN a bulk review starts N runs, no more than a fixed configured
-  number of those runs shall execute concurrently; the remainder shall wait
-  for a slot rather than all starting at once. (verify via: integration test)
+- AC-7: WHEN a bulk review starts N runs, no more than **3** of those runs
+  shall execute concurrently; the remainder shall wait for a slot rather than
+  all starting at once. (verify via: integration test)
 - AC-8: IF one PR's run fails — at start, during pre-work, or during
   execution — THEN every other PR's run in the same batch shall still run to
   completion, and the batch shall not be rolled back. (verify via: integration
@@ -112,11 +121,13 @@ spec.
   server shall return the PR count, the enabled-agent count, the resulting run
   count, and an approximate total cost. (verify via: integration test)
 - AC-13: WHEN the approximate total cost is computed, it shall be the mean
-  recorded cost of completed review runs multiplied by the run count. (verify
+  recorded cost of completed review runs **for that repo** multiplied by the
+  run count — never a mean taken across other repos in the workspace. (verify
   via: unit test)
-- AC-14: IF no completed review run has a recorded cost, THEN the estimate
-  shall return the counts with the cost reported as unavailable, never as
-  zero. (verify via: unit test)
+- AC-14: IF that repo has no completed review run with a recorded cost, THEN
+  the estimate shall return the counts with the cost reported as unavailable,
+  never as zero and never substituted from another repo's history. (verify
+  via: unit test)
 - AC-15: WHEN the estimate is returned, it shall be marked as approximate so
   the client cannot render it as an exact figure. (verify via: unit test)
 - AC-16: WHEN the estimate's PR count and a subsequent bulk trigger's derived
@@ -127,8 +138,10 @@ spec.
 **Blast size on the PR list**
 
 - AC-17: WHEN `GET /repos/:id/pulls` responds, each PR shall carry a blast-size
-  figure derived from its blast radius as cached for the PR's **current** head
-  sha. (verify via: integration test)
+  figure equal to the **number of downstream callers** in its blast radius as
+  cached for the PR's **current** head sha — the count of `BlastResult.callers`
+  entries, not a count of changed symbols and not a count of impacted
+  endpoints. (verify via: integration test)
 - AC-18: WHEN `GET /repos/:id/pulls` responds, no blast radius shall be
   computed, and no code index shall be built or read beyond the cached rows —
   a PR with no fresh cached blast shall report its blast size as absent.
@@ -202,7 +215,7 @@ spec.
   `deriveReviewStatus` over `lastReviewedSha` / `headSha` / `updatedAt`
   (`pulls/status.ts`). No model involved.
 - [deterministic: computed by code] The cost estimate — mean of recorded
-  `cost_usd` on completed runs × run count (AC-13).
+  `cost_usd` on that repo's completed runs × run count (AC-13).
 - [reused: cached blast radius] The blast-size figure — read from the blast
   cache populated by earlier `GET /pulls/:id/blast` calls, never recomputed
   here (AC-18).
@@ -261,15 +274,6 @@ spec.
 
 ## Open questions
 
-- [NEEDS CLARIFICATION] What exactly is "blast size"? The cached
-  `BlastResult` (`repo-intel/types.ts:74`) exposes `changedSymbols`, `callers`
-  and `impactedEndpoints`. Downstream **caller count** is the obvious single
-  number, but impacted endpoints arguably matter more for risk. This must be
-  one figure with one definition before AC-17 is implementable.
-- [NEEDS CLARIFICATION] What is the fixed concurrency limit in AC-7? The
-  behavior ("never more than the limit at once") is testable without the
-  number, but the number itself is a cost and provider-rate-limit decision.
-- [NEEDS CLARIFICATION] Should the cost estimate's mean be scoped — per agent,
-  per model, per repo, or global across all completed runs? A global mean over
-  a workspace running both a cheap and an expensive model will misprice any
-  specific batch.
+None. Blast size (AC-17), the concurrency limit (AC-7), and the cost
+estimate's scope (AC-13 — per repo) were all resolved on 2026-09-30 — see the
+changelog.

@@ -1,10 +1,32 @@
-import { SIZE_MEDIUM_MAX, SIZE_SMALL_MAX, type PrMeta, type SizeInfo } from "./constants";
+import { SIZE_MEDIUM_MAX, SIZE_SMALL_MAX, type PrMeta, type PrSize, type SizeInfo } from "./constants";
 
 /** Bucket a PR into S/M/L by total changed lines. */
 export function sizeOf(pr: PrMeta): SizeInfo {
   const lines = pr.additions + pr.deletions;
   const size = lines < SIZE_SMALL_MAX ? "S" : lines < SIZE_MEDIUM_MAX ? "M" : "L";
   return { size, lines };
+}
+
+const RISK_BUCKET_RANK: Record<PrSize, number> = { L: 2, M: 1, S: 0 };
+
+/** SPEC-05 C-AC-6..9 — "Highest risk" comparator: the riskier size bucket
+ *  (L > M > S) first; within the same bucket, larger cached blast size
+ *  first, then lower score first. A PR missing blast size or score is never
+ *  treated as zero — that tiebreak level is simply skipped for the pair,
+ *  never promoting or demoting the PR missing it (AC-8, AC-9). */
+export function compareByRisk(a: PrMeta, b: PrMeta): number {
+  const bucketDiff = RISK_BUCKET_RANK[sizeOf(b).size] - RISK_BUCKET_RANK[sizeOf(a).size];
+  if (bucketDiff !== 0) return bucketDiff;
+
+  const blastA = a.blast_size ?? null;
+  const blastB = b.blast_size ?? null;
+  if (blastA != null && blastB != null && blastA !== blastB) return blastB - blastA;
+
+  const scoreA = a.score ?? null;
+  const scoreB = b.score ?? null;
+  if (scoreA != null && scoreB != null && scoreA !== scoreB) return scoreA - scoreB;
+
+  return 0;
 }
 
 /** Compact relative time for the list's UPDATED column (e.g. "3h", "2d"). */

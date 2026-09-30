@@ -56,6 +56,46 @@ export const ReviewRunResponse = z.object({
 });
 export type ReviewRunResponse = z.infer<typeof ReviewRunResponse>;
 
+/**
+ * SPEC-05 — a repo's `needs_review` bulk-review trigger + its pre-flight cost
+ * estimate. Both derive the same set the same way (S-AC-16), so the count a
+ * user confirms and the set that actually fires never differ in kind.
+ */
+
+/** GET .../pulls/review-estimate response — what "Review all" would cost,
+ *  computed from history, never from a fresh token/diff analysis. */
+export const ReviewEstimate = z.object({
+  pr_count: z.number().int(),
+  agent_count: z.number().int(),
+  run_count: z.number().int(),
+  /** Null when that repo has no completed run with a recorded cost yet
+   *  (S-AC-14) — the client renders "no history" rather than `$0.00`. */
+  approx_cost_usd: z.number().nullable(),
+  /** Always true — the figure is a historical mean, never an exact price
+   *  (S-AC-15). Present so a client can't accidentally render it as exact. */
+  approximate: z.literal(true),
+  /** PRs in the needs_review set that already have a run in flight and would
+   *  be skipped rather than duplicated (S-AC-4). */
+  skip_count: z.number().int(),
+});
+export type ReviewEstimate = z.infer<typeof ReviewEstimate>;
+
+/** One PR's outcome from a bulk trigger — never collapsed into one status
+ *  code (S-AC-3). `run_ids` is populated only for `started`. */
+export const BulkReviewOutcome = z.object({
+  pr_id: z.string(),
+  outcome: z.enum(['started', 'skipped', 'failed']),
+  run_ids: z.array(z.string()),
+  /** Present for `skipped` (why) and `failed` (the error). */
+  reason: z.string().nullish(),
+});
+export type BulkReviewOutcome = z.infer<typeof BulkReviewOutcome>;
+
+export const BulkReviewResponse = z.object({
+  results: z.array(BulkReviewOutcome),
+});
+export type BulkReviewResponse = z.infer<typeof BulkReviewResponse>;
+
 /** Intent persisted for a PR (the Intent plus the pr_id it scopes). */
 export const PrIntentRecord = Intent.extend({ pr_id: z.string() });
 export type PrIntentRecord = z.infer<typeof PrIntentRecord>;

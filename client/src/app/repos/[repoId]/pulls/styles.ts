@@ -45,7 +45,19 @@ export const s = {
     color: "var(--text-muted)",
     textAlign: "right",
   } satisfies CSSProperties,
+  actionsCell: {
+    display: "flex",
+    justifyContent: "flex-end",
+  } satisfies CSSProperties,
   muted: { color: "var(--text-muted)" } satisfies CSSProperties,
+  riskTooltip: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    padding: "10px 12px",
+    fontSize: 12.5,
+    color: "var(--text-secondary)",
+  } satisfies CSSProperties,
   filterBar: {
     display: "flex",
     alignItems: "center",

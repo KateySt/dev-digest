@@ -1,14 +1,16 @@
 /* RunReviewDropdown — ported from components2.jsx.
    "Run all enabled agents" / a specific agent → kicks off POST /pulls/:id/review
-   and hands the resulting runIds up so the parent can stream SSE live status. */
+   and hands the resulting runIds up so the parent can stream SSE live status.
+   Promoted out of the PR detail page (SPEC-05 client Module interactions) so
+   the PR list's per-row action can reuse it instead of duplicating it. */
 "use client";
 
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Dropdown, type DropdownItemDef } from "@devdigest/ui";
-import { useAgents } from "../../../../../../../lib/hooks/agents";
-import { useRunReview } from "../../../../../../../lib/hooks/reviews";
+import { useAgents } from "@/lib/hooks/agents";
+import { useRunReview } from "@/lib/hooks/reviews";
 import { DROPDOWN_WIDTH } from "./constants";
 
 export function RunReviewDropdown({
@@ -16,6 +18,7 @@ export function RunReviewDropdown({
   size = "sm",
   kind = "primary",
   warnMerged = false,
+  ariaLabel,
   onRunStart,
   onRunsStarted,
   onRunSettled,
@@ -25,6 +28,10 @@ export function RunReviewDropdown({
   kind?: "primary" | "secondary";
   /** PR is already merged/closed — dim the trigger and warn, but still allow. */
   warnMerged?: boolean;
+  /** SPEC-05 — overrides the trigger's accessible name. Needed wherever many
+   *  of these render side by side (the PR list) so a screen reader can tell
+   *  20 otherwise-identical "Run Review" buttons apart by PR. */
+  ariaLabel?: string;
   /** Fired the moment a run is kicked off (before it completes). */
   onRunStart?: () => void;
   onRunsStarted?: (runIds: string[]) => void;
@@ -91,7 +98,14 @@ export function RunReviewDropdown({
           title={warnMerged ? t("runReview.mergedTooltip") : undefined}
           style={warnMerged ? { opacity: 0.6 } : undefined}
         >
-          <Button kind={kind} size={size} iconRight="ChevronDown" icon="Sparkles" loading={run.isPending}>
+          <Button
+            kind={kind}
+            size={size}
+            iconRight="ChevronDown"
+            icon="Sparkles"
+            loading={run.isPending}
+            aria-label={ariaLabel}
+          >
             {run.isPending ? t("runReview.running") : t("runReview.runReview")}
           </Button>
         </span>

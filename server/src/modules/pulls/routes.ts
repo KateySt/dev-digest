@@ -9,6 +9,8 @@ import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import { deriveReviewStatus } from './status.js';
+import { BlastRepository } from '../blast/repository.js';
+import { callerCount } from '../blast/helpers.js';
 
 /** `/pulls/:id/comments/:commentId` — `id` is our uuid, `commentId` is
  *  GitHub's numeric review-comment id (not ours to generate — coerce from
@@ -171,9 +173,21 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
+    // Blast size (SPEC-05 S-AC-17..20): read-only cache lookup, never
+    // computed here. A slice only counts as fresh when it was cached for the
+    // PR's CURRENT head sha and wasn't computed on the degraded path —
+    // otherwise the field is absent, never a stale or zero figure.
+    const blastRepo = new BlastRepository(container.db);
+    const blastByPr = await blastRepo.getSlices(prIds);
+
     const now = Date.now();
     return rows.map((r) => {
       const review = latestReviewByPr.get(r.id);
+      const blastSlice = blastByPr.get(r.id);
+      const blastSize =
+        blastSlice && blastSlice.headSha === r.headSha && !blastSlice.degraded
+          ? callerCount(blastSlice.blast)
+          : null;
       return {
         id: r.id,
         number: r.number,
@@ -196,6 +210,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         updated_at: r.updatedAt?.toISOString() ?? null,
         score: review ? review.score : null,
         cost_usd: latestRunCostByPr.get(r.id) ?? null,
+        blast_size: blastSize,
         findings: review
           ? findingsCountByReviewId.get(review.reviewId) ?? {
               CRITICAL: 0,

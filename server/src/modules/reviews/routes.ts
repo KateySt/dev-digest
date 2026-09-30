@@ -43,6 +43,25 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     return { pr_id: req.params.id, runs, reviews };
   });
 
+  // ---- SPEC-05: bulk "Review all" over a repo's needs_review set ----------
+  // Pre-flight cost estimate — read-only, triggers nothing.
+  app.get('/repos/:id/pulls/review-estimate', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return service.estimateBulkReview(workspaceId, req.params.id);
+  });
+
+  // Same tight per-route limit as the single-PR trigger below — each call can
+  // fan out to many expensive LLM runs at once.
+  app.post(
+    '/repos/:id/pulls/review',
+    { schema: { params: IdParams }, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (req) => {
+      const { workspaceId } = await getContext(container, req);
+      const results = await service.runBulkReview(workspaceId, req.params.id, req.log);
+      return { results };
+    },
+  );
+
   // ---- SSE: live run events (replay buffer first, then live; ends on done) -
   // No rate limit: SSE is one long-lived connection, not burst traffic.
   app.get(

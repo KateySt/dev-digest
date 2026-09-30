@@ -194,6 +194,10 @@ export const PrMeta = z.object({
       SUGGESTION: z.number().int(),
     })
     .nullish(),
+  // Downstream-caller count from the PR's cached blast radius at its current
+  // head sha (list endpoint only; SPEC-05 S-AC-17). Absent — not zero — when
+  // no fresh cache entry exists; never computed by the list request itself.
+  blast_size: z.number().int().nullish(),
 });
 export type PrMeta = z.infer<typeof PrMeta>;
 

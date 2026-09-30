@@ -13,6 +13,15 @@ the data source; this spec does not restate them.
 
 ## Changelog
 
+- 2026-09-30 — resolved the two remaining open clarifications: a manual
+  filter/sort change while Triage queue is active deactivates the toggle
+  rather than fighting the user or letting the view drift (AC-32); the risk
+  order is explained via a per-row tooltip (AC-33). Status stays `draft`.
+- 2026-09-30 — named the blast-size figure AC-7 tiebreaks on, now that the
+  server spec has resolved it: the downstream-caller count (S-AC-17). Split
+  the initial draft's AC-14 so the in-flight state and the settled outcome are
+  one testable thing each; AC count unchanged. Toggle-vs-manual-change and
+  order-explainability stay open and are deferred to planning.
 - 2026-09-30 — initial version
 
 ## Problem and user
@@ -90,6 +99,12 @@ that states what it will spend.
   in-session filter/sort to restore, the toggle shall render active, and
   deactivating it shall fall back to the page defaults — `needs_review` status
   and `newest` sort. (verify via: unit test)
+- AC-32: WHEN Triage queue is active and the user changes the status filter or
+  the sort by hand — not via the toggle itself — the toggle shall deactivate
+  immediately, and the manually chosen filter/sort shall stand as the new
+  view rather than being re-pinned or silently reverted. This deactivation
+  does not restore the pre-activation state from AC-4; the user's manual
+  choice is the new state. (verify via: unit test)
 
 **"Highest risk" sort**
 
@@ -98,8 +113,9 @@ that states what it will spend.
   test)
 - AC-7: WHILE "Highest risk" is selected, PRs falling in the same size bucket
   as each other — the existing S/M/L bucket from `SIZE_SMALL_MAX` /
-  `SIZE_MEDIUM_MAX` — shall be ordered by descending cached blast size, and
-  then by ascending score. (verify via: unit test)
+  `SIZE_MEDIUM_MAX` — shall be ordered by descending cached blast size (the
+  server's downstream-caller count, S-AC-17), and then by ascending score.
+  (verify via: unit test)
 - AC-8: WHERE a PR has no cached blast size, its position within its size
   bucket shall be determined without it, rather than treating the absent
   figure as zero. (verify via: unit test)
@@ -109,6 +125,11 @@ that states what it will spend.
 - AC-10: WHEN the sort dropdown is rendered, "Highest risk" shall appear
   alongside the existing newest/oldest options, labeled from a message key.
   (verify via: unit test)
+- AC-33: WHILE "Highest risk" is selected, each row shall offer a tooltip,
+  reachable by hover and by keyboard focus, stating the values used to rank
+  it — diff size, cached blast size (or a stated "not available"), and score
+  (or a stated "not yet reviewed") — so the order is explainable rather than
+  arbitrary-looking. (verify via: unit test)
 
 **Per-row Run Review**
 
@@ -260,7 +281,8 @@ that states what it will spend.
   keyboard, and announces the counts and cost as text rather than as styling;
   each row's Run Review dropdown is keyboard reachable and its trigger has an
   accessible name that identifies *which* PR it belongs to, since 20 identical
-  "Run Review" buttons are otherwise indistinguishable to a screen reader.
+  "Run Review" buttons are otherwise indistinguishable to a screen reader;
+  AC-33's risk tooltip is reachable by keyboard focus, not hover alone.
 - **Observability (user-facing).** A batch's result is readable from the rows
   themselves (AC-25, AC-26) without opening any PR. A failed row states that
   it failed rather than reverting to its pre-run appearance.
@@ -323,15 +345,7 @@ that states what it will spend.
 
 ## Open questions
 
-- [NEEDS CLARIFICATION] What happens to the Triage queue toggle when the user
-  changes the status filter or the sort **by hand while it is active**? Three
-  readable options: the toggle turns itself off (the view is no longer the
-  triage view), it stays on and re-pins the value the user just changed
-  (fighting the user), or it stays on and lets the view drift (an "active"
-  toggle that no longer describes the screen). AC-1 … AC-5 do not cover this
-  and it is reachable in one click.
-- [NEEDS CLARIFICATION] Both blast-size definition questions from the server
-  spec land here visually: whichever figure is chosen (downstream caller count
-  or impacted endpoint count) is what AC-7 tiebreaks on, and the user has no
-  way to see it. Should the risk ordering be explainable in the UI at all — a
-  tooltip or a sort-key column — or is an unexplained order acceptable?
+None. All clarifications are resolved: the blast-size figure AC-7 tiebreaks on
+(downstream-caller count, S-AC-17), the toggle's manual-change transition
+(AC-32 — deactivates, does not fight the user), and the risk order's
+explainability (AC-33 — a hover/focus tooltip) were all closed on 2026-09-30.

@@ -1,5 +1,6 @@
+import PQueue from 'p-queue';
 import type { Container } from '../../platform/container.js';
-import type { FindingActionKind, RunEventKind, RunTrace } from '@devdigest/shared';
+import type { BulkReviewOutcome, FindingActionKind, ReviewEstimate, RunEventKind, RunTrace } from '@devdigest/shared';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
@@ -7,6 +8,8 @@ import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl } from './findings.js';
 import { reviewToDto } from './helpers.js';
+import { needsReviewPrIds } from '../pulls/status.js';
+import { BULK_REVIEW_CONCURRENCY, BULK_REVIEW_MAX_PRS } from './constants.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -139,6 +142,124 @@ export class ReviewService {
 
   private publish(runId: string, kind: RunEventKind, msg: string, data?: unknown) {
     return this.container.runBus.publish(runId, kind, msg, data);
+  }
+
+  // ===========================================================================
+  // SPEC-05 — bulk "Review all" over a repo's needs_review set.
+  // ===========================================================================
+
+  /** Repo ownership check (S-AC-11) + the repo's current needs_review set,
+   *  shared by the estimate and the trigger so they can never derive the set
+   *  two different ways (S-AC-16). */
+  private async resolveRepoScope(workspaceId: string, repoId: string) {
+    const repo = await this.repo.getRepo(repoId);
+    if (!repo || repo.workspaceId !== workspaceId) throw new NotFoundError('Repo not found');
+    const pulls = await this.repo.listPullsForRepo(repoId);
+    const prIds = needsReviewPrIds(pulls);
+    return { repo, pulls, prIds };
+  }
+
+  /** GET .../pulls/review-estimate — what "Review all" would cost, computed
+   *  from history (S-AC-12..16). Never triggers anything. */
+  async estimateBulkReview(workspaceId: string, repoId: string): Promise<ReviewEstimate> {
+    const { prIds } = await this.resolveRepoScope(workspaceId, repoId);
+    const enabled = await this.agents.listEnabled(workspaceId);
+    const inFlight = await this.repo.prIdsWithActiveRun(workspaceId, prIds);
+    const targetable = prIds.filter((id) => !inFlight.has(id));
+    const runCount = targetable.length * enabled.length;
+    const meanCost = await this.repo.meanCostForRepo(repoId);
+    return {
+      pr_count: prIds.length,
+      agent_count: enabled.length,
+      run_count: runCount,
+      approx_cost_usd: meanCost == null ? null : meanCost * runCount,
+      approximate: true,
+      skip_count: inFlight.size,
+    };
+  }
+
+  /**
+   * POST .../pulls/review — bulk-trigger every PR in the repo's OWN derived
+   * needs_review set (S-AC-1; a client-supplied list is never accepted, so a
+   * caller cannot widen a batch). Each targeted PR's agent_run rows are
+   * created synchronously (so the response can report real run ids), then
+   * the actual (slow) execution runs in the background with bounded
+   * concurrency across PRs — never awaited by this method.
+   */
+  async runBulkReview(
+    workspaceId: string,
+    repoId: string,
+    logger?: Logger,
+  ): Promise<BulkReviewOutcome[]> {
+    const enabled = await this.agents.listEnabled(workspaceId);
+    if (enabled.length === 0) {
+      throw new AppError('no_enabled_agents', 'Enable at least one agent before running a bulk review.', 400);
+    }
+
+    const { repo, pulls, prIds } = await this.resolveRepoScope(workspaceId, repoId);
+    if (prIds.length === 0) {
+      throw new AppError('nothing_to_review', 'No pull requests currently need review.', 400);
+    }
+    if (prIds.length > BULK_REVIEW_MAX_PRS) {
+      throw new AppError(
+        'bulk_review_too_large',
+        `${prIds.length} pull requests need review — the maximum for one "Review all" is ${BULK_REVIEW_MAX_PRS}.`,
+        400,
+      );
+    }
+
+    const inFlight = await this.repo.prIdsWithActiveRun(workspaceId, prIds);
+    const pullById = new Map(pulls.map((p) => [p.id, p]));
+
+    const results: BulkReviewOutcome[] = [];
+    const toExecute: { pull: (typeof pulls)[number]; jobs: { agent: AgentRow; runId: string }[] }[] = [];
+
+    for (const prId of prIds) {
+      if (inFlight.has(prId)) {
+        results.push({ pr_id: prId, outcome: 'skipped', run_ids: [], reason: 'already has a run in flight' });
+        continue;
+      }
+      const pull = pullById.get(prId);
+      if (!pull) {
+        // Vanishingly unlikely (deleted between the two reads above), but a
+        // batch's per-PR isolation (S-AC-8) covers this shape too.
+        results.push({ pr_id: prId, outcome: 'failed', run_ids: [], reason: 'Pull request no longer exists' });
+        continue;
+      }
+      const jobs: { agent: AgentRow; runId: string }[] = [];
+      for (const agent of enabled) {
+        const runId = await this.repo.createAgentRun({
+          workspaceId,
+          agentId: agent.id,
+          prId,
+          provider: agent.provider,
+          model: agent.model,
+        });
+        jobs.push({ agent, runId });
+      }
+      results.push({ pr_id: prId, outcome: 'started', run_ids: jobs.map((j) => j.runId) });
+      toExecute.push({ pull, jobs });
+    }
+
+    // Fire-and-forget: the HTTP response returns now with every outcome
+    // already decided; actual review execution happens in the background.
+    // Bounded to BULK_REVIEW_CONCURRENCY PRs at once — each PR's own jobs
+    // already run sequentially inside executeRuns, so this bound is also the
+    // bound on total concurrent runs (S-AC-7). One PR's executeRuns throwing
+    // never stops the queue from draining the rest (S-AC-8).
+    const queue = new PQueue({ concurrency: BULK_REVIEW_CONCURRENCY });
+    for (const { pull, jobs } of toExecute) {
+      void queue.add(() =>
+        this.executor.executeRuns(workspaceId, pull, repo, jobs, logger).catch((err) => {
+          logger?.error(
+            { prId: pull.id, err: (err as Error).message },
+            'bulk review: background execution crashed for one PR',
+          );
+        }),
+      );
+    }
+
+    return results;
   }
 
   // ===========================================================================
