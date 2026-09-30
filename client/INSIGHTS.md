@@ -14,6 +14,28 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-09-30 — `client/src/vendor/shared` and `server/src/vendor/shared` are NOT byte-identical — diff only the file(s) you touch
+
+The 2026-09-15 entry below (and `server/INSIGHTS.md`'s equivalent) describes
+the two `vendor/shared` trees as "confirmed byte-identical" and says to
+"diff the two files to confirm they still match" after a hand-applied edit
+— that was true when written, isn't anymore. While building the Onboarding
+Tour feature (SPEC-06), `diff -rq` between the two trees found 5
+pre-existing differing files, unrelated to this feature: `adapters.ts`,
+`contracts/eval-ci.ts`, `contracts/knowledge.ts`, `contracts/platform.ts`,
+`contracts/productionize.ts` — e.g. this side's `contracts/knowledge.ts` is
+missing the `AgentVersionConfig`/`AgentVersion` exports the server side has.
+No CI check enforces parity between the two trees, so this kind of drift
+accumulates silently.
+
+Practical effect: **a whole-tree diff between the two `vendor/shared`
+directories is no longer a usable check** — it'll show noise from these 5
+files no matter what you touched. Keep hand-applying identical edits to
+both trees (still correct), but scope the "diff to confirm" step to
+**only the specific file(s) you edited**, not the whole tree.
+
+---
+
 ### 2026-09-24 — none of the seeded PRs have `endpoints_affected`/`crons_affected` data, so the Blast Radius panel's endpoint/cron chip styling can't be visually confirmed live
 
 Context, found while doing visual QA on the Blast Radius panel's endpoint

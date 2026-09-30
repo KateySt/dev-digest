@@ -19,6 +19,7 @@ import risks from './risks/routes.js';
 import blast from './blast/routes.js';
 import commits from './commits/routes.js';
 import history from './history/routes.js';
+import onboarding from './onboarding/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -54,4 +55,5 @@ export const modules: Record<string, FastifyPluginAsync> = {
   blast,
   commits,
   history,
+  onboarding,
 };

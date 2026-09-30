@@ -1,17 +1,87 @@
 {
   "title": "Onboarding Tour",
-  "sections": "Sections",
-  "sectionCount": "{count} sections",
+  "subtitle": "{indexed} of {discovered} files indexed · generated {age}",
+  "subtitleNeverGenerated": "Not generated yet",
+  "partialIndexMarker": "partial index",
+  "generate": "Generate tour",
+  "generating": "Generating…",
   "regenerate": "Regenerate",
   "regenerating": "Regenerating…",
   "unknownError": "Unknown error",
-  "generate": {
-    "title": "Generate onboarding tour",
-    "body": "DevDigest indexes the repo and specs, then writes a 5-section guided tour: overview, architecture, key modules, getting started, and conventions & gotchas.",
-    "cta": "Generate onboarding tour",
-    "generating": "Generating…"
+  "generateFailed": "Couldn't start generation: {message}",
+
+  "anchorNav": {
+    "label": "Sections"
   },
+
+  "sections": {
+    "architecture": {
+      "heading": "Architecture overview",
+      "empty": "No architecture overview available for this tour.",
+      "diagramFallbackTitle": "Diagram unavailable — showing the underlying nodes and edges instead:",
+      "diagramEmpty": "No architecture diagram data available."
+    },
+    "criticalPaths": {
+      "heading": "Critical paths",
+      "empty": "No critical dependency chains were found for this repo.",
+      "openFile": "Open {path} on GitHub"
+    },
+    "runLocally": {
+      "heading": "How to run locally",
+      "empty": "No run commands were found in this repo's package.json, compose file, or .env.example.",
+      "copyCommand": "Copy \"{command}\"",
+      "copied": "Copied"
+    },
+    "readingPath": {
+      "heading": "Guided reading path",
+      "empty": "No guided reading path is available for this tour."
+    },
+    "firstTasks": {
+      "heading": "First tasks",
+      "empty": "No starter-task suggestions are available for this tour."
+    }
+  },
+
+  "collapse": {
+    "expand": "Expand {section}",
+    "collapse": "Collapse {section}"
+  },
+
+  "empty": {
+    "noTour": {
+      "title": "No onboarding tour yet",
+      "body": "Generate a five-section guided tour of this repo — architecture, critical paths, how to run it locally, a reading order, and first tasks — from the repo's own index and files."
+    },
+    "noClone": {
+      "title": "This repo isn't cloned yet",
+      "body": "The onboarding tour needs a local clone of the repo to read its files. Once the repo finishes cloning, come back here to generate the tour."
+    }
+  },
+
+  "degraded": {
+    "index": {
+      "title": "Index coverage is degraded",
+      "reason": {
+        "index_partial": "The repo's index is only partially built, so this tour may be missing files.",
+        "repo_too_large": "This repo exceeds the indexer's file cap, so this tour covers only part of it.",
+        "flag_off": "Repo indexing is turned off for this workspace, so no deterministic facts are available.",
+        "index_failed": "The repo's index failed to build, so this tour may be missing files.",
+        "no_data": "No index data is available yet for this repo."
+      },
+      "remedy": "Try resyncing the repo's index from Project Context, then regenerate this tour."
+    },
+    "model": {
+      "title": "Tour generation was incomplete",
+      "reason": {
+        "call_failed": "The model call failed, so the written sections below are unavailable.",
+        "timeout": "The model call took too long, so the written sections below are unavailable.",
+        "invalid_response": "The model's response couldn't be used, so the written sections below are unavailable."
+      },
+      "remedy": "The facts below (reading path, critical paths, run commands) are still accurate — try Regenerate to get the written sections."
+    }
+  },
+
   "loadError": {
-    "title": "Couldn’t load the onboarding tour"
+    "title": "Couldn't load the onboarding tour"
   }
 }

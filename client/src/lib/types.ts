@@ -32,6 +32,16 @@ export type {
   ProjectContextSourceFolder,
   ProjectContextList,
   ProjectContextAttachment,
+  OnboardingTour,
+  OnboardingReadResponse,
+  OnboardingGenerateAccepted,
+  OnboardingReadingPathEntry,
+  OnboardingCriticalPathEntry,
+  OnboardingRunCommand,
+  OnboardingDiagramEdge,
+  OnboardingIndexStatus,
+  OnboardingIndexDegradedReason,
+  OnboardingModelFailureReason,
 } from "@devdigest/shared";
 
 export type { Review, Finding, Severity, Verdict } from "@devdigest/shared";

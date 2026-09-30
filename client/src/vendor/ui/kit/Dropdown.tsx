@@ -129,10 +129,20 @@ export function Dropdown({
 
   React.useEffect(() => {
     if (!open) return;
-    window.addEventListener("scroll", reposition, { passive: true, capture: true });
+    // capture:true is needed to catch scrolling of any ancestor of the
+    // trigger — but it also catches the panel's own internal list scroll
+    // (e.g. hovering + wheel-scrolling through items). Skip those: the
+    // panel scrolling internally never changes the trigger's position, and
+    // re-measuring mid-scroll reads the already-clamped height, which was
+    // collapsing maxHeight and stranding items below the viewport.
+    const onScroll = (e: Event) => {
+      if (panelRef.current?.contains(e.target as Node)) return;
+      reposition();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
     window.addEventListener("resize", reposition);
     return () => {
-      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", reposition);
     };
   }, [open, reposition]);
@@ -157,6 +167,7 @@ export function Dropdown({
         createPortal(
           <div
             ref={panelRef}
+            className={pos?.maxHeight ? "dd-dropdown-panel" : undefined}
             style={{
               position: "fixed",
               top: pos?.top ?? -9999,
@@ -164,7 +175,7 @@ export function Dropdown({
               visibility: pos ? "visible" : "hidden",
               width,
               maxHeight: pos?.maxHeight,
-              overflowY: pos?.maxHeight ? "auto" : undefined,
+              overflowY: pos?.maxHeight ? "scroll" : undefined,
               background: "var(--bg-elevated)",
               border: "1px solid var(--border-strong)",
               borderRadius: 9,

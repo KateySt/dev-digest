@@ -183,6 +183,20 @@ body {
   background: var(--text-muted);
 }
 
+/* ---- dropdown panel: always-visible scroll indicator ----
+   Windows/Chromium overlay scrollbars hide at rest and only paint on
+   hover, which made an overflowing dropdown look scroll-less until you
+   moved the mouse over it. Forcing scrollbar-gutter + a non-transparent
+   track keeps the affordance visible whenever content overflows. */
+.dd-dropdown-panel {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--bg-elevated);
+}
+.dd-dropdown-panel::-webkit-scrollbar-track {
+  background: var(--bg-elevated);
+}
+
 ::selection {
   background: var(--accent-bg);
 }
