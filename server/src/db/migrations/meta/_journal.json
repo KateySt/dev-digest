@@ -120,6 +120,13 @@
       "when": 1790754431574,
       "tag": "0016_living_ender_wiggin",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790779662584,
+      "tag": "0017_wealthy_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

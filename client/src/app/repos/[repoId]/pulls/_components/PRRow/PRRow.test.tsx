@@ -34,6 +34,7 @@ const PR: PrMeta = {
   number: 482,
   title: "Add rate limiting to public API endpoints",
   author: "marisa.koch",
+  avatar_url: null,
   branch: "feat/rate-limit-public",
   base: "main",
   head_sha: "deadbeef",

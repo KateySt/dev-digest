@@ -175,6 +175,11 @@ export interface GitHubClient {
   listCommitFiles(repo: RepoRef, sha: string): Promise<string[]>;
   /** GET /user — for "posting as @user". */
   currentLogin(): Promise<string>;
+  /**
+   * Bytes-per-language for the whole repo (GitHub `GET /repos/{owner}/{repo}/languages`).
+   * Repo-wide only — GitHub exposes no per-PR language breakdown.
+   */
+  getLanguages(repo: RepoRef): Promise<Record<string, number>>;
 }
 
 // ---------- Git (simple-git, heavy) ----------

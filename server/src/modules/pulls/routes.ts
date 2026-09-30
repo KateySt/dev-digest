@@ -60,6 +60,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
               number: pr.number,
               title: pr.title,
               author: pr.author,
+              avatarUrl: pr.avatar_url ?? null,
               branch: pr.branch,
               base: pr.base,
               headSha: pr.head_sha,
@@ -74,6 +75,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
               target: [t.pullRequests.repoId, t.pullRequests.number],
               set: {
                 title: pr.title,
+                avatarUrl: pr.avatar_url ?? null,
                 headSha: pr.head_sha,
                 status: pr.status,
                 updatedAt: pr.updated_at ? new Date(pr.updated_at) : null,
@@ -193,6 +195,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         number: r.number,
         title: r.title,
         author: r.author,
+        avatar_url: r.avatarUrl,
         branch: r.branch,
         base: r.base,
         head_sha: r.headSha,
@@ -272,6 +275,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         .update(t.pullRequests)
         .set({
           body: detail.body ?? null,
+          avatarUrl: detail.avatar_url ?? null,
           // Diff stats aren't on GitHub's PR-list payload — backfill them from
           // the detail fetch so the Pull Requests list shows real size/files.
           additions: detail.additions,
@@ -290,6 +294,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         number: pr.number,
         title: pr.title,
         author: pr.author,
+        avatar_url: pr.avatarUrl,
         branch: pr.branch,
         base: pr.base,
         head_sha: pr.headSha,

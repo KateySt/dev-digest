@@ -161,6 +161,9 @@ export const Repo = z.object({
   full_name: z.string(),
   default_branch: z.string(),
   clone_path: z.string().nullable(),
+  // Bytes-per-language for the whole repo (GitHub's /languages endpoint has
+  // no per-PR breakdown); null until the first clone/refresh fetches it.
+  languages: z.record(z.string(), z.number()).nullable(),
   last_polled_at: z.string().nullable(),
   created_by: z.string().nullable(),
 });
@@ -175,6 +178,7 @@ export const PrMeta = z.object({
   number: z.number().int(),
   title: z.string(),
   author: z.string(),
+  avatar_url: z.string().nullable(),
   branch: z.string(),
   base: z.string(),
   head_sha: z.string(),

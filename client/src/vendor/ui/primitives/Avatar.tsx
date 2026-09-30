@@ -1,6 +1,40 @@
+"use client";
+
 import React from "react";
 
-export function Avatar({ name, size = 22, color }: { name: string; size?: number; color?: string }) {
+export function Avatar({
+  name,
+  avatarUrl,
+  size = 22,
+  color,
+}: {
+  name: string;
+  /** GitHub avatar image URL; falls back to initials when missing or failing to load. */
+  avatarUrl?: string | null;
+  size?: number;
+  color?: string;
+}) {
+  const [imgFailed, setImgFailed] = React.useState(false);
+
+  if (avatarUrl && !imgFailed) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        width={size}
+        height={size}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 99,
+          flexShrink: 0,
+          objectFit: "cover",
+        }}
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
   const initials = name
     .split(/[\s-]/)
     .map((w) => w[0])

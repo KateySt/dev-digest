@@ -11,6 +11,7 @@ import {
   ErrorState,
   AutoTriggerStatus,
   Button,
+  LanguageBar,
 } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
 import { RepoNotFound } from "@/components/repo-not-found";
@@ -132,6 +133,11 @@ export default function PullsPage() {
               ? t("list.summary", { open: openCount, needsReview: needsReviewCount })
               : t("list.loading")}
           </p>
+          {activeRepo?.languages && (
+            <div style={{ maxWidth: 420, marginTop: 10 }}>
+              <LanguageBar languages={activeRepo.languages} height={5} showLegend />
+            </div>
+          )}
         </div>
         <div style={s.headerActions}>
           <AutoTriggerStatus on={false} />

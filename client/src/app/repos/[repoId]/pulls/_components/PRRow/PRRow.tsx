@@ -81,7 +81,7 @@ export function PRRow({
         </div>
       </div>
       <div style={s.authorCell}>
-        <Avatar name={pr.author} size={18} />
+        <Avatar name={pr.author} avatarUrl={pr.avatar_url} size={18} />
         {pr.author}
       </div>
       <div onClick={(e) => e.stopPropagation()}>

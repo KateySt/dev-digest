@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
@@ -31,6 +31,24 @@ const FINDINGS: FindingRecord[] = [
     accepted_at: null,
     dismissed_at: null,
   },
+  {
+    id: "f2",
+    severity: "WARNING",
+    category: "bug",
+    title: "Retry-After header omitted",
+    file: "src/middleware/ratelimit.ts",
+    start_line: 52,
+    end_line: 52,
+    rationale: "Clients can't back off correctly.",
+    suggestion: null,
+    confidence: 0.81,
+    kind: "finding",
+    trifecta_components: null,
+    evidence: null,
+    review_id: "r1",
+    accepted_at: null,
+    dismissed_at: null,
+  },
 ];
 
 function renderWithIntl(ui: React.ReactElement) {
@@ -51,5 +69,20 @@ describe("FindingsPanel (smoke)", () => {
   it("shows the empty state when nothing matches", () => {
     renderWithIntl(<FindingsPanel findings={[]} prId="pr1" />);
     expect(screen.getByText("No findings match")).toBeInTheDocument();
+  });
+
+  it("defaults to the All pill, filters to one severity on click, and back to all via the All pill", () => {
+    renderWithIntl(<FindingsPanel findings={FINDINGS} prId="pr1" />);
+    expect(screen.getByText("All")).toBeInTheDocument();
+    expect(screen.getByText("Hardcoded secret")).toBeInTheDocument();
+    expect(screen.getByText("Retry-After header omitted")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Warning"));
+    expect(screen.queryByText("Hardcoded secret")).not.toBeInTheDocument();
+    expect(screen.getByText("Retry-After header omitted")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("All"));
+    expect(screen.getByText("Hardcoded secret")).toBeInTheDocument();
+    expect(screen.getByText("Retry-After header omitted")).toBeInTheDocument();
   });
 });

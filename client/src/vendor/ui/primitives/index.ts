@@ -10,6 +10,8 @@ export { MonoLink } from "./MonoLink";
 export { HoverPopover } from "./HoverPopover";
 export type { HoverPopoverProps } from "./HoverPopover";
 export { ProgressBar, PercentProgress } from "./ProgressBar";
+export { LanguageBar, languageStats } from "./LanguageBar";
+export type { LanguageStat } from "./LanguageBar";
 export { CircularScore } from "./CircularScore";
 export { Toggle } from "./Toggle";
 export { Kbd } from "./Kbd";

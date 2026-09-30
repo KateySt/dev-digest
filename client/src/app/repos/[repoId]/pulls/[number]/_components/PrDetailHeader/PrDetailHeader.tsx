@@ -56,7 +56,7 @@ export function PrDetailHeader({
           </h1>
           <div style={s.meta}>
             <span style={s.authorChip}>
-              <Avatar name={pr.author} size={17} />
+              <Avatar name={pr.author} avatarUrl={pr.avatar_url} size={17} />
               {pr.author}
             </span>
             {pr.opened_at && (

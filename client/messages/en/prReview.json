@@ -30,6 +30,7 @@
     "refreshing": "Refreshing…"
   },
   "panel": {
+    "all": "All",
     "hideLowConfidence": "Hide low confidence",
     "noMatchTitle": "No findings match",
     "noMatchBody": "Adjust the filters above, or run a review to generate findings."

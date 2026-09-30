@@ -16,6 +16,7 @@ export const pullRequests = pgTable(
     number: integer('number').notNull(),
     title: text('title').notNull(),
     author: text('author').notNull(),
+    avatarUrl: text('avatar_url'),
     branch: text('branch').notNull(),
     base: text('base').notNull(),
     headSha: text('head_sha').notNull(),

@@ -57,6 +57,17 @@ export class RepoService {
     });
     await this.repo.updateClonePath(repoId, path);
 
+    // Language bar (repo-wide, GitHub has no per-PR breakdown) — best-effort,
+    // never fails the clone job when GitHub is unavailable.
+    try {
+      const gh = await this.container.github();
+      const languages = await gh.getLanguages({ owner, name });
+      await this.repo.updateLanguages(repoId, languages);
+    } catch {
+      // No token / offline / API error — language bar stays hidden until a
+      // later refresh succeeds.
+    }
+
     // T2.2 — kick off the indexer in the background. ENQUEUE (not call) so the
     // clone job closes immediately and the (heavier) index runs as its own
     // job under JobRunner's timeout/retry. If the handler isn't registered

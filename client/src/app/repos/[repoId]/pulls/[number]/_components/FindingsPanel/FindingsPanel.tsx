@@ -4,11 +4,12 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Toggle, EmptyState } from "@devdigest/ui";
-import type { FindingRecord } from "@devdigest/shared";
+import { Toggle, EmptyState, Chip, SEV } from "@devdigest/ui";
+import type { FindingRecord, Severity } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
-import { KEY_TO_ACTION } from "./constants";
+import { countBySeverity } from "../../../../../../../lib/findings";
+import { KEY_TO_ACTION, SEVERITY_FILTER_ORDER } from "./constants";
 import { visibleFindings } from "./helpers";
 import { s } from "./styles";
 
@@ -30,13 +31,34 @@ export function FindingsPanel({
   const t = useTranslations("prReview");
   const action = useFindingAction();
   const [hideLow, setHideLow] = React.useState(false);
+  const [severityFilter, setSeverityFilter] = React.useState<Severity | null>(null);
   const [focusIdx, setFocusIdx] = React.useState(() => {
     if (!targetFindingId) return 0;
     const idx = visibleFindings(findings, false).findIndex((f) => f.id === targetFindingId);
     return idx >= 0 ? idx : 0;
   });
 
-  const shown = React.useMemo(() => visibleFindings(findings, hideLow), [findings, hideLow]);
+  const confidenceFiltered = React.useMemo(
+    () => visibleFindings(findings, hideLow),
+    [findings, hideLow],
+  );
+  const severityCounts = React.useMemo(
+    () => countBySeverity(confidenceFiltered),
+    [confidenceFiltered],
+  );
+  const shown = React.useMemo(
+    () =>
+      severityFilter
+        ? confidenceFiltered.filter((f) => f.severity === severityFilter)
+        : confidenceFiltered,
+    [confidenceFiltered, severityFilter],
+  );
+
+  // A narrower filter can leave focus pointing past the end (or at a card
+  // that's no longer shown) — snap back to the first visible card.
+  React.useEffect(() => {
+    setFocusIdx(0);
+  }, [severityFilter]);
 
   const lastTargetRef = React.useRef<string | null>(targetFindingId ?? null);
   React.useEffect(() => {
@@ -64,6 +86,27 @@ export function FindingsPanel({
   return (
     <div>
       <div style={s.toolbar}>
+        <div style={s.severityGroup}>
+          <Chip
+            active={severityFilter === null}
+            count={confidenceFiltered.length}
+            onClick={() => setSeverityFilter(null)}
+          >
+            {t("panel.all")}
+          </Chip>
+          {SEVERITY_FILTER_ORDER.filter((sev) => severityCounts[sev] > 0).map((sev) => (
+            <Chip
+              key={sev}
+              icon={SEV[sev].icon}
+              color={SEV[sev].c}
+              count={severityCounts[sev]}
+              active={severityFilter === sev}
+              onClick={() => setSeverityFilter(sev)}
+            >
+              {SEV[sev].label}
+            </Chip>
+          ))}
+        </div>
         <div style={s.toggleGroup}>
           {t("panel.hideLowConfidence")}
           <Toggle on={hideLow} onChange={setHideLow} size={16} />
