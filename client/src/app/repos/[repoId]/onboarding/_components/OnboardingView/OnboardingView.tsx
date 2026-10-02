@@ -17,6 +17,7 @@ import { CriticalPathsSection } from "./_components/CriticalPathsSection";
 import { RunLocallySection } from "./_components/RunLocallySection";
 import { ReadingPathSection } from "./_components/ReadingPathSection";
 import { FirstTasksSection } from "./_components/FirstTasksSection";
+import { SkillSuggestionsCard } from "./_components/SkillSuggestionsCard";
 import { formatRelativeAge, isPartialIndex, SECTION_ORDER } from "./helpers";
 import { s } from "./styles";
 
@@ -119,8 +120,14 @@ export function OnboardingView() {
   if (data.state === "no_clone") {
     return (
       <AppShell crumb={crumb}>
-        <div style={{ ...s.page, ...s.centerFill }}>
-          <EmptyState icon="GitBranch" title={t("empty.noClone.title")} body={t("empty.noClone.body")} />
+        <div style={s.page}>
+          <div style={s.centerFill}>
+            <EmptyState icon="GitBranch" title={t("empty.noClone.title")} body={t("empty.noClone.body")} />
+          </div>
+          {/* C-AC-37: suggestions depend only on repos.languages, not on a
+              generated tour or even a local clone — render on every page
+              state, below the centered empty-state content. */}
+          <SkillSuggestionsCard repoId={repoId} />
         </div>
       </AppShell>
     );
@@ -129,16 +136,21 @@ export function OnboardingView() {
   if (data.state === "not_generated") {
     return (
       <AppShell crumb={crumb}>
-        <div style={{ ...s.page, ...s.centerFill, flexDirection: "column", gap: 12 }}>
-          <EmptyState
-            icon="Target"
-            title={t("empty.noTour.title")}
-            body={t("empty.noTour.body")}
-            cta={t("generate")}
-            ctaLoading={isGenerating}
-            onCta={handleGenerate}
-          />
-          {generateError && <div style={s.generateError}>{t("generateFailed", { message: generateError })}</div>}
+        <div style={s.page}>
+          <div style={{ ...s.centerFill, flexDirection: "column", gap: 12 }}>
+            <EmptyState
+              icon="Target"
+              title={t("empty.noTour.title")}
+              body={t("empty.noTour.body")}
+              cta={t("generate")}
+              ctaLoading={isGenerating}
+              onCta={handleGenerate}
+            />
+            {generateError && <div style={s.generateError}>{t("generateFailed", { message: generateError })}</div>}
+          </div>
+          {/* C-AC-37: see the no_clone branch above for why this is rendered
+              here too, not only in the "generated" state. */}
+          <SkillSuggestionsCard repoId={repoId} />
         </div>
       </AppShell>
     );
@@ -174,6 +186,8 @@ export function OnboardingView() {
         {generateError && <div style={s.generateError}>{t("generateFailed", { message: generateError })}</div>}
 
         <DegradedBanner indexReason={tour.index_degraded_reason} modelReason={tour.model_failure_reason} />
+
+        <SkillSuggestionsCard repoId={repoId} />
 
         <div style={s.layout}>
           <AnchorNav

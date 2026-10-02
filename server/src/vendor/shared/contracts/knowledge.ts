@@ -168,17 +168,49 @@ export const Skill = z.object({
   scan_status: SkillScanStatus,
   scan_findings: z.array(SkillScanFinding).nullish(),
   scanned_at: z.string().nullish(),
+  // Project scope (SPEC-07): null = global, non-null = scoped to that repo.
+  // Nullish because several existing producers (manual/file create, legacy
+  // fixture-sourced community rows) never fill it — see server INSIGHTS.md
+  // 2026-09-15 on required-field breakage across unrelated producers.
+  repo_id: z.string().nullish(),
+  // Catalog tag slugs (SPEC-07); nullish for the same reason as repo_id —
+  // only community imports from the live catalog populate this.
+  tags: z.array(z.string()).nullish(),
 });
 export type Skill = z.infer<typeof Skill>;
 
 export const CommunitySkill = z.object({
+  path: z.string(),
+  folder: z.string(),
   name: z.string(),
-  repo: z.string(),
-  stars: z.number().int(),
-  lang: z.string(),
-  desc: z.string(),
+  description: z.string(),
+  tags: z.array(z.string()),
+  type: SkillType,
 });
 export type CommunitySkill = z.infer<typeof CommunitySkill>;
+
+/** Listing-level wrapper returned by `GET /skills/community` — the entries
+ *  grouped/filtered server-side plus whether the catalog was reachable at
+ *  all (SPEC-07 S-AC-8, S-AC-31). `available: false` means the upstream
+ *  catalog could not be retrieved; `entries` is `[]` in that case, never a
+ *  fixture/placeholder fallback. */
+export const CommunityCatalogListing = z.object({
+  available: z.boolean(),
+  message: z.string().nullish(),
+  entries: z.array(CommunitySkill),
+});
+export type CommunityCatalogListing = z.infer<typeof CommunityCatalogListing>;
+
+/** Outcome of the Settings catalog test action (SPEC-07 S-AC-4) — a sibling
+ *  type to `ConnTestResult`, NOT a `ConnTestProvider` widening: the catalog
+ *  test has no `provider` dimension, only a resolved repo + boolean outcome
+ *  + human-readable message (folder/entry counts on success, failure reason
+ *  on error). */
+export const CatalogTestResult = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+});
+export type CatalogTestResult = z.infer<typeof CatalogTestResult>;
 
 // ---- Conventions ----
 export const ConventionCategory = z.enum([

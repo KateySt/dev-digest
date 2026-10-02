@@ -2,9 +2,7 @@ import type { CSSProperties } from "react";
 
 export const s = {
   root: {
-    position: "sticky",
-    top: 0,
-    zIndex: 5,
+    flexShrink: 0,
     background: "var(--bg-primary)",
     borderBottom: "1px solid var(--border)",
     padding: "18px 32px 0",

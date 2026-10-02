@@ -108,6 +108,18 @@ export const SettingsKnown = z.object({
   automatic_reviews: z.boolean().default(false),
   /** Per-feature model overrides (provider+model), keyed by FeatureModelId. */
   feature_models: z.record(FeatureModelId, FeatureModelChoice).default({}),
+  /** Community skill catalog repo override (SPEC-07), `owner/name` form.
+   *  Absent/empty ⇒ fall back to the COMMUNITY_CATALOG_REPO env default. Not
+   *  a secret — deliberately NOT routed through SecretsProvider, must be
+   *  displayable as plain text in Settings. */
+  community_catalog_repo: z.string().optional(),
+  /** Read-only: the server's resolved COMMUNITY_CATALOG_REPO env default
+   *  (e.g. "KateySt/SKILLS"), always present regardless of whether
+   *  `community_catalog_repo` has an override saved. Not a stored setting —
+   *  computed by the server on every GET/PUT /settings response so the
+   *  Settings UI can show the actual effective default instead of a generic
+   *  "using the server's configured default" message (C-AC-31 gap-fill). */
+  community_catalog_repo_default: z.string().optional(),
 });
 export type SettingsKnown = z.infer<typeof SettingsKnown>;
 

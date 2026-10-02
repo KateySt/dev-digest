@@ -7,7 +7,7 @@ import type {
 } from '@devdigest/shared';
 import type { AgentRunRow, SkillRow, SkillVersionRow } from '../../db/rows.js';
 import type { AgentSkillLinkRow, SkillFindingOutcomeRow } from './repository.js';
-import { STATS_WINDOW_DAYS } from './constants.js';
+import { STATS_WINDOW_DAYS, SUGGESTION_LANGUAGE_THRESHOLD } from './constants.js';
 
 /**
  * Pure helpers for the skills module — DB row ⇄ DTO mapping and the
@@ -29,6 +29,8 @@ export function toSkillDto(row: SkillRow): Skill {
     scan_status: row.scanStatus as SkillScanStatus,
     scan_findings: (row.scanFindings as SkillScanFinding[] | null) ?? null,
     scanned_at: row.scannedAt ? row.scannedAt.toISOString() : null,
+    repo_id: row.repoId ?? null,
+    tags: row.tags ?? null,
   };
 }
 
@@ -214,4 +216,62 @@ export function computeSkillUsageSummaries(
     });
   }
   return result;
+}
+
+// ---- Community catalog (SPEC-07) -----------------------------------------
+
+/** A validated catalog repo coordinate, ready to pass to `CatalogSource`. */
+export interface ResolvedCatalogRepo {
+  owner: string;
+  name: string;
+  /** Normalized `owner/name` form, for display/logging and as the cache key. */
+  fullName: string;
+}
+
+/**
+ * Validate + parse a catalog repo value (the env default or a workspace
+ * override) into an owner/name pair. Accepts `owner/name` or a
+ * `https://github.com/owner/name` URL; rejects everything else — the SSRF
+ * guard (SPEC-07 S-AC-3): this runs BEFORE any outbound request, so a
+ * non-github.com value never reaches `fetch`. Returns `null` for an invalid
+ * value; callers surface that as a config error / unavailable outcome, never
+ * as a thrown exception from deep inside a fetch call.
+ */
+export function parseCatalogRepoValue(value: string): ResolvedCatalogRepo | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  let ownerName = trimmed;
+  const urlMatch = trimmed.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
+  if (urlMatch) {
+    ownerName = `${urlMatch[1]}/${urlMatch[2]}`;
+  }
+
+  const m = ownerName.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (!m) return null;
+  const [, owner, name] = m;
+  return { owner: owner!, name: name!, fullName: `${owner}/${name}` };
+}
+
+/** Normalize a GitHub-reported language name to a tag slug for suggestion
+ *  matching (SPEC-07 S-AC-29) — lowercase, non-alphanumeric runs collapsed
+ *  to a single hyphen, trimmed of leading/trailing hyphens. Exact-match
+ *  only: this never aliases 'TypeScript' and 'JavaScript' to each other. */
+export function languageNameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Language slugs that clear the 5% byte-share qualifying threshold (SPEC-07
+ *  S-AC-27). A null/empty/all-zero breakdown yields no qualifying languages
+ *  — S-AC-30's callers treat that as an empty suggestion list, not an error. */
+export function qualifyingLanguageSlugs(languages: Record<string, number> | null | undefined): string[] {
+  if (!languages) return [];
+  const total = Object.values(languages).reduce((sum, n) => sum + n, 0);
+  if (total <= 0) return [];
+  return Object.entries(languages)
+    .filter(([, bytes]) => bytes / total >= SUGGESTION_LANGUAGE_THRESHOLD)
+    .map(([name]) => languageNameToSlug(name));
 }

@@ -36,6 +36,10 @@ const EnvSchema = z.object({
     (v) => (v === '' ? undefined : v),
     z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   ),
+  // SPEC-07 — community skill catalog default repo (`owner/name`). Non-secret
+  // (never routed through SecretsProvider — must be displayable in Settings).
+  // Empty-string-safe: falls back to the hardcoded default below.
+  COMMUNITY_CATALOG_REPO: z.string().optional(),
 });
 
 export type AppConfig = {
@@ -59,6 +63,13 @@ export type AppConfig = {
    * EXACTLY like the ripgrep-only baseline.
    */
   repoIntelEnabled: boolean;
+  /**
+   * Default community skill catalog repository (`owner/name`), used when a
+   * workspace has no `community_catalog_repo` setting override (SPEC-07
+   * S-AC-1). Falls back to `KateySt/SKILLS` when COMMUNITY_CATALOG_REPO is
+   * unset or empty.
+   */
+  communityCatalogRepoDefault: string;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -77,5 +88,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webOrigin: `http://localhost:${parsed.WEB_PORT}`,
     embeddingsEnabled: parsed.EMBEDDINGS_ENABLED === 'true',
     repoIntelEnabled: parsed.REPO_INTEL_ENABLED !== 'false',
+    communityCatalogRepoDefault: parsed.COMMUNITY_CATALOG_REPO?.trim() || 'KateySt/SKILLS',
   };
 }

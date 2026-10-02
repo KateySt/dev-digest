@@ -127,6 +127,20 @@
       "when": 1790779662584,
       "tag": "0017_wealthy_forgotten_one",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790949489671,
+      "tag": "0018_cuddly_mother_askani",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790953604223,
+      "tag": "0019_slow_namor",
+      "breakpoints": true
     }
   ]
 }

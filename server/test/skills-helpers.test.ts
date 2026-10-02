@@ -6,6 +6,9 @@ import {
   toSkillVersionListItem,
   computeSkillStats,
   computeSkillUsageSummaries,
+  parseCatalogRepoValue,
+  languageNameToSlug,
+  qualifyingLanguageSlugs,
 } from '../src/modules/skills/helpers.js';
 import type { AgentSkillLinkRow, SkillFindingOutcomeRow } from '../src/modules/skills/repository.js';
 import type { AgentRunRow, SkillRow, SkillVersionRow } from '../src/db/rows.js';
@@ -21,6 +24,11 @@ const ROW: SkillRow = {
   enabled: true,
   version: 2,
   evidenceFiles: null,
+  scanStatus: 'clean',
+  scanFindings: null,
+  scannedAt: null,
+  repoId: null,
+  tags: null,
   createdAt: new Date('2026-01-01T00:00:00Z'),
 };
 
@@ -36,12 +44,90 @@ describe('toSkillDto', () => {
       enabled: true,
       version: 2,
       evidence_files: null,
+      scan_status: 'clean',
+      scan_findings: null,
+      scanned_at: null,
+      repo_id: null,
+      tags: null,
     });
   });
 
   it('passes through evidence_files when present', () => {
     const dto = toSkillDto({ ...ROW, evidenceFiles: ['src/a.ts:12'] });
     expect(dto.evidence_files).toEqual(['src/a.ts:12']);
+  });
+
+  it('passes through repo_id and tags when present (SPEC-07)', () => {
+    const dto = toSkillDto({ ...ROW, repoId: 'repo-1', tags: ['python', 'testing'] });
+    expect(dto.repo_id).toBe('repo-1');
+    expect(dto.tags).toEqual(['python', 'testing']);
+  });
+});
+
+describe('parseCatalogRepoValue', () => {
+  it('accepts owner/name form', () => {
+    expect(parseCatalogRepoValue('KateySt/SKILLS')).toEqual({
+      owner: 'KateySt',
+      name: 'SKILLS',
+      fullName: 'KateySt/SKILLS',
+    });
+  });
+
+  it('accepts a github.com URL form', () => {
+    expect(parseCatalogRepoValue('https://github.com/KateySt/SKILLS')).toEqual({
+      owner: 'KateySt',
+      name: 'SKILLS',
+      fullName: 'KateySt/SKILLS',
+    });
+  });
+
+  it('accepts a github.com URL with a trailing .git', () => {
+    expect(parseCatalogRepoValue('https://github.com/KateySt/SKILLS.git')?.fullName).toBe('KateySt/SKILLS');
+  });
+
+  it('rejects a non-github.com URL (SSRF guard)', () => {
+    expect(parseCatalogRepoValue('https://evil.example.com/KateySt/SKILLS')).toBeNull();
+  });
+
+  it('rejects a bare hostname with no owner/name', () => {
+    expect(parseCatalogRepoValue('not-a-repo')).toBeNull();
+  });
+
+  it('rejects an empty value', () => {
+    expect(parseCatalogRepoValue('')).toBeNull();
+    expect(parseCatalogRepoValue('   ')).toBeNull();
+  });
+});
+
+describe('languageNameToSlug', () => {
+  it('lowercases and hyphenates non-alphanumeric runs', () => {
+    expect(languageNameToSlug('TypeScript')).toBe('typescript');
+    expect(languageNameToSlug('C++')).toBe('c');
+    expect(languageNameToSlug('Objective-C')).toBe('objective-c');
+  });
+
+  it('never aliases TypeScript and JavaScript to each other', () => {
+    expect(languageNameToSlug('TypeScript')).not.toBe(languageNameToSlug('JavaScript'));
+  });
+});
+
+describe('qualifyingLanguageSlugs', () => {
+  it('excludes languages below the 5% byte-share threshold', () => {
+    const slugs = qualifyingLanguageSlugs({ Python: 980, CSS: 20 });
+    expect(slugs).toEqual(['python']);
+  });
+
+  it('includes a language exactly at the threshold', () => {
+    const slugs = qualifyingLanguageSlugs({ Python: 95, CSS: 5 });
+    expect(slugs.sort()).toEqual(['css', 'python']);
+  });
+
+  it('returns an empty list for a null breakdown', () => {
+    expect(qualifyingLanguageSlugs(null)).toEqual([]);
+  });
+
+  it('returns an empty list for an all-zero breakdown', () => {
+    expect(qualifyingLanguageSlugs({ Python: 0 })).toEqual([]);
   });
 });
 

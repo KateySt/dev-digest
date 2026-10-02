@@ -11,6 +11,12 @@ vi.mock("@/lib/hooks/skills", () => ({
   useUpdateSkill: () => ({ mutate: updateMutate, isPending: false }),
   useDeleteSkill: () => ({ mutate: deleteMutate, isPending: false }),
 }));
+// ConfigTab's project-scope picker (2026-10-02 amendment) needs the repos
+// list — mocked the same way the skill hooks above are, so no QueryClient is
+// required to render this component in isolation.
+vi.mock("@/lib/hooks", () => ({
+  useRepos: () => ({ data: [] }),
+}));
 
 import { ConfigTab } from "./ConfigTab";
 

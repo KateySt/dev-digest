@@ -41,6 +41,11 @@ vi.mock("@/lib/hooks/skills", () => ({
   useDeleteSkill: () => ({ mutate: vi.fn(), isPending: false }),
   useScanSkill: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+// ConfigTab's project-scope picker (2026-10-02 amendment) needs the repos
+// list — mocked the same way the skill hooks above are.
+vi.mock("@/lib/hooks", () => ({
+  useRepos: () => ({ data: [] }),
+}));
 
 import { SkillEditor } from "./SkillEditor";
 

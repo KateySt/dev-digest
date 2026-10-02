@@ -87,4 +87,36 @@ describe("SkillCard (smoke)", () => {
     renderWithIntl(<SkillCard skill={{ ...SKILL, scan_status: "pending" }} />);
     expect(screen.getByText("scanning…")).toBeInTheDocument();
   });
+
+  it("renders up to 4 tag chips plus an overflow count (AC-47/AC-48)", () => {
+    renderWithIntl(
+      <SkillCard skill={{ ...SKILL, tags: ["python", "testing", "security", "api", "typing"] }} />,
+    );
+    expect(screen.getByText("python")).toBeInTheDocument();
+    expect(screen.getByText("api")).toBeInTheDocument();
+    expect(screen.queryByText("typing")).not.toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
+  });
+
+  it("renders no tag row when the skill has no tags (AC-49)", () => {
+    const { container } = renderWithIntl(<SkillCard skill={{ ...SKILL, tags: null }} />);
+    expect(container.querySelector('[title="python"]')).not.toBeInTheDocument();
+  });
+
+  it("renders a non-interactive scope badge for a project-scoped skill (AC-50/AC-52)", () => {
+    renderWithIntl(<SkillCard skill={SKILL} repoName="acme/widgets" />);
+    const badge = screen.getByText("acme/widgets");
+    expect(badge.closest("button")).toBeNull();
+  });
+
+  it("renders no scope badge for a global skill (AC-51)", () => {
+    renderWithIntl(<SkillCard skill={SKILL} repoName={null} />);
+    expect(screen.queryByText(/acme\/widgets/)).not.toBeInTheDocument();
+  });
+
+  it("renders tag chips as non-interactive spans, not buttons (AC-52)", () => {
+    renderWithIntl(<SkillCard skill={{ ...SKILL, tags: ["python"] }} />);
+    const chip = screen.getByText("python");
+    expect(chip.tagName).toBe("SPAN");
+  });
 });

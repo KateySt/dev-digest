@@ -42,6 +42,9 @@ export type {
   OnboardingIndexStatus,
   OnboardingIndexDegradedReason,
   OnboardingModelFailureReason,
+  CommunitySkill,
+  CommunityCatalogListing,
+  CatalogTestResult,
 } from "@devdigest/shared";
 
 export type { Review, Finding, Severity, Verdict } from "@devdigest/shared";

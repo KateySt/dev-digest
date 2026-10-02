@@ -1,0 +1,1 @@
+export { SettingsCatalog } from "./SettingsCatalog";

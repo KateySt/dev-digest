@@ -20,7 +20,8 @@ export function Tabs({
         gap: 2,
         padding: pad,
         borderBottom: "1px solid var(--border)",
-        overflowX: "auto",
+        overflowY: "scroll",
+        overflowX: "hidden",
       }}
     >
       {tabs.map((t) => {

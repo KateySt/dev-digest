@@ -20,6 +20,18 @@
     "configured": "Configured",
     "notSet": "Not set"
   },
+  "catalog": {
+    "title": "Catalog",
+    "body": "Point DevDigest at the GitHub repository that supplies the Community tab's skill catalog.",
+    "repoLabel": "Catalog repository",
+    "repoPlaceholder": "owner/name",
+    "usingDefault": "No override saved — using the default: {value}",
+    "save": "Save",
+    "saving": "Saving…",
+    "test": "Test",
+    "testing": "Testing…",
+    "testFailed": "Test failed"
+  },
   "models": {
     "title": "Feature Models",
     "body": "Choose the model each system feature uses. The list and live prices come from OpenRouter; a feature falls back to its default until you pick one.",
