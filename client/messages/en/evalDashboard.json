@@ -1,0 +1,36 @@
+{
+  "page": {
+    "crumbSkillsLab": "Skills Lab",
+    "crumbEvalDashboard": "Eval Dashboard"
+  },
+  "title": "Eval Dashboard",
+  "subtitle": "Regression harness across all reviewer agents · pick an agent to see its runs",
+  "runAll": "Run all agents",
+  "runAllStarting": "Starting…",
+  "runAllResult": "{started, plural, one {Started # agent} other {Started # agents}}{skipped, plural, =0 {} other { · {skipped} already running}}",
+  "agents": {
+    "title": "Agents",
+    "lastRun": "Last run v{version} · {ranAt} · {passed}/{evaluated} pass",
+    "neverRun": "never run",
+    "running": "Running {done}/{total}…",
+    "open": "Open {name} eval dashboard",
+    "recall": "RECALL",
+    "precision": "PREC",
+    "citation": "CITE",
+    "noAgents": "No agents yet. Create an agent and add eval cases to start."
+  },
+  "recent": {
+    "title": "Recent eval runs · all agents",
+    "empty": "No eval runs yet.",
+    "columns": {
+      "agent": "Agent",
+      "ranAt": "Ran at",
+      "version": "Version",
+      "recall": "Recall",
+      "precision": "Precision",
+      "citation": "Citation",
+      "pass": "Pass"
+    }
+  },
+  "loadFailed": "Couldn't load the eval dashboard."
+}

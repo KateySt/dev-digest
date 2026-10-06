@@ -29,6 +29,7 @@ import { AgentsRepository } from '../modules/agents/repository.js';
 import { ReviewRepository } from '../modules/reviews/repository.js';
 import { SkillsRepository } from '../modules/skills/repository.js';
 import { SkillsService } from '../modules/skills/service.js';
+import { AgentsService } from '../modules/agents/service.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
@@ -84,6 +85,7 @@ export class Container {
   private _reviewRepo?: ReviewRepository;
   private _skillsRepo?: SkillsRepository;
   private _skillsService?: SkillsService;
+  private _agentsService?: AgentsService;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
@@ -129,6 +131,11 @@ export class Container {
    */
   get skillsService(): SkillsService {
     return (this._skillsService ??= new SkillsService(this));
+  }
+
+  /** Shared `AgentsService` instance, memoized like `skillsService`. */
+  get agentsService(): AgentsService {
+    return (this._agentsService ??= new AgentsService(this));
   }
 
   get codeIndex(): CodeIndex {

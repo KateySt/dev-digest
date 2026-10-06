@@ -1,37 +1,29 @@
-/* hooks/eval-dashboard.ts — backs the global Eval Dashboard page. */
+/* hooks/eval-dashboard.ts — backs the cross-agent Eval Dashboard (/eval). */
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { EvalCaseRun, EvalRun } from "@devdigest/shared";
+import type { EvalCrossAgentDashboard, RunAllAgentsResponse } from "@devdigest/shared";
 
-export interface EvalTrendPoint {
-  label: string;
-  recall: number;
-  precision: number;
-  citation: number;
-}
+/** Polling interval (ms) while any suite run is running (spec: at most every 2s). */
+export const EVAL_POLL_MS = 2000;
 
-/** GET /eval-dashboard's response. Not a shared contract type — workspace-
- *  wide ad-hoc summary, only consumed here. */
-export interface EvalDashboard {
-  cases_total: number;
-  runs_total: number;
-  trend: EvalTrendPoint[];
-  recent_runs: (EvalCaseRun & { case_name: string })[];
-}
-
-export function useEvalDashboard() {
+/** GET /eval-dashboard — per-agent latest run + history + running state. Polls
+ *  while any agent's suite run is running and stops once none is. */
+export function useEvalCrossDashboard() {
   return useQuery({
     queryKey: ["eval-dashboard"],
-    queryFn: () => api.get<EvalDashboard>("/eval-dashboard"),
+    queryFn: () => api.get<EvalCrossAgentDashboard>("/eval-dashboard"),
+    refetchInterval: (query) =>
+      (query.state.data?.agents ?? []).some((a) => a.running_run) ? EVAL_POLL_MS : false,
   });
 }
 
-export function useRunAllEvals() {
+/** "Run all agents" — POST /eval-dashboard/run-all (202 { started, skipped }). */
+export function useRunAllAgents() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post<EvalRun>("/eval-dashboard/run-all"),
+    mutationFn: () => api.post<RunAllAgentsResponse>("/eval-dashboard/run-all"),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["eval-dashboard"] }),
   });
 }

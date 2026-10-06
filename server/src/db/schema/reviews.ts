@@ -43,6 +43,9 @@ export const findings = pgTable('findings', {
   trifectaComponents: jsonb('trifecta_components').$type<string[]>(),
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
   dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+  // "Reply to author": URL + time of the GitHub comment posted from the studio.
+  replyUrl: text('reply_url'),
+  repliedAt: timestamp('replied_at', { withTimezone: true }),
 });
 
 export const prIntent = pgTable('pr_intent', {

@@ -69,10 +69,13 @@ flowchart TB
     polling["polling<br/>/repos/:id/poll"]
   end
   subgraph Review["Review & runs"]
-    reviews["reviews<br/>/pulls/:id/review · /reviews · /findings/:id/(accept|dismiss)<br/>/runs/:id/(events|trace)"]
+    reviews["reviews<br/>/pulls/:id/review · /reviews · /findings/:id/(accept|dismiss|reply)<br/>/runs/:id/(events|trace)"]
   end
   subgraph Agents["Agents"]
-    agents["agents<br/>/agents · /agents/:id"]
+    agents["agents<br/>/agents · /agents/:id<br/>/agents/:id/versions · /versions/:v/promote"]
+  end
+  subgraph Evals["Evals"]
+    evalMod["eval<br/>/eval-cases · /findings/:id/eval-case<br/>/agents/:id/eval-runs (+ /compare)<br/>/eval-suite-runs/:id · /eval-dashboard (+ /run-all)"]
   end
   subgraph Intel["Repo intelligence"]
     repoIntel["repo-intel<br/>/repos/:id/index-state · /resync"]
@@ -83,6 +86,45 @@ flowchart TB
   end
   HEALTH["/health (liveness) · /health/ready (DB ping → 200/503)"]
 ```
+
+## Evals (suite runs)
+
+Owned by `modules/eval/` (spec: [`specs/eval.md`](specs/eval.md)). Scoring is
+pure and lives in `reviewer-core` (`scoreEvalCase`, `aggregateSuiteScores`:
+file + line-overlap matching, pooled recall/precision/citation accuracy, `null`
+when a denominator is zero).
+
+- **Cases** (`eval_cases`) have a `kind` (`must_find` / `must_not_flag`) and a
+  `source` (`manual` or promoted from a finding via
+  `POST /findings/:id/eval-case`, tracked by `source_finding_id`; one case per
+  finding, a repeat call is a `409` carrying the existing `case_id`).
+- **Suite runs** (`eval_suite_runs`) are started with
+  `POST /agents/:id/eval-runs` (`202`, or `409 eval_run_in_progress` — a partial
+  unique index allows one `running` run per agent) or for every eligible agent
+  with `POST /eval-dashboard/run-all`. Cases run **sequentially in the
+  background**; poll `GET /eval-suite-runs/:id` for `cases_done / cases_total`
+  and per-case results. A case that errors is recorded (`status = errored`) and
+  excluded from the pooled metrics; the run fails only if every case errored.
+- **Versioning:** a run is pinned to the agent version at start (a snapshot is
+  ensured first). Agent versions now include skill links with per-skill
+  versions; `POST /agents/:id/versions/:v/promote` restores one, and
+  `GET /agents/:id/eval-runs/compare?base=&head=` diffs two runs.
+- **Boot reaper:** `EvalService.reapStaleSuiteRuns()` runs next to the review
+  reaper in `app.ts` and fails any suite run left `running` by a dead process.
+
+```mermaid
+stateDiagram-v2
+  [*] --> running: start (row inserted, 202)
+  running --> running: case done, cases_done + 1 (errored cases skipped in metrics)
+  running --> completed: all cases processed, at least one evaluated
+  running --> failed: input build failed or every case errored
+  running --> failed: boot reaper (process died)
+  completed --> [*]
+  failed --> [*]
+```
+
+`POST /findings/:id/reply` (reviews module) posts the reply body to GitHub as a PR
+comment and records `reply_url` / `replied_at` on the finding.
 
 ## Environment
 
@@ -105,7 +147,9 @@ through `SecretsProvider` (`~/.devdigest/secrets.json`, mode `0600`, with
 `process.env` as a fallback), per the **Where keys live** note at the top.
 
 Migrations are **not** applied on boot — run `pnpm db:migrate` (pgvector is
-enabled by migration `0000`). `pnpm db:seed` is idempotent demo data
+enabled by migration `0000`; `0020` adds `eval_suite_runs` and the eval-case /
+finding-reply columns — Evals routes fail without it). `pnpm db:seed` also
+seeds eval demo data (`src/db/seed-eval.ts`). `pnpm db:seed` is idempotent demo data
 (`acme/payments-api`, PR #482, the two built-in agents).
 
 ## Review context (non-obvious)

@@ -13,3 +13,4 @@ how to run them. New journeys get the next number, prefixed like the rest.
 | `05-pr-diff.flow.json` | PR detail Files changed tab renders the seeded diff |
 | `06-onboarding.flow.json` | Onboarding add-repository screen renders |
 | `07-settings.flow.json` | Settings renders the API Keys and Feature Models sections |
+| `08-evals.flow.json` | Turn an accepted finding into an eval case, then compare two seeded eval runs (needs the seeded Security Reviewer eval data) |

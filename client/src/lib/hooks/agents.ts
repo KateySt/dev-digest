@@ -110,3 +110,21 @@ export function useSetAgentSkills() {
     },
   });
 }
+
+/** "Promote vN" — POST /agents/:id/versions/:version/promote. Applies that
+ *  snapshot as a NEW current version; a 409 (deleted skills) surfaces as an
+ *  ApiError whose `details.missing_skills` lists them. */
+export function usePromoteAgentVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, version }: { agentId: string; version: number }) =>
+      api.post<Agent>(`/agents/${agentId}/versions/${version}/promote`),
+    onSuccess: (agent) => {
+      qc.setQueryData(["agent", agent.id], agent);
+      qc.invalidateQueries({ queryKey: ["agents"] });
+      qc.invalidateQueries({ queryKey: ["agent-skills", agent.id] });
+      qc.invalidateQueries({ queryKey: ["agent-eval-runs", agent.id] });
+      qc.invalidateQueries({ queryKey: ["eval-dashboard"] });
+    },
+  });
+}

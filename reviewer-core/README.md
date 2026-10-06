@@ -39,7 +39,9 @@ extra slots are omitted, so `assemblePrompt` simply leaves those sections out.
 Exported from `src/index.ts`: `assemblePrompt` / `wrapUntrusted` (prompt),
 `groundFindings` / `groundingSummary` (grounding), `toJsonSchema` / `extractJson`
 / `parseWithRepair` (structured output), plus the `run` entrypoint and
-`reduce`. Contracts (`Review`, `Finding`, `Verdict`, …) come from
+`reduce`, plus the eval scorers `scoreEvalCase` / `aggregateSuiteScores`
+(`src/output/eval-score.ts` — pure, file + line-overlap matching, pooled metrics,
+`null` on a zero denominator). Contracts (`Review`, `Finding`, `Verdict`, …) come from
 `@devdigest/shared`.
 
 ## Testing

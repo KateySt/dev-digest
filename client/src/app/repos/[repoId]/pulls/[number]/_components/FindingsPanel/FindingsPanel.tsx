@@ -19,6 +19,7 @@ export function FindingsPanel({
   repoFullName,
   headSha,
   targetFindingId,
+  agentId,
 }: {
   findings: FindingRecord[];
   prId: string;
@@ -27,6 +28,8 @@ export function FindingsPanel({
   /** Deep-linked finding (e.g. from the PR-list tooltip) — expanded and
    *  keyboard-focused on mount instead of the usual first row. */
   targetFindingId?: string | null;
+  /** The review's agent (null for agentless reviews) — gates "Turn into eval case". */
+  agentId?: string | null;
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
@@ -126,6 +129,8 @@ export function FindingsPanel({
               pending={action.isPending}
               repoFullName={repoFullName}
               headSha={headSha}
+              prId={prId}
+              agentId={agentId}
               onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
             />
           ))

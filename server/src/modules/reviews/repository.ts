@@ -135,6 +135,15 @@ export class ReviewRepository {
     return reviewRepo.findingContext(this.db, findingId);
   }
 
+  /** finding id -> eval case id seeded from it (read-only lookup). */
+  evalCaseIdsForFindings(findingIds: string[]): Promise<Map<string, string>> {
+    return reviewRepo.evalCaseIdsForFindings(this.db, findingIds);
+  }
+
+  setFindingReply(findingId: string, url: string, at: Date): Promise<FindingRow | null> {
+    return reviewRepo.setFindingReply(this.db, findingId, url, at);
+  }
+
   setFindingAccepted(findingId: string, at: Date | null): Promise<FindingRow | undefined> {
     return reviewRepo.setFindingAccepted(this.db, findingId, at);
   }

@@ -1,0 +1,11 @@
+{
+  "status": {
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "noValue": "—",
+  "trend": {
+    "ariaLabel": "Metric trend chart"
+  }
+}

@@ -1,12 +1,12 @@
 import PQueue from 'p-queue';
 import type { Container } from '../../platform/container.js';
-import type { BulkReviewOutcome, FindingActionKind, ReviewEstimate, RunEventKind, RunTrace } from '@devdigest/shared';
+import type { BulkReviewOutcome, FindingActionKind, PrReviewComment, ReviewEstimate, RunEventKind, RunTrace } from '@devdigest/shared';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
 import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
-import { actOnFinding as actOnFindingImpl } from './findings.js';
+import { actOnFinding as actOnFindingImpl, replyToFinding as replyToFindingImpl } from './findings.js';
 import { reviewToDto } from './helpers.js';
 import { needsReviewPrIds } from '../pulls/status.js';
 import { BULK_REVIEW_CONCURRENCY, BULK_REVIEW_MAX_PRS } from './constants.js';
@@ -274,6 +274,11 @@ export class ReviewService {
     return actOnFindingImpl(this.repo, workspaceId, findingId, action);
   }
 
+  /** "Reply to author" - post `body` to GitHub, record the comment URL/time on the finding. */
+  async replyToFinding(workspaceId: string, findingId: string, body: string): Promise<PrReviewComment> {
+    return replyToFindingImpl(this.container, this.repo, workspaceId, findingId, body);
+  }
+
   // ===========================================================================
   // Reads
   // ===========================================================================
@@ -289,8 +294,11 @@ export class ReviewService {
         if (a) names.set(review.agentId, a.name);
       }
     }
+    const evalCaseIds = await this.repo.evalCaseIdsForFindings(
+      rows.flatMap(({ findings }) => findings.map((f) => f.id)),
+    );
     return rows.map(({ review, findings }) =>
-      reviewToDto(review, findings, review.agentId ? names.get(review.agentId) : null),
+      reviewToDto(review, findings, review.agentId ? names.get(review.agentId) : null, evalCaseIds),
     );
   }
 

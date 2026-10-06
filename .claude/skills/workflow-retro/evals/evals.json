@@ -1,0 +1,23 @@
+{
+  "skill_name": "workflow-retro",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/workflow-retro — the session transcript to retro is saved at evals/files/session-multi-agent.md (treat it as this conversation). Scope: whole session, no --deep. Save your chat report as chat_report.md and write the ledger entry to docs/retro/ledger.md (treat your outputs directory as the repo root, so the ledger lands at <outputs>/docs/retro/ledger.md).",
+      "expected_output": "Full seven-section retro with correct token sums, the duplicate architecture-reviewer spawn called out as orchestration self-critique, spec-creator's 2 extra rounds traced to the missing write-back question, and a ledger entry in the prescribed format.",
+      "files": ["evals/files/session-multi-agent.md"]
+    },
+    {
+      "id": 2,
+      "prompt": "retro just the spec-creator dialog from the saved session at evals/files/session-multi-agent.md (treat it as this conversation) — nothing else. Save the chat report as chat_report.md and write the ledger entry to docs/retro/ledger.md (treat your outputs directory as the repo root).",
+      "expected_output": "A retro limited to the spec-creator dialog, stating the narrowed scope at the top, with only spec-creator numbers (71600 tokens, 2 resumes, 2 AskUserQuestion rounds, 1 free-text answer).",
+      "files": ["evals/files/session-multi-agent.md"]
+    },
+    {
+      "id": 3,
+      "prompt": "/workflow-retro — session transcript is at evals/files/session-single-agent.md (treat it as this conversation). Save the chat report as chat_report.md and write the ledger entry to docs/retro/ledger.md (treat your outputs directory as the repo root).",
+      "expected_output": "Honest retro that says plainly no agents ran and no token data exists for this session, without fabricating friction, numbers, or filler recommendations.",
+      "files": ["evals/files/session-single-agent.md"]
+    }
+  ]
+}

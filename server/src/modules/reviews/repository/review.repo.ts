@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { Finding } from '@devdigest/shared';
@@ -140,4 +140,34 @@ export async function setFindingDismissed(
     .where(eq(t.findings.id, findingId))
     .returning();
   return row;
+}
+
+/** finding id -> id of the eval case seeded from it (findings without one are absent). */
+export async function evalCaseIdsForFindings(
+  db: Db,
+  findingIds: string[],
+): Promise<Map<string, string>> {
+  if (findingIds.length === 0) return new Map();
+  const rows = await db
+    .select({ findingId: t.evalCases.sourceFindingId, caseId: t.evalCases.id })
+    .from(t.evalCases)
+    .where(inArray(t.evalCases.sourceFindingId, findingIds));
+  const out = new Map<string, string>();
+  for (const r of rows) if (r.findingId) out.set(r.findingId, r.caseId);
+  return out;
+}
+
+/** Record a posted reply - only if none is recorded yet. Returns null if one already was. */
+export async function setFindingReply(
+  db: Db,
+  findingId: string,
+  url: string,
+  at: Date,
+): Promise<FindingRow | null> {
+  const [row] = await db
+    .update(t.findings)
+    .set({ replyUrl: url, repliedAt: at })
+    .where(and(eq(t.findings.id, findingId), isNull(t.findings.replyUrl)))
+    .returning();
+  return row ?? null;
 }

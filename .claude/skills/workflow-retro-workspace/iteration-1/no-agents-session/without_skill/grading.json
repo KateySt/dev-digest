@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {"text": "States plainly that no subagents ran in this session", "passed": true, "evidence": "chat_report.md: 'This was not a multi-agent workflow. The assistant worked alone and spawned no subagents.' and 'Agents run: 0'. Matches the fixture (only Grep/Read/Edit/Bash)."},
+    {"text": "Does not fabricate token counts, durations, or round-trips", "passed": true, "evidence": "Report says 'The transcript has no token counts... I haven't estimated any'; no durations given; '1 user request, 0 clarifying questions' is consistent with the fixture."},
+    {"text": "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar", "passed": false, "evidence": "Friction opens with 'None observed' but then lists three 'gaps' (no regression test, typecheck not run, no browser check) that the fixture does not support as problems. Recommendations has five items, including filler such as 'skim sibling components' and 'run pnpm typecheck'. It never says Recommendations has nothing meeting the bar. The ledger also lists the gaps as friction."},
+    {"text": "Notes that session-level token total is not knowable", "passed": false, "evidence": "Report says only 'The transcript has no token counts'; ledger says 'not recorded in transcript'. Neither says that the total session token count cannot be read by the skill/agent. This is a weaker claim than the assertion."},
+    {"text": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "passed": false, "evidence": "The file exists at outputs/docs/retro/ledger.md, but the format deviates from SKILL.md. The heading is '## 2026-10-05 - ...' instead of '### YYYY-MM-DD — label'. There is no **Scope:** field. Fields are plain '- Agents:' bullets, not bold labels. It adds a Round-trips field and uses singular 'Recommendation'. There is no file header."}
+  ],
+  "summary": {"passed": 2, "failed": 3, "total": 5, "pass_rate": 0.4},
+  "timing": {"total_tokens": 31075, "duration_ms": 42214, "total_duration_seconds": 42.2},
+  "eval_feedback": {
+    "suggestions": [
+      {"assertion": "Notes that session-level token total is not knowable", "reason": "Ambiguous: 'transcript has no token counts' is close but not the same claim. Specify whether the statement must be about the session total or whether any no-token-data statement counts."},
+      {"assertion": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "reason": "Make the format checkable by naming the required markers: '### date — label' heading and bold Scope/Agents/Tokens/Friction/Recommendations fields. A without_skill run cannot see the skill's format, so this assertion mostly measures skill uplift."},
+      {"reason": "No assertion covers the chat report's required headings (Token ledger / Agent timeline / Round-trips / ...) or the 'top 1-3 recommendations' cap. The run gave 5 recommendations, which is the main observed deviation."}
+    ],
+    "overall": "Assertions 1-2 are easy to satisfy by any honest baseline. 3-5 discriminate on skill-specific behaviour. Tightening the wording on 4 and 5 would make verdicts less subjective."
+  }
+}

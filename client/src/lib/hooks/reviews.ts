@@ -332,6 +332,21 @@ export function useFindingAction() {
   });
 }
 
+/** "Reply to author" - POST /findings/:id/reply posts `reply` verbatim as an
+ *  inline GitHub comment and records its URL on the finding. Refreshes the
+ *  PR's reviews so the card shows "Posted - View on GitHub". Errors propagate
+ *  (the dialog shows the message and keeps the edited text). */
+export function useReplyToFinding(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ findingId, reply }: { findingId: string; reply: string }) =>
+      api.post<PrReviewComment>(`/findings/${findingId}/reply`, { reply }),
+    onSuccess: () => {
+      if (prId) qc.invalidateQueries({ queryKey: ["reviews", prId] });
+    },
+  });
+}
+
 /**
  * Subscribe to a run's SSE event stream. Returns the accumulated RunEvents and a
  * `running` flag (true until the stream closes). Live status for the

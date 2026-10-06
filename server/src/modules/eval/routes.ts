@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { EvalOwnerKind } from '@devdigest/shared';
+import { EvalCaseKind, EvalOwnerKind, EvalRange } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { NotFoundError } from '../../platform/errors.js';
@@ -9,23 +9,29 @@ import { EvalService } from './service.js';
 
 /**
  * eval module.
- *   GET    /eval-cases?owner_kind=&owner_id=  → list for an owner (Evals tab)
- *   GET    /eval-cases/:id                    → one case (editor modal)
- *   POST   /eval-cases                        → create
- *   PUT    /eval-cases/:id                    → update
- *   DELETE /eval-cases/:id                    → delete
- *   POST   /eval-cases/:id/run                → run ONE case → EvalCaseRun
- *   GET    /agents/:id/eval-stats             → Evals tab header rollup (agent)
- *   GET    /skills/:id/eval-stats             → Evals tab header rollup (skill)
- *   POST   /skills/:id/eval-cases/run-all     → "Run all evals" → EvalRun (batch, this skill's cases)
- *   GET    /eval-dashboard                    → global Eval Dashboard
- *   POST   /eval-dashboard/run-all            → "Run eval (N)" → EvalRun (batch, whole workspace)
+ *   GET    /eval-cases?owner_kind=&owner_id=  -> list for an owner (Evals tab)
+ *   GET    /eval-cases/:id                    -> one case (editor modal)
+ *   POST   /eval-cases                        -> create (source: manual)
+ *   PUT    /eval-cases/:id                    -> update
+ *   DELETE /eval-cases/:id                    -> delete
+ *   POST   /eval-cases/:id/run                -> run ONE case (no suite link) -> EvalCaseRun
+ *   POST   /findings/:id/eval-case            -> turn a decided finding into a case
+ *   POST   /agents/:id/eval-runs              -> start a background suite run (202)
+ *   GET    /agents/:id/eval-runs?range=       -> suite runs + history + regression alert
+ *   GET    /agents/:id/eval-runs/compare      -> compare two suite runs
+ *   GET    /eval-suite-runs/:id               -> suite run progress + per-case results
+ *   GET    /agents/:id/eval-stats             -> Evals tab header (agent)
+ *   GET    /skills/:id/eval-stats             -> Evals tab header (skill)
+ *   POST   /skills/:id/eval-cases/run-all     -> skill "Run all evals" (batch)
+ *   GET    /eval-dashboard                    -> cross-agent dashboard
+ *   POST   /eval-dashboard/run-all            -> "Run all agents" (202)
  */
 
 const ListQuery = z.object({ owner_kind: EvalOwnerKind, owner_id: z.string() });
 
 const CreateEvalCaseBody = z.object({
   owner_kind: EvalOwnerKind,
+  kind: EvalCaseKind.optional(),
   owner_id: z.string(),
   name: z.string().min(1),
   input_diff: z.string().optional(),
@@ -34,6 +40,12 @@ const CreateEvalCaseBody = z.object({
   expected_output: z.unknown().optional(),
   notes: z.string().optional(),
 });
+
+const RunsQuery = z.object({ range: EvalRange.default('all') });
+const CompareQuery = z.object({ base: z.string().uuid(), head: z.string().uuid() });
+
+/** Each start fans out to expensive LLM calls — same tight limit as review triggers. */
+const RUN_RATE_LIMIT = { rateLimit: { max: 10, timeWindow: '1 minute' } };
 
 const UpdateEvalCaseBody = z.object({
   name: z.string().min(1).optional(),
@@ -46,7 +58,7 @@ const UpdateEvalCaseBody = z.object({
 
 export default async function evalRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
-  const service = new EvalService(app.container);
+  const service = new EvalService(app.container, app.log);
 
   app.get('/eval-cases', { schema: { querystring: ListQuery } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
@@ -105,13 +117,56 @@ export default async function evalRoutes(appBase: FastifyInstance) {
     return service.runAllForOwner(workspaceId, 'skill', req.params.id);
   });
 
+  app.post('/findings/:id/eval-case', { schema: { params: IdParams } }, async (req, reply) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const evalCase = await service.createFromFinding(workspaceId, req.params.id);
+    reply.status(201);
+    return evalCase;
+  });
+
+  app.post(
+    '/agents/:id/eval-runs',
+    { schema: { params: IdParams }, config: RUN_RATE_LIMIT },
+    async (req, reply) => {
+      const { workspaceId } = await getContext(app.container, req);
+      const started = await service.startAgentRun(workspaceId, req.params.id);
+      reply.status(202);
+      return started;
+    },
+  );
+
+  app.get(
+    '/agents/:id/eval-runs',
+    { schema: { params: IdParams, querystring: RunsQuery } },
+    async (req) => {
+      const { workspaceId } = await getContext(app.container, req);
+      return service.listAgentRuns(workspaceId, req.params.id, req.query.range);
+    },
+  );
+
+  app.get(
+    '/agents/:id/eval-runs/compare',
+    { schema: { params: IdParams, querystring: CompareQuery } },
+    async (req) => {
+      const { workspaceId } = await getContext(app.container, req);
+      return service.compare(workspaceId, req.params.id, req.query.base, req.query.head);
+    },
+  );
+
+  app.get('/eval-suite-runs/:id', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.getSuiteRun(workspaceId, req.params.id);
+  });
+
   app.get('/eval-dashboard', async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     return service.dashboard(workspaceId);
   });
 
-  app.post('/eval-dashboard/run-all', async (req) => {
+  app.post('/eval-dashboard/run-all', { config: RUN_RATE_LIMIT }, async (req, reply) => {
     const { workspaceId } = await getContext(app.container, req);
-    return service.runAllForWorkspace(workspaceId);
+    const result = await service.runAllAgents(workspaceId);
+    reply.status(202);
+    return result;
   });
 }

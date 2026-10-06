@@ -135,6 +135,8 @@ export function DiffTab({
         pending={findingAction.isPending}
         repoFullName={repoFullName}
         headSha={headSha}
+        prId={prId}
+        agentId={reviews?.find((r) => r.id === f.review_id)?.agent_id ?? null}
         onAction={(action) => handleFindingAction(f.id, action)}
       />
     ),

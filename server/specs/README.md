@@ -7,7 +7,7 @@ before or alongside implementation. Not test files; server tests live in
 | Spec | Feature |
 |------|---------|
 | [`skills.md`](./skills.md) | Skill attachment, ordering, trust-by-source, versioning — **implemented** (extended by [`community-catalog.md`](./community-catalog.md)) |
-| [`eval.md`](./eval.md) | Eval case scoring, single-run vs. workspace batch, agent-only ownership |
+| [`eval.md`](./eval.md) | Evals regression harness: cases seeded from accepted/dismissed findings (`must_find`/`must_not_flag`/manual) with frozen diff fragments, versioned background suite runs per agent, pooled file + line-overlap scoring, regression alert, run compare, Promote vN, skill links bumping agent version, FindingCard Reply → GitHub (Learn split out to a future spec); **amended 2026-10-06** — **draft** (case CRUD, single-case run, `scoreEvalCase` already built; client side: [`../../client/specs/agent-evals.md`](../../client/specs/agent-evals.md)) |
 | [`ci.md`](./ci.md) | Publish/re-publish idempotency, skills-as-bodies config, no runner yet |
 | [`project-context.md`](./project-context.md) | Project Context: markdown doc discovery, per-agent/per-skill attachment + order, token counts, run-time injection into the `## Project context` slot — **draft** (client side: [`../../client/specs/project-context.md`](../../client/specs/project-context.md)) |
 | [`pr-triage-queue.md`](./pr-triage-queue.md) | Bulk review trigger over a repo's `needs_review` set: batch cap, in-flight skip, bounded parallelism, independent per-PR failure, cost estimate, cached blast size on the PR list — **draft** (client side: [`../../client/specs/pr-triage-queue.md`](../../client/specs/pr-triage-queue.md)) |

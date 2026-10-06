@@ -73,9 +73,13 @@ d('MCP server (Testcontainers pg)', () => {
     const result = await client.callTool({ name: 'get_findings', arguments: { pr_id: prId } });
     expect(result.isError).toBeFalsy();
     const parsed = JSON.parse((result.content as ToolContent[])[0]!.text);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0].findings).toHaveLength(2);
-    expect(parsed[0].findings.some((f: { title: string }) => f.title.includes('Stripe secret key'))).toBe(true);
+    // The seed also carries a second (older) agent review on this PR for the eval e2e flow,
+    // so pick the Stripe review rather than assuming it is the only one.
+    const stripe = parsed.find((r: { findings: { title: string }[] }) =>
+      r.findings.some((f) => f.title.includes('Stripe secret key')),
+    );
+    expect(stripe).toBeDefined();
+    expect(stripe.findings).toHaveLength(2);
   });
 
   it('get_blast_radius returns a clear "not found" tool error for an unknown pr_id', async () => {

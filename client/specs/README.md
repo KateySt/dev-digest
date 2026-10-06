@@ -6,7 +6,7 @@ colocated `*.test.tsx`, browser journeys live in `../e2e/specs/`.
 
 | Spec | Feature |
 |------|---------|
-| [`agent-evals.md`](./agent-evals.md) | Agent Editor Evals tab + Eval Case Editor + Eval Dashboard — **implemented** |
+| [`agent-evals.md`](./agent-evals.md) | Evals regression harness UI: FindingCard Turn into eval case / Reply to author (Learn slot only, behavior split out), Evals tab with suite-run metrics and deltas, per-agent dashboard (range filter, regression banner, run history), Compare runs modal + Promote, cross-agent Eval Dashboard with Run all agents; **amended 2026-10-06** — **draft** (Evals tab, case editor, `/eval` page already built; server side: [`../../server/specs/eval.md`](../../server/specs/eval.md)) |
 | [`agent-performance.md`](./agent-performance.md) | Agent Editor Stats tab + global Agent Performance page (one feature) — **implemented** |
 | [`agent-ci.md`](./agent-ci.md) | Agent Editor CI tab + Publish to CI + CI Runs — **implemented** (Publish only; the multi-target Export wizard stayed out of scope) |
 | [`project-context.md`](./project-context.md) | Project Context page + Agent/Skill Editor Context tabs + Prompt assembly "Project context" block — **draft** (server side: [`../../server/specs/project-context.md`](../../server/specs/project-context.md)) |

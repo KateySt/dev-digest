@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { RunRequest } from '@devdigest/shared';
 import type { RunEvent } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
@@ -16,6 +17,9 @@ import { ReviewService } from './service.js';
  *   POST   /findings/:id/(accept|dismiss)              → finding actions
  */
 const FINDING_ACTIONS = ['accept', 'dismiss'] as const;
+
+/** Body of `POST /findings/:id/reply` - the user-edited comment, posted verbatim. */
+const ReplyBody = z.object({ reply: z.string().min(1) });
 export default async function reviewsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
@@ -166,4 +170,14 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
       return result;
     });
   }
+
+  // ---- Reply to author (separate from FINDING_ACTIONS: it takes a body) -----
+  app.post(
+    '/findings/:id/reply',
+    { schema: { params: IdParams, body: ReplyBody } },
+    async (req) => {
+      const { workspaceId } = await getContext(container, req);
+      return service.replyToFinding(workspaceId, req.params.id, req.body.reply);
+    },
+  );
 }
