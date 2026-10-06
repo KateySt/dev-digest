@@ -13,6 +13,7 @@ export const s = {
   header: { display: "flex", alignItems: "center", gap: 14, marginBottom: 20 } satisfies CSSProperties,
   headerText: { flex: 1 } satisfies CSSProperties,
   h1: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" } satisfies CSSProperties,
+  scopeSwitcher: { width: 190, flexShrink: 0 } satisfies CSSProperties,
   search: {
     display: "flex",
     alignItems: "center",

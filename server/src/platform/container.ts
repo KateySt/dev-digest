@@ -6,6 +6,7 @@ import type {
   CodeIndex,
   Embedder,
   LLMProvider,
+  CatalogSource,
 } from '@devdigest/shared';
 import type { AppConfig } from './config.js';
 import type { Db } from '../db/client.js';
@@ -14,6 +15,7 @@ import { runBus, type RunBus } from './sse.js';
 import { LocalSecretsProvider } from '../adapters/secrets/local.js';
 import { LocalNoAuthProvider } from '../adapters/auth/local.js';
 import { OctokitGitHubClient } from '../adapters/github/octokit.js';
+import { GitHubCatalogSource } from '../adapters/github/catalog.js';
 import { SimpleGitClient } from '../adapters/git/simple-git.js';
 import { RipgrepCodeIndex } from '../adapters/codeindex/ripgrep.js';
 import { OpenAIProvider } from '../adapters/llm/openai.js';
@@ -26,10 +28,12 @@ import { ConfigError } from './errors.js';
 import { AgentsRepository } from '../modules/agents/repository.js';
 import { ReviewRepository } from '../modules/reviews/repository.js';
 import { SkillsRepository } from '../modules/skills/repository.js';
+import { SkillsService } from '../modules/skills/service.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
+import { type WorkingTreeStatus, SimpleGitWorkingTreeStatus } from '../adapters/git/status.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,
@@ -52,6 +56,11 @@ export interface ContainerOverrides {
   /** repo-intel T3 adapters — only the indexer pipeline reads these. */
   depgraph?: DepGraph;
   tokenizer?: Tokenizer;
+  /** SPEC-04 (Project Context) — clone working-tree status, for S-AC-28's
+   *  resync refusal. */
+  gitStatus?: WorkingTreeStatus;
+  /** SPEC-07 — unauthenticated community catalog reads. */
+  catalogSource?: CatalogSource;
 }
 
 export class Container {
@@ -74,10 +83,13 @@ export class Container {
   private _agentsRepo?: AgentsRepository;
   private _reviewRepo?: ReviewRepository;
   private _skillsRepo?: SkillsRepository;
+  private _skillsService?: SkillsService;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
+  private _gitStatus?: WorkingTreeStatus;
   private _priceBook?: PriceBook;
+  private _catalogSource?: CatalogSource;
 
   constructor(config: AppConfig, db: Db, private overrides: ContainerOverrides = {}) {
     this.config = config;
@@ -106,6 +118,19 @@ export class Container {
     return (this._skillsRepo ??= new SkillsRepository(this.db));
   }
 
+  /**
+   * Shared `SkillsService` instance (SPEC-07). Memoized here, the same
+   * construct-once/reuse pattern as `skillsRepo` above, so its in-memory
+   * `catalogCache` (service.ts's `CATALOG_CACHE_TTL_MS` window) is actually
+   * shared across every call site — `skills/routes.ts`, `repos/service.ts`'s
+   * `skillSuggestions()`, and `settings/routes.ts`'s catalog-test handler —
+   * instead of each constructing its own short-lived instance with an
+   * always-empty cache.
+   */
+  get skillsService(): SkillsService {
+    return (this._skillsService ??= new SkillsService(this));
+  }
+
   get codeIndex(): CodeIndex {
     if (this.overrides.codeIndex) return this.overrides.codeIndex;
     this._codeIndex ??= new RipgrepCodeIndex(this.git);
@@ -130,11 +155,27 @@ export class Container {
     return this._depgraph;
   }
 
-  /** Token counter (js-tiktoken) for the repo-map budget search. */
+  /** Token counter (js-tiktoken) for the repo-map budget search AND SPEC-04's
+   *  model-aware project-context counts. */
   get tokenizer(): Tokenizer {
     if (this.overrides.tokenizer) return this.overrides.tokenizer;
     this._tokenizer ??= new TiktokenTokenizer();
     return this._tokenizer;
+  }
+
+  /** Clone working-tree status (SPEC-04 S-AC-28). */
+  get gitStatus(): WorkingTreeStatus {
+    if (this.overrides.gitStatus) return this.overrides.gitStatus;
+    this._gitStatus ??= new SimpleGitWorkingTreeStatus();
+    return this._gitStatus;
+  }
+
+  /** Unauthenticated community catalog reads (SPEC-07) — deliberately NOT
+   *  behind `github()`, which requires a configured GITHUB_TOKEN. */
+  get catalogSource(): CatalogSource {
+    if (this.overrides.catalogSource) return this.overrides.catalogSource;
+    this._catalogSource ??= new GitHubCatalogSource();
+    return this._catalogSource;
   }
 
   /**

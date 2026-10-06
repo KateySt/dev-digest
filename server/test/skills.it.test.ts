@@ -4,7 +4,7 @@ import { waitForPrRuns } from './helpers/runs.js';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
-import { MockLLMProvider, MockEmbedder, MockGitClient } from '../src/adapters/mocks.js';
+import { MockLLMProvider, MockEmbedder, MockGitClient, MockCatalogSource } from '../src/adapters/mocks.js';
 import * as t from '../src/db/schema.js';
 import type { Review } from '@devdigest/shared';
 
@@ -77,7 +77,7 @@ d('A1 skills (Testcontainers pg)', () => {
     await pg?.stop();
   });
 
-  function appWith(structured: unknown) {
+  function appWith(structured: unknown, catalogSource?: MockCatalogSource) {
     return buildApp({
       config: config(),
       db: pg.handle.db,
@@ -85,6 +85,7 @@ d('A1 skills (Testcontainers pg)', () => {
         embedder: new MockEmbedder(),
         git: new MockGitClient({ diff: DIFF }),
         llm: { openai: new MockLLMProvider('openai', { structured }) },
+        ...(catalogSource ? { catalogSource } : {}),
       },
     });
   }
@@ -240,14 +241,37 @@ d('A1 skills (Testcontainers pg)', () => {
   });
 
   it('community catalog: search then import stores it disabled', async () => {
-    const app = await appWith(REVIEW_FIXTURE);
+    const catalogSource = new MockCatalogSource({
+      trees: {
+        'owner/catalog-repo': [
+          { path: 'python', type: 'tree' },
+          { path: 'python/no-bare-except.md', type: 'blob' },
+        ],
+      },
+      bodies: {
+        'owner/catalog-repo#python/no-bare-except.md':
+          '---\ndescription: Flags bare except clauses that swallow SECRET errors.\n---\n# No bare except',
+      },
+    });
+    const app = await appWith(REVIEW_FIXTURE, catalogSource);
+    await app.inject({
+      method: 'PUT',
+      url: '/settings',
+      payload: { community_catalog_repo: 'owner/catalog-repo' },
+    });
+    const { repo } = await setupRepoAndPr(pg.handle.db, workspaceId);
 
     const search = (await app.inject({ method: 'GET', url: '/skills/community?q=secret' })).json();
-    expect(search.length).toBeGreaterThan(0);
-    const target = search[0];
+    expect(search.available).toBe(true);
+    expect(search.entries.length).toBeGreaterThan(0);
+    const target = search.entries[0];
 
     const imported = (
-      await app.inject({ method: 'POST', url: '/skills/import-community', payload: { name: target.name } })
+      await app.inject({
+        method: 'POST',
+        url: '/skills/import-community',
+        payload: { path: target.path, repo_id: repo.id },
+      })
     ).json();
     expect(imported.name).toBe(target.name);
     expect(imported.source).toBe('community');

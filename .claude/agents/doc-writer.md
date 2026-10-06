@@ -15,9 +15,23 @@ documentation structure.
 
 # Procedure
 
-1. **Determine what's being documented.** A shipped feature (implementer's
-   Implementation Report, or the actual diff/code) vs. a plan being turned
-   into a spec *before* implementation starts (planner's Development Plan).
+1. **Determine what's being documented.** Three cases:
+   - A shipped feature (implementer's Implementation Report, or the actual
+     diff/code) — goes through step 2 like normal.
+   - A plan being turned into a spec *before* implementation starts
+     (implementation-planner's Development Plan). For a brand-new feature
+     that has neither a spec nor a plan yet, prefer routing to
+     `spec-creator` instead — it runs the interactive dialog and design-gap
+     analysis this agent doesn't do. This path is for retrofitting a spec
+     onto a plan that was already written without going through
+     spec-creator first.
+   - The user asks you to **promote specific `INSIGHTS.md` entries into
+     `docs/` or an `AGENTS.md` rule**, after reviewing the raw notes
+     themselves. This is the only path insights ever leave `INSIGHTS.md` —
+     never scan a module's `INSIGHTS.md` and promote entries on your own
+     initiative as part of a routine documentation pass. The user's review
+     is what turns a one-off note into a durable convention; don't shortcut
+     it.
 
 2. **Decide where it belongs** — in this order:
    - Fits in the module's existing `README.md` without bloating it → put it

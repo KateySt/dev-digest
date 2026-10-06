@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { BlastRadius } from '@devdigest/shared';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
@@ -38,6 +38,19 @@ export class BlastRepository {
   async getSlice(prId: string): Promise<BlastSlice | undefined> {
     const [row] = await this.db.select().from(t.prBrief).where(eq(t.prBrief.prId, prId));
     return (row?.json as PrBriefJson | undefined)?.blast;
+  }
+
+  /** Batch, read-only cache lookup for the PR list (SPEC-05 S-AC-17/S-AC-18) —
+   *  never computes a missing slice, only returns what's already cached. */
+  async getSlices(prIds: string[]): Promise<Map<string, BlastSlice>> {
+    if (prIds.length === 0) return new Map();
+    const rows = await this.db.select().from(t.prBrief).where(inArray(t.prBrief.prId, prIds));
+    const out = new Map<string, BlastSlice>();
+    for (const row of rows) {
+      const slice = (row.json as PrBriefJson | undefined)?.blast;
+      if (slice) out.set(row.prId, slice);
+    }
+    return out;
   }
 
   async upsertSlice(prId: string, slice: BlastSlice): Promise<void> {

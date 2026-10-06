@@ -1,5 +1,13 @@
 import type { Container } from '../../platform/container.js';
-import type { Provider, Review, RunTrace, SkillScanFinding, SkillScanStatus, UnifiedDiff } from '@devdigest/shared';
+import type {
+  Provider,
+  Review,
+  RunTrace,
+  SkillScanFinding,
+  SkillScanStatus,
+  SpecReadEntry,
+  UnifiedDiff,
+} from '@devdigest/shared';
 import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
 import { RunLogger } from '../../platform/run-logger.js';
 import * as schema from '../../db/schema.js';
@@ -11,6 +19,7 @@ import { loadDiff } from './diff-loader.js';
 import { isScanBlocking } from '../skills/helpers.js';
 import { IntentService } from '../intent/service.js';
 import { renderIntentDigest } from '../intent/helpers.js';
+import { ProjectContextService } from '../project-context/service.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -214,6 +223,28 @@ export class ReviewRunExecutor {
         runLog.info(`${skillBodies.length} skill(s) attached to prompt`);
       }
 
+      // SPEC-04 — Project Context: resolve the agent's + its skills' attached
+      // documents FRESH on every run (nothing cached on the agent row — S-AC-11),
+      // independent of the repo-intel toggle above (this has nothing to do with
+      // repo-intel). Never fails the run: a resolution error just means no
+      // project context this run, same fail-soft contract as callers/repoMap.
+      let projectContext: { texts: string[]; specsRead: SpecReadEntry[] } = {
+        texts: [],
+        specsRead: [],
+      };
+      try {
+        projectContext = await new ProjectContextService(this.container).resolveForRun(
+          repo.clonePath,
+          agent.id,
+          agent.model,
+        );
+        if (projectContext.texts.length > 0) {
+          runLog.info(`${projectContext.texts.length} project-context document(s) attached to prompt`);
+        }
+      } catch (err) {
+        runLog.info(`project context: resolution failed — ${(err as Error).message}`);
+      }
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -228,6 +259,8 @@ export class ReviewRunExecutor {
         strategy: agent.strategy ?? REVIEW_STRATEGY,
         // Skills tab — omit-when-empty, same contract as callers/repoMap below.
         ...(skillBodies.length > 0 ? { skills: skillBodies } : {}),
+        // SPEC-04 — Project Context, resolved above; omit-when-empty, same idiom.
+        ...(projectContext.texts.length > 0 ? { specs: projectContext.texts } : {}),
         // T1.3 — pass the callers digest only when we built one. assemblePrompt
         // omits the section when this is empty/undefined.
         ...(callersDigest ? { callers: callersDigest } : {}),
@@ -315,7 +348,7 @@ export class ReviewRunExecutor {
         })),
         raw_output: outcome.raw,
         memory_pulled: [],
-        specs_read: [],
+        specs_read: projectContext.specsRead,
         // Persisted log = the run's FULL event buffer (incl. shared pre-work:
         // diff load + intent), not just events recorded inside this method.
         log: runLog.logFor(runId),

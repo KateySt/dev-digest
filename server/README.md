@@ -131,6 +131,14 @@ What the reviewer actually sends to the model is assembled in
 - **Grounding is mandatory.** Every finding must cite a line that exists in the
   diff or it is dropped (`groundFindings`), and the score is recomputed from the
   surviving findings — the model's self-reported score is ignored.
+- **Project context is now live.** `PromptParts.specs` (rendered as a
+  `## Project context` section, `wrapUntrusted`-delimited, already covered by
+  `INJECTION_GUARD`) used to be passed as `null` unconditionally. It's now
+  filled per run by `modules/project-context/` from each agent's and its
+  attached skills' ordered document sets — resolved fresh from storage every
+  run (nothing cached on the agent row), deduped by path, and dropped whole-
+  document past the project-context token budget rather than truncated. See
+  [`specs/project-context.md`](specs/project-context.md).
 
 ## Testing
 

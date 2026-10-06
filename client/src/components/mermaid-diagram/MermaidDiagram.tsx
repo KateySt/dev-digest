@@ -17,9 +17,13 @@ function looksLikeMermaid(src: string): boolean {
  * Renders a mermaid diagram string to inline SVG. mermaid is imported lazily
  * (client-only). We VALIDATE with mermaid.parse({suppressErrors}) before
  * rendering — mermaid otherwise injects a "Syntax error" bomb graphic into the
- * DOM on bad input instead of throwing. Junk/unparseable input renders nothing.
+ * DOM on bad input instead of throwing. Junk/unparseable input renders the
+ * optional `fallback` (e.g. a deterministic node/edge text list — see the
+ * Onboarding Tour's Architecture section) instead of silently rendering
+ * nothing, when one is supplied. Every existing call site keeps working
+ * unchanged with `fallback` omitted (purely additive).
  */
-export function MermaidDiagram({ chart }: { chart: string }) {
+export function MermaidDiagram({ chart, fallback }: { chart: string; fallback?: React.ReactNode }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [state, setState] = React.useState<"pending" | "ok" | "invalid">("pending");
 
@@ -55,8 +59,10 @@ export function MermaidDiagram({ chart }: { chart: string }) {
     };
   }, [chart]);
 
-  // Not a (valid) diagram → render nothing rather than a broken box.
-  if (state === "invalid") return null;
+  // Not a (valid) diagram → render the supplied fallback (if any) rather
+  // than a broken box; render nothing when no fallback was given (every
+  // pre-existing call site's behavior, unchanged).
+  if (state === "invalid") return fallback != null ? <>{fallback}</> : null;
 
   return (
     <div

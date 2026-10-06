@@ -11,6 +11,10 @@
       "fromUrl": "Import from URL",
       "community": "Search community skills…"
     },
+    "scope": {
+      "all": "All projects",
+      "global": "Global only"
+    },
     "empty": {
       "title": "No skills yet",
       "body": "Import a skill from a file, a URL, or the community catalog.",
@@ -61,15 +65,30 @@
   },
   "community": {
     "searchPlaceholder": "Search community skills (e.g. security)…",
-    "allLanguages": "All languages",
-    "loadError": "Could not load community skills",
-    "retry": "Retry",
+    "projectLabel": "Project",
+    "noRepos": "Connect a project to import community skills into it.",
+    "addRepoLink": "Add a repository",
+    "clearFilter": "Clear filter",
+    "suggestedFor": "Suggested for {project}",
+    "suggestionsCardTitle": "Suggested skills",
+    "importing": "Importing…",
+    "import": "Import",
+    "importSuccess": "Imported \"{name}\" into {project}.",
+    "importSuccessSimple": "Imported \"{name}\".",
+    "importFailed": "Import failed",
+    "unavailable": {
+      "title": "Catalog unavailable",
+      "fallbackBody": "Could not reach the community catalog.",
+      "settingsLink": "Check the Catalog setting →"
+    },
+    "empty": {
+      "title": "Catalog is empty",
+      "body": "The catalog was reached successfully, but it has no entries yet."
+    },
     "noMatch": {
       "title": "No matching skills",
-      "body": "Try a different search term."
-    },
-    "importing": "Importing…",
-    "import": "Import"
+      "body": "Try a different search term or clear the active filter."
+    }
   },
   "listItem": {
     "needsVetting": "needs vetting",
@@ -126,7 +145,13 @@
     "descriptionHint": "This is the skill's interface — phrase it directively (what the agent should do with it), not as a summary.",
     "bodyLabel": "Skill body (Markdown)",
     "bodyHint": "Saving a changed body creates a new immutable version.",
-    "version": "v{version}"
+    "version": "v{version}",
+    "scope": {
+      "label": "Project",
+      "hint": "Global skills apply everywhere. Scoping to a project hides it from other projects' filtered lists and deletes it if that project is removed.",
+      "global": "Global (all projects)",
+      "reassignError": "Could not change this skill's project. Please try again."
+    }
   },
   "previewTab": {
     "title": "Preview",
@@ -138,10 +163,26 @@
     "tabs": {
       "config": "Config",
       "preview": "Preview",
+      "context": "Context",
       "evals": "Evals",
       "stats": "Stats",
       "versions": "Versions"
     }
+  },
+  "context": {
+    "title": "Context",
+    "attachedBadge": "{count, plural, one {# attached} other {# attached}}",
+    "inheritNote": "Any agent using this skill inherits these documents.",
+    "serializesAs": "SERIALIZES AS",
+    "filterPlaceholder": "Filter documents…",
+    "noMatch": "No documents match your filter.",
+    "empty": "No documents discovered in this repo yet.",
+    "loadError": "Could not load project context documents.",
+    "preview": "Preview",
+    "dragHandleLabel": "Reorder {name}",
+    "dragHandleInertLabel": "Reordering is disabled while the filter is active",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
   },
   "stats": {
     "loadError": "Could not load stats.",

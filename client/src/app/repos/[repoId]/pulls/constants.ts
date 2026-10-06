@@ -23,8 +23,11 @@ export const SIZE_COLOR: Record<string, string> = {
   L: "var(--crit)",
 };
 
-/** Grid template for both the header row and PR rows. */
-export const GRID = "1fr 132px 92px 60px 108px 118px 72px 78px";
+/** Grid template for both the header row and PR rows. SPEC-05 C-AC-11/31
+ *  appends a fixed-width "actions" column for the permanent per-row Run
+ *  Review dropdown, keeping the header and every row aligned at the same
+ *  widths. */
+export const GRID = "1fr 132px 92px 60px 108px 118px 72px 78px 140px";
 
 /** Line-count thresholds for the S/M/L size bucket. */
 export const SIZE_SMALL_MAX = 100;
@@ -48,6 +51,7 @@ export const COLUMN_KEYS: string[] = [
   "status",
   "cost",
   "updated",
+  "actions",
 ];
 
 /** Number of skeleton rows shown while loading. */

@@ -30,6 +30,7 @@
     "refreshing": "Refreshing…"
   },
   "panel": {
+    "all": "All",
     "hideLowConfidence": "Hide low confidence",
     "noMatchTitle": "No findings match",
     "noMatchBody": "Adjust the filters above, or run a review to generate findings."
@@ -40,7 +41,8 @@
     "running": "Running…",
     "runReview": "Run Review",
     "mergedWarning": "Already merged — review is informational",
-    "mergedTooltip": "This PR is already merged; running a review won’t affect the merged code."
+    "mergedTooltip": "This PR is already merged; running a review won’t affect the merged code.",
+    "runReviewFor": "Run Review for #{number} {title}"
   },
   "runStatus": {
     "elapsed": "Running · {count} agent(s)",
@@ -106,7 +108,16 @@
     "filterPlaceholder": "Filter pull requests…",
     "sort": {
       "newest": "Sort: Newest",
-      "oldest": "Sort: Oldest"
+      "oldest": "Sort: Oldest",
+      "highestRisk": "Sort: Highest risk"
+    },
+    "triageQueue": "Triage queue",
+    "riskTooltip": {
+      "diffSize": "Diff size: {lines} lines",
+      "blastSize": "Blast size: {count} caller(s)",
+      "blastSizeUnavailable": "Blast size: not available",
+      "score": "Score: {score}",
+      "scoreUnavailable": "Score: not yet reviewed"
     },
     "columns": {
       "pullRequest": "Pull request",
@@ -116,7 +127,8 @@
       "findings": "Findings",
       "status": "Status",
       "cost": "Cost",
-      "updated": "Updated"
+      "updated": "Updated",
+      "actions": ""
     },
     "filesCount": "{count} files",
     "errorTitle": "Couldn’t load pull requests",

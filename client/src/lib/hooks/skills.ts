@@ -1,11 +1,13 @@
 /* hooks/skills.ts — React Query hooks for the Skills Lab page + the Add Skill
    drawer's URL/Community tabs. File import needs no dedicated hook — the
-   caller reads the File client-side and calls useCreateSkill(). */
+   caller reads the File client-side and calls useCreateSkill(). SPEC-07
+   (community skill catalog) reshaped the community/import hooks and added
+   suggestions + catalog-test. */
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { CommunitySkill, Skill, SkillType } from "@devdigest/shared";
+import type { CatalogTestResult, CommunityCatalogListing, Skill, SkillType } from "@devdigest/shared";
 
 /** GET /skills' list item — the `Skill` DTO plus a lightweight usage summary
  *  ("N agents · X% pull · Y% accept") for the card, batched server-side
@@ -19,10 +21,19 @@ export interface SkillListItem extends Skill {
   };
 }
 
-export function useSkills() {
+/** `GET /skills`, optionally narrowed to one project's working set (2026-10-02
+ *  amendment). `repoFilter` omitted ⇒ every skill in the workspace (what the
+ *  Agent editor's skill picker always gets — it calls this with no args);
+ *  `"none"` ⇒ global-only; a repo id ⇒ that project's skills plus global.
+ *  `enabled: false` lets a caller hold off fetching until it knows which
+ *  filter to use (e.g. while the active repo is still resolving) instead of
+ *  fetching the wrong default and re-fetching a moment later. */
+export function useSkills(repoFilter?: string, opts: { enabled?: boolean } = {}) {
+  const qs = repoFilter ? `?repo_id=${encodeURIComponent(repoFilter)}` : "";
   return useQuery({
-    queryKey: ["skills"],
-    queryFn: () => api.get<SkillListItem[]>("/skills"),
+    queryKey: ["skills", repoFilter ?? "all"],
+    queryFn: () => api.get<SkillListItem[]>(`/skills${qs}`),
+    enabled: opts.enabled ?? true,
   });
 }
 
@@ -53,7 +64,9 @@ export function useCreateSkill() {
 
 export interface UpdateSkillInput {
   id: string;
-  patch: Partial<Pick<Skill, "name" | "description" | "type" | "body" | "enabled">> & {
+  // "repo_id" included for project-scope reassignment (2026-10-02 amendment):
+  // omitted ⇒ not touched, null ⇒ cleared to global, a repo id ⇒ reassigned.
+  patch: Partial<Pick<Skill, "name" | "description" | "type" | "body" | "enabled" | "repo_id">> & {
     override?: boolean;
   };
 }
@@ -103,23 +116,74 @@ export function useImportSkillUrl() {
   });
 }
 
-/** Fixture community catalog search (no live external index in this repo). */
-export function useCommunitySkills(query: string, lang?: string) {
+// ---- Community catalog (SPEC-07) -----------------------------------------
+
+/** Live catalog listing — `GET /skills/community`. One query key per
+ *  (query, tag) pair; folders and tags both derive from this single payload
+ *  client-side (no second unfiltered fetch, client spec "No duplicate fetch
+ *  to derive filters"). `data.available === false` is the unavailable
+ *  outcome (S-AC-31) — distinct from a reachable-but-empty `entries: []`. */
+export function useCommunitySkills(query?: string, tag?: string) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
-  if (lang) params.set("lang", lang);
+  if (tag) params.set("tag", tag);
   const qs = params.toString();
   return useQuery({
-    queryKey: ["community-skills", query, lang],
-    queryFn: () => api.get<CommunitySkill[]>(`/skills/community${qs ? `?${qs}` : ""}`),
+    queryKey: ["community-skills", query ?? "", tag ?? ""],
+    queryFn: () => api.get<CommunityCatalogListing>(`/skills/community${qs ? `?${qs}` : ""}`),
   });
+}
+
+/** Explicit catalog refresh (client spec's retry action on the unavailable
+ *  state, and any future "refresh" affordance) — discards the server's
+ *  cached listing and re-fetches (S-AC-7). */
+export function useRefreshCommunityCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<CommunityCatalogListing>("/skills/community/refresh"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["community-skills"] }),
+  });
+}
+
+export interface ImportCommunitySkillInput {
+  path: string;
+  repo_id: string;
 }
 
 export function useImportCommunitySkill() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => api.post<Skill>("/skills/import-community", { name }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["skills"] }),
+    mutationFn: ({ path, repo_id }: ImportCommunitySkillInput) =>
+      api.post<Skill>("/skills/import-community", { path, repo_id }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["skills"] });
+      // An import excludes that path from future suggestion responses
+      // (S-AC-28) — drop every project's cached suggestion list so the
+      // onboarding card and the Community tab's pinned group both reflect
+      // it without a manual refresh (client spec AC-40).
+      qc.invalidateQueries({ queryKey: ["skill-suggestions"] });
+    },
+  });
+}
+
+/** Per-project catalog suggestions — `GET /repos/:id/skill-suggestions`
+ *  (S-AC-26 – S-AC-32). Already language-matched, threshold-filtered, and
+ *  de-duplicated against imports server-side — this hook performs no
+ *  matching of its own. */
+export function useSkillSuggestions(repoId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["skill-suggestions", repoId],
+    queryFn: () => api.get<CommunityCatalogListing>(`/repos/${repoId}/skill-suggestions`),
+    enabled: !!repoId,
+  });
+}
+
+/** Settings → Catalog "Test" action — `POST /settings/catalog-test`. An
+ *  optional `repo` tests an unsaved edit without persisting it (client spec
+ *  AC-34); omitted, it tests the resolved stored/env value. */
+export function useCatalogTest() {
+  return useMutation({
+    mutationFn: (repo?: string) => api.post<CatalogTestResult>("/settings/catalog-test", { repo }),
   });
 }
 

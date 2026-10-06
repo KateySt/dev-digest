@@ -1,5 +1,9 @@
 # Agent Editor — Evals tab, Eval Case Editor, Eval Dashboard
 
+Spec ID: SPEC-01
+Status: implemented
+Supersedes: none
+
 **Status: implemented.** Built against the already-existing `eval_cases`/
 `eval_runs` schema and `EvalCase`/`EvalRun`/`EvalPerTrace` contracts, plus one
 additive contract (`EvalCaseRun`, `EvalCaseListItem`) added to resolve the

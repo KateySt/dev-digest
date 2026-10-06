@@ -72,12 +72,18 @@ export function toBlastRadius(result: BlastResult): BlastRadius {
   return { changed_symbols, downstream, summary: '' };
 }
 
+/** Total downstream-caller count across every changed symbol — the PR list's
+ *  blast-size figure (SPEC-05 S-AC-17) and the summary sentence's count. */
+export function callerCount(radius: Pick<BlastRadius, 'downstream'>): number {
+  return radius.downstream.reduce((sum, d) => sum + d.callers.length, 0);
+}
+
 /** Deterministic, LLM-free summary sentence for the panel's header line. */
 export function buildSummary(radius: Omit<BlastRadius, 'summary'>): string {
   const symbolCount = radius.changed_symbols.length;
-  const callerCount = radius.downstream.reduce((sum, d) => sum + d.callers.length, 0);
+  const callers = callerCount(radius);
   const endpointCount = uniqueSorted(radius.downstream.flatMap((d) => d.endpoints_affected)).length;
   const cronCount = uniqueSorted(radius.downstream.flatMap((d) => d.crons_affected)).length;
 
-  return `${symbolCount} changed symbol${symbolCount === 1 ? '' : 's'}, ${callerCount} caller${callerCount === 1 ? '' : 's'}, ${endpointCount} endpoint${endpointCount === 1 ? '' : 's'} and ${cronCount} cron${cronCount === 1 ? '' : 's'} affected`;
+  return `${symbolCount} changed symbol${symbolCount === 1 ? '' : 's'}, ${callers} caller${callers === 1 ? '' : 's'}, ${endpointCount} endpoint${endpointCount === 1 ? '' : 's'} and ${cronCount} cron${cronCount === 1 ? '' : 's'} affected`;
 }

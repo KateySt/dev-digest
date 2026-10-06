@@ -52,6 +52,7 @@
     "tabs": {
       "config": "Config",
       "skills": "Skills",
+      "context": "Context",
       "evals": "Evals",
       "stats": "Stats",
       "ci": "CI"
@@ -99,6 +100,23 @@
     "filterPlaceholder": "Filter skills…",
     "orderHint": "Order matters — earlier skills appear earlier in the assembled prompt. Toggle to attach.",
     "noMatch": "No skills match your filter."
+  },
+  "context": {
+    "title": "Context",
+    "attachedBadge": "{linked} of {total} attached",
+    "filterPlaceholder": "Filter documents…",
+    "noMatch": "No documents match your filter.",
+    "empty": "No documents discovered in this repo yet.",
+    "loadError": "Could not load project context documents.",
+    "tokenTotal": "≈{tokens} tokens attached",
+    "tokenTotalEstimated": "≈{tokens} tokens attached (estimated)",
+    "estimatedBadge": "Estimated",
+    "footerNote": "Attached documents are injected as an untrusted “## Project context” block into every run.",
+    "preview": "Preview",
+    "dragHandleLabel": "Reorder {name}",
+    "dragHandleInertLabel": "Reordering is disabled while the filter is active",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
   },
   "stats": {
     "loadError": "Could not load stats.",

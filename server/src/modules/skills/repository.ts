@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import { INITIAL_SKILL_VERSION } from './constants.js';
@@ -56,6 +56,14 @@ export interface InsertSkill extends ScanResultFields {
   body: string;
   enabled?: boolean;
   evidenceFiles?: string[];
+  /** Project scope (SPEC-07). Absent/undefined ⇒ global (null repo_id). */
+  repoId?: string | null;
+  /** Catalog tag slugs (SPEC-07). Absent/undefined ⇒ null (no tags). */
+  tags?: string[] | null;
+  /** Repo-relative catalog path a community import came from (SPEC-07
+   *  S-AC-28 gap-fill). Absent/undefined ⇒ null (manual/imported_url skills,
+   *  and community skills imported before this column existed). */
+  sourcePath?: string | null;
 }
 
 export interface UpdateSkill extends ScanResultFields {
@@ -64,13 +72,43 @@ export interface UpdateSkill extends ScanResultFields {
   type?: 'rubric' | 'convention' | 'security' | 'custom';
   body?: string;
   enabled?: boolean;
+  /** Project scope reassignment (2026-10-02 amendment, AC-41/AC-43).
+   *  `undefined` ⇒ not touched; `null` ⇒ cleared to global; a string ⇒
+   *  reassigned to that repo. Never affects `version`/scan fields (AC-44). */
+  repoId?: string | null;
 }
 
 export class SkillsRepository {
   constructor(private db: Db) {}
 
-  async list(workspaceId: string): Promise<SkillRow[]> {
-    return this.db.select().from(t.skills).where(eq(t.skills.workspaceId, workspaceId));
+  /**
+   * List a workspace's skills, optionally narrowed by project scope
+   * (2026-10-02 amendment). `repoFilter`:
+   *  - `undefined` ⇒ no filter, every skill regardless of `repo_id` (AC-36,
+   *    the default — also what the Agent editor's skill picker always gets,
+   *    AC-40).
+   *  - `null` ⇒ global-only: `repo_id IS NULL` (AC-37).
+   *  - a repo id ⇒ that project's skills plus every global skill (AC-35).
+   */
+  async list(workspaceId: string, repoFilter?: string | null): Promise<SkillRow[]> {
+    if (repoFilter === undefined) {
+      return this.db.select().from(t.skills).where(eq(t.skills.workspaceId, workspaceId));
+    }
+    if (repoFilter === null) {
+      return this.db
+        .select()
+        .from(t.skills)
+        .where(and(eq(t.skills.workspaceId, workspaceId), isNull(t.skills.repoId)));
+    }
+    return this.db
+      .select()
+      .from(t.skills)
+      .where(
+        and(
+          eq(t.skills.workspaceId, workspaceId),
+          or(isNull(t.skills.repoId), eq(t.skills.repoId, repoFilter)),
+        ),
+      );
   }
 
   async getById(workspaceId: string, id: string): Promise<SkillRow | undefined> {
@@ -108,6 +146,9 @@ export class SkillsRepository {
         ...(values.scanStatus !== undefined ? { scanStatus: values.scanStatus } : {}),
         scanFindings: values.scanFindings ?? null,
         scannedAt: values.scannedAt ?? null,
+        repoId: values.repoId ?? null,
+        tags: values.tags ?? null,
+        sourcePath: values.sourcePath ?? null,
       })
       .returning();
     await this.snapshotVersion(row!.id, INITIAL_SKILL_VERSION, row!.body);
@@ -134,6 +175,7 @@ export class SkillsRepository {
         ...(patch.type !== undefined ? { type: patch.type } : {}),
         ...(patch.body !== undefined ? { body: patch.body } : {}),
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+        ...(patch.repoId !== undefined ? { repoId: patch.repoId } : {}),
         ...(bodyChanged ? { version: nextVersion } : {}),
         ...(patch.scanStatus !== undefined ? { scanStatus: patch.scanStatus } : {}),
         ...(patch.scanFindings !== undefined ? { scanFindings: patch.scanFindings } : {}),
@@ -207,5 +249,30 @@ export class SkillsRepository {
       .from(t.agentSkills)
       .innerJoin(t.agents, eq(t.agents.id, t.agentSkills.agentId))
       .where(eq(t.agents.workspaceId, workspaceId));
+  }
+
+  /**
+   * Catalog paths already imported into a specific project — feeds
+   * suggestion exclusion (SPEC-07 S-AC-28). Matches on the stored
+   * `source_path` column exactly (the repo-relative catalog path a
+   * community import came from), not the earlier `(name, folder-tag)` proxy
+   * — exact path matching survives a later rename in the Skill Editor and
+   * can't collide across folders. A null `source_path` (skills imported
+   * before this column existed) simply never matches any catalog entry's
+   * path, so those rows fall out of the exclusion set — acceptable per the
+   * same zero-backfill discipline as AC-34.
+   */
+  async communitySkillSourcePathsForRepo(workspaceId: string, repoId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ sourcePath: t.skills.sourcePath })
+      .from(t.skills)
+      .where(
+        and(
+          eq(t.skills.workspaceId, workspaceId),
+          eq(t.skills.repoId, repoId),
+          eq(t.skills.source, 'community'),
+        ),
+      );
+    return rows.map((r) => r.sourcePath).filter((p): p is string => p !== null);
   }
 }

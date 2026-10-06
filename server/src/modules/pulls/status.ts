@@ -37,6 +37,18 @@ export function rollupSeverities(rows: { severity: string }[]): SeverityCounts {
  *  - `stale`        — current head was reviewed but the PR is older than STALE_DAYS
  *  - `reviewed`     — current head reviewed and recent
  */
+/** SPEC-05 S-AC-1/S-AC-16 — the ONE needs_review derivation shared by the
+ *  cost estimate and the bulk trigger, so the count a user confirms and the
+ *  set that actually fires can never diverge in kind (only in the snapshot
+ *  moment, per the estimate-vs-trigger race edge case). */
+export function needsReviewPrIds<T extends { id: string; status: string; lastReviewedSha: string | null; headSha: string }>(
+  rows: T[],
+): string[] {
+  return rows
+    .filter((r) => deriveReviewStatus({ ghStatus: r.status, lastReviewedSha: r.lastReviewedSha, headSha: r.headSha, updatedAt: null, now: Date.now() }) === 'needs_review')
+    .map((r) => r.id);
+}
+
 export function deriveReviewStatus(args: {
   /** DB `status` column = GitHub merge state (open/merged/closed). */
   ghStatus: string;

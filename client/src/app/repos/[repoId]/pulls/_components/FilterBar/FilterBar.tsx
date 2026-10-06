@@ -30,6 +30,7 @@ export function FilterBar({
   const sortOptions = [
     { value: "newest", label: t("list.sort.newest") },
     { value: "oldest", label: t("list.sort.oldest") },
+    { value: "highest_risk", label: t("list.sort.highestRisk") },
   ];
   return (
     <div style={s.filterBar}>

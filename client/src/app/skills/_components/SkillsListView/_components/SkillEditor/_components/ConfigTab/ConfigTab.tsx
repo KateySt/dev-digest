@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, CodeField, FormField, Select, TextInput, Toggle } from "@devdigest/ui";
 import type { Skill, SkillType } from "@devdigest/shared";
 import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
+import { useRepos } from "@/lib/hooks";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/slug";
 import { SKILL_TYPES } from "@/app/skills/_components/SkillsListView/constants";
@@ -14,11 +15,16 @@ import { s } from "./styles";
 /** Config tab — name/description/type/body + enabled toggle. Save bumps the
  *  skill's version when the body changed (server-side rule); Delete removes
  *  the skill entirely. */
+/** Sentinel for "global" in the project-scope Select — `Select` only carries
+ *  string values, and `Skill.repo_id`'s real "global" value is `null`. */
+const GLOBAL_SCOPE = "__global__";
+
 export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () => void }) {
   const t = useTranslations("skills");
   const toast = useToast();
   const update = useUpdateSkill();
   const del = useDeleteSkill();
+  const { data: repos } = useRepos();
 
   const [name, setName] = React.useState(skill.name);
   const [description, setDescription] = React.useState(skill.description);
@@ -58,6 +64,23 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
     del.mutate(skill.id, { onError: () => toast.error(t("preview.deleteError")) });
   };
 
+  // Project scope reassignment (2026-10-02 amendment) — fires immediately on
+  // change, like the Enabled toggle above, rather than bundled into Save:
+  // it's a distinct administrative action (AC-44: never bumps version, never
+  // re-runs the scan), not a content edit.
+  const scopeOptions = [
+    { value: GLOBAL_SCOPE, label: t("preview.scope.global") },
+    ...(repos ?? []).map((r) => ({ value: r.id, label: r.full_name })),
+  ];
+  const changeScope = (value: string) => {
+    const repoId = value === GLOBAL_SCOPE ? null : value;
+    if (repoId === (skill.repo_id ?? null)) return;
+    update.mutate(
+      { id: skill.id, patch: { repo_id: repoId } },
+      { onError: () => toast.error(t("preview.scope.reassignError")) },
+    );
+  };
+
   return (
     <div style={s.wrap}>
       <FormField label={t("preview.enabled")} hint={blocked && !skill.enabled ? t("preview.enableBlockedHint") : undefined}>
@@ -73,6 +96,14 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
       </FormField>
       <FormField label={t("preview.typeLabel")}>
         <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+      </FormField>
+      <FormField label={t("preview.scope.label")} hint={t("preview.scope.hint")}>
+        <Select
+          value={skill.repo_id ?? GLOBAL_SCOPE}
+          onChange={changeScope}
+          options={scopeOptions}
+          mono={false}
+        />
       </FormField>
       <FormField label={t("preview.descriptionLabel")} hint={t("preview.descriptionHint")}>
         <TextInput value={description} onChange={setDescription} />

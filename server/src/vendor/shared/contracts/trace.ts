@@ -36,6 +36,24 @@ export const ToolCall = z.object({
 });
 export type ToolCall = z.infer<typeof ToolCall>;
 
+/**
+ * SPEC-04 (Project Context) — outcome of one attached document at run time.
+ * `injected` = its full text reached the prompt's `## Project context` slot;
+ * every other value is a reason it did NOT (missing = path not found in the
+ * clone, empty = whitespace-only content, dropped_for_budget = the whole
+ * document was dropped from the end of resolved order under AC-18).
+ */
+export const SpecReadOutcome = z.enum(['injected', 'missing', 'empty', 'dropped_for_budget']);
+export type SpecReadOutcome = z.infer<typeof SpecReadOutcome>;
+
+/** One entry of `RunTrace.specs_read` — a repo-relative attached path plus
+ *  its outcome for this run (SPEC-04 AC-19). */
+export const SpecReadEntry = z.object({
+  path: z.string(),
+  outcome: SpecReadOutcome,
+});
+export type SpecReadEntry = z.infer<typeof SpecReadEntry>;
+
 export const PromptAssembly = z.object({
   system: z.string(),
   skills: z.string().nullish(),
@@ -85,7 +103,7 @@ export const RunTrace = z.object({
   tool_calls: z.array(ToolCall),
   raw_output: z.string(),
   memory_pulled: z.array(MemoryPulled),
-  specs_read: z.array(z.string()),
+  specs_read: z.array(SpecReadEntry),
   log: z.array(RunLogLine),
 });
 export type RunTrace = z.infer<typeof RunTrace>;

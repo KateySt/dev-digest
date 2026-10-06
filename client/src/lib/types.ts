@@ -29,6 +29,22 @@ export type {
   PrStatus,
   SpecFile,
   IndexStatus,
+  ProjectContextSourceFolder,
+  ProjectContextList,
+  ProjectContextAttachment,
+  OnboardingTour,
+  OnboardingReadResponse,
+  OnboardingGenerateAccepted,
+  OnboardingReadingPathEntry,
+  OnboardingCriticalPathEntry,
+  OnboardingRunCommand,
+  OnboardingDiagramEdge,
+  OnboardingIndexStatus,
+  OnboardingIndexDegradedReason,
+  OnboardingModelFailureReason,
+  CommunitySkill,
+  CommunityCatalogListing,
+  CatalogTestResult,
 } from "@devdigest/shared";
 
 export type { Review, Finding, Severity, Verdict } from "@devdigest/shared";

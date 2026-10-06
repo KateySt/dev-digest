@@ -139,73 +139,77 @@ export default function PRDetailPage() {
 
   return (
     <AppShell crumb={crumb}>
-      <PrDetailHeader
-        pr={pr}
-        prId={prId}
-        tab={tab}
-        findingsCount={findingsCount}
-        githubUrl={repoFullName ? githubPrUrl(repoFullName, pr.number) : null}
-        onSetTab={setTab}
-        onRunStart={() => setTab("findings")}
-        onRunsStarted={() => invalidateActiveRuns()}
-      />
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+        <PrDetailHeader
+          pr={pr}
+          prId={prId}
+          tab={tab}
+          findingsCount={findingsCount}
+          githubUrl={repoFullName ? githubPrUrl(repoFullName, pr.number) : null}
+          onSetTab={setTab}
+          onRunStart={() => setTab("findings")}
+          onRunsStarted={() => invalidateActiveRuns()}
+        />
 
-      <div style={{ padding: "24px 32px 44px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 1080, margin: "0 auto" }}>
-        {tab === "overview" && (
-          <OverviewTab
-            prBody={pr.body}
-            prId={prId}
-            reviews={runs}
-            onNavigateToFile={navigateToFile}
-            prRuns={prRuns}
-            reviewRunning={reviewRunning}
-            repoFullName={repoFullName}
-            headSha={pr.head_sha}
-            repoId={repoId}
-            prNumber={pr.number}
-          />
-        )}
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <div style={{ padding: "24px 32px 44px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 1080, margin: "0 auto" }}>
+            {tab === "overview" && (
+              <OverviewTab
+                prBody={pr.body}
+                prId={prId}
+                reviews={runs}
+                onNavigateToFile={navigateToFile}
+                prRuns={prRuns}
+                reviewRunning={reviewRunning}
+                repoFullName={repoFullName}
+                headSha={pr.head_sha}
+                repoId={repoId}
+                prNumber={pr.number}
+              />
+            )}
 
-        {tab === "findings" && (
-          <FindingsTab
-            prId={prId}
-            liveRunIds={liveRunIds}
-            reviewRunning={reviewRunning}
-            lethalTrifecta={lethalTrifecta}
-            runs={runs}
-            prRuns={prRuns}
-            prCommits={pr.commits}
-            repoId={repoId}
-            prNumber={pr.number}
-            repoFullName={repoFullName}
-            headSha={pr.head_sha}
-            targetFindingId={targetFindingId}
-            cancelMutation={cancel}
-            onOpenTrace={(id) => setParam("trace", id)}
-            onDelete={(id) => {
-              if (window.confirm("Delete this run from history? (its logs are removed too)"))
-                deleteRun.mutate(id);
-            }}
-            onRunDone={() => {
-              invalidateActiveRuns();
-              invalidateRunHistory();
-              refetchReviews();
-            }}
-          />
-        )}
+            {tab === "findings" && (
+              <FindingsTab
+                prId={prId}
+                liveRunIds={liveRunIds}
+                reviewRunning={reviewRunning}
+                lethalTrifecta={lethalTrifecta}
+                runs={runs}
+                prRuns={prRuns}
+                prCommits={pr.commits}
+                repoId={repoId}
+                prNumber={pr.number}
+                repoFullName={repoFullName}
+                headSha={pr.head_sha}
+                targetFindingId={targetFindingId}
+                cancelMutation={cancel}
+                onOpenTrace={(id) => setParam("trace", id)}
+                onDelete={(id) => {
+                  if (window.confirm("Delete this run from history? (its logs are removed too)"))
+                    deleteRun.mutate(id);
+                }}
+                onRunDone={() => {
+                  invalidateActiveRuns();
+                  invalidateRunHistory();
+                  refetchReviews();
+                }}
+              />
+            )}
 
-        {tab === "diff" && (
-          <DiffTab
-            prId={prId}
-            filesCount={pr.files_count}
-            files={pr.files}
-            canComment={pr.status === "open"}
-            repoFullName={repoFullName}
-            headSha={pr.head_sha}
-            targetFile={targetFile}
-            targetLine={targetLine}
-          />
-        )}
+            {tab === "diff" && (
+              <DiffTab
+                prId={prId}
+                filesCount={pr.files_count}
+                files={pr.files}
+                canComment={pr.status === "open"}
+                repoFullName={repoFullName}
+                headSha={pr.head_sha}
+                targetFile={targetFile}
+                targetLine={targetLine}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       {prId && traceRunId && (

@@ -10,6 +10,8 @@ import {
   EmptyState,
   ErrorState,
   AutoTriggerStatus,
+  Button,
+  LanguageBar,
 } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
 import { RepoNotFound } from "@/components/repo-not-found";
@@ -18,6 +20,7 @@ import { useActiveRepo, useRepoNotFound } from "@/lib/repo-context";
 import { ApiError } from "@/lib/api";
 import { COLUMN_KEYS, SKELETON_ROWS } from "./constants";
 import { s } from "./styles";
+import { compareByRisk } from "./helpers";
 import { PRRow } from "./_components/PRRow";
 import { FilterBar } from "./_components/FilterBar";
 
@@ -37,14 +40,64 @@ export default function PullsPage() {
 
   // Default to "needs review" — the most actionable filter on open.
   const status = search.get("status") ?? "needs_review";
-  const setStatus = (k: string) => {
+  // SPEC-05 C-AC-3 — sort moved into the URL alongside status, so a Triage
+  // queue view survives a reload and can be shared as a link.
+  const sort = search.get("sort") ?? "newest";
+  const triageOn = search.get("triage") === "1";
+
+  // The filter/sort active immediately before Triage queue was turned on
+  // (this session only) — restored on an explicit toggle-off (C-AC-4).
+  // Cleared (not restored) by a manual filter/sort change while active,
+  // since that manual choice stands as the new view instead (C-AC-32).
+  const triagePrevRef = React.useRef<{ status: string; sort: string } | null>(null);
+
+  const setParams = (patch: Record<string, string | null>) => {
     const sp = new URLSearchParams(search.toString());
-    sp.set("status", k); // always explicit so "all" sticks over the needs_review default
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null) sp.delete(k);
+      else sp.set(k, v); // always explicit so a value sticks over its default
+    }
     router.replace(`/repos/${repoId}/pulls?${sp.toString()}`);
   };
 
+  const setStatus = (k: string) => {
+    if (triageOn && k !== status) {
+      triagePrevRef.current = null;
+      setParams({ status: k, triage: null });
+      return;
+    }
+    setParams({ status: k });
+  };
+
+  const setSort = (k: string) => {
+    if (triageOn && k !== sort) {
+      triagePrevRef.current = null;
+      setParams({ sort: k, triage: null });
+      return;
+    }
+    setParams({ sort: k });
+  };
+
+  const activateTriage = () => {
+    triagePrevRef.current = { status, sort };
+    setParams({ status: "needs_review", sort: "highest_risk", triage: "1" });
+  };
+
+  const deactivateTriage = () => {
+    const prev = triagePrevRef.current;
+    triagePrevRef.current = null;
+    if (prev) {
+      setParams({ status: prev.status, sort: prev.sort, triage: null });
+    } else {
+      // C-AC-5 — loaded with triage URL state present, nothing in-session to
+      // restore: fall back to the page defaults.
+      setParams({ status: "needs_review", sort: "newest", triage: null });
+    }
+  };
+
+  const toggleTriage = () => (triageOn ? deactivateTriage() : activateTriage());
+
   const [query, setQuery] = React.useState("");
-  const [sort, setSort] = React.useState("newest");
 
   const q = query.trim().toLowerCase();
   const filtered = (pulls ?? [])
@@ -52,6 +105,7 @@ export default function PullsPage() {
     .filter((p) => !q || p.title.toLowerCase().includes(q) || String(p.number).includes(q))
     .slice()
     .sort((a, b) => {
+      if (sort === "highest_risk") return compareByRisk(a, b);
       const ta = Date.parse(a.updated_at ?? "") || 0;
       const tb = Date.parse(b.updated_at ?? "") || 0;
       return sort === "oldest" ? ta - tb : tb - ta;
@@ -79,9 +133,23 @@ export default function PullsPage() {
               ? t("list.summary", { open: openCount, needsReview: needsReviewCount })
               : t("list.loading")}
           </p>
+          {activeRepo?.languages && (
+            <div style={{ maxWidth: 420, marginTop: 10 }}>
+              <LanguageBar languages={activeRepo.languages} height={5} showLegend />
+            </div>
+          )}
         </div>
         <div style={s.headerActions}>
           <AutoTriggerStatus on={false} />
+          <Button
+            kind="tertiary"
+            icon="Filter"
+            active={triageOn}
+            aria-pressed={triageOn}
+            onClick={toggleTriage}
+          >
+            {t("list.triageQueue")}
+          </Button>
         </div>
       </div>
 
@@ -128,7 +196,13 @@ export default function PullsPage() {
           />
         ) : (
           filtered.map((pr) => (
-            <PRRow key={pr.number} pr={pr} repoId={repoId} repoFullName={activeRepo?.full_name} />
+            <PRRow
+              key={pr.number}
+              pr={pr}
+              repoId={repoId}
+              repoFullName={activeRepo?.full_name}
+              showRiskTooltip={sort === "highest_risk"}
+            />
           ))
         )}
       </div>

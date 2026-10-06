@@ -14,6 +14,31 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-09-30 — `server/src/vendor/shared` and `client/src/vendor/shared` are NOT byte-identical — diff only the file(s) you touch
+
+Both this file's 2026-09-15 entry and `client/INSIGHTS.md`'s equivalent entry
+describe the two `vendor/shared` trees as "confirmed byte-identical" and
+instruct "diff the two files to confirm they still match" — true when that
+entry was written, no longer true. While building the Onboarding Tour
+feature (SPEC-06), `diff -rq` between the two trees turned up 5
+pre-existing differing files, unrelated to this feature:
+`adapters.ts`, `contracts/eval-ci.ts`, `contracts/knowledge.ts`,
+`contracts/platform.ts`, `contracts/productionize.ts`. Some of this drift is
+substantial (`client`'s `contracts/knowledge.ts` is missing the
+`AgentVersionConfig`/`AgentVersion` exports `server`'s copy has, and several
+comments have independently diverged), so this isn't recent — it's been
+accumulating silently since there's no CI check enforcing parity.
+
+Practical effect: **a whole-tree `diff -rq server/src/vendor/shared
+client/src/vendor/shared` is not a usable pre-existing-drift check anymore**
+— it will always show noise from these 5 files regardless of what you
+touched. When you edit a shared contract, apply the identical edit to both
+trees by hand (still correct — see the 2026-09-15 entry below), then diff
+**only the specific file(s) you touched** to confirm those two match, not
+the whole tree.
+
+---
+
 ### 2026-09-15 — new PrMeta/PrDetail fields must be `.nullish()` unless every producer fills them
 
 Mistake (caught by typecheck, not by review): `PrMeta` is the return type of

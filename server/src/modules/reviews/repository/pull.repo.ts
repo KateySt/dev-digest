@@ -17,6 +17,14 @@ export async function getPull(
   return row;
 }
 
+/** Every PR row for a repo — the bulk review trigger derives its own
+ *  needs_review set from these via `deriveReviewStatus` (SPEC-05 S-AC-1),
+ *  the same derivation `GET /repos/:id/pulls` uses, so the two never diverge
+ *  in kind. Caller is expected to have already validated repo ownership. */
+export async function listPullsForRepo(db: Db, repoId: string): Promise<PullRow[]> {
+  return db.select().from(t.pullRequests).where(eq(t.pullRequests.repoId, repoId));
+}
+
 export async function getRepo(
   db: Db,
   repoId: string,

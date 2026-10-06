@@ -12,6 +12,7 @@ import { RepoService } from './service.js';
  *   GET    /repos              → list repos (workspace-scoped)
  *   POST   /repos/:id/refresh  → re-fetch clone + bump last_polled_at
  *   DELETE /repos/:id          → remove repo
+ *   GET    /repos/:id/skill-suggestions → SPEC-07 language-matched catalog entries
  *
  * The clone runs as a JobRunner job (kind 'clone') — real `git clone` via the
  * GitClient adapter into <cloneDir>/<owner>/<repo>.
@@ -44,5 +45,10 @@ export default async function reposRoutes(appBase: FastifyInstance) {
     const { workspaceId } = await getContext(app.container, req);
     await service.remove(workspaceId, req.params.id);
     return { deleted: req.params.id };
+  });
+
+  app.get('/repos/:id/skill-suggestions', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.skillSuggestions(workspaceId, req.params.id);
   });
 }

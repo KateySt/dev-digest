@@ -1,5 +1,9 @@
 # Agent Editor — CI tab, Publish to CI, CI Runs
 
+Spec ID: SPEC-03
+Status: implemented
+Supersedes: none
+
 **Status: implemented** (the `publishDialog` one-step flow — see the scope
 decision below; `exportWizard`'s multi-CI-system wizard was not built).
 

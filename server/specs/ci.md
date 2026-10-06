@@ -1,5 +1,9 @@
 # CI
 
+Spec ID: SPEC-03
+Status: implemented
+Supersedes: none
+
 "Publish to CI" commits a GitHub Actions workflow + a portable agent config
 to a target repo and opens a pull request — via `GitHubClient` (`server/src/
 vendor/shared/adapters.ts`), not a bespoke Octokit call.

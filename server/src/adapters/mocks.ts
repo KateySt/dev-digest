@@ -31,6 +31,9 @@ import type {
   AuthWorkspace,
   SecretsProvider,
   SecretKey,
+  CatalogSource,
+  CatalogRepoRef,
+  CatalogTreeEntry,
 } from '@devdigest/shared';
 import { parseUnifiedDiff } from './git/diff-parser.js';
 
@@ -127,6 +130,8 @@ export interface MockGitHubOptions {
   comments?: PrReviewComment[];
   /** Fixture for `listCommitFiles`, keyed by sha — file paths that commit touched. */
   commitFilesBySha?: Record<string, string[]>;
+  /** Fixture for `getLanguages` — bytes per language. */
+  languages?: Record<string, number>;
 }
 
 export class MockGitHubClient implements GitHubClient {
@@ -146,6 +151,7 @@ export class MockGitHubClient implements GitHubClient {
           number: 482,
           title: 'Add rate limiting to public API endpoints',
           author: 'marisa.koch',
+          avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',
           branch: 'feat/rate-limit-public',
           base: 'main',
           head_sha: 'a1b2c3d4',
@@ -165,6 +171,7 @@ export class MockGitHubClient implements GitHubClient {
       number: n,
       title: 'Add rate limiting to public API endpoints',
       author: 'marisa.koch',
+      avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',
       branch: 'feat/rate-limit-public',
       base: 'main',
       head_sha: 'a1b2c3d4',
@@ -266,6 +273,10 @@ export class MockGitHubClient implements GitHubClient {
   async currentLogin(): Promise<string> {
     return this.opts.login ?? 'mock-user';
   }
+
+  async getLanguages(_repo: RepoRef): Promise<Record<string, number>> {
+    return this.opts.languages ?? { TypeScript: 82345, JavaScript: 12045, CSS: 4210 };
+  }
 }
 
 // ---------- Mock Git ----------
@@ -355,5 +366,37 @@ export class MockSecretsProvider implements SecretsProvider {
   constructor(private secrets: Partial<Record<string, string>> = {}) {}
   async get(key: SecretKey): Promise<string | undefined> {
     return this.secrets[key as string];
+  }
+}
+
+// ---------- Mock Catalog source (SPEC-07) ----------
+export interface MockCatalogOptions {
+  /** Tree entries keyed by `owner/name`; also used to decide which repos
+   *  `listTree` succeeds for — an unset key throws (unavailable outcome). */
+  trees?: Record<string, CatalogTreeEntry[]>;
+  /** Raw body text keyed by `owner/name#path`. */
+  bodies?: Record<string, string>;
+}
+
+export class MockCatalogSource implements CatalogSource {
+  public treeCalls: CatalogRepoRef[] = [];
+  public bodyCalls: { repo: CatalogRepoRef; path: string }[] = [];
+
+  constructor(private opts: MockCatalogOptions = {}) {}
+
+  async listTree(repo: CatalogRepoRef): Promise<CatalogTreeEntry[]> {
+    this.treeCalls.push(repo);
+    const key = `${repo.owner}/${repo.name}`;
+    const tree = this.opts.trees?.[key];
+    if (!tree) throw new Error(`MockCatalogSource: no tree fixture for ${key}`);
+    return tree;
+  }
+
+  async fetchBody(repo: CatalogRepoRef, path: string): Promise<string> {
+    this.bodyCalls.push({ repo, path });
+    const key = `${repo.owner}/${repo.name}#${path}`;
+    const body = this.opts.bodies?.[key];
+    if (body === undefined) throw new Error(`MockCatalogSource: no body fixture for ${key}`);
+    return body;
   }
 }

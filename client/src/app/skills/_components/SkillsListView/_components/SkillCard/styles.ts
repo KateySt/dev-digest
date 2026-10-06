@@ -34,5 +34,7 @@ export const s = {
     WebkitBoxOrient: "vertical",
   } satisfies CSSProperties,
   metaRow: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } satisfies CSSProperties,
+  tagRow: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" } satisfies CSSProperties,
+  tagOverflow: { fontSize: 11.5, color: "var(--text-muted)" } satisfies CSSProperties,
   usageRow: { fontSize: 12, color: "var(--text-muted)" } satisfies CSSProperties,
 } as const;

@@ -180,7 +180,7 @@ describe('AI contracts parse fixtures', () => {
       tool_calls: [{ tool: 'read_file', args: "'src/config.ts'", meta: '1,240 bytes', ms: 120 }],
       raw_output: '{}',
       memory_pulled: [{ pr: 288, text: 'verified via stripe-signature' }],
-      specs_read: ['specs/security-baseline.md'],
+      specs_read: [{ path: 'specs/security-baseline.md', outcome: 'injected' }],
       log: [{ t: '00.00', kind: 'info', msg: 'started' }],
     });
     expect(trace.tool_calls).toHaveLength(1);
@@ -204,6 +204,7 @@ describe('platform DTOs', () => {
         full_name: 'acme/payments-api',
         default_branch: 'main',
         clone_path: null,
+        languages: null,
         last_polled_at: null,
         created_by: null,
       }),
@@ -213,6 +214,7 @@ describe('platform DTOs', () => {
         number: 482,
         title: 't',
         author: 'a',
+        avatar_url: null,
         branch: 'b',
         base: 'main',
         head_sha: 'sha',

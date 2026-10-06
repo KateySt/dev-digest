@@ -54,6 +54,7 @@ import {
 } from './constants.js';
 import { runFullIndex, type IndexPayload } from './pipeline/full.js';
 import { runIncremental } from './pipeline/incremental.js';
+import { filterAllowedPaths } from '../project-context/helpers.js';
 
 /**
  * GLOBALS allowlist — common JS/TS builtins + runtime that appear as bare
@@ -139,6 +140,15 @@ export class RepoIntelService implements RepoIntel {
    * is unreachable or the indexer version moved, so this is always
    * correct — never a destructive re-clone. Degrades (never throws) when the
    * repo isn't cloned yet or the fetch fails.
+   *
+   * SPEC-04 S-AC-28: refuses the advance (leaving the working tree untouched)
+   * when project-context documents (`specs/`/`docs/`/`insights/` markdown)
+   * are modified in the working tree but not committed — advancing would
+   * silently discard a user's saved-but-uncommitted edit (Project Context's
+   * save writes to the working tree only, no commit; see
+   * `server/specs/project-context.md`'s design decision). Non-project-context
+   * dirt doesn't block (that AC is scoped to the documents this feature can
+   * write).
    */
   async resyncRepo(repoId: string): Promise<IndexResult> {
     const startedAt = Date.now();
@@ -146,6 +156,19 @@ export class RepoIntelService implements RepoIntel {
     if (!repo || !repo.clonePath) {
       return { status: 'degraded', filesIndexed: 0, filesSkipped: 0, durationMs: Date.now() - startedAt, reason: 'no_clone' };
     }
+
+    const modified = await this.container.gitStatus.modifiedPaths(repo.clonePath);
+    const blocking = filterAllowedPaths(modified);
+    if (blocking.length > 0) {
+      return {
+        status: 'degraded',
+        filesIndexed: 0,
+        filesSkipped: 0,
+        durationMs: Date.now() - startedAt,
+        reason: `project_context_blocked:${blocking.join(',')}`,
+      };
+    }
+
     const ref: RepoRef = { owner: repo.owner, name: repo.name };
     try {
       await this.container.git.sync(ref, repo.defaultBranch);

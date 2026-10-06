@@ -1,5 +1,9 @@
 # Eval
 
+Spec ID: SPEC-02
+Status: implemented
+Supersedes: none
+
 An eval case (`eval_cases`) is a hand-authored regression fixture: a diff +
 optional PR title/body (`input_meta`) + a list of findings you expect a
 review to surface (`expected_output`). Running it replays a real

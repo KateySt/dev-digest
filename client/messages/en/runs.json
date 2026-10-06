@@ -34,7 +34,13 @@
       "memoryPulled": "Memory pulled",
       "specsRead": "Specs read",
       "items": "{count, plural, one {# item} other {# items}}",
-      "none": "none"
+      "none": "none",
+      "specsReadReason": {
+        "injected": "injected",
+        "missing": "missing",
+        "empty": "empty",
+        "dropped_for_budget": "dropped for budget"
+      }
     },
     "stat": {
       "duration": "DURATION",
@@ -47,7 +53,8 @@
       "skills": "Skills (dynamic)",
       "memory": "Memory (dynamic)",
       "repoMap": "Repo skeleton — repo-intel (dynamic)",
-      "specs": "Project context (dynamic)",
+      "specs": "Project context — attached specs (untrusted)",
+      "specsEmpty": "No project-context documents were attached to this run.",
       "callers": "Callers of changed symbols — repo-intel (dynamic)",
       "user": "User / diff (dynamic)",
       "copy": "Copy",

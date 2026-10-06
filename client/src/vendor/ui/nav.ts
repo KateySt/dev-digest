@@ -23,6 +23,8 @@ export const NAV: NavGroup[] = [
     section: "WORKSPACE",
     items: [
       { key: "pulls", label: "Pull Requests", icon: "GitPullRequest", href: "/repos/:repoId/pulls", gKey: "p" },
+      { key: "onboarding-tour", label: "Onboarding Tour", icon: "Target", href: "/repos/:repoId/onboarding", gKey: "o" },
+      { key: "context", label: "Project Context", icon: "FileText", href: "/repos/:repoId/context", gKey: "x" },
     ],
   },
   {
@@ -37,8 +39,17 @@ export const NAV: NavGroup[] = [
   {
     section: "GLOBAL",
     items: [
+      { key: "memory", label: "Memory", icon: "Brain", href: "/memory", gKey: "m" },
+      { key: "multi-agent", label: "Multi-Agent Review", icon: "Users", href: "/multi-agent", gKey: "r" },
       { key: "agent-performance", label: "Agent Performance", icon: "Activity", href: "/agent-performance", gKey: "f" },
       { key: "ci-runs", label: "CI Runs", icon: "Workflow", href: "/ci-runs", gKey: "c" },
+    ],
+  },
+  {
+    section: "MORE SCREENS",
+    items: [
+      { key: "conformance", label: "Conformance", icon: "Shield", href: "/conformance", gKey: "n" },
+      { key: "first-run-setup", label: "First-run setup", icon: "Play", href: "/first-run", gKey: "u" },
     ],
   },
 ];
@@ -54,6 +65,7 @@ export const SETTINGS_ITEM: NavItemDef = {
 export const SETTINGS_SECTIONS = [
   { key: "api-keys", label: "API Keys" },
   { key: "models", label: "Feature Models" },
+  { key: "catalog", label: "Catalog" },
 ] as const;
 
 /** Keyboard shortcut registry. Wiring is finalized by A6. */
@@ -67,12 +79,18 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: "⌘K", label: "Open command palette", group: "Global" },
   { keys: "?", label: "Show keyboard shortcuts", group: "Global" },
   { keys: "g p", label: "Go to Pull Requests", group: "Navigation" },
+  { keys: "g o", label: "Go to Onboarding Tour", group: "Navigation" },
+  { keys: "g x", label: "Go to Project Context", group: "Navigation" },
   { keys: "g s", label: "Go to Skills", group: "Navigation" },
   { keys: "g a", label: "Go to Agents", group: "Navigation" },
   { keys: "g v", label: "Go to Conventions", group: "Navigation" },
   { keys: "g e", label: "Go to Eval Dashboard", group: "Navigation" },
+  { keys: "g m", label: "Go to Memory", group: "Navigation" },
+  { keys: "g r", label: "Go to Multi-Agent Review", group: "Navigation" },
   { keys: "g f", label: "Go to Agent Performance", group: "Navigation" },
   { keys: "g c", label: "Go to CI Runs", group: "Navigation" },
+  { keys: "g n", label: "Go to Conformance", group: "Navigation" },
+  { keys: "g u", label: "Go to First-run setup", group: "Navigation" },
   { keys: "j / k", label: "Next / previous finding", group: "Findings" },
   { keys: "a", label: "Accept finding", group: "Findings" },
   { keys: "d", label: "Dismiss finding", group: "Findings" },

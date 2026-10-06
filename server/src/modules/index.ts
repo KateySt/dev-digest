@@ -8,6 +8,7 @@ import agents from './agents/routes.js';
 import reviews from './reviews/routes.js';
 import repoIntel from './repo-intel/routes.js';
 import skills from './skills/routes.js';
+import projectContext from './project-context/routes.js';
 import conventions from './conventions/routes.js';
 import agentPerformance from './agent-performance/routes.js';
 import evalModule from './eval/routes.js';
@@ -18,6 +19,7 @@ import risks from './risks/routes.js';
 import blast from './blast/routes.js';
 import commits from './commits/routes.js';
 import history from './history/routes.js';
+import onboarding from './onboarding/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -42,6 +44,7 @@ export const modules: Record<string, FastifyPluginAsync> = {
   reviews,
   repoIntel,
   skills,
+  projectContext,
   conventions,
   agentPerformance,
   eval: evalModule,
@@ -52,4 +55,5 @@ export const modules: Record<string, FastifyPluginAsync> = {
   blast,
   commits,
   history,
+  onboarding,
 };

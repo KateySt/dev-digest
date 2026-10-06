@@ -1,5 +1,17 @@
 # Skills
 
+Spec ID: SPEC-01
+Status: implemented
+Supersedes: none
+
+## Changelog
+
+- 2026-10-02 — noted that `source: 'community'` now means the live GitHub
+  catalog defined by [`community-catalog.md`](./community-catalog.md)
+  (SPEC-07), not the in-process fixture; everything else in this spec
+  (attachment, ordering, the `enabled` trust gate, versioning) is unchanged by
+  that feature.
+
 A Skill is a reusable, text-only rule/rubric block (markdown `body`) that gets
 attached to one or more Agents with an `order`. It cannot call tools or read
 files — it is prompt text, nothing else.
@@ -30,7 +42,7 @@ cached on the agent row. A failed/cancelled run's persisted trace has
 |----------------|------------------------------------|------------------|
 | `manual`       | created/edited in the Skill editor, or a **file** import | `true` |
 | `imported_url` | server-side fetch of a URL         | `false` (needs vetting) |
-| `community`    | imported from the fixture catalog  | `false` (needs vetting) |
+| `community`    | imported from the live catalog repository (SPEC-07) | `false` (needs vetting) |
 | `extracted`    | accepted from a Conventions Lab candidate | n/a — not built by this feature |
 
 A skill body is never delimiter-wrapped as `<untrusted>` data the way diff/PR-

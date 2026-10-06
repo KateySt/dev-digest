@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api";
 import { SCAN_SEVERITY_COLOR } from "@/app/skills/_components/SkillsListView/constants";
 import { ConfigTab } from "./_components/ConfigTab";
 import { PreviewTab } from "./_components/PreviewTab";
+import { ContextTab } from "./_components/ContextTab";
 import { EvalsTab } from "./_components/EvalsTab";
 import { StatsTab } from "./_components/StatsTab";
 import { VersionsTab } from "./_components/VersionsTab";
@@ -116,6 +117,8 @@ export function SkillEditor({
       <div style={s.body}>
         {tab === "preview" ? (
           <PreviewTab skill={skill} />
+        ) : tab === "context" ? (
+          <ContextTab skill={skill} />
         ) : tab === "evals" ? (
           <EvalsTab skill={skill} />
         ) : tab === "stats" ? (

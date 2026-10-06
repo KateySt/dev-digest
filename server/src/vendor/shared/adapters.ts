@@ -175,6 +175,38 @@ export interface GitHubClient {
   listCommitFiles(repo: RepoRef, sha: string): Promise<string[]>;
   /** GET /user — for "posting as @user". */
   currentLogin(): Promise<string>;
+  /**
+   * Bytes-per-language for the whole repo (GitHub `GET /repos/{owner}/{repo}/languages`).
+   * Repo-wide only — GitHub exposes no per-PR language breakdown.
+   */
+  getLanguages(repo: RepoRef): Promise<Record<string, number>>;
+}
+
+// ---------- Catalog source (SPEC-07) — unauthenticated public-repo reads ----------
+/** A minimal GitHub repo coordinate for the catalog source port. */
+export interface CatalogRepoRef {
+  owner: string;
+  name: string;
+}
+
+/** One file-tree entry from the catalog repo's recursive tree listing. */
+export interface CatalogTreeEntry {
+  path: string;
+  type: 'blob' | 'tree';
+}
+
+/**
+ * Unauthenticated catalog reads (SPEC-07 community skill catalog) —
+ * deliberately NOT part of `GitHubClient`: that port is resolved through
+ * `container.github()`, which throws a `ConfigError` when no `GITHUB_TOKEN`
+ * is configured, and the community catalog must work in the tokenless
+ * local-first setup this app targets (the catalog repo is public). `listTree`
+ * is the one-request tree read the listing is built from; `fetchBody` is
+ * separate, lazy, and only ever called per-import — never during listing.
+ */
+export interface CatalogSource {
+  listTree(repo: CatalogRepoRef): Promise<CatalogTreeEntry[]>;
+  fetchBody(repo: CatalogRepoRef, path: string): Promise<string>;
 }
 
 // ---------- Git (simple-git, heavy) ----------

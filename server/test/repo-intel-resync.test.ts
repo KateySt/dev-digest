@@ -45,6 +45,9 @@ function makeService(opts: { basics: Basics | null; state?: IndexState | null; g
     db: {}, // never queried — service.repo is overridden below
     depgraph: { buildEdges: async () => [] },
     tokenizer: { count: (text: string) => Math.ceil(text.length / 4) },
+    // SPEC-04 S-AC-28 — resyncRepo consults this before advancing the clone;
+    // no locally-modified project-context docs in these fixtures.
+    gitStatus: { modifiedPaths: async () => [] },
   } as unknown as Container;
 
   const service = new RepoIntelService(container);

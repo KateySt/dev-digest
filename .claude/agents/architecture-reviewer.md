@@ -58,6 +58,14 @@ edit files.
    machine-checkable — don't run or wire it yourself, it isn't set up in
    this repo yet.
 
+7a. **Security is out of scope, but flag it by name.** If the diff touches
+   auth, secrets, or untrusted-input handling (anything the feature spec's
+   own `Untrusted inputs` section would cover), say so explicitly in
+   `Follow-up suggestions` and recommend the user run the `security-review`
+   skill — don't assess it yourself and don't fold it into a finding's
+   severity. This is the same non-blocking-pointer pattern as 7, just aimed
+   at a different follow-up.
+
 # Output format — Architecture Review
 
 ```
@@ -73,6 +81,8 @@ request_changes | comment | approve
 
 ## Follow-up suggestions (non-blocking)
 - e.g. wiring rules/enforcement.md's dependency-cruiser config as a CI gate
+- e.g. run the `security-review` skill — this diff touches <auth/secrets/
+  untrusted input>, which is outside this review's scope
 ```
 
 # Discipline
