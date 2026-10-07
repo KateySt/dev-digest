@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { NotFoundError, ValidationError } from '../../platform/errors.js';
+import { MAX_ATTACHED_PATHS, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_PATH_LENGTH } from './constants.js';
 import { ProjectContextService, type SaveResult } from './service.js';
 
 /**
@@ -29,17 +30,21 @@ const ScopeQuery = z.object({
   skill_id: z.string().uuid().optional(),
 });
 
+const DocumentPath = z.string().min(1).max(MAX_DOCUMENT_PATH_LENGTH);
+
 const DocumentQuery = ScopeQuery.extend({
-  path: z.string().min(1),
+  path: DocumentPath,
 });
 
+// `.max()` counts characters (always <= bytes) — a cheap gross bound; the
+// exact byte-size check (AC-33) lives in the service.
 const SaveDocumentBody = z.object({
-  path: z.string().min(1),
-  content: z.string(),
+  path: DocumentPath,
+  content: z.string().max(MAX_DOCUMENT_BYTES),
 });
 
 const SetDocumentsBody = z.object({
-  paths: z.array(z.string()),
+  paths: z.array(DocumentPath).max(MAX_ATTACHED_PATHS),
 });
 
 function saveErrorMessage(reason: SaveResult['reason']): string {
@@ -50,6 +55,8 @@ function saveErrorMessage(reason: SaveResult['reason']): string {
       return 'Path must end in .md and live under specs/, docs/, or insights/.';
     case 'outside_clone':
       return 'Path resolves outside the repo clone.';
+    case 'too_large':
+      return `Document exceeds the maximum size of ${MAX_DOCUMENT_BYTES} bytes.`;
     default:
       return 'Could not save document.';
   }

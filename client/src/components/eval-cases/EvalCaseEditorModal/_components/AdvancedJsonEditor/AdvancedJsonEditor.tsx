@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Textarea } from "@devdigest/ui";
+import { Badge } from "@devdigest/ui";
 import type { EvalCaseKind } from "@devdigest/shared";
 import { s } from "../../styles";
 
@@ -13,12 +13,15 @@ export function AdvancedJsonEditor({
   kind,
   value,
   valid,
+  hintId,
   onChange,
   onAddSkeleton,
 }: {
   kind: EvalCaseKind;
   value: string;
   valid: boolean;
+  /** id of the visible hint explaining why Save/Run is blocked (AC-52/53). */
+  hintId?: string;
   onChange: (next: string) => void;
   onAddSkeleton: () => void;
 }) {
@@ -34,7 +37,16 @@ export function AdvancedJsonEditor({
           {mustNotFlag ? t("caseEditor.locationSkeleton") : t("caseEditor.findingSkeleton")}
         </button>
       </div>
-      <Textarea value={value} onChange={onChange} rows={12} mono />
+      {/* Native textarea (not the vendored Textarea) so it can carry aria-describedby. */}
+      <textarea
+        className="mono"
+        value={value}
+        rows={12}
+        aria-describedby={hintId}
+        aria-invalid={hintId ? true : undefined}
+        onChange={(e) => onChange(e.target.value)}
+        style={s.jsonTextarea}
+      />
     </div>
   );
 }

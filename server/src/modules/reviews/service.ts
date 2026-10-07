@@ -114,22 +114,26 @@ export class ReviewService {
     const repo = await this.repo.getRepo(pull.repoId);
     if (!repo) throw new NotFoundError('Repo not found');
 
-    // Create the agent_run rows up front so a runId is available IMMEDIATELY —
+    // Create the agent_run rows up front so a runId is available IMMEDIATELY -
     // the client persists these in global state and subscribes to the SSE
-    // stream. The actual (slow) review runs in the background below.
+    // stream. The actual (slow) review runs in the background below. The
+    // in-flight check and the inserts are ONE atomic step per PR (S-AC-23/24):
+    // a second concurrent trigger for the same PR is refused, not queued.
+    const runIds = await this.repo.createRunsIfIdle(
+      workspaceId,
+      prId,
+      targets.map((a) => ({ id: a.id, provider: a.provider, model: a.model })),
+    );
+    if (runIds === null) {
+      throw new AppError('review_in_progress', 'A review is already running for this pull request.', 409);
+    }
     const runs: { run_id: string; agent_id: string; agent_name: string }[] = [];
     const jobs: { agent: AgentRow; runId: string }[] = [];
-    for (const agent of targets) {
-      const runId = await this.repo.createAgentRun({
-        workspaceId,
-        agentId: agent.id,
-        prId,
-        provider: agent.provider,
-        model: agent.model,
-      });
+    targets.forEach((agent, i) => {
+      const runId = runIds[i]!;
       runs.push({ run_id: runId, agent_id: agent.id, agent_name: agent.name });
       jobs.push({ agent, runId });
-    }
+    });
 
     // Fire-and-forget: the HTTP response returns now with the runIds; reviews
     // are persisted as each agent finishes and the client refetches on SSE done.
@@ -208,38 +212,51 @@ export class ReviewService {
       );
     }
 
-    const inFlight = await this.repo.prIdsWithActiveRun(workspaceId, prIds);
     const pullById = new Map(pulls.map((p) => [p.id, p]));
 
-    const results: BulkReviewOutcome[] = [];
+    // Each PR's "check in-flight + create runs" is its own short atomic step
+    // (`createRunsIfIdle`, S-AC-21), walked in a fixed PR-id order so two
+    // overlapping batches take their per-PR locks in the same order. Outcomes
+    // are reported in the derived set's order regardless.
+    const outcomes = new Map<string, BulkReviewOutcome>();
     const toExecute: { pull: (typeof pulls)[number]; jobs: { agent: AgentRow; runId: string }[] }[] = [];
+    const agentRefs = enabled.map((a) => ({ id: a.id, provider: a.provider, model: a.model }));
 
-    for (const prId of prIds) {
-      if (inFlight.has(prId)) {
-        results.push({ pr_id: prId, outcome: 'skipped', run_ids: [], reason: 'already has a run in flight' });
-        continue;
-      }
+    for (const prId of [...prIds].sort()) {
       const pull = pullById.get(prId);
       if (!pull) {
         // Vanishingly unlikely (deleted between the two reads above), but a
         // batch's per-PR isolation (S-AC-8) covers this shape too.
-        results.push({ pr_id: prId, outcome: 'failed', run_ids: [], reason: 'Pull request no longer exists' });
+        outcomes.set(prId, { pr_id: prId, outcome: 'failed', run_ids: [], reason: 'Pull request no longer exists' });
         continue;
       }
-      const jobs: { agent: AgentRow; runId: string }[] = [];
-      for (const agent of enabled) {
-        const runId = await this.repo.createAgentRun({
-          workspaceId,
-          agentId: agent.id,
-          prId,
-          provider: agent.provider,
-          model: agent.model,
-        });
-        jobs.push({ agent, runId });
+      // Per-PR isolation (S-AC-8, S-AC-22): whatever goes wrong starting this
+      // PR is contained to it - rows already created for it are marked failed
+      // (never left running), its outcome is `failed`, the batch carries on.
+      let createdRunIds: string[] | null = null;
+      try {
+        createdRunIds = await this.repo.createRunsIfIdle(workspaceId, prId, agentRefs);
+        if (createdRunIds === null) {
+          outcomes.set(prId, { pr_id: prId, outcome: 'skipped', run_ids: [], reason: 'already has a run in flight' });
+          continue;
+        }
+        const ids = createdRunIds;
+        const jobs = enabled.map((agent, i) => ({ agent, runId: ids[i]! }));
+        toExecute.push({ pull, jobs });
+        outcomes.set(prId, { pr_id: prId, outcome: 'started', run_ids: ids });
+      } catch (err) {
+        const reason = `Failed to start review: ${(err as Error).message}`;
+        logger?.error({ prId, err: (err as Error).message }, 'bulk review: failed to start one PR');
+        if (createdRunIds && createdRunIds.length > 0) {
+          await this.repo.failRunningRuns(createdRunIds, reason).catch(() => undefined);
+          // Never execute a PR that was reported as failed.
+          const idx = toExecute.findIndex((e) => e.pull.id === prId);
+          if (idx >= 0) toExecute.splice(idx, 1);
+        }
+        outcomes.set(prId, { pr_id: prId, outcome: 'failed', run_ids: [], reason });
       }
-      results.push({ pr_id: prId, outcome: 'started', run_ids: jobs.map((j) => j.runId) });
-      toExecute.push({ pull, jobs });
     }
+    const results: BulkReviewOutcome[] = prIds.map((id) => outcomes.get(id)!);
 
     // Fire-and-forget: the HTTP response returns now with every outcome
     // already decided; actual review execution happens in the background.

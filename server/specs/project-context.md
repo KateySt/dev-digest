@@ -50,6 +50,26 @@ and AC-29 as the highest-priority gaps.
 
 ## Changelog
 
+- 2026-10-07 — security and integrity amendment (user decisions R2 and Q2 in
+  `docs/plans/2026-10-07-unfinished-features-and-critical-bugs.md`). Added
+  AC-30/AC-31 (symlink policy: any symlink target, or a real path outside the
+  clone root's real path, is refused on read and write), AC-32 – AC-34
+  (per-document size cap: `dropped_for_budget` in runs — the `SpecReadOutcome`
+  contract is unchanged — 422 on oversized save/create, 413 on oversized
+  direct read), AC-35 – AC-37 (AC-28's transport: a synchronous 409
+  `project_context_blocked` with `details.paths` from `POST
+  /repos/:id/resync`, plus a reason persisted in the repo's index stats for the
+  in-job race, cleared by the next successful advance), AC-38/AC-39 (attached
+  set replace is atomic and serialized per owner). AC-29's verification method
+  changed in place to an integration test with a deterministic stub LLM
+  provider (no real model). The repo-intel paragraph under "Module
+  interactions" was corrected: the refusal is now a 409, not a degraded
+  non-throwing outcome. Implementation-chosen limits (not mandated by the
+  spec; adjust in `modules/project-context/constants.ts`): document cap 256 KiB
+  (`MAX_DOCUMENT_BYTES`), path length cap 512 characters
+  (`MAX_DOCUMENT_PATH_LENGTH`), at most 200 attached paths per owner
+  (`MAX_ATTACHED_PATHS`, 422 beyond), and the 413 error code is
+  `payload_too_large` with `details.max_bytes`.
 - 2026-09-30 — resolved the three open clarifications from the initial draft:
   tokenizer fallback marks counts `estimated` (AC-6, AC-8), empty documents are
   skipped at resolution (AC-17), and a clone advance is refused while
@@ -248,7 +268,59 @@ accounting, and document editing behind it.
 - AC-29: WHEN the same pull request is reviewed twice by the same agent and
   model, once with a project-context document attached and once without, the
   two runs shall produce different findings. (verify via: integration test,
-  against a fixed PR fixture and a fixed document fixture)
+  against a fixed diff fixture and a fixed document fixture containing a
+  sentinel, with a deterministic stub LLM provider whose findings depend on
+  whether the sentinel reached the prompt — *2026-10-07: no real model call*)
+
+**Path safety — symlinks (2026-10-07)**
+
+- AC-30: IF a document to be read (in a run, by the direct read endpoint, or
+  for token counting) is a symlink, or its real path resolves outside the real
+  path of the repo's clone root, THEN the system shall not read it and shall
+  treat it as nonexistent — AC-16's missing outcome in a run, not found on the
+  read endpoint. (verify via: unit test)
+- AC-31: IF a document create or save targets an existing symlink, or a path
+  whose nearest existing ancestor directory resolves (by real path) outside the
+  real path of the clone root, THEN the system shall reject the request without
+  writing any file and without creating any directory. (verify via: unit test)
+
+**Document size cap (2026-10-07)**
+
+- AC-32: IF an attached document's size exceeds the maximum document size,
+  THEN the system shall omit it from injection without reading its content and
+  record it in `specs_read` with the existing `dropped_for_budget` outcome.
+  (verify via: unit test)
+- AC-33: IF a document create or save carries content larger than the maximum
+  document size, THEN the system shall reject it with 422 and write nothing.
+  (verify via: integration test)
+- AC-34: IF a document requested through the direct read endpoint is larger
+  than the maximum document size, THEN the system shall respond 413 without
+  returning its content. (verify via: integration test)
+
+**Clone-advance refusal transport (2026-10-07, refines AC-28)**
+
+- AC-35: WHEN `POST /repos/:id/resync` is requested while project-context
+  documents in that repo's clone are modified and uncommitted, the system shall
+  respond synchronously with 409, error code `project_context_blocked`, and
+  `details.paths` listing every blocking repo-relative path, and shall enqueue
+  no job. (verify via: integration test)
+- AC-36: IF project-context documents become modified after a resync job was
+  accepted, THEN the job shall refuse the advance per AC-28, merge the refusal
+  reason with the blocking paths into the repo's persisted index stats, and
+  leave the repo's index status unchanged. (verify via: integration test)
+- AC-37: WHEN a later clone advance for that repo succeeds, the system shall
+  clear any persisted refusal reason from the repo's index stats. (verify via:
+  integration test)
+
+**Attached-set replace concurrency (2026-10-07, refines AC-9/AC-10)**
+
+- AC-38: WHEN several set-replace requests for the same agent (or the same
+  skill) arrive concurrently, the system shall apply them one at a time, each
+  atomically, so that every request succeeds and the final stored set equals
+  exactly one of the submitted sets, with no duplicated or interleaved rows.
+  (verify via: integration test)
+- AC-39: IF a set replace fails partway, THEN the system shall leave the
+  previously stored set unchanged. (verify via: integration test)
 
 ## Edge cases
 
@@ -269,7 +341,20 @@ accounting, and document editing behind it.
 - **One oversized document.** A single document larger than the whole
   project-context budget is dropped entirely by AC-18 rather than truncated,
   which can leave the resolved set empty; the drop is still recorded per
-  AC-19.
+  AC-19. *(2026-10-07)* A document above the per-document size cap is dropped
+  before it is even read (AC-32) and shares the same `dropped_for_budget`
+  outcome — the trace does not distinguish "too big for the budget" from "too
+  big to read".
+- *(2026-10-07)* **A symlink inside the clone.** Even a symlink pointing at
+  another allowlisted document inside the clone is refused (AC-30, AC-31) —
+  the policy is "no symlinks", not "no symlinks that escape", so a later
+  retarget of the link cannot turn a vetted path into an arbitrary-file read.
+  A directory symlink or Windows junction anywhere on the path is caught by
+  the real-path containment check.
+- *(2026-10-07)* **Race between the synchronous check and the job.** A file
+  modified after `POST /repos/:id/resync` returned 202 is caught inside the
+  job (AC-36); the caller learns about it from the persisted reason, not from
+  the HTTP response.
 - **Every attached document is empty.** AC-17 removes all of them, so the
   resolved set is empty and no `## Project context` section is emitted, while
   the trace still lists each one as attached-but-not-injected.
@@ -287,7 +372,12 @@ accounting, and document editing behind it.
 
 - **Security — path traversal.** Every create/save path is validated against
   the clone root (AC-25); document paths arrive from the client and are
-  untrusted input, not just display strings.
+  untrusted input, not just display strings. *(2026-10-07)* Containment is
+  checked on real paths, and symlinks are refused outright (AC-30, AC-31), so
+  a lexically in-root path cannot be redirected outside the clone.
+- **Bounded reads and writes (2026-10-07).** No document read or write handles
+  more than the maximum document size (AC-32 – AC-34); request paths and
+  content are length-limited at route validation.
 - **Security — injection surface.** Document content reaches the model as
   untrusted data inside `<untrusted source="spec-N">` blocks covered by the
   existing `INJECTION_GUARD`. Documents are read from the repo's clone, which
@@ -314,7 +404,10 @@ accounting, and document editing behind it.
 - [deterministic: tokenizer or heuristic estimate, no model call] Per-document
   and total token counts, plus the `estimated` marker (AC-6, AC-8).
 - [deterministic: git working-tree status of the clone] The blocking-path list
-  behind AC-28.
+  behind AC-28, returned in the 409 (AC-35) or persisted in index stats
+  (AC-36).
+- [deterministic: filesystem `lstat`/`realpath`/size] Symlink detection,
+  real-path containment and the size-cap check (AC-30 – AC-34).
 - [deterministic: database aggregate] Coverage metric and "used by" counts.
 - [reused: `reviewer-core/src/prompt.ts`] The `PromptParts.specs` slot, the
   `## Project context` section, `wrapUntrusted`, and `INJECTION_GUARD` — all
@@ -336,7 +429,11 @@ accounting, and document editing behind it.
   shared guard, not in downstream pattern matching.
 - **Document paths** are untrusted, both when attached and when saved: they
   are validated for extension, allowlisted segment, and containment within
-  the clone root (AC-24, AC-25) before any read or write.
+  the clone root (AC-24, AC-25) before any read or write. *(2026-10-07)* The
+  filesystem itself is also untrusted — a clone can contain symlinks committed
+  upstream — hence the symlink refusal and real-path check (AC-30, AC-31).
+- **Document size** is untrusted: a committed or uploaded document can be
+  arbitrarily large, so it is capped on every path (AC-32 – AC-34).
 - Attached document content is never executed, never parsed as configuration,
   and never used to derive agent settings.
 
@@ -358,9 +455,12 @@ accounting, and document editing behind it.
   `readClone` uses. This feature adds no new clone, fetch, or checkout
   operation, but it does add one constraint on an existing one: `repo-intel`'s
   manual re-analyze, which advances the clone to `origin/<defaultBranch>`,
-  gains the AC-28 refusal. That path already reports a degraded, non-throwing
-  outcome for other unmet preconditions, so the refusal is a new outcome of
-  the same shape rather than a new error class.
+  gains the AC-28 refusal. *(Corrected 2026-10-07.)* The refusal reaches the
+  caller synchronously as `409 project_context_blocked` with
+  `details.paths` (AC-35) through the existing `AppError.details` envelope —
+  no shared-contract change. The in-job race path still refuses without
+  throwing and records the reason in the repo's index stats (AC-36), leaving
+  the index status untouched.
 - **Shared contract change.** `specs_read` is currently
   `z.array(z.string())` in `src/vendor/shared/contracts/trace.ts`; AC-19 needs
   a per-entry outcome and reason, so the entry type changes. Two constraints

@@ -7,7 +7,8 @@
    change so there's exactly one hook set per route. */
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React from "react";
+import { useQuery, useMutation, useQueryClient, type MutateOptions } from "@tanstack/react-query";
 import { api } from "../api";
 import type { ProjectContextAttachment, ProjectContextList, SpecFile } from "../types";
 
@@ -90,44 +91,84 @@ export function useSaveProjectContextDocument() {
   });
 }
 
-// ---- Agent Context tab — whole-ordered-set (server AC-9) -----------------
+// ---- Agent / skill Context tab — whole-ordered-set (server AC-9, AC-10) ----
+
+/** Query keys for an owner's attached set (read by the Context tabs to derive
+ *  the next set from the latest cache, C-AC-32). */
+export const agentContextKey = (agentId: string | null | undefined) => ["agent-context", agentId] as const;
+export const skillContextKey = (skillId: string | null | undefined) => ["skill-context", skillId] as const;
+
+/** Whole ordered set → the cache shape (order = position). */
+const toAttachments = (paths: string[]): ProjectContextAttachment[] => paths.map((path, order) => ({ path, order }));
+
+/**
+ * Optimistic, per-owner-serialized set-replace (C-AC-31..33). Every request
+ * carries the FULL set, so requests must run one at a time in click order:
+ * `scope` queues them (TanStack v5). The optimistic cache write happens
+ * synchronously in `replace` (NOT in `onMutate`, which v5 runs a microtask
+ * later) so a second action in the same tick already builds on the first. A
+ * failure rolls the cache back to the snapshot taken before that change; the
+ * settle step re-syncs from the server only once the last queued request is
+ * done, so an early refetch can't overwrite a still-pending optimistic set.
+ */
+function useSetContextDocuments(
+  ownerKind: "agent" | "skill",
+  ownerId: string,
+  keyOf: (id: string) => readonly unknown[],
+) {
+  const qc = useQueryClient();
+  const key = keyOf(ownerId);
+  const mutationKey = [`${ownerKind}-context-set`, ownerId];
+  const mutation = useMutation({
+    mutationKey,
+    scope: { id: `${ownerKind}-context:${ownerId}` },
+    mutationFn: ({ paths }: { paths: string[]; previous: ProjectContextAttachment[] | undefined }) =>
+      api.post<ProjectContextAttachment[]>(`/${ownerKind}s/${ownerId}/context`, { paths }),
+    onMutate: () => qc.cancelQueries({ queryKey: key }),
+    onError: (_err, { previous }) => {
+      qc.setQueryData(key, previous);
+    },
+    onSettled: () => {
+      // This mutation still counts as pending inside onSettled.
+      if (qc.isMutating({ mutationKey }) <= 1) qc.invalidateQueries({ queryKey: key });
+    },
+  });
+  const { mutate } = mutation;
+  /** Apply `paths` to the cache now, then queue the POST. */
+  const replace = React.useCallback(
+    (paths: string[], options?: MutateOptions<ProjectContextAttachment[], Error, { paths: string[]; previous: ProjectContextAttachment[] | undefined }>) => {
+      const previous = qc.getQueryData<ProjectContextAttachment[]>(key);
+      qc.setQueryData(key, toAttachments(paths));
+      mutate({ paths, previous }, options);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [qc, mutate, ownerId],
+  );
+  return { replace, isPending: mutation.isPending };
+}
 
 export function useAgentContextDocuments(agentId: string | null | undefined) {
   return useQuery({
-    queryKey: ["agent-context", agentId],
+    queryKey: agentContextKey(agentId),
     queryFn: () => api.get<ProjectContextAttachment[]>(`/agents/${agentId}/context`),
     enabled: !!agentId,
   });
 }
 
-export function useSetAgentContextDocuments() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ agentId, paths }: { agentId: string; paths: string[] }) =>
-      api.post<ProjectContextAttachment[]>(`/agents/${agentId}/context`, { paths }),
-    onSuccess: (_data, { agentId }) => {
-      qc.invalidateQueries({ queryKey: ["agent-context", agentId] });
-    },
-  });
+/** `replace(paths)` replaces the agent's whole attached set. */
+export function useSetAgentContextDocuments(agentId: string) {
+  return useSetContextDocuments("agent", agentId, agentContextKey);
 }
-
-// ---- Skill Context tab — whole-ordered-set (server AC-10) -----------------
 
 export function useSkillContextDocuments(skillId: string | null | undefined) {
   return useQuery({
-    queryKey: ["skill-context", skillId],
+    queryKey: skillContextKey(skillId),
     queryFn: () => api.get<ProjectContextAttachment[]>(`/skills/${skillId}/context`),
     enabled: !!skillId,
   });
 }
 
-export function useSetSkillContextDocuments() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ skillId, paths }: { skillId: string; paths: string[] }) =>
-      api.post<ProjectContextAttachment[]>(`/skills/${skillId}/context`, { paths }),
-    onSuccess: (_data, { skillId }) => {
-      qc.invalidateQueries({ queryKey: ["skill-context", skillId] });
-    },
-  });
+/** `replace(paths)` replaces the skill's whole attached set. */
+export function useSetSkillContextDocuments(skillId: string) {
+  return useSetContextDocuments("skill", skillId, skillContextKey);
 }

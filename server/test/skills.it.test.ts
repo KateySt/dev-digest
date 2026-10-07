@@ -322,6 +322,64 @@ d('A1 skills (Testcontainers pg)', () => {
     await app.close();
   });
 
+  it('B7 / AC-50, AC-51: a non-uuid repo_id is 422 on create, update, import-community and list', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const skill = (
+      await app.inject({ method: 'POST', url: '/skills', payload: { name: 'B7 target', type: 'convention', body: 'b' } })
+    ).json();
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/skills',
+      payload: { name: 'B7 bad', type: 'convention', body: 'b', repo_id: 'not-a-uuid' },
+    });
+    const update = await app.inject({ method: 'PUT', url: `/skills/${skill.id}`, payload: { repo_id: 'not-a-uuid' } });
+    const imp = await app.inject({
+      method: 'POST',
+      url: '/skills/import-community',
+      payload: { path: 'x/y.md', repo_id: 'not-a-uuid' },
+    });
+    const list = await app.inject({ method: 'GET', url: '/skills?repo_id=not-a-uuid' });
+    expect([create.statusCode, update.statusCode, imp.statusCode, list.statusCode]).toEqual([422, 422, 422, 422]);
+
+    // null stays valid on update (clears to global); 'none' stays valid on list.
+    expect((await app.inject({ method: 'PUT', url: `/skills/${skill.id}`, payload: { repo_id: null } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/skills?repo_id=none' })).statusCode).toBe(200);
+
+    const all = (await app.inject({ method: 'GET', url: '/skills' })).json() as { name: string }[];
+    expect(all.some((s) => s.name === 'B7 bad')).toBe(false);
+    await app.close();
+  });
+
+  it('B7 / AC-49: POST /skills with a foreign-workspace repo_id is rejected and persists nothing', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const [otherWs] = await pg.handle.db.insert(t.workspaces).values({ name: 'foreign-ws' }).returning();
+    const [foreignRepo] = await pg.handle.db
+      .insert(t.repos)
+      .values({ workspaceId: otherWs!.id, owner: 'evil', name: 'foreign', fullName: 'evil/foreign' })
+      .returning();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/skills',
+      payload: { name: 'B7 foreign-scoped', type: 'convention', body: 'b', repo_id: foreignRepo!.id },
+    });
+    expect(res.statusCode).toBe(422);
+
+    const rows = await pg.handle.db.select().from(t.skills).where(eq(t.skills.name, 'B7 foreign-scoped'));
+    expect(rows).toHaveLength(0);
+
+    // Own-workspace repo is still accepted.
+    const { repo } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const ok = await app.inject({
+      method: 'POST',
+      url: '/skills',
+      payload: { name: 'B7 own-scoped', type: 'convention', body: 'b', repo_id: repo.id },
+    });
+    expect(ok.statusCode).toBe(201);
+    await app.close();
+  });
+
   it('an agent with no linked skills has a null skills prompt block', async () => {
     const app = await appWith(REVIEW_FIXTURE);
     const { pr } = await setupRepoAndPr(pg.handle.db, workspaceId);

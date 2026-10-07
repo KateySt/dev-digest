@@ -14,6 +14,16 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-07 — TanStack v5: `onMutate` runs a microtask after `mutate()`, so same-tick optimistic mutations read stale cache
+
+Two optimistic mutations fired in the same tick (e.g. rapid attach/detach
+toggles) both run `onMutate` a microtask after `mutate()` returns, so both
+read the pre-update cache and the second clobbers the first. Do the
+synchronous cache write before calling `mutate()` instead of relying on
+`onMutate`. See `client/src/lib/hooks/project-context.ts`.
+
+---
+
 ### 2026-09-30 — `client/src/vendor/shared` and `server/src/vendor/shared` are NOT byte-identical — diff only the file(s) you touch
 
 The 2026-09-15 entry below (and `server/INSIGHTS.md`'s equivalent) describes

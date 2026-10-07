@@ -6,4 +6,4 @@ before or alongside implementation. Not eval files; those live in
 
 | Spec | Feature |
 |------|---------|
-| [`skill-eval-harness.md`](./skill-eval-harness.md) | Code-level skill eval harness: `pnpm eval` runs `skills/<skill>/<skill>.eval.ts` files via `skillTask`, grades with `patternMatch` + an LLM judge whose evidence quotes are verified verbatim, red/green per case with non-zero exit, local only; first eval `onion-architecture` — **draft** (prerequisite: module docs by doc-writer) |
+| [`skill-eval-harness.md`](./skill-eval-harness.md) | Code-level skill eval harness (SPEC-01, reconciled with the merged code 2026-10-07): `pnpm eval:skills` runs `skills/<skill>/<skill>.eval.ts` via vitest + `skillTask` on the Claude Agent SDK (subscription) or OpenRouter (`EVAL_BACKEND`); grades with a `grounding` gate + LLM judge whose PASS quotes must be verbatim; records to `results/`; static `eval:quality` gate; evals `onion-architecture` (to build) and `dependency-checker` — **draft** |

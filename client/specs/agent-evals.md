@@ -7,6 +7,7 @@ Server side: [`../../server/specs/eval.md`](../../server/specs/eval.md) (SPEC-02
 Design references: `docs/design/evals/01-finding-card-turn-into-eval.png`, `02-eval-dashboard.png`, `03-agent-eval-detail.png`, `04-compare-runs-modal.png`, `05-agent-editor-evals-tab.png`, `06-eval-case-modal.png`, `proto-evals-tab.png`.
 
 ## Changelog
+- 2026-10-07 — Case Editor data-integrity fixes (bugs B1/B2, user decision R1 in `docs/plans/2026-10-07-unfinished-features-and-critical-bugs.md`): AC-52/AC-53 — Advanced mode blocks Save and Run case while the JSON is invalid or is valid but not an array (e.g. `{}` or `null`), so `null` is never sent (for must not flag, `null` used to be read as `empty []` and forbid the whole diff); AC-54 — once a case is saved in an editor session, every later Save/Run updates it instead of creating a duplicate. Server counterpart: SPEC-02 AC-52.
 - 2026-10-06 — Resolved the Case Editor open question: switching from Advanced JSON back to the form is blocked for invalid JSON (AC-49) and confirms data loss for unrepresentable fields (AC-50); line fields must be positive integers with start ≤ end (AC-51). AC-14 chip renamed "assert empty" → `empty []` to match the skill design (`docs/design/evals/skill-editor-evals-tab.png`), for agents and skills alike.
 - 2026-10-06 — Case Editor amended for manual case authoring: structured must find / must not flag fields with add/remove (AC-43..AC-46), raw JSON kept behind an "Advanced" toggle (AC-22 now applies to that mode), DiffView preview of the pasted diff (AC-47), warning when a location is not in the diff (AC-48). AC-2 / AC-4 now per target, since "Turn into eval case" can also target a linked skill (picker and skill side in [`skill-evals.md`](./skill-evals.md), SPEC-08). The modal is shared, so agent and skill cases both get this.
 - 2026-10-06 — Resolved all open questions: Learn split out to a future spec (button kept in the action row but rendered disabled with a "Coming soon" tooltip); Reply shows "Posted · View on GitHub" after reload and allows no second reply; Promote confirmation warns that skill text is not rolled back and surfaces a missing-skill 409; range filter applies only to the trend chart and run table. ACs renumbered.
@@ -73,6 +74,9 @@ None beyond the goals.
 - AC-49: IF the Advanced JSON is invalid, THEN the system shall block switching back to the structured form and show a hint explaining why. (verify via: unit test)
 - AC-50: IF the Advanced JSON is valid but contains fields the structured form cannot show, THEN the system shall ask for confirmation that these fields will be lost, and switch to the form only after the user confirms. (verify via: unit test)
 - AC-51: IF a start or end line is not a positive integer, or the start line is greater than the end line, THEN the system shall mark that field invalid and block saving. (verify via: unit test)
+- AC-52: WHILE the editor is in Advanced mode and the expected-output JSON does not parse, the system shall disable Save and Run case and show a hint, linked to the editor via `aria-describedby`, explaining why. (verify via: unit test)
+- AC-53: WHILE the editor is in Advanced mode and the expected-output JSON parses but is not an array (e.g. `{}` or `null`), the system shall disable Save and Run case and show a hint explaining that an array is required; an empty array `[]` shall remain saveable. (verify via: unit test)
+- AC-54: WHEN a case has been created in the current editor session (by Save, Run on save, or Run case), the system shall update that same case on every later Save or Run and shall not create another case. (verify via: unit test)
 
 ### Per-agent dashboard
 - AC-23: WHEN the per-agent dashboard loads, the system shall show the agent name, model chip, "N runs on the M-case set", an agent picker that switches agent, a range selector, and "Run eval". (verify via: unit test)
@@ -109,6 +113,8 @@ None beyond the goals.
 - Sparkline or trend with a single point renders a dot, not an empty chart.
 - Agent picker list includes only agents in the workspace; switching while a run polls keeps polling the original agent's run in the background.
 - Promote is only shown in the compare modal.
+- Run case on an unsaved new case creates it once (AC-54); pressing Run twice, or Run then Save, still leaves exactly one case.
+- A server 422 for a non-array `expected_output` (SPEC-02 AC-52) should not be reachable from the editor, since AC-52/AC-53 block it first.
 - An older finding whose reply was posted from GitHub directly (not via the studio) is not detected; only studio-posted replies show "Posted".
 
 ## Non-functional requirements

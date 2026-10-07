@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Dropdown, type DropdownItemDef } from "@devdigest/ui";
 import { useAgents } from "@/lib/hooks/agents";
+import { ApiError } from "@/lib/api";
+import { notify } from "@/lib/toast";
 import { useRunReview } from "@/lib/hooks/reviews";
 import { DROPDOWN_WIDTH } from "./constants";
 
@@ -50,6 +52,15 @@ export function RunReviewDropdown({
     try {
       const res = await run.mutateAsync({ prId, ...opts });
       onRunsStarted?.(res.runs.map((r) => r.run_id));
+    } catch (err) {
+      // 409 review_in_progress: a run for this PR is already in flight - say so
+      // instead of a generic failure (C-AC-34). Anything else keeps surfacing
+      // through the global mutation error toast.
+      if (err instanceof ApiError && err.status === 409 && err.code === "review_in_progress") {
+        notify.info(t("runReview.alreadyRunning"));
+        return;
+      }
+      throw err;
     } finally {
       onRunSettled?.();
     }

@@ -131,6 +131,39 @@ d('eval (Testcontainers pg)', () => {
     await app.close();
   });
 
+  it('B2 / S-AC-52 (eval): create and update reject a non-array expected_output with 422 and persist nothing', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const agent = await makeAgent(app, 'Eval AC52 Agent');
+    const base = { owner_kind: 'agent', owner_id: agent.id, input_diff: DIFF };
+
+    for (const [i, bad] of [{}, null, 'x', 5].entries()) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/eval-cases',
+        payload: { ...base, name: `bad-${i}`, expected_output: bad },
+      });
+      expect(res.statusCode).toBe(422);
+    }
+    const listed = (await app.inject({ method: 'GET', url: `/eval-cases?owner_kind=agent&owner_id=${agent.id}` })).json();
+    expect(listed).toHaveLength(0);
+
+    const ok = (
+      await app.inject({
+        method: 'POST',
+        url: '/eval-cases',
+        payload: { ...base, name: 'ok', expected_output: [] },
+      })
+    ).json();
+    for (const bad of [{}, null]) {
+      const res = await app.inject({ method: 'PUT', url: `/eval-cases/${ok.id}`, payload: { expected_output: bad } });
+      expect(res.statusCode).toBe(422);
+    }
+    const stored = (await app.inject({ method: 'GET', url: `/eval-cases/${ok.id}` })).json();
+    expect(stored.expected_output).toEqual([]);
+
+    await app.close();
+  });
+
   it('POST /eval-cases/:id/run matches hand-computed recall/precision/citation_accuracy', async () => {
     const app = await appWith(REVIEW_FIXTURE);
     const agent = await makeAgent(app, 'Eval Run Agent');

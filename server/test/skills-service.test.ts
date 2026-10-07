@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Container } from '../src/platform/container.js';
 import { SkillsService } from '../src/modules/skills/service.js';
 import { MockCatalogSource } from '../src/adapters/mocks.js';
@@ -225,6 +225,9 @@ describe('SkillsService.create — manual create without a project (S-AC-23)', (
   it('persists the given repo_id when a project is specified', async () => {
     const { container, insertedValues } = buildContainer({});
     const service = new SkillsService(container);
+    // B7 / AC-49: create now verifies ownership; the fake db can't answer that
+    // query, so stub the (private) check — it is covered for real in skills.it.test.ts.
+    vi.spyOn(service as never, 'repoBelongsToWorkspace' as never).mockResolvedValue(true as never);
 
     const skill = await service.create('ws1', {
       type: 'custom',
@@ -234,5 +237,16 @@ describe('SkillsService.create — manual create without a project (S-AC-23)', (
 
     expect(skill.repo_id).toBe('repo-42');
     expect(insertedValues[0]?.repoId).toBe('repo-42');
+  });
+
+  it('B7 / AC-49: rejects a repo_id outside the workspace and inserts nothing', async () => {
+    const { container, insertedValues } = buildContainer({});
+    const service = new SkillsService(container);
+    vi.spyOn(service as never, 'repoBelongsToWorkspace' as never).mockResolvedValue(false as never);
+
+    await expect(
+      service.create('ws1', { type: 'custom', body: '# A skill\nBody.', repoId: 'repo-42' }),
+    ).rejects.toMatchObject({ statusCode: 422 });
+    expect(insertedValues).toHaveLength(0);
   });
 });

@@ -91,6 +91,21 @@ export class ReviewRepository {
     return runRepo.prIdsWithActiveRun(this.db, workspaceId, prIds);
   }
 
+  /** Atomic per-PR "check in-flight + create one run per agent" (S-AC-21..24).
+   *  Null when any run for the PR is already in flight (nothing created). */
+  createRunsIfIdle(
+    workspaceId: string,
+    prId: string,
+    agents: { id: string; provider: string | null; model: string | null }[],
+  ): Promise<string[] | null> {
+    return runRepo.createRunsIfIdle(this.db, workspaceId, prId, agents);
+  }
+
+  /** Mark still-running runs failed with a reason (bulk start failure, S-AC-22). */
+  failRunningRuns(runIds: string[], reason: string): Promise<void> {
+    return runRepo.failRunningRuns(this.db, runIds, reason);
+  }
+
   /** Mean recorded cost of a repo's completed runs — the bulk cost estimate's
    *  basis (SPEC-05 S-AC-13), null when that repo has no completed run yet. */
   meanCostForRepo(repoId: string): Promise<number | null> {

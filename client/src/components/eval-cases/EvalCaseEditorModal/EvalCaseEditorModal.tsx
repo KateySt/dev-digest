@@ -9,7 +9,7 @@ import { parseUnifiedDiff } from "@/lib/eval";
 import { formatRunCost } from "@/components/run-cost-badge";
 import { DiffViewer } from "@/components/diff-viewer";
 import { useCaseSummaryText } from "../useCaseSummaryText";
-import { addFindingSkeleton, addLocationSkeleton, summarizeCase, tryParseJson } from "../helpers";
+import { addFindingSkeleton, addLocationSkeleton, parseExpectedJson, summarizeCase } from "../helpers";
 import { entriesFromExpected, entriesValid, expectedFromEntries, type EntryDraft } from "./entries";
 import { AdvancedJsonEditor } from "./_components/AdvancedJsonEditor";
 import { ExpectedEntriesForm } from "./_components/ExpectedEntriesForm";
@@ -74,9 +74,19 @@ export function EvalCaseEditorModal({
   const [runOnSave, setRunOnSave] = React.useState(false);
   const [tab, setTab] = React.useState<"diff" | "prMeta">("diff");
   const [lastRun, setLastRun] = React.useState(initialCase?.last_run ?? null);
+  // The case's persisted identity (AC-54): seeded from an existing case, set
+  // once the first save creates one. The ref guards the window between a click
+  // and the re-render so a double Run/Save can never create twice.
+  const [savedCase, setSavedCase] = React.useState<{ id: string; name: string } | null>(
+    initialCase ? { id: initialCase.id, name: initialCase.name } : null,
+  );
+  const persistedIdRef = React.useRef<string | undefined>(initialCase?.id);
+  const creatingRef = React.useRef<Promise<string> | null>(null);
 
-  const parsedExpected = tryParseJson(expectedText);
-  const jsonValid = parsedExpected !== null;
+  const expectedState = parseExpectedJson(expectedText);
+  // Syntax validity drives the badge; array-ness is a separate block (AC-52/53).
+  const jsonValid = expectedState.state !== "invalid";
+  const parsedExpected = expectedState.state === "ok" ? expectedState.value : undefined;
   const formValid = entriesValid(entries);
   // The value both modes save — same shape either way (AC-46).
   const currentExpected: unknown = advanced ? parsedExpected : expectedFromEntries(entries, kind);
@@ -86,7 +96,14 @@ export function EvalCaseEditorModal({
   const saving = create.isPending || update.isPending;
   const running = run.isPending;
   const mustNotFlag = kind === "must_not_flag";
-  const saveBlocked = !advanced && !formValid;
+  const formBlocked = !advanced && !formValid;
+  const jsonBlocked = advanced && expectedState.state !== "ok";
+  const saveBlocked = formBlocked || jsonBlocked;
+  const blockedMessage = jsonBlocked
+    ? expectedState.state === "invalid"
+      ? t("caseEditor.jsonInvalidBlocked")
+      : t("caseEditor.jsonNotArrayBlocked")
+    : t("caseEditor.saveBlocked");
 
   // Derived (not stored): inputs changed on a case that already has a result.
   // The baseline is normalised through the form model so opening a case whose
@@ -111,11 +128,11 @@ export function EvalCaseEditorModal({
     }
     // Advanced → form: invalid JSON can't be shown (AC-49); fields the form
     // has no input for are lost, so confirm first (AC-50).
-    if (!jsonValid) {
+    if (expectedState.state === "invalid") {
       setSwitchBlocked(true);
       return;
     }
-    const next = entriesFromExpected(parsedExpected, kind);
+    const next = entriesFromExpected(expectedState.state === "ok" ? expectedState.value : JSON.parse(expectedText), kind);
     if (next.lossy && !window.confirm(t("caseEditor.lossConfirm"))) return;
     setEntries(next.entries);
     setSwitchBlocked(false);
@@ -123,27 +140,43 @@ export function EvalCaseEditorModal({
   };
 
   const persist = async (): Promise<string> => {
+    // Blocked Advanced JSON never reaches the server (never send null).
+    if (!formBlocked && advanced && parsedExpected === undefined) throw new Error("expected_output must be an array");
     const input_meta = prTitle || prBody ? { title: prTitle, body: prBody } : undefined;
-    const expected_output = advanced ? (jsonValid ? parsedExpected : null) : currentExpected;
-    if (initialCase) {
+    const expected_output = advanced ? parsedExpected : currentExpected;
+    // A create already in flight (double click): wait for it, then update it.
+    if (creatingRef.current) await creatingRef.current;
+    const existingId = persistedIdRef.current;
+    if (existingId) {
       const saved = await update.mutateAsync({
-        id: initialCase.id,
+        id: existingId,
         patch: { name, input_diff: diff, input_meta, expected_output },
         ownerKind,
         ownerId,
       });
-      return saved.id;
+      setSavedCase({ id: existingId, name: saved.name ?? name });
+      return existingId;
     }
-    const created = await create.mutateAsync({
-      owner_kind: ownerKind,
-      owner_id: ownerId,
-      name: name.trim() || t("caseEditor.namePlaceholder"),
-      kind,
-      input_diff: diff,
-      input_meta,
-      expected_output,
-    });
-    return created.id;
+    const creation = create
+      .mutateAsync({
+        owner_kind: ownerKind,
+        owner_id: ownerId,
+        name: name.trim() || t("caseEditor.namePlaceholder"),
+        kind,
+        input_diff: diff,
+        input_meta,
+        expected_output,
+      })
+      .then((created) => {
+        persistedIdRef.current = created.id;
+        setSavedCase({ id: created.id, name: created.name });
+        return created.id;
+      })
+      .finally(() => {
+        creatingRef.current = null;
+      });
+    creatingRef.current = creation;
+    return creation;
   };
 
   const handleSave = async () => {
@@ -176,7 +209,7 @@ export function EvalCaseEditorModal({
   return (
     <Modal width={960} onClose={onClose}>
       <Modal.Header
-        title={initialCase ? t("caseEditor.caseTitle", { name: initialCase.name }) : t("caseEditor.newCase")}
+        title={savedCase ? t("caseEditor.caseTitle", { name: savedCase.name }) : t("caseEditor.newCase")}
         subtitle={t("caseEditor.subtitle", { owner: ownerName })}
         onClose={onClose}
       />
@@ -186,7 +219,7 @@ export function EvalCaseEditorModal({
             <TextInput value={name} onChange={setName} placeholder={t("caseEditor.namePlaceholder")} />
           </FormField>
 
-          {!initialCase && (
+          {!savedCase && (
             <FormField label={t("caseEditor.kindLabel")}>
               <div role="radiogroup" aria-label={t("caseEditor.kindLabel")} style={s.kindRow}>
                 {(["must_find", "must_not_flag"] as const).map((k) => (
@@ -255,6 +288,7 @@ export function EvalCaseEditorModal({
                   kind={kind}
                   value={expectedText}
                   valid={jsonValid}
+                  hintId={jsonBlocked ? blockedId : undefined}
                   onChange={(v) => {
                     setExpectedText(v);
                     setSwitchBlocked(false);
@@ -293,7 +327,7 @@ export function EvalCaseEditorModal({
           </label>
           {saveBlocked && (
             <span id={blockedId} style={s.saveHint}>
-              {t("caseEditor.saveBlocked")}
+              {blockedMessage}
             </span>
           )}
           <div style={s.footerActions}>
@@ -302,14 +336,14 @@ export function EvalCaseEditorModal({
             </Button>
             <Button kind="secondary" icon="Play" onClick={handleRunCase}
               disabled={saving || running || saveBlocked}
-              title={saveBlocked ? t("caseEditor.saveBlocked") : undefined}
+              title={saveBlocked ? blockedMessage : undefined}
               aria-describedby={saveBlocked ? blockedId : undefined}
             >
               {running ? t("caseEditor.running") : t("caseEditor.runCase")}
             </Button>
             <Button kind="primary" icon="Check" onClick={handleSave}
               disabled={saving || running || saveBlocked}
-              title={saveBlocked ? t("caseEditor.saveBlocked") : undefined}
+              title={saveBlocked ? blockedMessage : undefined}
               aria-describedby={saveBlocked ? blockedId : undefined}
             >
               {saving ? t("caseEditor.saving") : t("caseEditor.save")}

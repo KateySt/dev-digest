@@ -135,3 +135,77 @@ describe("EvalCaseEditorModal: editing a case", () => {
     expect(order).toEqual(["PUT /eval-cases/case-1", "POST /eval-cases/case-1/run"]);
   });
 });
+
+describe("EvalCaseEditorModal: persisted id and Advanced JSON blocking", () => {
+  // The raw editor is the only `.mono` textarea besides the diff; the diff has a placeholder.
+  const rawEditor = () => document.querySelector("textarea.mono[rows='12']") as HTMLTextAreaElement;
+  const setExpected = (value: string) => fireEvent.change(rawEditor(), { target: { value } });
+  const saveBtn = () => screen.getByRole("button", { name: "Save" });
+  const runBtn = () => screen.getByRole("button", { name: "Run case" });
+
+  it("B1 / C-AC-54: Run case then Save on a new case = 1 create + 1 update, no second create", async () => {
+    const { net, onClose } = setup();
+    fireEvent.change(screen.getByPlaceholderText("stripe-key-leak"), { target: { value: "my-case" } });
+    fireEvent.click(runBtn());
+    expect(await screen.findByText("Last run passed")).toBeInTheDocument();
+    // Kind picker is gone and the header shows the case title after first save.
+    expect(screen.queryByRole("radiogroup", { name: "Kind" })).not.toBeInTheDocument();
+    expect(screen.getByText(/^Eval case · /)).toBeInTheDocument();
+
+    fireEvent.click(saveBtn());
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(net.callsTo("POST", "/eval-cases")).toHaveLength(1);
+    expect(net.calls.filter((c) => c.method === "PUT" && c.path === "/eval-cases/new-1")).toHaveLength(1);
+  });
+
+  it("B1 / C-AC-54: Run case twice on a new case creates exactly one case", async () => {
+    const { net } = setup();
+    fireEvent.click(runBtn());
+    await screen.findByText("Last run passed");
+    fireEvent.click(runBtn());
+    await vi.waitFor(() => expect(net.calls.filter((c) => /\/run$/.test(c.path))).toHaveLength(2));
+    expect(net.callsTo("POST", "/eval-cases")).toHaveLength(1);
+    expect(net.calls.filter((c) => c.method === "PUT" && c.path === "/eval-cases/new-1")).toHaveLength(1);
+  });
+
+  it("B1 / C-AC-54: a double click on Run case before the first create settles still creates once", async () => {
+    const { net } = setup();
+    fireEvent.click(runBtn());
+    fireEvent.click(runBtn());
+    await vi.waitFor(() => expect(net.calls.filter((c) => /\/run$/.test(c.path)).length).toBeGreaterThan(0));
+    expect(net.callsTo("POST", "/eval-cases")).toHaveLength(1);
+  });
+
+  it("B2 / C-AC-52: invalid Advanced JSON disables Save and Run case and links a hint via aria-describedby", () => {
+    const { net } = setup();
+    openAdvanced();
+    setExpected("[{ not json");
+    expect(saveBtn()).toBeDisabled();
+    expect(runBtn()).toBeDisabled();
+    const hint = screen.getByText(/JSON is invalid/);
+    expect(rawEditor().getAttribute("aria-describedby")).toBe(hint.id);
+    expect(saveBtn().getAttribute("aria-describedby")).toBe(hint.id);
+    expect(net.calls.filter((c) => c.path.startsWith("/eval-cases"))).toHaveLength(0);
+  });
+
+  it("B2 / C-AC-53: valid but non-array JSON ({} and null) blocks Save and Run with an array-required hint", () => {
+    setup();
+    openAdvanced();
+    for (const text of ["{}", "null"]) {
+      setExpected(text);
+      expect(saveBtn()).toBeDisabled();
+      expect(runBtn()).toBeDisabled();
+      expect(screen.getByText(/must be an array/)).toBeInTheDocument();
+    }
+  });
+
+  it("B2 / C-AC-53: an empty array [] stays saveable and is sent as []", async () => {
+    const { net, onClose } = setup();
+    openAdvanced();
+    setExpected("[]");
+    expect(saveBtn()).toBeEnabled();
+    fireEvent.click(saveBtn());
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect((net.callsTo("POST", "/eval-cases")[0]!.body as { expected_output: unknown }).expected_output).toEqual([]);
+  });
+});

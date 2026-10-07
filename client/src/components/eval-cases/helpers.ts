@@ -11,6 +11,23 @@ export function tryParseJson(text: string): unknown | null {
   }
 }
 
+/** Classification of the Advanced expected-output text: it must parse AND be
+ *  an array (AC-52/AC-53). `{}` / `null` parse but are not an array; `[]` is ok. */
+export type ExpectedJsonState =
+  | { state: "invalid" }
+  | { state: "notArray" }
+  | { state: "ok"; value: unknown[] };
+
+export function parseExpectedJson(text: string): ExpectedJsonState {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { state: "invalid" };
+  }
+  return Array.isArray(parsed) ? { state: "ok", value: parsed } : { state: "notArray" };
+}
+
 const FINDING_SKELETON = {
   severity: "CRITICAL",
   category: "security",

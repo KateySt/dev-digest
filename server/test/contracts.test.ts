@@ -8,7 +8,7 @@ import {
   PrHistory,
   SmartDiff,
   Conformance,
-  Onboarding,
+  OnboardingTour,
   EvalRun,
   MemoryItem,
   RunTrace,
@@ -145,8 +145,20 @@ describe('AI contracts parse fixtures', () => {
       }),
     ).not.toThrow();
     expect(() =>
-      Onboarding.parse({
-        sections: [{ kind: 'architecture', title: 'T', body: 'b', links: [] }],
+      OnboardingTour.parse({
+        index_status: 'full',
+        files_indexed: 10,
+        files_discovered: 10,
+        generated_at: '2026-10-07T00:00:00Z',
+        blob_ref: 'main',
+        blob_ref_kind: 'branch',
+        schema_version: 1,
+        reading_path: [{ position: 1, path: 'src/index.ts', rationale: null }],
+        critical_paths: [],
+        run_commands: [],
+        env_keys: [],
+        diagram_nodes: [],
+        diagram_edges: [],
       }),
     ).not.toThrow();
     expect(() =>
@@ -175,7 +187,7 @@ describe('AI contracts parse fixtures', () => {
   it('RunTrace (data2.jsx TRACE single-document)', () => {
     const trace = RunTrace.parse({
       config: { agent: 'Security Reviewer', version: 'v7', model: 'gpt-4.1', pr: 482, source: 'local' },
-      stats: { duration_ms: 8200, tokens_in: 14820, tokens_out: 1240, findings: 3, grounding: '3/3 passed' },
+      stats: { duration_ms: 8200, tokens_in: 14820, tokens_out: 1240, cost_usd: null, findings: 3, grounding: '3/3 passed' },
       prompt_assembly: { system: 's', user: 'u' },
       tool_calls: [{ tool: 'read_file', args: "'src/config.ts'", meta: '1,240 bytes', ms: 120 }],
       raw_output: '{}',

@@ -49,7 +49,7 @@ const CreateEvalCaseBody = z.object({
   input_diff: z.string().optional(),
   input_files: z.unknown().optional(),
   input_meta: z.unknown().optional(),
-  expected_output: z.unknown().optional(),
+  expected_output: z.array(z.unknown()).optional(),
   notes: z.string().optional(),
 });
 
@@ -64,7 +64,7 @@ const UpdateEvalCaseBody = z.object({
   input_diff: z.string().optional(),
   input_files: z.unknown().optional(),
   input_meta: z.unknown().optional(),
-  expected_output: z.unknown().optional(),
+  expected_output: z.array(z.unknown()).optional(),
   notes: z.string().optional(),
 });
 

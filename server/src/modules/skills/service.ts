@@ -160,6 +160,12 @@ export class SkillsService {
   }
 
   async create(workspaceId: string, input: CreateSkillInput): Promise<Skill> {
+    // AC-49: a supplied repo_id must belong to the caller's workspace — same
+    // check and message as update/import. Runs before the scan so nothing is
+    // persisted on rejection.
+    if (input.repoId && !(await this.repoBelongsToWorkspace(workspaceId, input.repoId))) {
+      throw new ValidationError('repo_id does not belong to this workspace');
+    }
     const name = input.name?.trim() || nameFromMarkdown(input.body, 'Untitled skill');
     const scan = await this.scanBody(workspaceId, input.body);
     const enabled = isScanBlocking(scan.status, scan.findings) ? false : input.enabled;

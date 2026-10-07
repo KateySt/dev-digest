@@ -13,6 +13,20 @@ does not restate them.
 
 ## Changelog
 
+- 2026-10-07 — AC-24 wording corrected: the accepted single-PR request
+  returns **200**, the existing success status of `POST /pulls/:id/review`
+  (asserted by `reviews.it.test.ts`), not 202. User decision: keep the
+  existing contract. No AC added or removed.
+- 2026-10-07 — concurrency and isolation amendment (user decisions R3 and Q3
+  in `docs/plans/2026-10-07-unfinished-features-and-critical-bugs.md`, bug
+  B10). Added AC-21 (concurrent bulk requests cannot double-start a PR),
+  AC-22 (a per-PR start failure marks that PR's created rows failed, reports
+  it failed, and the batch continues — the start-time half of AC-8), AC-23 /
+  AC-24 (the single-PR `POST /pulls/:id/review` returns 409
+  `review_in_progress` when any run for that PR is in flight, including under
+  concurrent requests; previously unspecified). The Isolation NFR was
+  reworded: each PR's check-and-start is its own short atomic step, which is
+  not a batch-wide transaction or lock.
 - 2026-09-30 — resolved the last open clarification: the cost estimate's mean
   (AC-13, AC-14) is scoped per repo, never blended across other repos in the
   workspace. No AC added or removed.
@@ -115,6 +129,25 @@ spec.
   workspace, or for a repo that does not exist, the request shall be refused
   without creating any run. (verify via: integration test)
 
+- AC-21: WHEN two or more bulk review requests for the same repo are processed
+  concurrently, the server shall create at most one set of runs (one per
+  enabled agent) per PR, and every other concurrent request shall report that
+  PR as skipped. (verify via: integration test)
+- AC-22: IF starting one PR's runs fails after some of its run rows were
+  created, THEN the server shall mark those rows failed with a reason, report
+  that PR's outcome as failed to start, leave no row of it queued or running,
+  and continue starting the remaining PRs. (verify via: integration test)
+
+**Single-PR review trigger (2026-10-07)**
+
+- AC-23: IF `POST /pulls/:id/review` is requested while that PR has any review
+  run that has not yet completed, THEN the server shall respond 409 with error
+  code `review_in_progress` and create no run. (verify via: integration test)
+- AC-24: WHEN two `POST /pulls/:id/review` requests for the same PR are
+  processed concurrently, the server shall accept exactly one (200, the
+  endpoint's existing success status) and answer the other with 409
+  `review_in_progress`. (verify via: integration test)
+
 **Cost estimate**
 
 - AC-12: WHEN a cost estimate is requested for a repo's `needs_review` set, the
@@ -176,6 +209,14 @@ spec.
   (AC-18/AC-19); the list still responds normally.
 - **All target PRs already in flight.** Every entry is `skipped` (AC-4) and no
   run is created — a successful response with zero started runs, not an error.
+- *(2026-10-07)* **Bulk and single-PR triggers racing.** A bulk request and a
+  single-PR request for the same PR go through the same atomic per-PR
+  check-and-start, so whichever loses sees the other's run as in flight:
+  the bulk entry is `skipped` (AC-4/AC-21), the single-PR call gets 409
+  (AC-23).
+- *(2026-10-07)* **Single-PR trigger for one agent while another agent's run
+  is in flight.** Still 409 (AC-23) — the check is "any run for this PR", not
+  "a run for this agent".
 - **Pre-work failure fans out.** `run-executor.ts`'s `failAll` marks *every*
   queued run for one PR as failed when shared pre-work (diff load, intent)
   fails. Within a batch that must stay scoped to the one PR whose pre-work
@@ -205,9 +246,12 @@ spec.
   run rows it created and the logs it emitted: which PRs were targeted, which
   were skipped, and which failed. The existing per-run log buffer and trace are
   the mechanism; no batch-level record is introduced.
-- **Isolation.** One PR's failure is contained to that PR's runs (AC-8). A
-  batch introduces no shared transaction, no shared lock, and no shared
-  mutable state across PRs.
+- **Isolation.** One PR's failure is contained to that PR's runs (AC-8,
+  AC-22). A batch introduces no batch-wide transaction and no shared mutable
+  state across PRs. *(Reworded 2026-10-07.)* Each PR's "check in-flight +
+  create runs" is its own short atomic step serialized per PR (AC-21, AC-24);
+  where a request touches several PRs it takes them in a fixed order so two
+  batches cannot deadlock.
 
 ## Inputs and provenance
 

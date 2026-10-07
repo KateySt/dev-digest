@@ -69,7 +69,8 @@
     "runReview": "Run Review",
     "mergedWarning": "Already merged — review is informational",
     "mergedTooltip": "This PR is already merged; running a review won’t affect the merged code.",
-    "runReviewFor": "Run Review for #{number} {title}"
+    "runReviewFor": "Run Review for #{number} {title}",
+    "alreadyRunning": "A review is already running for this pull request."
   },
   "runStatus": {
     "elapsed": "Running · {count} agent(s)",

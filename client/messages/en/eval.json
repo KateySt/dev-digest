@@ -90,6 +90,8 @@
     "lossConfirm": "This JSON has fields the form can't show. Switching to the form will discard them. Continue?",
     "diffUnparsed": "Couldn't read any file from this diff — add ---/+++ file headers to preview it.",
     "saveBlocked": "Fix the highlighted line numbers to save.",
+    "jsonInvalidBlocked": "The expected-output JSON is invalid — fix it to save or run this case.",
+    "jsonNotArrayBlocked": "The expected-output JSON must be an array (use [] for none) to save or run this case.",
     "lastRunBanner": "{summary}"
   },
   "evalsTab": {

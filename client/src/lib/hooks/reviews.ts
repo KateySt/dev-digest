@@ -256,6 +256,10 @@ export function useRunReview() {
         ...(agentId ? { agentId } : {}),
         ...(all ? { all } : {}),
       }),
+    // 409 `review_in_progress` (server S-AC-23/24) is an expected outcome the
+    // caller words itself (C-AC-34) — keep `providers.tsx` from also toasting
+    // the raw server message.
+    meta: { silentCodes: ["review_in_progress"] },
     onSuccess: (_d, { prId }) => {
       qc.invalidateQueries({ queryKey: ["reviews", prId] });
     },
