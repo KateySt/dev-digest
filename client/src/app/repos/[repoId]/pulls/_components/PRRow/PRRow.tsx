@@ -9,7 +9,7 @@ import { Icon, Avatar, Badge, CircularScore, HoverPopover } from "@devdigest/ui"
 import { RunCostBadge } from "@/components/run-cost-badge";
 import { FindingsTooltip, SeverityCountBadges } from "@/components/findings-tooltip";
 import { RunReviewDropdown } from "@/components/run-review-dropdown";
-import { usePrActiveRuns, usePrReviews } from "@/lib/hooks/reviews";
+import { usePrActiveRuns, usePrReviews, usePrRuns } from "@/lib/hooks/reviews";
 import { latestReview } from "@/lib/findings";
 import type { PrMeta } from "@/lib/types";
 import { SIZE_COLOR, STATUS_META } from "../../constants";
@@ -47,14 +47,26 @@ export function PRRow({
   const { data: activeRuns } = usePrActiveRuns(pr.id);
   const isRunning = (activeRuns?.length ?? 0) > 0;
   const wasRunningRef = React.useRef(false);
+  // Flips true once a run this row watched has settled; only then is the run
+  // history fetched (C-AC-15/25) - no extra request while it is still running,
+  // and nothing is ever retried automatically (C-AC-27).
+  const [settled, setSettled] = React.useState(false);
   React.useEffect(() => {
     if (wasRunningRef.current && !isRunning) {
-      // Just settled — refresh the list so this row's score/findings/status/
+      // Just settled - refresh the list so this row's score/findings/status/
       // cost update without a manual reload.
       qc.invalidateQueries({ queryKey: ["pulls", repoId] });
+      setSettled(true);
     }
     wasRunningRef.current = isRunning;
   }, [isRunning, qc, repoId]);
+  // `undefined` (not fetched) stays distinct from `[]` (fetched, no runs).
+  const { data: runs } = usePrRuns(settled ? pr.id : null);
+  const newestRun = runs?.reduce<(typeof runs)[number] | undefined>(
+    (best, r) => (!best || Date.parse(r.ran_at ?? "") > Date.parse(best.ran_at ?? "") ? r : best),
+    undefined,
+  );
+  const failedRun = !isRunning && newestRun?.status === "failed" ? newestRun : null;
 
   const [hasHoveredFindings, setHasHoveredFindings] = React.useState(false);
   const { data: reviews } = usePrReviews(hasHoveredFindings ? pr.id : null);
@@ -147,6 +159,19 @@ export function PRRow({
       </div>
       <div style={s.updatedCell}>{relativeTime(pr.updated_at)}</div>
       <div onClick={(e) => e.stopPropagation()} style={s.actionsCell}>
+        {failedRun && (
+          <span
+            title={
+              failedRun.error
+                ? t("list.rowFailedTitle", { error: failedRun.error })
+                : t("list.rowFailedNoReason")
+            }
+          >
+            <Badge icon="AlertTriangle" color="var(--crit)" bg="transparent">
+              {t("list.rowFailed")}
+            </Badge>
+          </span>
+        )}
         {isRunning ? (
           <Badge icon="RefreshCw" color="var(--accent)" bg="var(--accent-bg)">
             {t("runReview.running")}

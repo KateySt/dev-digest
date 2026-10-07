@@ -440,3 +440,171 @@ New ACs:
   - `failRunningRuns` defensive path has no service-level test.
   - Local row order may go stale after chained mutation failures until resync.
   - Phase 5 still needs `useRunReview` to invalidate `["pr-active-runs", prId]`.
+
+### Phase 3 — DONE 2026-10-07 (uncommitted)
+
+- Files (server): `src/modules/repo-intel/{constants,repository,service,routes}.ts`,
+  `src/modules/repo-intel/pipeline/{walk,full}.ts`, `src/platform/jobs.ts`,
+  `src/app.ts`, `src/modules/onboarding/{constants,service}.ts`,
+  `src/modules/ci/routes.ts`. Tests: `test/repo-intel-resync.test.ts`,
+  `test/project-context.it.test.ts` (resync refusal), new
+  `test/onboarding.it.test.ts`, `test/indexer-pipeline.test.ts`,
+  `src/modules/onboarding/service.test.ts`, `test/ci.it.test.ts`.
+  `PERSIST_MARGIN_MS=5000`.
+- Files (client): `src/lib/hooks/repo-intel.ts` (`silentCodes`),
+  `ProjectContextView` (+ `helpers.ts`, new test), `OnboardingView`
+  (+ `constants.ts` with `POLL_CEILING_MS=150000`, new test), `CiRunsView`
+  (+ new test, `@/` imports), `PublishDialog` (+ `helpers.ts`
+  `providerSecretKey`, tests), `messages/en/onboarding.json`
+  (`generateTimedOut`).
+- Results: server typecheck clean; unit 398 pass / 2 skipped; integration
+  `project-context.it` / `onboarding.it` / `ci.it` 15/15 (implementer's broader
+  run 24/24); client typecheck clean; client 63 files, 504/504. No test debt.
+- Reviews: architecture comment (0 CRITICAL); security no findings;
+  plan-verifier COMPLETE, no gaps.
+- Behavior notes:
+  - `POST /repos/:id/resync` now returns 404 for a repo outside the workspace
+    (was 202 for any id).
+  - `tryGetIndexState` surfaces `degradedReason` `repo_too_large` on partial
+    rows.
+  - `mergeIndexStats` overwrites `stats.reason` (e.g. `soft_budget`) until the
+    next index run.
+  - If no `repo_index_state` row exists, the in-job refusal cannot be persisted
+    (the route pre-check makes this rare; an upsert is an option).
+  - The reaper assumes one API instance per DB.
+- Non-blocking follow-ups:
+  - Update the local-service comment in `repo-intel/routes.ts` (it now also
+    serves `findResyncBlockers`).
+  - `PublishDialog` `helpers.ts` mirrors the server `providerSecretKey`;
+    longer term, have the CI preview return the secret name or add a contract
+    test.
+  - Move `BLOCKED_ERROR_CODE` to a `constants.ts` (literal is duplicated in
+    `hooks/repo-intel.ts`).
+  - `IndexPayload.maxIndexedFiles` is a test seam on the prod payload.
+  - The poll ceiling could move into `useOnboardingTour` (tanstack-query skill:
+    polling should stop itself).
+  - Pre-existing: missing i18n key `ci.json` `runs.status.no_findings`
+    (CiRunsView constants), still unfixed.
+  - Pre-existing: `GET /repos/:id/index-state` has no ownership check (not
+    exploitable under the single-workspace `LocalNoAuthProvider`).
+  - Onboarding test ids use new S-AC-28..32 while the plan text cites
+    S-AC-3, 7, 15, 23, 24, 27 (same behaviours).
+
+### Phase 4 — DONE 2026-10-07 (uncommitted)
+
+- Files (server): `src/adapters/github/catalog.ts` (`fetchBody` now reads
+  `raw.githubusercontent.com/{owner}/{name}/HEAD/{path}`, path segments
+  encoded, `Accept` header dropped, 5s timeout + 200,000-char cap kept;
+  `listTree` unchanged), `src/modules/skills/service.ts` (`catalogInflight`
+  dedup in `loadCatalog`; `populateCatalog` with PQueue + `allSettled` and a
+  `parseCatalogEntry(path, folder, '')` fallback; cache write in `loadCatalog`
+  gated on in-flight slot ownership), `src/modules/skills/constants.ts`
+  (`CATALOG_BODY_CONCURRENCY = 8`). Tests: `test/skills-service.test.ts` (7 B11
+  tests), new `test/github-catalog-adapter.test.ts` (4).
+- Results: server typecheck clean; unit 41 files, 409 pass / 2 skipped;
+  `skills.it` 9/10 (the one failure is the baseline flaky "an agent with no
+  linked skills has a null skills prompt block").
+- Reviews: architecture comment — 1 WARNING (a superseded population after
+  `forceRefresh` could overwrite the newer cache), fixed in the same round with
+  a regression test; security no findings >= 8; plan-verifier COMPLETE. No
+  test debt (minor: no test triggers the real 5s timeout abort for AC-19).
+- Behavior notes:
+  - `forceRefresh` also drops the in-flight population.
+  - Fallback entries (from failed bodies) are cached for the full 15-minute TTL.
+  - The byte cap still applies after the full body is buffered (streaming cap
+    is a hardening follow-up).
+- Non-blocking follow-ups:
+  - Optionally skip caching / use a shorter TTL when any body fell back.
+  - Extract a cache/dedup helper if a second catalog consumer appears.
+  - Tighten the `parseCatalogRepoValue` regex to reject `.`/`..` owner/name
+    (pre-existing, hardening).
+  - Streaming byte cap.
+  - Tidy the stale "See this task's Implementation Report" comment above
+    `loadCatalog` in `skills/service.ts`.
+
+### Phase 5 — DONE 2026-10-07 (uncommitted)
+
+- Files (client): `src/lib/hooks/reviews.ts` (`useRunReview` now invalidates
+  reviews / pr-active-runs / pr-runs; new `useReviewEstimate` with key
+  `["review-estimate", repoId]`, `staleTime`/`gcTime` 0; new `useBulkReview`,
+  body-less POST, invalidates only when started plus `["pulls", repoId]`,
+  `meta.silentCodes` = `bulk_review_too_large` / `nothing_to_review` /
+  `no_enabled_agents`) + new `reviews.test.tsx`. New
+  `src/app/repos/[repoId]/pulls/_components/ReviewAllButton/**` (constants
+  `BULK_REVIEW_MAX_PRS = 20`, `ReviewAllDialog` with helpers `estimateView`,
+  `useDialogKeyboard.ts` focus trap / Escape / focus restore).
+  `pulls/page.tsx` wiring + new `page.test.tsx`. `PRRow.tsx` settled-gated
+  `usePrRuns` + Failed badge + new `PRRowRunState.test.tsx`. `pulls/styles.ts`;
+  `messages/en/prReview.json` (`list.reviewAll.*`, `list.rowFailed*`). Removed
+  3 empty stray `client/_tmp_*` files.
+- Results: client typecheck clean; client 68 files / 529 tests.
+- Reviews: architecture comment 0 CRITICAL; security no findings >= 8;
+  plan-verifier INCOMPLETE -> one gap-fill round (focus-trap a11y NFR) ->
+  COMPLETE.
+- Open manual follow-up: C-AC-31 header/row alignment check with agent-browser
+  against the dev stack was NOT performed.
+- Behavior notes:
+  - The failure badge shows only for runs that settle while the row is mounted
+    (not restored after reload).
+  - Initial dialog focus is the header Close (X) button.
+  - Tests use `fireEvent` (no `@testing-library/user-event` dependency in
+    `client/`).
+  - The keyboard handler is on `document`, so a second modal stacked on top
+    would also receive Escape.
+- Non-blocking follow-ups:
+  - Move the ApiError-code -> message-key mapping into
+    `ReviewAllDialog/helpers.ts` (`refusalKey`).
+  - Extract `newestRun(runs)` from `PRRow` into `helpers.ts`.
+  - Hard-coded `["pulls", repoId]` key in `PRRow` (pre-existing; the
+    tanstack-query skill suggests a `lib/hooks` helper).
+  - Consider adding `@testing-library/user-event`.
+
+### Phase 6 — NOT STARTED (deferred by user)
+
+### Phase 7 — DONE 2026-10-07 (uncommitted)
+
+- Files:
+  - `evals/src/scoring/llm-judge.ts`: exported pure `verifyEvidence` (quote
+    trimmed, non-empty, case-sensitive substring of the fixture, else
+    `passed: false` + `fabricated: true`); score is computed after it;
+    `parseVerdict` exported.
+  - `evals/src/logging/log.ts`: "(fabricated quote)" marker.
+  - New `evals/src/scoring/llm-judge.test.ts` (9 tests).
+  - New `evals/skills/onion-architecture/{onion-architecture.eval.ts,
+    onion-architecture.cases.ts (4 cases), fixtures/ (5 files)}` -
+    hand-written because `pnpm eval:scaffold` was blocked by the permission
+    classifier.
+  - New `.claude/skills/dependency-checker/SKILL.md`; dependency-checker row
+    added to `.claude/skills/README.md`.
+- Results: evals typecheck clean; `pnpm vitest run src` 16/16;
+  `eval:quality` dependency-checker PASS, onion-architecture PASS. Live (Agent
+  SDK subscription backend): dependency-checker 3/3 at 1.0 (thresholds
+  0.7/0.6/0.6). onion-architecture run 1 had 2/4 red (0.5, 0.33): the cases
+  asserted rules from `rules/*.md`, which `skillTask` does not inject (only
+  `SKILL.md` + `references/`). Cases/fixture fixed; run 2 4/4 at 1.0
+  (thresholds 0.75/0.67/0.67/0.67).
+- Reviews: architecture comment 0 CRITICAL; security no findings >= 8;
+  plan-verifier: AC-8, 9, 15, 22, 23, 24 MET; AC-16 (break SKILL.md -> red ->
+  revert -> green) NOT run live to save spend - manual follow-up.
+- Behavior notes:
+  - The verbatim check is strict (case-sensitive, exact substring);
+    paraphrasing judges get demoted.
+  - Optional `fabricated` key added to `records.jsonl` practices (schema
+    still 1).
+  - `vitest run skills <name>` ORs filters, so `eval:skills <name>` runs all
+    skills.
+- Follow-ups:
+  - Run AC-16 manually.
+  - Stray untracked `evals/pnpm-workspace.yaml` created by `pnpm install`
+    (`allowBuilds` esbuild placeholder) conflicts with the repo's
+    no-workspace convention: delete it or decide esbuild build approval (not
+    removed: permission classifier denied).
+  - dependency-checker `SKILL.md`: replace the `monorepo-like` tag; use the
+    real alias `@devdigest/*` and real layout
+    `server/src/modules/<name>/service.ts` in examples instead of the
+    synthetic eval names; add a line referring in-package layering findings
+    to onion-architecture / react-project-structure (re-run its eval after
+    editing).
+  - Restore the truncated `.claude/skills/README.md` catalog (Q6).
+  - Optional `eval:repeat` for stability numbers.
+  - Make `eval:skills <name>` filter to one skill.

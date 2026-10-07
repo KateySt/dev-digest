@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import PQueue from 'p-queue';
 import { and, eq } from 'drizzle-orm';
 import type { Container } from '../../platform/container.js';
 import type {
@@ -29,6 +30,7 @@ import {
 } from './helpers.js';
 import { parseCatalogEntry, selectCatalogEntryPaths, type ParsedCatalogEntry } from './catalog.js';
 import {
+  CATALOG_BODY_CONCURRENCY,
   CATALOG_CACHE_TTL_MS,
   IMPORT_URL_MAX_BYTES,
   IMPORT_URL_TIMEOUT_MS,
@@ -79,6 +81,8 @@ export interface UpdateSkillInput {
   repoId?: string | null;
 }
 
+type CatalogLoadResult = { available: boolean; message?: string; entries: ParsedCatalogEntry[] };
+
 export class SkillsService {
   private repo: SkillsRepository;
   /** In-memory catalog listing cache, keyed by resolved `owner/name` (SPEC-07
@@ -88,6 +92,9 @@ export class SkillsService {
    *  per-request call site, or this cache resets empty on every call and the
    *  TTL window is silently bypassed (see architecture-review fix history). */
   private catalogCache = new Map<string, { entries: ParsedCatalogEntry[]; fetchedAt: number }>();
+  /** In-flight cache populations by catalog `fullName` (S-AC-54): concurrent
+   *  cold-cache listings await the same promise → exactly one tree request. */
+  private catalogInflight = new Map<string, Promise<CatalogLoadResult>>();
 
   constructor(private container: Container) {
     this.repo = new SkillsRepository(container.db);
@@ -400,7 +407,7 @@ export class SkillsService {
   private async loadCatalog(
     repoValue: string,
     opts: { forceRefresh?: boolean } = {},
-  ): Promise<{ available: boolean; message?: string; entries: ParsedCatalogEntry[] }> {
+  ): Promise<CatalogLoadResult> {
     const resolved = parseCatalogRepoValue(repoValue);
     if (!resolved) {
       return {
@@ -410,23 +417,67 @@ export class SkillsService {
       };
     }
 
-    if (opts.forceRefresh) this.catalogCache.delete(resolved.fullName);
+    if (opts.forceRefresh) {
+      this.catalogCache.delete(resolved.fullName);
+      this.catalogInflight.delete(resolved.fullName);
+    }
     const cached = this.catalogCache.get(resolved.fullName);
     if (cached && Date.now() - cached.fetchedAt < CATALOG_CACHE_TTL_MS) {
       return { available: true, entries: cached.entries };
     }
 
+    const inflight = this.catalogInflight.get(resolved.fullName);
+    if (inflight) return inflight;
+
+    const population: Promise<CatalogLoadResult> = this.populateCatalog(resolved)
+      .then((result) => {
+        // Only the population that still owns the slot may cache — a forced
+        // refresh may have superseded it, and its older listing must not
+        // overwrite the newer one.
+        if (result.available && this.catalogInflight.get(resolved.fullName) === population) {
+          this.catalogCache.set(resolved.fullName, { entries: result.entries, fetchedAt: Date.now() });
+        }
+        return result;
+      })
+      .finally(() => {
+        // Only clear our own slot — a forced refresh may have replaced it.
+        if (this.catalogInflight.get(resolved.fullName) === population) {
+          this.catalogInflight.delete(resolved.fullName);
+        }
+      });
+    this.catalogInflight.set(resolved.fullName, population);
+    return population;
+  }
+
+  /**
+   * One cache population: a single tree request, then entry bodies with
+   * bounded concurrency. A failed body degrades that entry to AC-12-style
+   * fallback metadata (S-AC-52); only a tree failure makes the catalog
+   * unavailable (S-AC-53). Does not touch the cache. Never rejects.
+   */
+  private async populateCatalog(resolved: {
+    owner: string;
+    name: string;
+    fullName: string;
+  }): Promise<CatalogLoadResult> {
     try {
       const repoRef = { owner: resolved.owner, name: resolved.name };
       const tree = await this.container.catalogSource.listTree(repoRef);
       const candidates = selectCatalogEntryPaths(tree);
-      const entries = await Promise.all(
-        candidates.map(async ({ path, folder }) => {
-          const body = await this.container.catalogSource.fetchBody(repoRef, path);
-          return parseCatalogEntry(path, folder, body);
-        }),
+      const queue = new PQueue({ concurrency: CATALOG_BODY_CONCURRENCY });
+      const settled = await Promise.allSettled(
+        candidates.map(({ path, folder }) =>
+          queue.add(async () => parseCatalogEntry(path, folder, await this.container.catalogSource.fetchBody(repoRef, path))),
+        ),
       );
-      this.catalogCache.set(resolved.fullName, { entries, fetchedAt: Date.now() });
+      const entries = settled.map((r, i) => {
+        if (r.status === 'fulfilled' && r.value) return r.value;
+        const { path, folder } = candidates[i]!;
+        // Empty body = no frontmatter, no heading → filename name, folder tag,
+        // empty description, type custom (S-AC-12 / S-AC-52).
+        return parseCatalogEntry(path, folder, '');
+      });
+      // Caching happens in loadCatalog, gated on slot ownership.
       return { available: true, entries };
     } catch (err) {
       return {

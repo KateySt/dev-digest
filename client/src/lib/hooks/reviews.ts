@@ -8,11 +8,13 @@ import { api, API_BASE } from "../api";
 import { notify } from "../toast";
 import type {
   BlastRadius,
+  BulkReviewResponse,
   FindingActionKind,
   Intent,
   PrCommitHistory,
   PrHistory,
   PrReviewComment,
+  ReviewEstimate,
   ReviewRecord,
   ReviewRunResponse,
   Risks,
@@ -260,9 +262,53 @@ export function useRunReview() {
     // caller words itself (C-AC-34) — keep `providers.tsx` from also toasting
     // the raw server message.
     meta: { silentCodes: ["review_in_progress"] },
-    onSuccess: (_d, { prId }) => {
-      qc.invalidateQueries({ queryKey: ["reviews", prId] });
-    },
+    // `pr-active-runs` / `pr-runs` too (C-AC-14): the PR list row's in-progress
+    // state reads `usePrActiveRuns`, which sits idle (no polling) at `[]` until
+    // something invalidates it after a run starts.
+    onSuccess: (_d, { prId }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["reviews", prId] }),
+        qc.invalidateQueries({ queryKey: ["pr-active-runs", prId] }),
+        qc.invalidateQueries({ queryKey: ["pr-runs", prId] }),
+      ]),
+  });
+}
+
+// ---- "Review all" (SPEC-05): estimate + bulk trigger over a repo's needs_review set ----
+/** Pre-flight counts + approximate cost for "Review all". Read-only, starts
+   nothing. Always refetched when the dialog opens (`enabled` flips true) so the
+   confirm dialog never shows a remembered figure (cost safety NFR). */
+export function useReviewEstimate(repoId: string | null | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["review-estimate", repoId],
+    queryFn: () => api.get<ReviewEstimate>(`/repos/${repoId}/pulls/review-estimate`),
+    enabled: !!repoId && enabled,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+/** Start a review on every `needs_review` PR in the repo. Sends NO body - the
+   server derives the set (S-AC-1), so a client cannot widen the batch. The
+   response carries one outcome per PR; rows whose run started get their
+   in-flight state polled via `pr-active-runs`. */
+export function useBulkReview(repoId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<BulkReviewResponse>(`/repos/${repoId}/pulls/review`),
+    // The server's refusals (S-AC-5/6, no enabled agent) are worded inline by
+    // the confirm dialog - keep `providers.tsx` from also toasting them.
+    meta: { silentCodes: ["bulk_review_too_large", "nothing_to_review", "no_enabled_agents"] },
+    onSuccess: ({ results }) =>
+      Promise.all([
+        ...results
+          .filter((r) => r.outcome === "started")
+          .flatMap((r) => [
+            qc.invalidateQueries({ queryKey: ["pr-active-runs", r.pr_id] }),
+            qc.invalidateQueries({ queryKey: ["pr-runs", r.pr_id] }),
+          ]),
+        qc.invalidateQueries({ queryKey: ["pulls", repoId] }),
+      ]),
   });
 }
 

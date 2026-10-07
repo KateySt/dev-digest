@@ -48,6 +48,8 @@ export const s = {
   actionsCell: {
     display: "flex",
     justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 8,
   } satisfies CSSProperties,
   muted: { color: "var(--text-muted)" } satisfies CSSProperties,
   riskTooltip: {

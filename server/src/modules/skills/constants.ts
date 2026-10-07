@@ -21,6 +21,11 @@ export const SKILL_SCAN_SCHEMA_NAME = 'SkillScan';
  *  refresh (S-AC-7) discards the cache before re-fetching. */
 export const CATALOG_CACHE_TTL_MS = 15 * 60 * 1000;
 
+/** Max simultaneous entry-body fetches during one catalog population
+ *  (SPEC-07 S-AC-5/S-AC-52) — keeps a large catalog from opening hundreds of
+ *  sockets at once against the raw host. */
+export const CATALOG_BODY_CONCURRENCY = 8;
+
 /** Byte-share threshold (SPEC-07 S-AC-27) below which a project language
  *  doesn't qualify as a suggestion-matching language. */
 export const SUGGESTION_LANGUAGE_THRESHOLD = 0.05;

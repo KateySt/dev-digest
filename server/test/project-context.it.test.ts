@@ -5,6 +5,9 @@ import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
 import { MockLLMProvider, MockEmbedder, MockGitClient } from '../src/adapters/mocks.js';
 import { ProjectContextRepository } from '../src/modules/project-context/repository.js';
+import * as t from '../src/db/schema.js';
+import { eq } from 'drizzle-orm';
+import { RESYNC_JOB_KIND, INDEXER_VERSION } from '../src/modules/repo-intel/constants.js';
 
 const hasDocker = await dockerAvailable();
 const d = hasDocker ? describe : describe.skip;
@@ -121,6 +124,109 @@ d('project-context attached sets (Testcontainers pg)', () => {
 
     expect(paths(await repo.listAgentDocuments(agent.id))).toEqual(['docs/keep.md']);
     expect(paths(await repo.listSkillDocuments(skill.id))).toEqual(['docs/keep.md']);
+    await app.close();
+  });
+});
+
+d('project-context resync refusal (Testcontainers pg)', () => {
+  let pg: PgFixture;
+  let workspaceId: string;
+  let repoId: string;
+  /** Mutable so a test can dirty the tree between the route pre-check and the job. */
+  let modified: string[] = [];
+  const git = new MockGitClient({ head: 'sha-1' });
+
+  beforeAll(async () => {
+    pg = await startPg();
+    await seed(pg.handle.db);
+    const [ws] = await pg.handle.db.select().from(t.workspaces);
+    workspaceId = ws!.id;
+    const [r] = await pg.handle.db
+      .insert(t.repos)
+      .values({
+        workspaceId,
+        owner: 'acme',
+        name: 'resync-target',
+        fullName: 'acme/resync-target',
+        clonePath: '/mock/clone',
+      })
+      .returning();
+    repoId = r!.id;
+    await pg.handle.db.insert(t.repoIndexState).values({
+      repoId,
+      lastIndexedSha: 'sha-1',
+      indexerVersion: INDEXER_VERSION,
+      status: 'full',
+      filesIndexed: 3,
+      filesSkipped: 0,
+      stats: { durationMs: 5 },
+    });
+  });
+  afterAll(async () => {
+    await pg?.stop();
+  });
+
+  function makeApp() {
+    return buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: {
+        embedder: new MockEmbedder(),
+        git,
+        gitStatus: { modifiedPaths: async () => modified },
+        llm: { openai: new MockLLMProvider('openai', { structured: {} }) },
+      },
+    });
+  }
+
+  const resyncJobs = () =>
+    pg.handle.db.select().from(t.jobs).where(eq(t.jobs.kind, RESYNC_JOB_KIND));
+
+  it('B6 / S-AC-28 + S-AC-35: resync with modified project-context docs is a synchronous 409 listing every blocking path, enqueues nothing and does not sync', async () => {
+    const app = await makeApp();
+    modified = ['docs/guide.md', 'src/unrelated.ts', 'specs/a.md'];
+    const before = (await resyncJobs()).length;
+
+    const res = await app.inject({ method: 'POST', url: `/repos/${repoId}/resync` });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.code).toBe('project_context_blocked');
+    expect(res.json().error.details).toEqual({ paths: ['docs/guide.md', 'specs/a.md'] });
+    expect((await resyncJobs()).length).toBe(before);
+    expect(git.syncs).toHaveLength(0);
+    await app.close();
+  });
+
+  it('B6: resync of an unknown repo id is 404, not an accepted job', async () => {
+    const app = await makeApp();
+    modified = [];
+    const res = await app.inject({ method: 'POST', url: '/repos/00000000-0000-4000-8000-000000000000/resync' });
+    expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+
+  it('B6 / S-AC-36 + S-AC-37: an in-job race persists the reason without changing status; the next successful advance clears it', async () => {
+    const app = await makeApp();
+    // Accepted job whose tree became dirty after the route pre-check.
+    modified = ['docs/late.md'];
+    const job = await app.container.jobs.enqueue(workspaceId, RESYNC_JOB_KIND, { repoId });
+    await job.done;
+
+    let state = (await app.inject({ method: 'GET', url: `/repos/${repoId}/index-state` })).json();
+    expect(state.status).toBe('full'); // status untouched (S-AC-36)
+    expect(state.reason).toBe('project_context_blocked:docs/late.md');
+    expect(git.syncs).toHaveLength(0);
+
+    // Tree is clean again → a normal resync is accepted and succeeds.
+    modified = [];
+    const ok = await app.inject({ method: 'POST', url: `/repos/${repoId}/resync` });
+    expect(ok.statusCode).toBe(202);
+    await app.container.jobs.onIdle();
+
+    expect(git.syncs).toHaveLength(1);
+    state = (await app.inject({ method: 'GET', url: `/repos/${repoId}/index-state` })).json();
+    expect(state.status).toBe('full');
+    expect(state.reason).toBeUndefined(); // cleared (S-AC-37)
     await app.close();
   });
 });

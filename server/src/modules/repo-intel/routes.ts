@@ -4,6 +4,8 @@
  *   GET  /repos/:id/index-state  → IndexState (always works; degraded on missing data)
  *   POST /repos/:id/resync       → enqueues a RESYNC_JOB_KIND job (202 + job id):
  *                                  fetch latest from origin + incremental reindex.
+ *                                  409 `project_context_blocked` {paths} (nothing
+ *                                  enqueued) when project-context docs are modified.
  *
  * Job-handler registration lives here: this plugin runs once at app boot and
  * calls `RepoIntelService.registerIndexJobHandlers()` so INDEX/REFRESH jobs
@@ -15,7 +17,8 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { RepoIntelService } from './service.js';
-import { RESYNC_JOB_KIND } from './constants.js';
+import { AppError, NotFoundError } from '../../platform/errors.js';
+import { PROJECT_CONTEXT_BLOCKED_CODE, RESYNC_JOB_KIND } from './constants.js';
 import type { IndexState } from './types.js';
 
 export default async function repoIntelRoutes(appBase: FastifyInstance) {
@@ -45,6 +48,19 @@ export default async function repoIntelRoutes(appBase: FastifyInstance) {
     { schema: { params: IdParams } },
     async (req, reply) => {
       const { workspaceId } = await getContext(container, req);
+      // S-AC-35: refuse synchronously (409 + the blocking paths) BEFORE
+      // enqueueing when project-context documents would be discarded by the
+      // clone advance. The in-job check remains for the race (S-AC-36).
+      const blocking = await service.findResyncBlockers(workspaceId, req.params.id);
+      if (blocking === null) throw new NotFoundError('Repo not found');
+      if (blocking.length > 0) {
+        throw new AppError(
+          PROJECT_CONTEXT_BLOCKED_CODE,
+          'Project-context documents have uncommitted changes; resync would discard them',
+          409,
+          { paths: blocking },
+        );
+      }
       // 202 even when enqueue fails (no handler / DB hiccup) so the UI can
       // still poll /index-state without an inline error path. The actual
       // outcome shows up in `repo_index_state` once the worker runs.

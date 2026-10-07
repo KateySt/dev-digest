@@ -205,6 +205,29 @@ describe('runFullIndex', () => {
     expect(state!.filesIndexed).toBe(2);
   });
 
+  it('B9 / S-AC-30 + S-AC-31: a repo over the (injected) file cap is "partial" with repo_too_large, and indexed + skipped equals the files discovered', async () => {
+    for (const f of ['a', 'b', 'c', 'd', 'e']) {
+      await writeFileAt(root, `src/${f}.ts`, `export function ${f}() { return 1; }
+`);
+    }
+    const stub = makeRepoStub({
+      basics: { id: 'r4', owner: 'acme', name: 'app', clonePath: root },
+    });
+    const container = makeContainer({
+      currentHead: async () => 'sha-head',
+      diffNameOnly: async () => [],
+    });
+
+    const result = await runFullIndex(container, stub.repo, { repoId: 'r4', maxIndexedFiles: 3 });
+
+    expect(result.status).toBe('partial');
+    expect(result.reason).toBe('repo_too_large');
+    expect(result.filesIndexed).toBe(3);
+    expect(result.filesSkipped).toBe(2); // the two files the cap left out
+    expect(result.filesIndexed + result.filesSkipped).toBe(5); // discovered (S-AC-31)
+    expect(stub.getState()!.status).toBe('partial');
+  });
+
   it('returns degraded when the repo has no clonePath (writes a degraded state row)', async () => {
     const stub = makeRepoStub({
       basics: { id: 'r2', owner: 'acme', name: 'app', clonePath: null },

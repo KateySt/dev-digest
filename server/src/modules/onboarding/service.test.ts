@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +6,7 @@ import type { LLMProvider, StructuredResult } from '@devdigest/shared';
 import { OnboardingService } from './service.js';
 import type { OnboardingRepository, OnboardingRepoBasics } from './repository.js';
 import { MAX_INDEXED_FILES } from '../repo-intel/constants.js';
+import { GENERATION_DEADLINE_MS, PERSIST_MARGIN_MS } from './constants.js';
 import { MockLLMProvider } from '../../adapters/mocks.js';
 import type { Container } from '../../platform/container.js';
 
@@ -471,5 +472,52 @@ describe('OnboardingService.doGenerate — S-AC-20 diagram source + deterministi
     expect(tour.diagram_source).toBe(fixture.diagram_source);
     expect(new Set(tour.diagram_nodes)).toEqual(new Set(['src/a.ts', 'src/b.ts']));
     expect(tour.diagram_edges).toEqual([{ from: 'src/a.ts', to: 'src/b.ts' }]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// B9 / S-AC-32 — a hung model call is abandoned in time for the skeleton to persist.
+// ---------------------------------------------------------------------------
+
+describe('OnboardingService.doGenerate — model timeout leaves room to persist (S-AC-24, S-AC-32)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('B9 / S-AC-32: a never-resolving LLM call yields a persisted skeleton with model_failure_reason "timeout" before the deadline guard', async () => {
+    // Fake only timers + Date: the clone reads before the model call are real async I/O.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const hung = {
+      id: 'openai',
+      completeStructured: () => new Promise(() => {}),
+    } as unknown as LLMProvider;
+    const { doGenerate, upserts } = makeService({
+      basics: basics(),
+      llm: async () => hung,
+      repoIntel: { getTopFilesByRank: async () => ['src/x.ts'] },
+    });
+
+    let finished = false;
+    const done = doGenerate('r1', 'ws1', 'job-hung').then(() => {
+      finished = true;
+    });
+    // Step the fake clock in small increments, yielding to real I/O between
+    // steps, but never past GENERATION_DEADLINE_MS: the skeleton must land
+    // BEFORE the deadline guard (which would otherwise skip the write).
+    for (let t = 0; !finished && t < GENERATION_DEADLINE_MS; t += 500) {
+      await new Promise((r) => setImmediate(r));
+      await vi.advanceTimersByTimeAsync(500);
+    }
+    await done;
+
+    expect(upserts).toHaveLength(1);
+    const tour = upserts[0]!.tour as {
+      model_failure_reason: string;
+      architecture_md: string | null;
+      reading_path: { path: string; rationale: string | null }[];
+    };
+    expect(tour.model_failure_reason).toBe('timeout');
+    expect(tour.architecture_md).toBeNull();
+    expect(tour.reading_path).toEqual([{ position: 1, path: 'src/x.ts', rationale: null }]);
   });
 });

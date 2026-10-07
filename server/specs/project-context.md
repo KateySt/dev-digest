@@ -69,7 +69,9 @@ and AC-29 as the highest-priority gaps.
   (`MAX_DOCUMENT_BYTES`), path length cap 512 characters
   (`MAX_DOCUMENT_PATH_LENGTH`), at most 200 attached paths per owner
   (`MAX_ATTACHED_PATHS`, 422 beyond), and the 413 error code is
-  `payload_too_large` with `details.max_bytes`.
+  `payload_too_large` with `details.max_bytes`. `POST /repos/:id/resync` now
+  returns 404 for a repo outside the caller's workspace (implementation of the
+  ownership pre-check; previously 202 for any id). No AC changes.
 - 2026-09-30 — resolved the three open clarifications from the initial draft:
   tokenizer fallback marks counts `estimated` (AC-6, AC-8), empty documents are
   skipped at resolution (AC-17), and a clone advance is refused while

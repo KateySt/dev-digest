@@ -44,7 +44,8 @@ its own `SKILL.md` "When to use" section (the `Scope` column is a
 pre-filter, not the final answer):
 
 - `client/**` → Frontend-scoped skills (`next-best-practices`,
-  `react-best-practices`, `react-project-structure`, and
+  `react-best-practices`, `react-project-structure`, `tanstack-query` (any
+  `useQuery`/`useMutation`/`lib/hooks` change), and
   `react-testing-library` for `*.test.tsx` files).
 - `server/**` and `reviewer-core/**` → Backend-scoped skills
   (`fastify-best-practices`, `drizzle-orm-patterns`,

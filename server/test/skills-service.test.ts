@@ -250,3 +250,124 @@ describe('SkillsService.create — manual create without a project (S-AC-23)', (
     expect(insertedValues).toHaveLength(0);
   });
 });
+
+describe('SkillsService community catalog population robustness (B11)', () => {
+  const TREE = [
+    { path: 'python/a.md', type: 'blob' as const },
+    { path: 'python/b.md', type: 'blob' as const },
+    { path: 'go/c.md', type: 'blob' as const },
+  ];
+  const BODIES = {
+    'owner/catalog-repo#python/a.md': '# Alpha',
+    'owner/catalog-repo#python/b.md': '# Beta',
+    'owner/catalog-repo#go/c.md': '# Gamma',
+  };
+
+  it('B11 / S-AC-54: two concurrent cold-cache listings share one population (one listTree)', async () => {
+    const catalogSource = new MockCatalogSource({ trees: { 'owner/catalog-repo': TREE }, bodies: BODIES });
+    const { container } = buildContainer({ catalogSource });
+    const service = new SkillsService(container);
+
+    const [a, b] = await Promise.all([
+      service.communityCatalogListing('ws1'),
+      service.communityCatalogListing('ws1'),
+    ]);
+    expect(a.available && b.available).toBe(true);
+    expect(a.entries).toHaveLength(3);
+    expect(b.entries).toHaveLength(3);
+    expect(catalogSource.treeCalls).toHaveLength(1);
+    expect(catalogSource.bodyCalls).toHaveLength(3);
+  });
+
+  it('B11 / S-AC-52, S-AC-53: one failing body keeps all entries; the failed one gets fallback metadata', async () => {
+    const { 'owner/catalog-repo#python/b.md': _omit, ...bodies } = BODIES;
+    const catalogSource = new MockCatalogSource({ trees: { 'owner/catalog-repo': TREE }, bodies });
+    const { container } = buildContainer({ catalogSource });
+    const service = new SkillsService(container);
+
+    const result = await service.communityCatalogListing('ws1');
+    expect(result.available).toBe(true);
+    expect(result.entries).toHaveLength(3);
+    const failed = result.entries.find((e) => e.path === 'python/b.md')!;
+    expect(failed).toMatchObject({ name: 'b', description: '', tags: ['python'], type: 'custom', folder: 'python' });
+    expect(result.entries.find((e) => e.path === 'python/a.md')!.name).toBe('Alpha');
+  });
+
+  it('B11 / S-AC-53: every body failing still reports available with fallback entries', async () => {
+    const catalogSource = new MockCatalogSource({ trees: { 'owner/catalog-repo': TREE }, bodies: {} });
+    const { container } = buildContainer({ catalogSource });
+    const result = await new SkillsService(container).communityCatalogListing('ws1');
+    expect(result.available).toBe(true);
+    expect(result.entries.map((e) => e.name).sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('B11 / S-AC-31, S-AC-53: tree failure is unavailable and is not cached as success', async () => {
+    const catalogSource = new MockCatalogSource({ trees: {} });
+    const { container } = buildContainer({ catalogSource });
+    const service = new SkillsService(container);
+
+    const first = await service.communityCatalogListing('ws1');
+    expect(first.available).toBe(false);
+    expect(first.entries).toEqual([]);
+    const second = await service.communityCatalogListing('ws1');
+    expect(second.available).toBe(false);
+    expect(catalogSource.treeCalls).toHaveLength(2); // retried, not served from cache
+  });
+
+  it('B11 / S-AC-6: a cache hit issues zero outbound calls', async () => {
+    const catalogSource = new MockCatalogSource({ trees: { 'owner/catalog-repo': TREE }, bodies: BODIES });
+    const { container } = buildContainer({ catalogSource });
+    const service = new SkillsService(container);
+
+    await service.communityCatalogListing('ws1');
+    const trees = catalogSource.treeCalls.length;
+    const bodies = catalogSource.bodyCalls.length;
+    await service.communityCatalogListing('ws1');
+    expect(catalogSource.treeCalls).toHaveLength(trees);
+    expect(catalogSource.bodyCalls).toHaveLength(bodies);
+  });
+
+  it('B11 / S-AC-5: body fetches respect bounded concurrency', async () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ path: `f/${i}.md`, type: 'blob' as const }));
+    let active = 0;
+    let peak = 0;
+    const catalogSource = new MockCatalogSource({ trees: { 'owner/catalog-repo': many } });
+    catalogSource.fetchBody = async () => {
+      active++;
+      peak = Math.max(peak, active);
+      await new Promise((r) => setTimeout(r, 5));
+      active--;
+      return '# x';
+    };
+    const { container } = buildContainer({ catalogSource });
+    const result = await new SkillsService(container).communityCatalogListing('ws1');
+    expect(result.entries).toHaveLength(30);
+    expect(peak).toBeLessThanOrEqual(8);
+    expect(peak).toBeGreaterThan(1);
+  });
+
+  it('B11 / S-AC-7, S-AC-54: a population superseded by a forced refresh does not overwrite the newer cache', async () => {
+    const catalogSource = new MockCatalogSource({ trees: { 'owner/catalog-repo': TREE } });
+    let releaseOld!: () => void;
+    const oldGate = new Promise<void>((r) => (releaseOld = r));
+    let call = 0;
+    catalogSource.fetchBody = async (_repo, path) => {
+      const isOld = call++ < TREE.length; // first population's bodies
+      if (isOld) await oldGate;
+      return `# ${isOld ? 'Old' : 'New'} ${path}`;
+    };
+    const { container } = buildContainer({ catalogSource });
+    const service = new SkillsService(container);
+
+    const stale = service.communityCatalogListing('ws1');
+    await new Promise((r) => setTimeout(r, 0)); // let the first population start
+    const fresh = await service.communityCatalogListing('ws1', { forceRefresh: true });
+    expect(fresh.entries.every((e) => e.name.startsWith('New'))).toBe(true);
+
+    releaseOld();
+    await stale; // the superseded population finishes last
+
+    const after = await service.communityCatalogListing('ws1');
+    expect(after.entries.every((e) => e.name.startsWith('New'))).toBe(true);
+  });
+});

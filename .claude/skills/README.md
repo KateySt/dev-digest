@@ -1,1 +1,3 @@
 | [workflow-retro](workflow-retro/SKILL.md) | Workflow | Manual-only retro on a multi-agent session — tokens, agent order, friction, recommendations — appended to `docs/retro/ledger.md` |
+| [tanstack-query](tanstack-query/SKILL.md) | Frontend | TanStack Query v5 rules for `client/` — hooks in `lib/hooks`, keys/`queryOptions`, mutation invalidation, optimistic writes, polling, global toasts, test QueryClient |
+| [dependency-checker](dependency-checker/SKILL.md) | Tooling | Read-only dependency audit across `client/`, `server/`, `reviewer-core/`, `e2e/` — Mermaid package graph, installed-size table, P0/P1/P2/Info findings (drift, unused deps, cross-package imports); removals are recommendations only |

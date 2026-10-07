@@ -68,6 +68,16 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const container = new Container(config, db, opts.overrides);
   app.decorate('container', container);
 
+  // Reap jobs left queued/running by a dead process (the queue is in-memory),
+  // so e.g. onboarding generation isn't deduped onto an orphan forever
+  // (S-AC-28). Awaited before serving, for the same reason as the reapers below.
+  try {
+    const reaped = await container.jobs.reapOrphaned();
+    if (reaped > 0) app.log.info({ reaped }, 'reaped orphaned queued/running jobs on boot');
+  } catch (err) {
+    app.log.warn({ err: (err as Error).message }, 'orphaned-job reaping failed (non-fatal)');
+  }
+
   // Reap runs left 'running' by a previous (now-dead) process — otherwise they
   // show as perpetually "running" in the UI and can't be cancelled (no runner).
   //
