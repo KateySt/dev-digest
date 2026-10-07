@@ -75,7 +75,7 @@ flowchart TB
     agents["agents<br/>/agents · /agents/:id<br/>/agents/:id/versions · /versions/:v/promote"]
   end
   subgraph Evals["Evals"]
-    evalMod["eval<br/>/eval-cases · /findings/:id/eval-case<br/>/agents/:id/eval-runs (+ /compare)<br/>/eval-suite-runs/:id · /eval-dashboard (+ /run-all)"]
+    evalMod["eval<br/>/eval-cases · /findings/:id/eval-case<br/>/agents/:id/eval-runs (+ /compare)<br/>/eval-suite-runs/:id · /eval-dashboard (+ /run-all)<br/>/skills/:id/eval-runs (+ /compare) · /eval-dashboard/skills (+ /run-all)"]
   end
   subgraph Intel["Repo intelligence"]
     repoIntel["repo-intel<br/>/repos/:id/index-state · /resync"]
@@ -111,6 +111,45 @@ when a denominator is zero).
   `GET /agents/:id/eval-runs/compare?base=&head=` diffs two runs.
 - **Boot reaper:** `EvalService.reapStaleSuiteRuns()` runs next to the review
   reaper in `app.ts` and fails any suite run left `running` by a dead process.
+
+### Skill evals (SPEC-08)
+
+Same module and table as agent runs (spec: [`specs/skill-evals.md`](specs/skill-evals.md)).
+`eval_suite_runs` carries `owner_kind` (`agent` | `skill`), `skill_id` (FK,
+cascade), `skill_version`, `is_draft`, `provider`, `model`; a CHECK constrains
+the row shape per owner kind, and partial unique indexes allow one `running`
+run and one draft per skill. `eval_cases` is unique per
+(`source_finding_id`, `owner_kind`, `owner_id`).
+
+- **Isolation:** a skill run uses the baseline `SKILL_EVAL_SYSTEM_PROMPT` plus
+  only that skill, on the workspace `skill_eval` model. Text, version,
+  provider and model are captured at start; cases run sequentially in the
+  background.
+- **Routes:** `POST /skills/:id/eval-runs` (body `{ draft_body? }`, max 50k;
+  `202`; `400` no cases; `422 skill_scan_not_passed` with
+  `details.scan_status` when the scan is pending/error/blocking; `409` if any
+  run of the skill is running; a draft identical to the saved text becomes a
+  normal suite run), `GET /skills/:id/eval-runs?range=` (runs, history, alert,
+  `cases_total`, `latest_draft`), `GET /skills/:id/eval-runs/compare?base=&head=`,
+  `GET /eval-dashboard/skills`, `POST /eval-dashboard/skills/run-all`
+  (includes disabled skills; skips scan-blocked and running ones).
+  `GET /eval-suite-runs/:id` serves agent, skill and draft runs, discriminated
+  by `owner_kind`. `POST /findings/:id/eval-case` takes an optional
+  `{ target: { kind, id } }` (`409` per finding + target); findings expose
+  `eval_cases` per target. The old `POST /skills/:id/eval-cases/run-all` is
+  **removed**.
+- **Drafts:** draft text is never persisted; only the latest draft run per
+  skill is kept, and drafts are excluded from history, alert, stats and the
+  dashboard.
+- **Alert:** for skill runs the regression alert appends
+  " (model changed between runs)" and sets `model_changed` when provider/model
+  differ.
+- **Delete:** `SkillsService.delete` removes the skill and its eval cases in
+  one transaction (runs cascade via FK).
+- **Boot reaper** also fails running skill suite and draft runs
+  ("interrupted").
+- **Known gaps:** the client hook `useRunAllSkillEvals` still calls the removed
+  route (404 until client SPEC-08); restore/promote does not re-scan skill text.
 
 ```mermaid
 stateDiagram-v2
@@ -148,7 +187,7 @@ through `SecretsProvider` (`~/.devdigest/secrets.json`, mode `0600`, with
 
 Migrations are **not** applied on boot — run `pnpm db:migrate` (pgvector is
 enabled by migration `0000`; `0020` adds `eval_suite_runs` and the eval-case /
-finding-reply columns — Evals routes fail without it). `pnpm db:seed` also
+finding-reply columns, `0021` generalises it for skill runs — Evals routes fail without them). `pnpm db:seed` also
 seeds eval demo data (`src/db/seed-eval.ts`). `pnpm db:seed` is idempotent demo data
 (`acme/payments-api`, PR #482, the two built-in agents).
 
@@ -194,7 +233,8 @@ hermetic:
 - **integration** — `pnpm exec vitest run .it.test` — the `*.it.test.ts` files.
   Each starts a real Postgres via testcontainers (`test/helpers/pg.ts`), builds
   the app, migrates + seeds, and exercises routes end-to-end. They self-skip when
-  Docker is absent.
+  Docker is absent. Run them with `--no-file-parallelism` — several containers
+  starting at once can blow the docker-check timeout.
 - `pnpm test` runs both.
 
 A DB-backed test (one that imports `test/helpers/pg.ts`) **must** use the

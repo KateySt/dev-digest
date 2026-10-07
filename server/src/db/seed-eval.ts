@@ -12,6 +12,13 @@ import { inputFingerprint } from '../modules/eval/helpers.js';
  * accepted finding from that agent on PR #482 so "Turn into eval case" is
  * demonstrable without a model call. All fixed inputs; idempotent - skipped
  * once the agent already has suite runs or eval cases.
+ *
+ * Also seeds ONE skill ("pr-quality-rubric", v1 + v2 with different text) with
+ * three eval cases and two completed non-draft suite runs - one per skill
+ * version, different metrics and recorded provider/model - so the per-skill
+ * dashboard, Compare (skill-text diff + deltas) and the /eval Skills tab can
+ * be exercised without a model call. Independent of the agent data above and
+ * idempotent on its own.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -131,11 +138,212 @@ const RUNS: { version: 1 | 2; daysAgo: number; cost: number; counts: Record<Seed
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Skill eval demo data
+// ---------------------------------------------------------------------------
+
+const SKILL_NAME = 'pr-quality-rubric';
+const SKILL_V1_BODY = `# PR quality rubric
+
+Prefer small, single-purpose pull requests.
+Flag a change that mixes unrelated concerns.
+Flag hardcoded credentials.`;
+const SKILL_V2_BODY = `# PR quality rubric
+
+Prefer small, single-purpose pull requests.
+Flag a change that mixes unrelated concerns.
+Flag hardcoded credentials and secrets committed to config files.
+Flag outbound requests built from caller-supplied URLs (SSRF).
+Do not flag pure formatting refactors.`;
+
+/** Skill cases reuse the agent fixtures' diffs/expectations (3 of the 4). */
+const SKILL_CASE_KEYS: SeedCase['key'][] = ['stripe', 'ssrf', 'clean'];
+
+/** v1 misses the SSRF and the Stripe key (fails 2/3); v2 catches both. */
+const SKILL_RUNS: {
+  version: 1 | 2;
+  daysAgo: number;
+  cost: number;
+  model: string;
+  counts: Partial<Record<SeedCase['key'], Counts>>;
+}[] = [
+  {
+    version: 1,
+    daysAgo: 4,
+    cost: 0.09,
+    model: 'claude-haiku-4-5',
+    counts: {
+      stripe: { m: 0, e: 1, g: 1, n: 1, k: 1, d: 0, pass: false },
+      ssrf: { m: 0, e: 1, g: 0, n: 0, k: 0, d: 0, pass: false },
+      clean: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
+    },
+  },
+  {
+    version: 2,
+    daysAgo: 1,
+    cost: 0.11,
+    model: 'claude-haiku-4-5',
+    counts: {
+      stripe: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
+      ssrf: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
+      clean: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
+    },
+  },
+];
+
+async function seedSkillEvalData(db: Db, workspaceId: string): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(t.skills)
+    .where(and(eq(t.skills.workspaceId, workspaceId), eq(t.skills.name, SKILL_NAME)));
+  if (existing) {
+    const [haveCase] = await db
+      .select({ id: t.evalCases.id })
+      .from(t.evalCases)
+      .where(and(eq(t.evalCases.ownerKind, 'skill'), eq(t.evalCases.ownerId, existing.id)))
+      .limit(1);
+    const [haveRun] = await db
+      .select({ id: t.evalSuiteRuns.id })
+      .from(t.evalSuiteRuns)
+      .where(eq(t.evalSuiteRuns.skillId, existing.id))
+      .limit(1);
+    if (haveCase || haveRun) return;
+  }
+
+  // ---- skill at v2 (clean scan, so "Run eval" is enabled) with v1 + v2 text ----
+  const skill =
+    existing ??
+    (
+      await db
+        .insert(t.skills)
+        .values({
+          workspaceId,
+          name: SKILL_NAME,
+          description: 'Rubric for evaluating overall PR quality.',
+          type: 'rubric',
+          source: 'manual',
+          body: SKILL_V2_BODY,
+          enabled: true,
+          version: 2,
+          scanStatus: 'clean',
+          scannedAt: new Date(),
+        })
+        .returning()
+    )[0]!;
+  await db
+    .insert(t.skillVersions)
+    .values([
+      { skillId: skill.id, version: 1, body: SKILL_V1_BODY },
+      { skillId: skill.id, version: 2, body: SKILL_V2_BODY },
+    ])
+    .onConflictDoNothing();
+
+  // ---- skill-owned cases ----------------------------------------------------
+  const cases = CASES.filter((c) => SKILL_CASE_KEYS.includes(c.key));
+  const caseRows = new Map<SeedCase['key'], typeof t.evalCases.$inferSelect>();
+  for (const c of cases) {
+    const [row] = await db
+      .insert(t.evalCases)
+      .values({
+        workspaceId,
+        ownerKind: 'skill',
+        ownerId: skill.id,
+        name: c.name,
+        kind: c.kind,
+        source: 'manual',
+        inputDiff: c.diff,
+        inputMeta: { title: 'Add rate limiting to public API endpoints', body: 'Seeded eval fixture.' },
+        expectedOutput: c.expected,
+      })
+      .returning();
+    caseRows.set(c.key, row!);
+  }
+
+  // ---- one completed, non-draft suite run per skill version ----------------
+  const now = Date.now();
+  for (const r of SKILL_RUNS) {
+    const startedAt = new Date(now - r.daysAgo * DAY_MS);
+    const countsOf = (key: SeedCase['key']) => r.counts[key]!;
+    const pooled = aggregateSuiteScores(
+      cases.map((c) => {
+        const k = countsOf(c.key);
+        return { matched: k.m, expectedTotal: k.e, groundedTotal: k.g, noise: k.n, pass: k.pass, kept: k.k, dropped: k.d };
+      }),
+    );
+    const [suite] = await db
+      .insert(t.evalSuiteRuns)
+      .values({
+        workspaceId,
+        ownerKind: 'skill',
+        skillId: skill.id,
+        skillVersion: r.version,
+        isDraft: false,
+        provider: 'anthropic',
+        model: r.model,
+        status: 'completed',
+        startedAt,
+        finishedAt: new Date(startedAt.getTime() + 40_000),
+        casesTotal: cases.length,
+        casesDone: cases.length,
+        recall: pooled.recall,
+        precision: pooled.precision,
+        citationAccuracy: pooled.citationAccuracy,
+        passedCount: pooled.passed,
+        evaluatedCount: pooled.evaluated,
+        erroredCount: 0,
+        durationMs: 40_000,
+        costUsd: r.cost,
+      })
+      .returning();
+
+    for (const c of cases) {
+      const row = caseRows.get(c.key)!;
+      const k = countsOf(c.key);
+      const m = computeEvalMetrics({
+        matched: k.m,
+        expectedTotal: k.e,
+        groundedTotal: k.g,
+        noise: k.n,
+        kept: k.k,
+        dropped: k.d,
+      });
+      await db.insert(t.evalRuns).values({
+        caseId: row.id,
+        suiteRunId: suite!.id,
+        status: 'ok',
+        ranAt: new Date(startedAt.getTime() + 10_000),
+        actualOutput: Array.from({ length: k.g }, (_, i) => ({
+          file: c.file,
+          start_line: 12 + i,
+          end_line: 12 + i,
+          title: `seeded finding ${i + 1}`,
+        })),
+        pass: k.pass,
+        recall: m.recall,
+        precision: m.precision,
+        citationAccuracy: m.citationAccuracy,
+        durationMs: 1200,
+        costUsd: Math.round((r.cost / cases.length) * 1e4) / 1e4,
+        inputFingerprint: inputFingerprint(row),
+        expectedTotal: k.e,
+        matched: k.m,
+        groundedTotal: k.g,
+        noise: k.n,
+        kept: k.k,
+        dropped: k.d,
+      });
+    }
+  }
+}
+
 export async function seedEvalData(
   db: Db,
   args: { workspaceId: string; agentId: string; prId: string },
 ): Promise<void> {
   const { workspaceId, agentId, prId } = args;
+
+  // Independent of the agent data below (which returns early once seeded).
+  await seedSkillEvalData(db, workspaceId);
 
   const [agent] = await db.select().from(t.agents).where(eq(t.agents.id, agentId));
   if (!agent) return;

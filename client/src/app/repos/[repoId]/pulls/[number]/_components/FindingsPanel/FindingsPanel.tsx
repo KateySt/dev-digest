@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Toggle, EmptyState, Chip, SEV } from "@devdigest/ui";
 import type { FindingRecord, Severity } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
+import { useLinkedSkills } from "@/lib/hooks/agents";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
 import { countBySeverity } from "../../../../../../../lib/findings";
 import { KEY_TO_ACTION, SEVERITY_FILTER_ORDER } from "./constants";
@@ -33,6 +34,7 @@ export function FindingsPanel({
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
+  const linkedSkills = useLinkedSkills(agentId);
   const [hideLow, setHideLow] = React.useState(false);
   const [severityFilter, setSeverityFilter] = React.useState<Severity | null>(null);
   const [focusIdx, setFocusIdx] = React.useState(() => {
@@ -131,6 +133,7 @@ export function FindingsPanel({
               headSha={headSha}
               prId={prId}
               agentId={agentId}
+              linkedSkills={linkedSkills}
               onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
             />
           ))

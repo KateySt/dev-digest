@@ -3,6 +3,12 @@ import { screen, cleanup, fireEvent, within, act } from "@testing-library/react"
 import type { EvalCrossAgentDashboard } from "@devdigest/shared";
 import { get, mockFetch, renderApp, suiteRun } from "@/test/eval-utils";
 
+// The shell reads the active tab from the URL; default (no `tab`) is Agents.
+const nav = vi.hoisted(() => ({ replace: vi.fn(), search: new URLSearchParams() }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  useSearchParams: () => nav.search,
+}));
 // App chrome (nav, shortcuts, palette) is irrelevant here; render the page body only.
 vi.mock("@/components/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

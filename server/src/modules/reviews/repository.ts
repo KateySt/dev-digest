@@ -20,6 +20,8 @@ export type { FindingRow, PullRow };
 export type ReviewRow = typeof t.reviews.$inferSelect;
 
 import * as reviewRepo from './repository/review.repo.js';
+import type { FindingEvalCaseRef } from './repository/review.repo.js';
+export type { FindingEvalCaseRef };
 import * as runRepo from './repository/run.repo.js';
 import * as pullRepo from './repository/pull.repo.js';
 
@@ -135,9 +137,9 @@ export class ReviewRepository {
     return reviewRepo.findingContext(this.db, findingId);
   }
 
-  /** finding id -> eval case id seeded from it (read-only lookup). */
-  evalCaseIdsForFindings(findingIds: string[]): Promise<Map<string, string>> {
-    return reviewRepo.evalCaseIdsForFindings(this.db, findingIds);
+  /** finding id -> eval cases seeded from it, one per target (read-only lookup). */
+  evalCasesForFindings(workspaceId: string, findingIds: string[]): Promise<Map<string, FindingEvalCaseRef[]>> {
+    return reviewRepo.evalCasesForFindings(this.db, workspaceId, findingIds);
   }
 
   setFindingReply(findingId: string, url: string, at: Date): Promise<FindingRow | null> {

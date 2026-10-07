@@ -2,11 +2,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, ErrorState, Skeleton, Tabs } from "@devdigest/ui";
+import { Badge, Button, ErrorState, Icon, Skeleton, Tabs } from "@devdigest/ui";
+import type { Skill } from "@devdigest/shared";
 import { useScanSkill, useSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { ApiError } from "@/lib/api";
-import { SCAN_SEVERITY_COLOR } from "@/app/skills/_components/SkillsListView/constants";
+import { useSkillEvalActivity } from "@/lib/hooks/eval-runs";
+import { SCAN_SEVERITY_COLOR, SKILL_TYPE_COLOR } from "@/lib/skill-constants";
 import { ConfigTab } from "./_components/ConfigTab";
 import { PreviewTab } from "./_components/PreviewTab";
 import { ContextTab } from "./_components/ContextTab";
@@ -14,7 +16,10 @@ import { EvalsTab } from "./_components/EvalsTab";
 import { StatsTab } from "./_components/StatsTab";
 import { VersionsTab } from "./_components/VersionsTab";
 import { TABS } from "./constants";
+import { runBlockText } from "@/lib/skill-scan";
 import { s } from "./styles";
+
+const RUN_REASON_ID = "skill-run-on-evals-reason";
 
 /** Skill Editor — Config/Preview/Evals/Stats/Versions tabs for one skill.
  *  Mirrors the Agent Editor's shape (`AgentEditor.tsx`): owns the tab switch,
@@ -33,18 +38,7 @@ export function SkillEditor({
   onClosed: () => void;
 }) {
   const t = useTranslations("skills");
-  const toast = useToast();
   const { data: skill, isLoading, isError, error, refetch } = useSkill(skillId);
-  const rescan = useScanSkill();
-
-  if (isLoading || !skill) {
-    return (
-      <div style={s.wrap}>
-        <Skeleton height={24} width={160} />
-        <Skeleton height={200} />
-      </div>
-    );
-  }
 
   if (isError) {
     const notFound = error instanceof ApiError && error.status === 404;
@@ -57,29 +51,94 @@ export function SkillEditor({
     );
   }
 
+  if (isLoading || !skill) {
+    return (
+      <div style={s.wrap}>
+        <Skeleton height={24} width={160} />
+        <Skeleton height={200} />
+      </div>
+    );
+  }
+
+  // Keyed by skill so per-skill state (unsaved draft, run controller) resets on switch.
+  return <SkillEditorBody key={skill.id} skill={skill} tab={tab} onTab={onTab} onClosed={onClosed} />;
+}
+
+function SkillEditorBody({
+  skill,
+  tab,
+  onTab,
+  onClosed,
+}: {
+  skill: Skill;
+  tab: string;
+  onTab: (t: string) => void;
+  onClosed: () => void;
+}) {
+  const t = useTranslations("skills");
+  const toast = useToast();
+  const rescan = useScanSkill();
+  const activity = useSkillEvalActivity(skill.id, skill);
+
+  // Unsaved Config text, lifted here so it survives tab switches and feeds
+  // "Run on evals". Tied to the version it was typed against: a save, restore
+  // or Promote bumps `skill.version`, which discards it (back to `skill.body`).
+  const [draftState, setDraftState] = React.useState<{ version: number; body: string } | null>(null);
+  const body = draftState && draftState.version === skill.version ? draftState.body : skill.body;
+  const setBody = (next: string) => setDraftState({ version: skill.version, body: next });
+
+  const blockText = runBlockText(t, activity.disabledReason);
+
+  // Unsaved text differs from the saved text → draft run; otherwise a normal run.
+  const runOnEvals = () => {
+    activity.start(body !== skill.body ? body : undefined);
+    onTab("evals");
+  };
+
   const tabs = TABS.map((tb) => ({ key: tb.key, label: t(tb.labelKey), icon: tb.icon }));
 
   return (
     <div style={s.wrap}>
       <div style={s.header}>
-        <h2 style={s.h2}>{skill.name}</h2>
-        <Badge color="var(--text-secondary)" mono>
+        <span style={s.iconTile} aria-hidden="true">
+          <Icon.Sparkles size={17} />
+        </span>
+        <h2 className="mono" style={s.h2}>
+          {skill.name}
+        </h2>
+        <Badge color={SKILL_TYPE_COLOR[skill.type]}>{t(`listItem.type.${skill.type}`)}</Badge>
+        <Badge color="var(--text-secondary)" mono icon="GitCommit">
           {t("preview.version", { version: skill.version })}
         </Badge>
-        <Button kind="secondary" size="sm" icon="FlaskConical" onClick={() => onTab("evals")}>
-          {t("editor.runOnEvals")}
-        </Button>
-        <Button
-          kind="ghost"
-          size="sm"
-          icon="RefreshCw"
-          disabled={rescan.isPending}
-          onClick={() =>
-            rescan.mutate(skill.id, { onError: () => toast.error(t("preview.rescanError")) })
-          }
-        >
-          {t("editor.rescan")}
-        </Button>
+        <div style={s.headerActions}>
+          <Button
+            kind="ghost"
+            size="sm"
+            icon="RefreshCw"
+            disabled={rescan.isPending}
+            onClick={() =>
+              rescan.mutate(skill.id, { onError: () => toast.error(t("preview.rescanError")) })
+            }
+          >
+            {t("editor.rescan")}
+          </Button>
+          <Button
+            kind="secondary"
+            size="sm"
+            icon="Play"
+            onClick={runOnEvals}
+            disabled={!!activity.disabledReason}
+            title={blockText}
+            aria-describedby={blockText ? RUN_REASON_ID : undefined}
+          >
+            {t("editor.runOnEvals")}
+          </Button>
+          {blockText && (
+            <span id={RUN_REASON_ID} style={s.srOnly}>
+              {blockText}
+            </span>
+          )}
+        </div>
       </div>
 
       {skill.scan_status === "flagged" ? (
@@ -120,13 +179,19 @@ export function SkillEditor({
         ) : tab === "context" ? (
           <ContextTab skill={skill} />
         ) : tab === "evals" ? (
-          <EvalsTab skill={skill} />
+          <EvalsTab skill={skill} activity={activity} runBlockText={blockText} />
         ) : tab === "stats" ? (
           <StatsTab skill={skill} />
         ) : tab === "versions" ? (
           <VersionsTab skill={skill} />
         ) : (
-          <ConfigTab skill={skill} onDeleted={onClosed} />
+          <ConfigTab
+            skill={skill}
+            body={body}
+            onBodyChange={setBody}
+            onSaved={() => setDraftState(null)}
+            onDeleted={onClosed}
+          />
         )}
       </div>
     </div>

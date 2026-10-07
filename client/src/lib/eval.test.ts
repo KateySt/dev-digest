@@ -13,9 +13,12 @@ import {
   formatPointDelta,
   formatRanAt,
   lineDiff,
+  locationInDiff,
   normalizeSkills,
   orderRunsOldNew,
   parseRange,
+  parseUnifiedDiff,
+  runVersion,
   countPassing,
   toPointDelta,
 } from "./eval";
@@ -210,5 +213,134 @@ describe("collapseDiff", () => {
   });
   it("keeps everything when there are no changes (so an identical prompt still shows)", () => {
     expect(collapseDiff(same(5))).toHaveLength(5);
+  });
+});
+
+describe("runVersion / orderRunsOldNew for skill runs (SK-25)", () => {
+  it("runVersion reads agent_version for agent runs and skill_version for skill runs (null for a draft)", () => {
+    expect(runVersion({ agent_version: 4, started_at: "2026-06-01T00:00:00Z" })).toBe(4);
+    expect(runVersion({ skill_version: 2, started_at: "2026-06-01T00:00:00Z" })).toBe(2);
+    expect(runVersion({ skill_version: null, started_at: "2026-06-01T00:00:00Z" })).toBeNull();
+  });
+
+  it("orders skill runs old -> new by skill_version regardless of argument order, ties by start time", () => {
+    const v1 = { skill_version: 1, started_at: "2026-06-02T00:00:00Z" };
+    const v2 = { skill_version: 2, started_at: "2026-06-01T00:00:00Z" };
+    expect(orderRunsOldNew(v2, v1)).toEqual([v1, v2]);
+    expect(orderRunsOldNew(v1, v2)).toEqual([v1, v2]);
+    const early = { skill_version: 2, started_at: "2026-06-01T00:00:00Z" };
+    const late = { skill_version: 2, started_at: "2026-06-03T00:00:00Z" };
+    expect(orderRunsOldNew(late, early)).toEqual([early, late]);
+  });
+});
+
+describe("parseUnifiedDiff (C-47, C-48)", () => {
+  it("keeps the second file of a header-only multi-file diff whose first hunk count overshoots", () => {
+    const raw = [
+      "--- a/a.ts",
+      "+++ b/a.ts",
+      "@@ -1,9 +1,9 @@",
+      "-x",
+      "+y",
+      "--- a/b.ts",
+      "+++ b/b.ts",
+      "@@ -1 +1 @@",
+      "-p",
+      "+q",
+      "",
+    ].join("\n");
+    expect(parseUnifiedDiff(raw).map((f) => f.path)).toEqual(["a.ts", "b.ts"]);
+  });
+
+  const TWO_FILES = [
+    "diff --git a/src/a.ts b/src/a.ts",
+    "--- a/src/a.ts",
+    "+++ b/src/a.ts",
+    "@@ -10,3 +10,4 @@",
+    " keep",
+    "+added",
+    " keep2",
+    " keep3",
+    "diff --git a/src/b.ts b/src/b.ts",
+    "--- a/src/b.ts",
+    "+++ b/src/b.ts",
+    "@@ -1,2 +1,1 @@",
+    "-gone",
+    " stay",
+  ].join("\n");
+
+  it("returns [] for empty, whitespace-only, null and undefined input", () => {
+    expect(parseUnifiedDiff("")).toEqual([]);
+    expect(parseUnifiedDiff("  \n ")).toEqual([]);
+    expect(parseUnifiedDiff(null)).toEqual([]);
+    expect(parseUnifiedDiff(undefined)).toEqual([]);
+  });
+
+  it("splits a multi-file diff into per-file records with path, additions, deletions, patch and new-side ranges", () => {
+    const files = parseUnifiedDiff(TWO_FILES);
+    expect(files.map((f) => f.path)).toEqual(["src/a.ts", "src/b.ts"]);
+    expect(files[0]).toMatchObject({ additions: 1, deletions: 0, ranges: [{ start: 10, end: 13 }] });
+    expect(files[0]!.patch).toBe("@@ -10,3 +10,4 @@\n keep\n+added\n keep2\n keep3");
+    expect(files[1]).toMatchObject({ additions: 0, deletions: 1, ranges: [{ start: 1, end: 1 }] });
+  });
+
+  it("handles a plain ---/+++ diff without a `diff --git` line, and CRLF line endings", () => {
+    const files = parseUnifiedDiff("--- a/src/c.ts\r\n+++ b/src/c.ts\r\n@@ -1 +1,2 @@\r\n+x\r\n y\r\n");
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatchObject({ path: "src/c.ts", additions: 1, ranges: [{ start: 1, end: 2 }] });
+  });
+
+  it("does not read a deleted line that starts with '-- ' inside a hunk as a file header", () => {
+    const diff = ["--- a/x.ts", "+++ b/x.ts", "@@ -1,2 +1,1 @@", "--- removed comment", " ctx"].join("\n");
+    const files = parseUnifiedDiff(diff);
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatchObject({ path: "x.ts", deletions: 1, additions: 0 });
+  });
+
+  it("uses the old path for a deleted file (+++ /dev/null)", () => {
+    const files = parseUnifiedDiff(["--- a/old.ts", "+++ /dev/null", "@@ -1,2 +0,0 @@", "-a", "-b"].join("\n"));
+    expect(files.map((f) => f.path)).toEqual(["old.ts"]);
+  });
+
+  it("is tolerant: a hunk without any file header, junk text and malformed hunk headers never throw and yield no files", () => {
+    expect(parseUnifiedDiff("@@ -1 +1 @@\n+x")).toEqual([]);
+    expect(parseUnifiedDiff("just some pasted text\nwith no diff")).toEqual([]);
+    expect(() => parseUnifiedDiff("--- a/x\n+++ b/x\n@@ nonsense @@\n+x")).not.toThrow();
+  });
+
+  it("ends a hunk whose declared counts overshoot when the next file header arrives", () => {
+    const diff = [
+      "diff --git a/a.ts b/a.ts",
+      "--- a/a.ts",
+      "+++ b/a.ts",
+      "@@ -1,9 +1,9 @@",
+      "+x",
+      "diff --git a/b.ts b/b.ts",
+      "--- a/b.ts",
+      "+++ b/b.ts",
+      "@@ -1 +1 @@",
+      "+y",
+    ].join("\n");
+    const files = parseUnifiedDiff(diff);
+    expect(files.map((f) => f.path)).toEqual(["a.ts", "b.ts"]);
+  });
+});
+
+describe("locationInDiff (C-48)", () => {
+  const files = parseUnifiedDiff(
+    ["--- a/src/a.ts", "+++ b/src/a.ts", "@@ -10,3 +10,4 @@", " k", "+n", " k", " k"].join("\n"),
+  );
+
+  it("reports a missing file", () => {
+    expect(locationInDiff(files, "src/zzz.ts", 1, 1)).toEqual({ fileFound: false, linesFound: false });
+  });
+  it("reports lines found when the range overlaps a hunk (partial overlap counts)", () => {
+    expect(locationInDiff(files, "src/a.ts", 12, 12)).toEqual({ fileFound: true, linesFound: true });
+    expect(locationInDiff(files, "src/a.ts", 13, 20)).toEqual({ fileFound: true, linesFound: true });
+    expect(locationInDiff(files, "src/a.ts", 1, 10)).toEqual({ fileFound: true, linesFound: true });
+  });
+  it("reports file found but lines outside every hunk", () => {
+    expect(locationInDiff(files, "src/a.ts", 100, 105)).toEqual({ fileFound: true, linesFound: false });
+    expect(locationInDiff(files, "src/a.ts", 1, 9)).toEqual({ fileFound: true, linesFound: false });
   });
 });

@@ -32,7 +32,7 @@ export function AgentEditor({ agent, tab, onTab }: { agent: Agent; tab: string; 
         ) : tab === "stats" ? (
           <StatsTab agent={agent} />
         ) : tab === "evals" ? (
-          <EvalsTab ownerKind="agent" ownerId={agent.id} />
+          <EvalsTab agentId={agent.id} />
         ) : tab === "ci" ? (
           <CiTab agent={agent} />
         ) : (

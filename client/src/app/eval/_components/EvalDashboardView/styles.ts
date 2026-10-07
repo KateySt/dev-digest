@@ -5,6 +5,7 @@ const wrap = { overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0 } 
 
 export const s = {
   page: { padding: "24px 32px 44px", maxWidth: 1100, margin: "0 auto" } satisfies CSSProperties,
+  tabsWrap: { marginBottom: 20 } satisfies CSSProperties,
   header: { display: "flex", alignItems: "flex-start", marginBottom: 22, gap: 14 } satisfies CSSProperties,
   headerText: { flex: 1, minWidth: 0 } satisfies CSSProperties,
   h1: { fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em" } satisfies CSSProperties,

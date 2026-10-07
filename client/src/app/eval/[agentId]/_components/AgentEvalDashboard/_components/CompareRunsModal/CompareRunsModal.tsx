@@ -7,16 +7,8 @@ import type { AgentVersionConfig, EvalCompare } from "@devdigest/shared";
 import { ApiError } from "@/lib/api";
 import { useEvalCompare } from "@/lib/hooks/eval-runs";
 import { usePromoteAgentVersion } from "@/lib/hooks/agents";
-import { MetricDelta, MetricValue } from "@/components/eval-metrics";
-import { formatRunCost } from "@/components/run-cost-badge";
-import {
-  METRICS,
-  deltaColor,
-  formatPercent,
-  collapseDiff,
-  lineDiff,
-  normalizeSkills,
-} from "@/lib/eval";
+import { CompareFlags, CompareMetricCards, PromoteConfirm, TextDiffBlock } from "@/components/eval-dashboard";
+import { normalizeSkills } from "@/lib/eval";
 import { s } from "./styles";
 
 /** Compare two suite runs of one agent: old → new metric cards (cost rise is
@@ -59,6 +51,13 @@ export function CompareRunsModal({
     );
   };
 
+  // Promote's 409 carries the deleted skills; anything else is a plain failure.
+  const error = promote.error;
+  const missing =
+    error instanceof ApiError && error.status === 409
+      ? ((error.details as { missing_skills?: { id: string; name: string | null }[] } | undefined)?.missing_skills ?? null)
+      : null;
+
   return (
     <Modal width={900} onClose={onClose}>
       <Modal.Header
@@ -85,9 +84,20 @@ export function CompareRunsModal({
         </div>
         {confirming && data && (
           <PromoteConfirm
-            version={newV!}
+            title={t("compare.confirmTitle", { version: newV! })}
+            body={t("compare.confirmBody", { version: newV! })}
+            confirmLabel={t("compare.confirm")}
+            pendingLabel={t("compare.promoting")}
+            cancelLabel={t("compare.cancel")}
             pending={promote.isPending}
-            error={promote.error}
+            blocked={!!missing}
+            error={
+              missing
+                ? t("compare.missingSkills", { skills: missing.map((m) => m.name ?? m.id).join(", ") })
+                : error
+                  ? t("compare.failed", { message: error.message })
+                  : null
+            }
             onConfirm={doPromote}
             onCancel={() => {
               promote.reset();
@@ -100,143 +110,34 @@ export function CompareRunsModal({
   );
 }
 
-function PromoteConfirm({
-  version,
-  pending,
-  error,
-  onConfirm,
-  onCancel,
-}: {
-  version: number;
-  pending: boolean;
-  error: Error | null;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const t = useTranslations("evalAgent");
-  const missing =
-    error instanceof ApiError && error.status === 409
-      ? ((error.details as { missing_skills?: { id: string; name: string | null }[] } | undefined)?.missing_skills ?? null)
-      : null;
-
-  return (
-    <div role="alertdialog" aria-label={t("compare.confirmTitle", { version })} style={{ ...s.confirm, marginTop: 14 }}>
-      <strong>{t("compare.confirmTitle", { version })}</strong>
-      <p style={{ margin: "6px 0 10px" }}>{t("compare.confirmBody", { version })}</p>
-      {missing && (
-        <p role="alert" style={s.error}>
-          {t("compare.missingSkills", { skills: missing.map((m) => m.name ?? m.id).join(", ") })}
-        </p>
-      )}
-      {error && !missing && (
-        <p role="alert" style={s.error}>
-          {t("compare.failed", { message: error.message })}
-        </p>
-      )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <Button kind="primary" size="sm" onClick={onConfirm} loading={pending} disabled={!!missing}>
-          {pending ? t("compare.promoting") : t("compare.confirm")}
-        </Button>
-        <Button kind="ghost" size="sm" onClick={onCancel} disabled={pending}>
-          {t("compare.cancel")}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function CompareBody({ data }: { data: EvalCompare }) {
   const t = useTranslations("evalAgent");
+  const tm = useTranslations("evalMetrics");
   const oldV = data.old.run.agent_version;
   const newV = data.new.run.agent_version;
-  const oldPrompt = data.old.config?.system_prompt ?? "";
-  const newPrompt = data.new.config?.system_prompt ?? "";
-  const diff = React.useMemo(() => collapseDiff(lineDiff(oldPrompt, newPrompt)), [oldPrompt, newPrompt]);
-  const cost = data.deltas.cost_usd;
-  const costDir = cost == null ? "flat" : cost > 0 ? "up" : cost < 0 ? "down" : "flat";
 
   return (
     <>
-      <div style={s.cards}>
-        {METRICS.map((m) => (
-          <div key={m.key} style={s.card}>
-            <div style={s.cardLabel}>{t(`metrics.${m.key}`).toUpperCase()}</div>
-            <div style={s.cardRow}>
-              <span className="tnum" style={s.oldValue}>
-                {formatPercent(data.old.run[m.key])}%
-              </span>
-              <Icon.ArrowRight size={13} style={s.arrow} />
-              <MetricValue value={data.new.run[m.key]} color={m.color} size={26} />
-              <MetricDelta delta={data.deltas[m.key]} />
-            </div>
-          </div>
-        ))}
-        <div style={s.card}>
-          <div style={s.cardLabel}>{t("compare.cost")}</div>
-          <div style={s.cardRow}>
-            <span className="tnum" style={s.oldValue}>
-              {data.old.run.cost_usd != null ? formatRunCost(data.old.run.cost_usd) : "—"}
-            </span>
-            <Icon.ArrowRight size={13} style={s.arrow} />
-            <span className="tnum" style={{ fontSize: 26, fontWeight: 700, color: "var(--text-primary)" }}>
-              {data.new.run.cost_usd != null ? formatRunCost(data.new.run.cost_usd) : "—"}
-            </span>
-            {cost != null && costDir !== "flat" && (
-              // Cost is inverted: a rise is red, a drop green.
-              <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: deltaColor(costDir, true) }}>
-                {costDir === "up" ? "▲ " : "▼ "}
-                ${Math.abs(cost).toFixed(2)}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+      <CompareMetricCards oldRun={data.old.run} newRun={data.new.run} deltas={data.deltas} />
+      <CompareFlags caseSetsDiffer={data.case_sets_differ} editedCases={data.edited_cases} />
 
-      {(data.case_sets_differ || data.edited_cases > 0) && (
-        <div style={s.flags}>
-          {data.case_sets_differ && (
-            <span style={s.flag}>
-              {t("compare.caseSetsDiffer", { old: data.case_sets_differ.old_count, new: data.case_sets_differ.new_count })}
-            </span>
-          )}
-          {data.edited_cases > 0 && <span style={s.flag}>{t("compare.editedCases", { count: data.edited_cases })}</span>}
+      {data.old.config && data.new.config ? (
+        <TextDiffBlock
+          title={t("compare.promptDiff")}
+          oldText={data.old.config.system_prompt ?? ""}
+          newText={data.new.config.system_prompt ?? ""}
+          oldLabel={tm("compare.legendOld", { version: oldV })}
+          newLabel={tm("compare.legendNew", { version: newV })}
+        />
+      ) : (
+        <div>
+          <div style={s.sectionLabel}>
+            <Icon.FileText size={14} />
+            {t("compare.promptDiff")}
+          </div>
+          <div style={s.muted}>{t("compare.snapshotMissing", { version: data.old.config ? newV : oldV })}</div>
         </div>
       )}
-
-      <div>
-        <div style={s.sectionLabel}>
-          <Icon.FileText size={14} />
-          {t("compare.promptDiff")}
-        </div>
-        <div style={s.legend}>
-          <span style={s.legendItem}>
-            <span style={s.swatch("var(--crit-bg, rgba(239,68,68,0.3))")} />
-            {t("compare.legendOld", { version: oldV })}
-          </span>
-          <span style={s.legendItem}>
-            <span style={s.swatch("var(--ok-bg, rgba(16,185,129,0.3))")} />
-            {t("compare.legendNew", { version: newV })}
-          </span>
-        </div>
-        {data.old.config && data.new.config ? (
-          <div className="mono" style={s.diffBlock}>
-            {diff.map((l, i) =>
-              l.kind === "skip" ? (
-                <div key={i} style={s.diffSkip}>
-                  {t("compare.unchangedLines", { count: l.count })}
-                </div>
-              ) : (
-              <div key={i} style={s.diffLine(l.kind)}>
-                <span style={s.diffMark}>{l.kind === "add" ? t("compare.addedMark") : l.kind === "del" ? t("compare.removedMark") : ""}</span>
-                <span style={{ minWidth: 0 }}>{l.text || " "}</span>
-              </div>
-              ),
-            )}
-          </div>
-        ) : (
-          <div style={s.muted}>{t("compare.snapshotMissing", { version: data.old.config ? newV : oldV })}</div>
-        )}
-      </div>
 
       <div>
         <div style={s.sectionLabel}>

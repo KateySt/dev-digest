@@ -3,7 +3,7 @@
  * their arguments — no DB / network / `this`).
  */
 import type { Finding } from '@devdigest/shared';
-import type { FindingRow, PullRow, ReviewRow } from './repository.js';
+import type { FindingEvalCaseRef, FindingRow, PullRow, ReviewRow } from './repository.js';
 
 // reduceReviews + sliceDiff live in @devdigest/reviewer-core (pure engine logic
 // shared with the CI runner); re-exported here for backward-compatible imports.
@@ -14,6 +14,7 @@ export interface ReviewDtoFinding extends Finding {
   accepted_at: string | null;
   dismissed_at: string | null;
   eval_case_id: string | null;
+  eval_cases: { case_id: string; target_kind: 'agent' | 'skill'; target_id: string }[];
   reply_url: string | null;
   replied_at: string | null;
 }
@@ -34,7 +35,10 @@ export interface ReviewDto {
   findings: ReviewDtoFinding[];
 }
 
-export function findingRowToDto(row: FindingRow, evalCaseId?: string | null): ReviewDtoFinding {
+export function findingRowToDto(
+  row: FindingRow,
+  evalCases: readonly FindingEvalCaseRef[] = [],
+): ReviewDtoFinding {
   return {
     id: row.id,
     severity: row.severity as Finding['severity'],
@@ -52,7 +56,9 @@ export function findingRowToDto(row: FindingRow, evalCaseId?: string | null): Re
     review_id: row.reviewId,
     accepted_at: row.acceptedAt?.toISOString() ?? null,
     dismissed_at: row.dismissedAt?.toISOString() ?? null,
-    eval_case_id: evalCaseId ?? null,
+    // Back-compat single id: the agent-target case (a finding has at most one).
+    eval_case_id: evalCases.find((c) => c.ownerKind === 'agent')?.caseId ?? null,
+    eval_cases: evalCases.map((c) => ({ case_id: c.caseId, target_kind: c.ownerKind, target_id: c.ownerId })),
     reply_url: row.replyUrl ?? null,
     replied_at: row.repliedAt?.toISOString() ?? null,
   };
@@ -62,7 +68,7 @@ export function reviewToDto(
   review: ReviewRow,
   findings: FindingRow[],
   agentName?: string | null,
-  evalCaseIds?: ReadonlyMap<string, string>,
+  evalCases?: ReadonlyMap<string, readonly FindingEvalCaseRef[]>,
 ): ReviewDto {
   return {
     id: review.id,
@@ -76,7 +82,7 @@ export function reviewToDto(
     score: review.score,
     model: review.model,
     created_at: review.createdAt.toISOString(),
-    findings: findings.map((f) => findingRowToDto(f, evalCaseIds?.get(f.id))),
+    findings: findings.map((f) => findingRowToDto(f, evalCases?.get(f.id))),
   };
 }
 

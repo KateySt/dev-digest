@@ -1,9 +1,10 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, doublePrecision, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, doublePrecision, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { now } from './_shared';
 import { workspaces } from './core';
 import { pullRequests } from './pulls';
 import { agents } from './agents';
+import { skills } from './skills';
 import { findings } from './reviews';
 
 // ============================================================ Eval / Conformance / Compose
@@ -36,16 +37,19 @@ export const evalCases = pgTable(
     createdAt: now(),
   },
   (t) => ({
-    // One case per source finding (race-proof 409). Partial: manual cases have NULL.
-    sourceFindingUnique: uniqueIndex('eval_cases_source_finding_uidx')
-      .on(t.sourceFindingId)
+    // One case per (source finding, target) (race-proof 409): a finding may seed one
+    // case per target (its agent, each linked skill). Partial: manual cases have NULL.
+    sourceFindingUnique: uniqueIndex('eval_cases_source_finding_owner_uidx')
+      .on(t.sourceFindingId, t.ownerKind, t.ownerId)
       .where(sql`${t.sourceFindingId} IS NOT NULL`),
     ownerIdx: index('eval_cases_owner_idx').on(t.ownerKind, t.ownerId),
   }),
 );
 
-// One row per agent suite run: the whole case set executed against one
-// agent_versions snapshot. Metrics are nullable (null = zero denominator).
+// One row per suite run (agent OR skill): the whole case set executed against one
+// agent_versions / skill_versions snapshot, or - for a skill draft run - against
+// unsaved text (skill_version NULL, is_draft true). Metrics are nullable
+// (null = zero denominator). Row shape is enforced by eval_suite_runs_owner_shape_ck.
 export const evalSuiteRuns = pgTable(
   'eval_suite_runs',
   {
@@ -53,10 +57,15 @@ export const evalSuiteRuns = pgTable(
     workspaceId: uuid('workspace_id')
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    agentId: uuid('agent_id')
-      .notNull()
-      .references(() => agents.id, { onDelete: 'cascade' }),
-    agentVersion: integer('agent_version').notNull(),
+    ownerKind: text('owner_kind', { enum: ['agent', 'skill'] }).notNull().default('agent'),
+    agentId: uuid('agent_id').references(() => agents.id, { onDelete: 'cascade' }),
+    agentVersion: integer('agent_version'),
+    skillId: uuid('skill_id').references(() => skills.id, { onDelete: 'cascade' }),
+    skillVersion: integer('skill_version'),
+    isDraft: boolean('is_draft').notNull().default(false),
+    // Resolved skill_eval provider/model, recorded per skill run (null for agent runs).
+    provider: text('provider'),
+    model: text('model'),
     status: text('status', { enum: ['running', 'completed', 'failed'] }).notNull(),
     failureReason: text('failure_reason'),
     startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
@@ -78,6 +87,20 @@ export const evalSuiteRuns = pgTable(
     oneRunningPerAgent: uniqueIndex('eval_suite_runs_one_running_uidx')
       .on(t.agentId)
       .where(sql`${t.status} = 'running'`),
+    skillStartedIdx: index('eval_suite_runs_skill_started_idx').on(t.skillId, t.startedAt.desc()),
+    // At most one running run (suite OR draft) per skill (race-proof 409).
+    oneRunningPerSkill: uniqueIndex('eval_suite_runs_skill_one_running_uidx')
+      .on(t.skillId)
+      .where(sql`${t.status} = 'running'`),
+    // At most one draft run per skill.
+    oneDraftPerSkill: uniqueIndex('eval_suite_runs_skill_one_draft_uidx')
+      .on(t.skillId)
+      .where(sql`${t.isDraft}`),
+    ownerShapeCk: check(
+      'eval_suite_runs_owner_shape_ck',
+      sql`(${t.ownerKind} = 'agent' AND ${t.agentId} IS NOT NULL AND ${t.agentVersion} IS NOT NULL AND ${t.skillId} IS NULL AND ${t.skillVersion} IS NULL AND NOT ${t.isDraft})
+        OR (${t.ownerKind} = 'skill' AND ${t.skillId} IS NOT NULL AND ${t.agentId} IS NULL AND ${t.agentVersion} IS NULL AND ${t.isDraft} = (${t.skillVersion} IS NULL))`,
+    ),
   }),
 );
 

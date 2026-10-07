@@ -8,6 +8,12 @@ vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+// The panel loads the agent's linked skills once for the eval-case target picker;
+// this test renders without a QueryClient, so stub it (no linked skills).
+vi.mock("@/lib/hooks/agents", () => ({
+  useLinkedSkills: () => [],
+}));
+
 import { FindingsPanel } from "./FindingsPanel";
 
 afterEach(cleanup);

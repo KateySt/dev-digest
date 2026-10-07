@@ -10,8 +10,8 @@ import type {
   EvalCaseKind,
   EvalCaseListItem,
   EvalCaseRun,
+  EvalCaseTarget,
   EvalOwnerKind,
-  EvalRun,
 } from "@devdigest/shared";
 
 const evalStatsPath = (ownerKind: EvalOwnerKind, ownerId: string) =>
@@ -107,21 +107,6 @@ export function useRunEvalCase() {
   });
 }
 
-/** "Run all evals" on a skill's Evals tab — POST /skills/:id/eval-cases/run-all.
- *  Runs every case owned by that skill server-side, sequentially (see the
- *  server's `runBatch`), and returns the same `EvalRun` batch summary shape
- *  the global Eval Dashboard's "Run eval (N)" uses. */
-export function useRunAllSkillEvalCases() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (skillId: string) => api.post<EvalRun>(`/skills/${skillId}/eval-cases/run-all`),
-    onSuccess: (_d, skillId) => {
-      qc.invalidateQueries({ queryKey: ["eval-cases", "skill", skillId] });
-      qc.invalidateQueries({ queryKey: ["eval-stats", "skill", skillId] });
-    },
-  });
-}
-
 /** Result of "Turn into eval case": either a new case or the one that already
  *  existed for the finding (HTTP 409 is treated as success-like). */
 export interface EvalCaseFromFinding {
@@ -131,17 +116,21 @@ export interface EvalCaseFromFinding {
   already_existed: boolean;
 }
 
-/** POST /findings/:id/eval-case. A 409 carries the existing case id in
- *  `error.details.case_id` and resolves like a success so the UI can show
- *  "In eval set" instead of an error.
+/** POST /findings/:id/eval-case — optionally for a `target` (the finding's
+ *  agent by default, or a skill linked to it). A 409 carries the existing case
+ *  id for THAT target in `error.details.case_id` and resolves like a success so
+ *  the UI can show "In eval set" instead of an error.
  *
  *  A plain async function (not a mutation hook) on purpose: FindingCard calls
  *  it from an event handler and tracks the result in local state, which keeps
  *  the card render free of React Query context. Other screens pick the new
  *  case up on their next fetch (the Evals tab refetches on mount). */
-export async function createEvalCaseFromFinding(findingId: string): Promise<EvalCaseFromFinding> {
+export async function createEvalCaseFromFinding(
+  findingId: string,
+  target?: EvalCaseTarget,
+): Promise<EvalCaseFromFinding> {
   try {
-    const created = await api.post<EvalCase>(`/findings/${findingId}/eval-case`);
+    const created = await api.post<EvalCase>(`/findings/${findingId}/eval-case`, target ? { target } : undefined);
     return { case_id: created.id, created, already_existed: false };
   } catch (err) {
     const details = err instanceof ApiError ? (err.details as { case_id?: string } | undefined) : undefined;

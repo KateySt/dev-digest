@@ -1,7 +1,7 @@
 import type { FindingActionKind, GitHubClient, PrReviewComment } from '@devdigest/shared';
 import type { Container } from '../../platform/container.js';
 import { AppError, ConflictError, NotFoundError } from '../../platform/errors.js';
-import type { ReviewRepository } from './repository.js';
+import type { FindingEvalCaseRef, ReviewRepository } from './repository.js';
 import { findingRowToDto, type ReviewDtoFinding } from './helpers.js';
 
 /**
@@ -23,19 +23,23 @@ export async function actOnFinding(
   switch (action) {
     case 'accept': {
       const row = await repo.setFindingAccepted(findingId, new Date());
-      return { finding: findingRowToDto(row!, await evalCaseIdFor(repo, findingId)) };
+      return { finding: findingRowToDto(row!, await evalCasesFor(repo, workspaceId, findingId)) };
     }
     case 'dismiss': {
       const row = await repo.setFindingDismissed(findingId, new Date());
-      return { finding: findingRowToDto(row!, await evalCaseIdFor(repo, findingId)) };
+      return { finding: findingRowToDto(row!, await evalCasesFor(repo, workspaceId, findingId)) };
     }
     default:
       throw new AppError('invalid_action', `Action '${action}' is not available in the starter`, 400);
   }
 }
 
-async function evalCaseIdFor(repo: ReviewRepository, findingId: string): Promise<string | null> {
-  return (await repo.evalCaseIdsForFindings([findingId])).get(findingId) ?? null;
+async function evalCasesFor(
+  repo: ReviewRepository,
+  workspaceId: string,
+  findingId: string,
+): Promise<FindingEvalCaseRef[]> {
+  return (await repo.evalCasesForFindings(workspaceId, [findingId])).get(findingId) ?? [];
 }
 
 /**

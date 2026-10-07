@@ -20,49 +20,8 @@
     "90d": "90 days",
     "all": "All time"
   },
-  "banner": {
-    "dipped": "{metric} dipped {points}pts",
-    "context": "on v{version} (vs v{previous}).",
-    "up": "{metric} up",
-    "down": "{metric} down",
-    "flat": "{metric} unchanged"
-  },
-  "metrics": {
-    "recall": "Recall",
-    "precision": "Precision",
-    "citation_accuracy": "Citation accuracy",
-    "cost": "Cost"
-  },
-  "cards": {
-    "recall": "RECALL",
-    "precision": "PRECISION",
-    "citation_accuracy": "CITATION ACCURACY"
-  },
-  "trend": {
-    "title": "Metric trend",
-    "recall": "Recall",
-    "precision": "Precision",
-    "citation": "Citation"
-  },
   "runs": {
-    "title": "Recent runs",
-    "selected": "{count} selected",
-    "compare": "Compare",
-    "compareHint": "Select exactly two runs to compare",
-    "emptyRange": "No runs in this range.",
-    "columns": {
-      "select": "Select",
-      "ranAt": "Ran at",
-      "version": "Version",
-      "recall": "Recall",
-      "precision": "Precision",
-      "citation": "Citation",
-      "pass": "Pass",
-      "cost": "Cost",
-      "status": "Status"
-    },
-    "selectRun": "Select run v{version} from {ranAt}",
-    "errored": "{count} errored"
+    "title": "Recent runs"
   },
   "empty": {
     "title": "No eval runs yet",
@@ -72,20 +31,13 @@
   "compare": {
     "title": "Compare runs · v{old} → v{new}",
     "subtitle": "Old config vs new — metric deltas and prompt diff on the {cases}-case set",
-    "cost": "COST",
     "promptDiff": "System prompt diff",
-    "legendOld": "v{version} (old)",
-    "legendNew": "v{version} (new)",
-    "removedMark": "−",
-    "addedMark": "+",
     "configTitle": "Model & skills",
     "model": "Model",
     "skills": "Skills",
     "noSkills": "none",
     "unchanged": "unchanged",
     "snapshotMissing": "Config snapshot unavailable for v{version}.",
-    "caseSetsDiffer": "case sets differ ({old} vs {new})",
-    "editedCases": "{count, plural, one {# case} other {# cases}} edited between runs",
     "close": "Close",
     "promote": "Promote v{version}",
     "promoting": "Promoting…",
@@ -96,7 +48,6 @@
     "cancel": "Cancel",
     "missingSkills": "Can't promote: these skills no longer exist — {skills}. The agent was not changed.",
     "failed": "Promote failed: {message}",
-    "loadFailed": "Couldn't load the comparison.",
-    "unchangedLines": "… {count, plural, one {# unchanged line} other {# unchanged lines}}"
+    "loadFailed": "Couldn't load the comparison."
   }
 }

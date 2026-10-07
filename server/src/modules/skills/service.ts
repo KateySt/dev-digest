@@ -150,7 +150,13 @@ export class SkillsService {
   }
 
   async delete(workspaceId: string, id: string): Promise<boolean> {
-    return this.repo.deleteById(workspaceId, id);
+    // The skill row and its eval cases (owned by the eval module) go in one transaction.
+    return this.container.db.transaction(async (tx) => {
+      const deleted = await this.repo.deleteById(workspaceId, id, tx);
+      if (!deleted) return false;
+      await this.container.evalRepo.deleteCasesForOwner(workspaceId, 'skill', id, tx);
+      return true;
+    });
   }
 
   async create(workspaceId: string, input: CreateSkillInput): Promise<Skill> {

@@ -56,7 +56,7 @@
     "lastRunPassed": "Last run passed",
     "lastRunFailed": "Last run failed",
     "resultSummary": "recall {recall}% · precision {precision}% · citation {citation}% · {duration}s",
-    "subtitle": "{agent} · simulate a PR and assert the expected output",
+    "subtitle": "{owner} · simulate a PR and assert the expected output",
     "kindLabel": "Kind",
     "kindMustFind": "Must find",
     "kindMustNotFlag": "Must not flag",
@@ -68,6 +68,28 @@
     "notComparable": "Runs before and after this edit are not directly comparable — the case's inputs changed.",
     "diffPreview": "Diff preview",
     "lastRunErrored": "Last run errored",
+    "advanced": "Advanced",
+    "entryLabel": "Entry {index}",
+    "fileField": "File",
+    "startLine": "Start line",
+    "endLine": "End line",
+    "severityField": "Severity",
+    "categoryField": "Category",
+    "titleField": "Finding title",
+    "titleFieldPlaceholder": "What should be flagged",
+    "removeEntry": "Remove entry {index}",
+    "addFinding": "Add expected finding",
+    "addLocation": "Add forbidden location",
+    "emptyMustFind": "No expected findings yet.",
+    "emptyMustNotFlag": "No forbidden locations — this case asserts no findings.",
+    "invalidLine": "Lines must be positive whole numbers.",
+    "invalidRange": "Start line must not be after end line.",
+    "warnFile": "This file is not in the diff.",
+    "warnLines": "These lines are not in the diff.",
+    "switchBlocked": "The JSON is invalid — fix it before switching back to the form.",
+    "lossConfirm": "This JSON has fields the form can't show. Switching to the form will discard them. Continue?",
+    "diffUnparsed": "Couldn't read any file from this diff — add ---/+++ file headers to preview it.",
+    "saveBlocked": "Fix the highlighted line numbers to save.",
     "lastRunBanner": "{summary}"
   },
   "evalsTab": {
@@ -121,7 +143,11 @@
       "mustNotFlagAt": "expected 0 findings at {locations}, got {got}",
       "mustNotFlag": "expected 0 findings, got {got}"
     },
-    "assertEmpty": "assert empty",
+    "assertEmpty": "empty []",
+    "reason": {
+      "running": "A run is already in progress.",
+      "noCases": "Add an eval case first."
+    },
     "runFailed": "The run could not be started."
   },
   "page": {

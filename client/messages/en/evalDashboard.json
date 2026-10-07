@@ -32,5 +32,34 @@
       "pass": "Pass"
     }
   },
-  "loadFailed": "Couldn't load the eval dashboard."
+  "loadFailed": "Couldn't load the eval dashboard.",
+  "tabs": {
+    "label": "Eval Dashboard sections",
+    "agents": "Agents",
+    "skills": "Skills"
+  },
+  "skills": {
+    "subtitle": "Regression harness across all skills · pick a skill to see its runs",
+    "runAll": "Run all skills",
+    "runAllStarting": "Starting…",
+    "runAllResult": "{started, plural, one {Started # skill} other {Started # skills}}{skipped, plural, =0 {} other { · {skipped} skipped}}",
+    "title": "Skills",
+    "lastRun": "Last run v{version} · {ranAt} · {passed}/{evaluated} pass",
+    "neverRun": "never run",
+    "noCases": "no cases",
+    "running": "Running {done}/{total}…",
+    "open": "Open {name} eval dashboard",
+    "noSkills": "No skills yet. Create a skill and add eval cases to start.",
+    "recentTitle": "Recent eval runs · all skills",
+    "recentEmpty": "No eval runs yet.",
+    "columns": {
+      "skill": "Skill",
+      "ranAt": "Ran at",
+      "version": "Version",
+      "recall": "Recall",
+      "precision": "Precision",
+      "citation": "Citation",
+      "pass": "Pass"
+    }
+  }
 }

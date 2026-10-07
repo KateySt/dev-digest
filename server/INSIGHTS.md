@@ -14,6 +14,24 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-07 — Skill evals (SPEC-08): three gotchas worth knowing
+
+- **Service-level transaction is an accepted exception.** `SkillsService.delete`
+  runs one `db.transaction` deleting the skill and its eval cases
+  (`container.evalRepo.deleteCasesForOwner`); runs cascade via FK. It is the
+  first transaction opened in a service rather than a repository; the
+  architecture review accepted it because the two repos must commit atomically.
+  Don't copy the pattern casually.
+- **Fastify delivers a missing body as `null`**, so an optional body such as
+  `POST /skills/:id/eval-runs` (`{ draft_body? }`) and the `target` of
+  `POST /findings/:id/eval-case` needs a `.nullish()` body schema, not
+  `.optional()`, or a bodyless call returns 400.
+- **Run integration tests with `--no-file-parallelism`.** Parallel
+  testcontainers Postgres starts hit the docker-check timeout and the files
+  fail spuriously.
+
+---
+
 ### 2026-09-30 — `server/src/vendor/shared` and `client/src/vendor/shared` are NOT byte-identical — diff only the file(s) you touch
 
 Both this file's 2026-09-15 entry and `client/INSIGHTS.md`'s equivalent entry

@@ -18,6 +18,10 @@ export const FindingRecord = Finding.extend({
   dismissed_at: z.string().nullable(),
   /** Eval case seeded from this finding, if any. `.nullish()` — older payloads omit it. */
   eval_case_id: z.string().nullish(),
+  /** Every eval case seeded from this finding, per target. `.nullish()` — older payloads omit it. */
+  eval_cases: z
+    .array(z.object({ case_id: z.string(), target_kind: z.enum(['agent', 'skill']), target_id: z.string() }))
+    .nullish(),
   /** GitHub comment URL / time of a studio-posted "Reply to author". */
   reply_url: z.string().nullish(),
   replied_at: z.string().nullish(),

@@ -45,7 +45,7 @@ function setup(over: { cases?: EvalCaseListItem[]; stats?: ReturnType<typeof sta
     get("/agents/ag1/eval-runs", () => over.runs ?? { ...EMPTY_RUNS, cases_total: cases.length }),
     get("/agents/ag1", () => agent()),
   ]);
-  const view = renderApp(<EvalsTab ownerKind="agent" ownerId="ag1" />);
+  const view = renderApp(<EvalsTab agentId="ag1" />);
   return { net, ...view };
 }
 
@@ -126,10 +126,10 @@ describe("EvalsTab: case list", () => {
     expect(screen.getByText("errored: model timeout")).toBeInTheDocument();
   });
 
-  it("C-14: a must-not-flag case with no forbidden locations shows the 'assert empty' chip", async () => {
+  it("C-14: a must-not-flag case with no forbidden locations shows the 'empty []' chip", async () => {
     setup();
     await screen.findByText("assert-nothing");
-    expect(screen.getAllByText("assert empty")).toHaveLength(1);
+    expect(screen.getAllByText("empty []")).toHaveLength(1);
   });
 });
 
@@ -211,7 +211,7 @@ describe("EvalsTab: Run all evals", () => {
       get("/eval-suite-runs/run-7", () => ({ ...suiteRun({ id: "run-7", status: "running", cases_done: 1, cases_total: 4 }), results: [] })),
       get("/agents/ag1", () => agent()),
     ]);
-    renderApp(<EvalsTab ownerKind="agent" ownerId="ag1" />);
+    renderApp(<EvalsTab agentId="ag1" />);
 
     const btn = await screen.findByRole("button", { name: "Running 1/4…" });
     expect(btn).toBeDisabled();

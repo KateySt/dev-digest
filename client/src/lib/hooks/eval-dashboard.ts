@@ -3,7 +3,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { EvalCrossAgentDashboard, RunAllAgentsResponse } from "@devdigest/shared";
+import type {
+  EvalCrossAgentDashboard,
+  EvalCrossSkillDashboard,
+  RunAllAgentsResponse,
+  RunAllSkillsResponse,
+} from "@devdigest/shared";
 
 /** Polling interval (ms) while any suite run is running (spec: at most every 2s). */
 export const EVAL_POLL_MS = 2000;
@@ -25,5 +30,25 @@ export function useRunAllAgents() {
   return useMutation({
     mutationFn: () => api.post<RunAllAgentsResponse>("/eval-dashboard/run-all"),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["eval-dashboard"] }),
+  });
+}
+
+/** GET /eval-dashboard/skills — per-skill latest run + history + running state.
+ *  Polls while any skill's suite run is running and stops once none is. */
+export function useEvalSkillsDashboard() {
+  return useQuery({
+    queryKey: ["eval-dashboard-skills"],
+    queryFn: () => api.get<EvalCrossSkillDashboard>("/eval-dashboard/skills"),
+    refetchInterval: (query) =>
+      (query.state.data?.skills ?? []).some((s) => s.running_run) ? EVAL_POLL_MS : false,
+  });
+}
+
+/** "Run all skills" — POST /eval-dashboard/skills/run-all (202 { started, skipped }). */
+export function useRunAllSkills() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<RunAllSkillsResponse>("/eval-dashboard/skills/run-all"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["eval-dashboard-skills"] }),
   });
 }

@@ -41,6 +41,19 @@ vi.mock("@/lib/hooks/skills", () => ({
   useDeleteSkill: () => ({ mutate: vi.fn(), isPending: false }),
   useScanSkill: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+// The editor owns one run controller (header "Run on evals" + Evals tab) — it
+// has its own tests, so stub it here.
+vi.mock("@/lib/hooks/eval-runs", () => ({
+  useSkillEvalActivity: () => ({
+    running: false,
+    progress: null,
+    disabledReason: null,
+    startError: null,
+    start: vi.fn(),
+    draft: null,
+    caseCount: 2,
+  }),
+}));
 // ConfigTab's project-scope picker (2026-10-02 amendment) needs the repos
 // list — mocked the same way the skill hooks above are.
 vi.mock("@/lib/hooks", () => ({

@@ -7,6 +7,8 @@ Server side: [`../../server/specs/eval.md`](../../server/specs/eval.md) (SPEC-02
 Design references: `docs/design/evals/01-finding-card-turn-into-eval.png`, `02-eval-dashboard.png`, `03-agent-eval-detail.png`, `04-compare-runs-modal.png`, `05-agent-editor-evals-tab.png`, `06-eval-case-modal.png`, `proto-evals-tab.png`.
 
 ## Changelog
+- 2026-10-06 — Resolved the Case Editor open question: switching from Advanced JSON back to the form is blocked for invalid JSON (AC-49) and confirms data loss for unrepresentable fields (AC-50); line fields must be positive integers with start ≤ end (AC-51). AC-14 chip renamed "assert empty" → `empty []` to match the skill design (`docs/design/evals/skill-editor-evals-tab.png`), for agents and skills alike.
+- 2026-10-06 — Case Editor amended for manual case authoring: structured must find / must not flag fields with add/remove (AC-43..AC-46), raw JSON kept behind an "Advanced" toggle (AC-22 now applies to that mode), DiffView preview of the pasted diff (AC-47), warning when a location is not in the diff (AC-48). AC-2 / AC-4 now per target, since "Turn into eval case" can also target a linked skill (picker and skill side in [`skill-evals.md`](./skill-evals.md), SPEC-08). The modal is shared, so agent and skill cases both get this.
 - 2026-10-06 — Resolved all open questions: Learn split out to a future spec (button kept in the action row but rendered disabled with a "Coming soon" tooltip); Reply shows "Posted · View on GitHub" after reload and allows no second reply; Promote confirmation warns that skill text is not rolled back and surfaces a missing-skill 409; range filter applies only to the trend chart and run table. ACs renumbered.
 - 2026-10-06 — Evolved into a versioned regression harness UI: FindingCard gains "Turn into eval case", Learn, and Reply to author (Learn later split out — see the newer entry above); the Evals tab shows must find / must not flag badges and metrics from the latest suite run with deltas; the global Eval Dashboard becomes a cross-agent overview with "Run all agents"; new per-agent dashboard (range filter, regression banner, metric cards with sparklines, trend chart, selectable run history); new Compare runs modal with Promote vN; background-run progress. Status moved back to `draft`. Already built before this change and kept: Evals tab case list with per-row Run/Edit/Delete, Eval Case Editor modal (Name, Diff/PR-meta tabs, expected-output JSON editor with valid badge, "+ Finding skeleton", Run on save, Run case), `/eval` page in the sidebar.
 - 2026-10-06 — Prior content (pre-changelog): Evals tab + Eval Case Editor + workspace Eval Dashboard built on `EvalCase`/`EvalCaseRun`/`EvalCaseListItem`; Files tab cut.
@@ -37,9 +39,9 @@ None beyond the goals.
 
 ### FindingCard (PR review screen)
 - AC-1: WHEN a finding card is expanded, the system shall show the action row Accept / Dismiss / Learn / Turn into eval case / Reply to author. (verify via: unit test)
-- AC-2: WHEN the user clicks "Turn into eval case" on an accepted or dismissed finding, the system shall create the case and show a confirmation naming the case kind ("must find" or "must not flag") with a link to the case in the agent's Evals tab. (verify via: unit test)
+- AC-2: WHEN the user clicks "Turn into eval case" on an accepted or dismissed finding and confirms the target (the agent by default; skill targets per SPEC-08 AC-34), the system shall create the case and show a confirmation naming the case kind ("must find" or "must not flag") with a link to the case in the target's Evals tab. (verify via: unit test)
 - AC-3: IF the finding is neither accepted nor dismissed, THEN the system shall render "Turn into eval case" disabled with the tooltip "Accept or dismiss first". (verify via: unit test)
-- AC-4: WHEN a finding already has an eval case (from load or from a 409 response), the system shall render the button as "In eval set" linking to that case. (verify via: unit test)
+- AC-4: WHEN a finding already has an eval case for the agent target (from load or from a 409 response), the system shall mark the agent target "In eval set" linking to that case, keeping other targets selectable (SPEC-08 AC-36). (verify via: unit test)
 - AC-5: IF the finding's review has no agent, THEN the system shall render "Turn into eval case" disabled with a tooltip explaining that only agent reviews can seed cases. (verify via: unit test)
 - AC-6: WHEN the action row renders, the system shall show Learn disabled with the tooltip "Coming soon" and trigger no request on click. (verify via: unit test)
 - AC-7: WHEN the user clicks "Reply to author", the system shall open a confirmation dialog showing the target file:line and an editable comment body prefilled from the finding's title, rationale, and suggestion, and post nothing until the user confirms. (verify via: unit test)
@@ -51,7 +53,7 @@ None beyond the goals.
 - AC-11: IF a metric is null or no suite run exists, THEN the system shall show "—" for that value and no delta. (verify via: unit test)
 - AC-12: WHEN the Evals tab shows the case list, the system shall display "N / M passing" where M counts only cases that have a result, and separately the total case count. (verify via: unit test)
 - AC-13: WHEN a case row renders, the system shall show its status icon (pass / fail / never run / errored), name, a "must find" or "must not flag" badge with the tooltip "Seeded from an accepted finding" / "Seeded from a dismissed finding" (no seed tooltip for manual cases), and its summary ("expected N findings, got M", or for must not flag "expected 0 findings at file:L–L, got N", or "never run"). (verify via: unit test)
-- AC-14: WHERE a must not flag case has no forbidden locations, the system shall show the chip "assert empty". (verify via: unit test)
+- AC-14: WHERE a must not flag case has no forbidden locations, the system shall show the chip `empty []`. (verify via: unit test)
 - AC-15: WHEN the tab renders metrics, the system shall show the note "Scoring is mechanical — a finding counts when file matches and line ranges overlap. No model call in the scorer." (verify via: unit test)
 - AC-16: WHEN the user clicks "Run all evals", the system shall start a suite run for the agent and label the button with the number of cases to be reviewed before the click. (verify via: unit test)
 - AC-17: WHILE the agent's suite run is running, the system shall disable "Run all evals" and show "Running X/Y…" updated by polling until the run is completed or failed. (verify via: unit test)
@@ -61,7 +63,16 @@ None beyond the goals.
 ### Eval Case Editor modal
 - AC-20: WHEN the user creates a case via "+ New eval case", the system shall let them choose kind must find or must not flag, and save it as a manual case. (verify via: unit test)
 - AC-21: WHEN the user edits the diff or expected output of a case that has at least one result, the system shall show a warning that runs before and after the edit are not directly comparable. (verify via: unit test)
-- AC-22: WHERE the case is must not flag, the system shall label the JSON editor as forbidden locations and offer a location skeleton ({file, start_line, end_line}) instead of a finding skeleton. (verify via: unit test)
+- AC-22: WHERE the case is must not flag and the editor is in Advanced (raw JSON) mode, the system shall label the JSON editor as forbidden locations and offer a location skeleton ({file, start_line, end_line}) instead of a finding skeleton. (verify via: unit test)
+- AC-43: WHERE the case is must find, the system shall by default show a structured list of expected findings, each with file, start line, end line, severity, category, and title, with add and remove controls. (verify via: unit test)
+- AC-44: WHERE the case is must not flag, the system shall by default show a structured list of forbidden locations, each with file, start line, and end line, with add and remove controls; an empty list shall be labeled as asserting no findings. (verify via: unit test)
+- AC-45: WHEN the user toggles "Advanced", the system shall show the raw expected-output JSON editor with its valid badge, reflecting the structured entries. (verify via: unit test)
+- AC-46: WHEN the user saves from either mode, the system shall store the same expected-output shape the server already accepts. (verify via: unit test)
+- AC-47: WHEN the user pastes or edits the case diff, the system shall show a DiffView preview of it. (verify via: unit test)
+- AC-48: IF an expected finding or forbidden location names a file or line range not present in the case diff, THEN the system shall show a warning on that entry and still allow saving. (verify via: unit test)
+- AC-49: IF the Advanced JSON is invalid, THEN the system shall block switching back to the structured form and show a hint explaining why. (verify via: unit test)
+- AC-50: IF the Advanced JSON is valid but contains fields the structured form cannot show, THEN the system shall ask for confirmation that these fields will be lost, and switch to the form only after the user confirms. (verify via: unit test)
+- AC-51: IF a start or end line is not a positive integer, or the start line is greater than the end line, THEN the system shall mark that field invalid and block saving. (verify via: unit test)
 
 ### Per-agent dashboard
 - AC-23: WHEN the per-agent dashboard loads, the system shall show the agent name, model chip, "N runs on the M-case set", an agent picker that switches agent, a range selector, and "Run eval". (verify via: unit test)

@@ -9,8 +9,10 @@ import type {
   EvalRange,
   EvalRegressionAlert,
   EvalSuiteRun,
+  SkillEvalSuiteRun,
 } from '@devdigest/shared';
-import type { EvalCaseKind, EvalLocation } from '@devdigest/reviewer-core';
+import { aggregateSuiteScores } from '@devdigest/reviewer-core';
+import type { EvalCaseKind, EvalLocation, EvalSuiteCaseInput } from '@devdigest/reviewer-core';
 import type { EvalCaseRow, EvalRunRow, EvalSuiteRunRow } from '../../db/rows.js';
 import {
   FALLBACK_CASE_NAME,
@@ -64,11 +66,10 @@ export function toEvalCaseListItem(caseRow: EvalCaseRow, lastRun: EvalRunRow | u
   return { ...toEvalCaseDto(caseRow), last_run: lastRun ? toEvalCaseRunDto(lastRun) : null };
 }
 
-export function toEvalSuiteRunDto(row: EvalSuiteRunRow): EvalSuiteRun {
+/** Status / progress / pooled-metric fields common to agent and skill suite-run DTOs. */
+function suiteRunBase(row: EvalSuiteRunRow) {
   return {
     id: row.id,
-    agent_id: row.agentId,
-    agent_version: row.agentVersion,
     status: row.status as EvalSuiteRun['status'],
     failure_reason: row.failureReason,
     started_at: row.startedAt.toISOString(),
@@ -83,6 +84,24 @@ export function toEvalSuiteRunDto(row: EvalSuiteRunRow): EvalSuiteRun {
     errored_count: row.erroredCount,
     duration_ms: row.durationMs,
     cost_usd: row.costUsd,
+  };
+}
+
+/** Agent suite run (`agent_id` / `agent_version` are non-null on agent-owned rows — DB CHECK). */
+export function toEvalSuiteRunDto(row: EvalSuiteRunRow): EvalSuiteRun {
+  return { ...suiteRunBase(row), owner_kind: 'agent', agent_id: row.agentId!, agent_version: row.agentVersion! };
+}
+
+/** Skill suite run or draft run (`skill_version` null for drafts). */
+export function toSkillSuiteRunDto(row: EvalSuiteRunRow): SkillEvalSuiteRun {
+  return {
+    ...suiteRunBase(row),
+    owner_kind: 'skill',
+    skill_id: row.skillId!,
+    skill_version: row.skillVersion,
+    is_draft: row.isDraft,
+    provider: row.provider,
+    model: row.model,
   };
 }
 
@@ -258,10 +277,13 @@ export function pointDelta(newer: number | null, older: number | null): number |
  * template — no model call. Returns null when nothing dropped enough.
  */
 export function buildRegressionAlert(
-  latest: EvalSuiteRun | undefined,
-  previous: EvalSuiteRun | undefined,
+  latest: EvalSuiteRun | SkillEvalSuiteRun | undefined,
+  previous: EvalSuiteRun | SkillEvalSuiteRun | undefined,
 ): EvalRegressionAlert | null {
   if (!latest || !previous) return null;
+  const latestVersion = runVersion(latest);
+  const previousVersion = runVersion(previous);
+  const modelChanged = runModelChanged(latest, previous);
   const drops: EvalRegressionAlert['drops'] = [];
   const others: EvalRegressionAlert['others'] = [];
   for (const metric of METRICS) {
@@ -277,14 +299,78 @@ export function buildRegressionAlert(
     .join(', ');
   const othersText = others.map((o) => `${METRIC_LABEL[o.metric]} ${o.direction === 'flat' ? 'unchanged' : o.direction === 'up' ? 'rose' : 'slipped'}`).join(', ');
   const message =
-    `${dropText} in v${latest.agent_version} vs v${previous.agent_version}.` +
-    (othersText ? ` ${othersText}.` : '');
+    `${dropText} in v${latestVersion} vs v${previousVersion}.` +
+    (othersText ? ` ${othersText}.` : '') +
+    (modelChanged ? ' (model changed between runs)' : '');
   return {
-    version: latest.agent_version,
-    previous_version: previous.agent_version,
+    version: latestVersion,
+    previous_version: previousVersion,
     drops,
     others,
     message,
+    // Agent alerts stay byte-identical: the flag is only emitted for skill runs.
+    ...('skill_id' in latest ? { model_changed: modelChanged } : {}),
+  };
+}
+
+type VersionedRun = EvalSuiteRun | SkillEvalSuiteRun;
+
+/** The agent or skill version a run executed (a skill draft has none — never reaches here). */
+export function runVersion(run: VersionedRun): number {
+  return 'skill_id' in run ? (run.skill_version ?? 0) : run.agent_version;
+}
+
+/** True when two skill runs used a different provider or model (agent runs: always false). */
+export function runModelChanged(a: VersionedRun, b: VersionedRun): boolean {
+  if (!('skill_id' in a) || !('skill_id' in b)) return false;
+  return a.provider !== b.provider || a.model !== b.model;
+}
+
+/** Compare ordering: lower skill version = old; equal versions fall back to start time. */
+export function orderRunsForCompare<R extends { skillVersion: number | null; startedAt: Date }>(
+  a: R,
+  b: R,
+): [older: R, newer: R] {
+  const av = a.skillVersion ?? 0;
+  const bv = b.skillVersion ?? 0;
+  if (av !== bv) return av < bv ? [a, b] : [b, a];
+  return a.startedAt <= b.startedAt ? [a, b] : [b, a];
+}
+
+export interface SuiteRunSummary {
+  recall: number | null;
+  precision: number | null;
+  citationAccuracy: number | null;
+  passedCount: number;
+  evaluatedCount: number;
+  erroredCount: number;
+  status: 'completed' | 'failed';
+  failureReason: string | null;
+  costUsd: number | null;
+}
+
+/** Final summary of a run from its per-case outcomes: pooled metrics (SPEC-02 AC-33..36),
+ *  counts, and summed cost (null when any finished case's cost is unknown). */
+export function summarizeSuiteRun(
+  scored: (EvalSuiteCaseInput & { costUsd: number | null })[],
+  erroredCount: number,
+): SuiteRunSummary {
+  const pooled = aggregateSuiteScores(scored);
+  const completed = pooled.evaluated >= 1;
+  const cost = scored.reduce<number | null>(
+    (acc, c) => (acc == null || c.costUsd == null ? null : acc + c.costUsd),
+    0,
+  );
+  return {
+    recall: pooled.recall,
+    precision: pooled.precision,
+    citationAccuracy: pooled.citationAccuracy,
+    passedCount: pooled.passed,
+    evaluatedCount: pooled.evaluated,
+    erroredCount,
+    status: completed ? 'completed' : 'failed',
+    failureReason: completed ? null : 'every case errored',
+    costUsd: completed ? cost : null,
   };
 }
 
@@ -294,8 +380,8 @@ function formatPoints(p: number): string {
 
 /** Deltas (fractions, new minus old) for the three metrics; null when either side is null. */
 export function metricDeltas(
-  newer: EvalSuiteRun | undefined,
-  older: EvalSuiteRun | undefined,
+  newer: EvalSuiteRun | SkillEvalSuiteRun | undefined,
+  older: EvalSuiteRun | SkillEvalSuiteRun | undefined,
 ): AgentEvalStats['delta'] {
   const d = (a: number | null | undefined, b: number | null | undefined) =>
     a == null || b == null ? null : Math.round((a - b) * 1e6) / 1e6;
@@ -348,30 +434,6 @@ export function isUniqueViolation(err: unknown): boolean {
   return e?.code === '23505' || e?.cause?.code === '23505';
 }
 
-/** Average of the non-null values, or null when there are none. */
-function avgOf(values: (number | null)[]): number | null {
-  const known = values.filter((v): v is number => v != null);
-  if (known.length === 0) return null;
-  return known.reduce((a, b) => a + b, 0) / known.length;
-}
-
-/** Skill Evals tab header rollup (unchanged semantics): average recall/precision/
- *  citation over each case's LATEST run, excluding cases that have never run. */
-export function aggregateLatestRuns(latestRuns: (EvalRunRow | undefined)[]): {
-  recall: number | null;
-  precision: number | null;
-  citation_accuracy: number | null;
-  cases_evaluated: number;
-} {
-  const runs = latestRuns.filter((r): r is EvalRunRow => r != null);
-  return {
-    recall: avgOf(runs.map((r) => r.recall)),
-    precision: avgOf(runs.map((r) => r.precision)),
-    citation_accuracy: avgOf(runs.map((r) => r.citationAccuracy)),
-    cases_evaluated: runs.length,
-  };
-}
-
 /** Pick which decision a finding carries (accept and dismiss are mutually exclusive). */
 export function findingDecision(f: {
   acceptedAt: Date | null;
@@ -381,4 +443,10 @@ export function findingDecision(f: {
   if (f.dismissedAt && !f.acceptedAt) return 'dismissed';
   if (f.acceptedAt && f.dismissedAt) return f.acceptedAt >= f.dismissedAt ? 'accepted' : 'dismissed';
   return null;
+}
+
+/** postgres-js / drizzle foreign-key violation detection (SQLSTATE 23503, possibly wrapped). */
+export function isForeignKeyViolation(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } } | null;
+  return e?.code === '23503' || e?.cause?.code === '23503';
 }

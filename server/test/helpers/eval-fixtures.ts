@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { Review, StructuredRequest, StructuredResult } from '@devdigest/shared';
 import { buildApp } from '../../src/app.js';
@@ -83,11 +83,14 @@ export type ScriptedHandler = (ctx: { caseName: string | null; call: number }) =
  */
 export class ScriptedLLM extends MockLLMProvider {
   public callCount = 0;
+  /** Every structured request received, in order (assert prompt / model / skill text). */
+  public requests: StructuredRequest<unknown>[] = [];
   constructor(public handler: ScriptedHandler) {
     super('openai');
   }
   override async completeStructured<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>> {
     const call = ++this.callCount;
+    this.requests.push(req as StructuredRequest<unknown>);
     const text = JSON.stringify(req.messages);
     const m = text.match(/Review eval case \\"([^"\\]+)\\"/);
     const out = await this.handler({ caseName: m?.[1] ?? null, call });
@@ -120,7 +123,11 @@ export async function makeApp(
   const overrides: Record<string, unknown> = {
     embedder: new MockEmbedder(),
     git: opts.git ?? new MockGitClient({ diff: MULTI_HUNK_DIFF }),
-    llm: { openai: opts.llm ?? new MockLLMProvider('openai', { structured: REVIEW_ONE_HIT_ONE_DROP }) },
+    llm: (() => {
+      const llm = opts.llm ?? new MockLLMProvider('openai', { structured: REVIEW_ONE_HIT_ONE_DROP });
+      // `skill_eval` resolves to openrouter by default - route it to the same stub.
+      return { openai: llm, openrouter: llm };
+    })(),
   };
   if (opts.github !== null) overrides.github = opts.github ?? new MockGitHubClient();
   // `github: null` = "not connected": empty secrets so a developer's real GITHUB_TOKEN is never picked up.
@@ -316,7 +323,13 @@ export async function insertFindingFixture(
   return { repo: repo!, pr: pr!, review: rev!, finding: f! };
 }
 
-export async function insertSkill(db: Db, workspaceId: string, name = uniq('skill'), body = 'Always check secrets.') {
+export async function insertSkill(
+  db: Db,
+  workspaceId: string,
+  name = uniq('skill'),
+  body = 'Always check secrets.',
+  over: { scanStatus?: 'pending' | 'clean' | 'flagged' | 'error'; scanFindings?: unknown; enabled?: boolean } = {},
+) {
   const [s] = await db
     .insert(t.skills)
     .values({
@@ -326,11 +339,71 @@ export async function insertSkill(db: Db, workspaceId: string, name = uniq('skil
       type: 'custom',
       source: 'manual',
       body,
-      enabled: true,
-      scanStatus: 'clean',
+      enabled: over.enabled ?? true,
+      scanStatus: over.scanStatus ?? 'clean',
+      ...(over.scanFindings !== undefined ? { scanFindings: over.scanFindings as never } : {}),
     })
     .returning();
+  await db.insert(t.skillVersions).values({ skillId: s!.id, version: s!.version, body });
   return s!;
+}
+
+/** Simulate saving new skill text: bump version + snapshot (no scan, no LLM). */
+export async function saveSkillVersion(db: Db, skillId: string, body: string) {
+  const [cur] = await db.select().from(t.skills).where(eq(t.skills.id, skillId));
+  const version = cur!.version + 1;
+  await db.update(t.skills).set({ body, version }).where(eq(t.skills.id, skillId));
+  await db.insert(t.skillVersions).values({ skillId, version, body });
+  return version;
+}
+
+export async function startSkillRun(app: App, skillId: string, draftBody?: string) {
+  return app.inject({
+    method: 'POST',
+    url: `/skills/${skillId}/eval-runs`,
+    ...(draftBody !== undefined ? { payload: { draft_body: draftBody } } : {}),
+  });
+}
+
+export async function linkSkill(db: Db, agentId: string, skillId: string, order = 0) {
+  await db.insert(t.agentSkills).values({ agentId, skillId, order });
+}
+
+/** Insert a finished skill suite run directly (history / dashboard / compare fixtures). */
+export async function insertSkillSuiteRun(
+  db: Db,
+  workspaceId: string,
+  skillId: string,
+  over: Partial<typeof t.evalSuiteRuns.$inferInsert> = {},
+) {
+  const draft = over.isDraft ?? false;
+  const [row] = await db
+    .insert(t.evalSuiteRuns)
+    .values({
+      workspaceId,
+      ownerKind: 'skill',
+      skillId,
+      skillVersion: draft ? null : 1,
+      isDraft: draft,
+      provider: 'openrouter',
+      model: 'm1',
+      status: 'completed',
+      casesTotal: 5,
+      casesDone: 5,
+      recall: 0.8,
+      precision: 0.8,
+      citationAccuracy: 0.9,
+      passedCount: 4,
+      evaluatedCount: 5,
+      erroredCount: 0,
+      durationMs: 1000,
+      costUsd: 0.1,
+      startedAt: new Date(),
+      finishedAt: new Date(),
+      ...over,
+    })
+    .returning();
+  return row!;
 }
 
 export async function countAgentRunsAndReviews(db: Db) {
@@ -338,4 +411,4 @@ export async function countAgentRunsAndReviews(db: Db) {
   return { runs: runs.length, reviews: reviews.length };
 }
 
-export { eq };
+export { eq, inArray };

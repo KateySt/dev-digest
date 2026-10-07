@@ -138,7 +138,7 @@ d('POST /findings/:id/eval-case (Testcontainers pg)', () => {
     await app.close();
   });
 
-  it('S-7: a second request answers 409 with the existing case id and creates no second case', async () => {
+  it('S-7 / AC-31: a second request (same finding, default agent target) answers 409 with the existing case id and creates no second case', async () => {
     const app = await makeApp(pg);
     const agent = await makeAgent(app);
     const { finding } = await insertFindingFixture(pg.handle.db, ws, { agentId: agent.id, decision: 'accepted' });
@@ -240,10 +240,16 @@ d('POST /findings/:id/eval-case (Testcontainers pg)', () => {
     const findings = res.json().flatMap((r: { findings: { id: string; eval_case_id: string | null }[] }) => r.findings);
     expect(findings.find((f: { id: string }) => f.id === withCase.finding.id).eval_case_id).toBe(created.id);
     expect(findings.find((f: { id: string }) => f.id === other!.id).eval_case_id).toBeNull();
+    // SPEC-08 AC-12: per-target list (agent target here); empty when no case.
+    expect(findings.find((f: { id: string }) => f.id === withCase.finding.id).eval_cases).toEqual([
+      { case_id: created.id, target_kind: 'agent', target_id: agent.id },
+    ]);
+    expect(findings.find((f: { id: string }) => f.id === other!.id).eval_cases).toEqual([]);
 
     // accept/dismiss responses carry it too.
     const act = await app.inject({ method: 'POST', url: `/findings/${withCase.finding.id}/accept` });
     expect(act.json().finding.eval_case_id).toBe(created.id);
+    expect(act.json().finding.eval_cases).toEqual([{ case_id: created.id, target_kind: 'agent', target_id: agent.id }]);
     await app.close();
   });
 });

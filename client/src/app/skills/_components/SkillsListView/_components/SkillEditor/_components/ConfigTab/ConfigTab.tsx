@@ -8,18 +8,34 @@ import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { useRepos } from "@/lib/hooks";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/slug";
-import { SKILL_TYPES } from "@/app/skills/_components/SkillsListView/constants";
-import { isScanBlocking } from "@/app/skills/_components/SkillsListView/scan";
+import { SKILL_TYPES } from "@/lib/skill-constants";
+import { isScanBlocking } from "@/lib/skill-scan";
 import { s } from "./styles";
 
 /** Config tab — name/description/type/body + enabled toggle. Save bumps the
  *  skill's version when the body changed (server-side rule); Delete removes
- *  the skill entirely. */
+ *  the skill entirely.
+ *
+ *  `body` is CONTROLLED by the Skill Editor (not local state) so the unsaved
+ *  text survives tab switches and the header's "Run on evals" can run it as a
+ *  draft; `onSaved` lets the editor drop the draft once it's persisted. */
 /** Sentinel for "global" in the project-scope Select — `Select` only carries
  *  string values, and `Skill.repo_id`'s real "global" value is `null`. */
 const GLOBAL_SCOPE = "__global__";
 
-export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () => void }) {
+export function ConfigTab({
+  skill,
+  body,
+  onBodyChange,
+  onSaved,
+  onDeleted,
+}: {
+  skill: Skill;
+  body: string;
+  onBodyChange: (body: string) => void;
+  onSaved?: () => void;
+  onDeleted: () => void;
+}) {
   const t = useTranslations("skills");
   const toast = useToast();
   const update = useUpdateSkill();
@@ -29,13 +45,11 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
   const [name, setName] = React.useState(skill.name);
   const [description, setDescription] = React.useState(skill.description);
   const [type, setType] = React.useState<SkillType>(skill.type);
-  const [body, setBody] = React.useState(skill.body);
 
   React.useEffect(() => {
     setName(skill.name);
     setDescription(skill.description);
     setType(skill.type);
-    setBody(skill.body);
   }, [skill.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const typeOptions = SKILL_TYPES.map((v) => ({ value: v, label: t(`listItem.type.${v}`) }));
@@ -43,7 +57,12 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
   const save = () =>
     update.mutate(
       { id: skill.id, patch: { name, description, type, body } },
-      { onSuccess: (data) => toast.success(t("preview.version", { version: data.version })) },
+      {
+        onSuccess: (data) => {
+          toast.success(t("preview.version", { version: data.version }));
+          onSaved?.();
+        },
+      },
     );
 
   const blocked = isScanBlocking(skill.scan_status, skill.scan_findings);
@@ -111,7 +130,7 @@ export function ConfigTab({ skill, onDeleted }: { skill: Skill; onDeleted: () =>
       <FormField label={t("preview.bodyLabel")} hint={t("preview.bodyHint")}>
         <CodeField
           value={body}
-          onChange={setBody}
+          onChange={onBodyChange}
           filename={`${slugify(name) || "skill"}.md`}
           dirty={body !== skill.body}
         />

@@ -7,6 +7,7 @@ Client side: [`../../client/specs/agent-evals.md`](../../client/specs/agent-eval
 Design references: `docs/design/evals/01..06-*.png`, `docs/design/evals/proto-evals-tab.png`.
 
 ## Changelog
+- 2026-10-06 — AC-7 and AC-12 amended: "Turn into eval case" can now target a skill linked to the finding's agent ([`skill-evals.md`](./skill-evals.md), SPEC-08), so the duplicate check and the finding's case link are per (finding, target). Skill-owned runs move to versioned background suite runs under SPEC-08, replacing the synchronous skill batch noted as "kept" below.
 - 2026-10-06 — Resolved all open questions: Learn split out to a future spec (decisions recorded in Non-goals); Reply persists the comment URL/time and refuses a second reply (409); Promote refuses with 409 when a snapshot skill was deleted and links current skill text otherwise; suite runs left `running` by a restart are marked `failed` ("interrupted") on boot. ACs renumbered.
 - 2026-10-06 — Evolved into a versioned regression harness: cases seeded from accepted/dismissed findings (`must_find` / `must_not_flag`, `manual`), a new suite-run entity (one row per agent run, tied to an `agent_versions` snapshot) with background execution, pooled scoring on file + line overlap only (severity no longer matched), per-agent and cross-agent dashboards, run compare, Promote vN, skill link changes bumping the agent version, plus the FindingCard Reply-to-author action (Learn was in this entry's scope, later split out — see the newer entry above). Status moved back to `draft`. Already built before this change and kept: case CRUD, single-case run (`POST /eval-cases/:id/run`), per-case `eval_runs` rows, `scoreEvalCase`, citation accuracy from the grounding gate, `agent_versions` snapshots on agent config edits, skill-owned case runs.
 - 2026-10-06 — Prior content (pre-changelog): single-case vs. workspace batch run, greedy file + severity + line-overlap scoring, `pass = recall === 1 && precision === 1`, agent-only runnability (later extended to skill-owned cases).
@@ -48,12 +49,12 @@ Non-goals
 - AC-4: WHEN a case is created from a finding, the system shall set the owner to the agent whose review produced the finding. (verify via: integration test)
 - AC-5: IF the finding's review has no agent, THEN the system shall reject the request with a 400 error and create no case. (verify via: integration test)
 - AC-6: IF the finding is neither accepted nor dismissed, THEN the system shall reject the request with a 400 error and create no case. (verify via: integration test)
-- AC-7: IF a case already exists for the same source finding, THEN the system shall respond 409 with the existing case's id and create no new case. (verify via: integration test)
+- AC-7: IF a case already exists for the same source finding and the same target (agent, or a skill per SPEC-08), THEN the system shall respond 409 with the existing case's id and create no new case. (verify via: integration test)
 - AC-8: WHEN a case is created from a finding, the system shall default its name to the kebab-case form of the finding title. (verify via: unit test)
 - AC-9: WHEN a finding has no line range (full-file kinds such as `secret_leak`/`hook`), the system shall treat its location as the whole file and freeze all of that file's hunks. (verify via: unit test)
 - AC-10: WHEN the source finding, its review, or its PR is deleted, the system shall keep the case and its frozen inputs and clear only its link to the finding. (verify via: integration test)
 - AC-11: WHEN a case is created through the generic create endpoint (not from a finding), the system shall record source `manual` and accept a kind of `must_find` or `must_not_flag`. (verify via: integration test)
-- AC-12: WHEN listing a finding's data for the PR review screen, the system shall include the id of the eval case created from it, or null. (verify via: integration test)
+- AC-12: WHEN listing a finding's data for the PR review screen, the system shall include every eval case created from it with its target kind, target id, and case id (empty when none). (verify via: integration test)
 
 ### Agent versioning
 - AC-13: WHEN an agent's linked skills are linked, unlinked, or reordered, the system shall bump the agent's version and store a new `agent_versions` snapshot. (verify via: integration test)
@@ -137,7 +138,7 @@ Non-goals
 - Reply bodies are user-edited and posted verbatim to GitHub; the server performs no templating on them.
 
 ## Module interactions / API contracts
-- `POST /findings/:id/eval-case` → 201 `EvalCase` | 400 (undecided / agentless) | 409 `{ case_id }`.
+- `POST /findings/:id/eval-case` → 201 `EvalCase` | 400 (undecided / agentless) | 409 `{ case_id }` (per finding + target; optional `target` body per SPEC-08).
 - `POST /agents/:id/eval-runs` → 202 `{ run_id, status: 'running', cases_total }` | 400 (no cases) | 409 (already running).
 - `GET /agents/:id/eval-runs?range=7d|30d|90d|all` → suite runs + alert.
 - `GET /eval-suite-runs/:id` → status, progress, per-case results (incl. `errored`).
@@ -147,7 +148,7 @@ Non-goals
 - `GET /eval-dashboard` → per-agent latest-run summaries + recent suite runs across agents.
 - `POST /findings/:id/reply` (body `{ reply }`) → created comment | 400 | 409 — existing `FindingActionKind` value `reply`, now implemented (`learn` stays unimplemented, see Non-goals). Reply reuses the GitHub adapter's `createReviewComment` path already used by `POST /pulls/:id/comments`.
 - `reviewer-core`: `scoreEvalCase` changes to file + line-overlap matching with `must_find` / `must_not_flag` semantics; still pure, no I/O.
-- reviews module: finding data gains the linked eval case id and the posted reply URL/time.
+- reviews module: finding data gains the linked eval cases (per target) and the posted reply URL/time.
 
 ## Open questions
 None — all resolved 2026-10-06.

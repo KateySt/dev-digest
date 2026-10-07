@@ -13,19 +13,29 @@ import type {
   EvalCaseRun,
   EvalSuiteRun,
   FindingRecord,
+  Skill,
+  SkillEvalRuns,
+  SkillEvalSuiteRun,
+  SkillEvalSuiteRunDetail,
 } from "@devdigest/shared";
 import evalMessages from "../../messages/en/eval.json";
 import evalAgentMessages from "../../messages/en/evalAgent.json";
 import evalDashboardMessages from "../../messages/en/evalDashboard.json";
 import evalMetricsMessages from "../../messages/en/evalMetrics.json";
+import evalSkillMessages from "../../messages/en/evalSkill.json";
 import prReviewMessages from "../../messages/en/prReview.json";
+import shellMessages from "../../messages/en/shell.json";
+import skillsMessages from "../../messages/en/skills.json";
 
 export const ALL_MESSAGES = {
   eval: evalMessages,
   evalAgent: evalAgentMessages,
   evalDashboard: evalDashboardMessages,
   evalMetrics: evalMetricsMessages,
+  evalSkill: evalSkillMessages,
   prReview: prReviewMessages,
+  shell: shellMessages,
+  skills: skillsMessages,
 };
 
 // ---- fetch router ----------------------------------------------------------
@@ -234,6 +244,73 @@ export function finding(over: Partial<FindingRecord> = {}): FindingRecord {
     review_id: "r1",
     accepted_at: null,
     dismissed_at: null,
+    ...over,
+  };
+}
+
+// ---- skill fixtures (SPEC-08) -------------------------------------------------
+
+/** A finished (by default) non-draft skill suite run. */
+export function skillRun(over: Partial<SkillEvalSuiteRun> = {}): SkillEvalSuiteRun {
+  return {
+    id: "srun-1",
+    owner_kind: "skill",
+    skill_id: "sk1",
+    skill_version: 1,
+    is_draft: false,
+    provider: "openai",
+    model: "gpt-4.1",
+    status: "completed",
+    failure_reason: null,
+    started_at: "2026-06-01T09:14:00.000Z",
+    finished_at: "2026-06-01T09:15:00.000Z",
+    cases_total: 3,
+    cases_done: 3,
+    recall: 0.8,
+    precision: 0.8,
+    citation_accuracy: 0.9,
+    passed_count: 2,
+    evaluated_count: 3,
+    errored_count: 0,
+    duration_ms: 60000,
+    cost_usd: 0.1,
+    ...over,
+  };
+}
+
+/** A skill run with per-case results (`GET /eval-suite-runs/:id` / `latest_draft`). */
+export function skillRunDetail(
+  over: Partial<SkillEvalSuiteRunDetail> = {},
+): SkillEvalSuiteRunDetail {
+  return { ...skillRun(), results: [], ...over };
+}
+
+/** `GET /skills/:id/eval-runs` payload; `runs` default to the newest-first view of `history`. */
+export function skillEvalRuns(over: Partial<SkillEvalRuns> = {}): SkillEvalRuns {
+  const history = over.history ?? [];
+  return {
+    runs: [...history].reverse(),
+    history,
+    alert: null,
+    cases_total: 3,
+    latest_draft: null,
+    ...over,
+  };
+}
+
+export function skill(over: Partial<Skill> = {}): Skill {
+  return {
+    id: "sk1",
+    name: "pr-quality-rubric",
+    description: "Rubric for evaluating overall PR quality.",
+    type: "rubric",
+    source: "manual",
+    body: "# PR quality rubric\nPrefer small, single-purpose PRs.",
+    enabled: true,
+    version: 2,
+    scan_status: "clean",
+    scan_findings: null,
+    scanned_at: "2026-01-01T00:00:00Z",
     ...over,
   };
 }

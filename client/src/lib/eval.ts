@@ -7,6 +7,8 @@ import type {
   EvalCaseListItem,
   EvalRange,
   EvalSuiteRun,
+  PrFile,
+  SkillEvalSuiteRun,
 } from "@devdigest/shared";
 
 // ---- metrics ---------------------------------------------------------------
@@ -76,12 +78,24 @@ export function formatCostDelta(delta: number): string {
 
 // ---- runs ------------------------------------------------------------------
 
-/** Order two suite runs old → new by agent version (ties: started_at). */
-export function orderRunsOldNew<T extends Pick<EvalSuiteRun, "agent_version" | "started_at">>(
-  a: T,
-  b: T,
-): [T, T] {
-  if (a.agent_version !== b.agent_version) return a.agent_version < b.agent_version ? [a, b] : [b, a];
+/** Any suite run, agent- or skill-owned (the two differ only in their version field). */
+export type AnySuiteRun = EvalSuiteRun | SkillEvalSuiteRun;
+
+/** The minimum a run needs to be ordered: when it started + its config version. */
+export type VersionedRun = { started_at: string } & ({ agent_version: number } | { skill_version: number | null });
+
+/** The config version a run executed against: the agent version for an agent
+ *  run, the skill version for a skill run (null for a skill draft run). */
+export function runVersion(run: VersionedRun): number | null {
+  return "skill_version" in run ? run.skill_version : run.agent_version;
+}
+
+/** Order two suite runs old → new by version (ties: started_at). Works for
+ *  agent and skill runs alike. */
+export function orderRunsOldNew<T extends VersionedRun>(a: T, b: T): [T, T] {
+  const va = runVersion(a) ?? 0;
+  const vb = runVersion(b) ?? 0;
+  if (va !== vb) return va < vb ? [a, b] : [b, a];
   return a.started_at <= b.started_at ? [a, b] : [b, a];
 }
 
@@ -234,4 +248,140 @@ export function collapseDiff(lines: readonly DiffLine[], context = 3): DiffChunk
   });
   if (skipped > 0) out.push({ kind: "skip", count: skipped });
   return out;
+}
+
+// ---- unified diff parsing (Case Editor preview + location checks) -----------
+
+export interface LineRange {
+  start: number;
+  end: number;
+}
+
+/** One file of a pasted unified diff: a `PrFile`-shaped record the DiffViewer
+ *  can render, plus the new-side line ranges its hunks cover. */
+export interface ParsedDiffFile extends PrFile {
+  /** New-side line ranges covered by the file's hunks (context included). */
+  ranges: LineRange[];
+}
+
+/** `@@ -a[,b] +c[,d] @@` → groups: 1 old start, 2 old length, 3 new start, 4 new length. */
+const HUNK_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+function stripPrefix(p: string): string {
+  const path = p.replace(/\t.*$/, "").trim();
+  return path.replace(/^"|"$/g, "").replace(/^[ab]\//, "");
+}
+
+/** Mutable accumulator for the file currently being parsed. */
+interface FileDraft {
+  path: string | null;
+  patch: string[];
+  additions: number;
+  deletions: number;
+  ranges: LineRange[];
+}
+
+/**
+ * Parse pasted unified-diff text into per-file records. Tolerant by design —
+ * the user is typing/pasting in a textarea: lines before the first hunk are
+ * header noise, a file without `+++`/`---`/`diff --git` headers is skipped
+ * (no path to attach hunks to), and malformed hunk headers are ignored.
+ * Pure: never throws, returns [] for empty input.
+ */
+export function parseUnifiedDiff(raw: string | null | undefined): ParsedDiffFile[] {
+  if (!raw || !raw.trim()) return [];
+  const files: ParsedDiffFile[] = [];
+  let cur: FileDraft | null = null;
+  let pendingOld: string | null = null;
+  // Lines still owed by the current hunk's declared lengths; while > 0 every
+  // line belongs to the hunk, so a `--- a/x` deletion isn't read as a header.
+  let oldLeft = 0;
+  let newLeft = 0;
+
+  const flush = () => {
+    if (cur && cur.path && cur.patch.length > 0) {
+      files.push({
+        path: cur.path,
+        additions: cur.additions,
+        deletions: cur.deletions,
+        patch: cur.patch.join("\n"),
+        ranges: cur.ranges,
+      });
+    }
+    cur = null;
+  };
+  const begin = (path: string | null): FileDraft => {
+    flush();
+    oldLeft = 0;
+    newLeft = 0;
+    const d: FileDraft = { path, patch: [], additions: 0, deletions: 0, ranges: [] };
+    cur = d;
+    return d;
+  };
+
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const file = cur as FileDraft | null;
+    // A new file/hunk header always ends the current hunk, even when a
+    // hand-written hunk header's counts overshoot the lines actually present.
+    // A `--- ` immediately followed by `+++ ` is a file header, not a deleted line.
+    const fileHeader = line.startsWith("--- ") && (lines[i + 1] ?? "").startsWith("+++ ");
+    if (line.startsWith("diff --git ") || line.startsWith("@@") || fileHeader) {
+      oldLeft = 0;
+      newLeft = 0;
+    }
+    if (file && (oldLeft > 0 || newLeft > 0)) {
+      if (line.startsWith("+")) {
+        file.additions++;
+        newLeft--;
+      } else if (line.startsWith("-")) {
+        file.deletions++;
+        oldLeft--;
+      } else if (!line.startsWith("\\")) {
+        oldLeft--;
+        newLeft--;
+      }
+      file.patch.push(line);
+      continue;
+    }
+
+    if (line.startsWith("diff --git ")) {
+      const m = line.match(/ b\/(.+)$/);
+      begin(m ? stripPrefix("b/" + m[1]) : null);
+      pendingOld = null;
+    } else if (line.startsWith("--- ")) {
+      pendingOld = stripPrefix(line.slice(4));
+      if (!file || file.patch.length > 0) begin(null);
+    } else if (line.startsWith("+++ ")) {
+      const next = stripPrefix(line.slice(4));
+      const path = next === "/dev/null" ? pendingOld : next;
+      if (!file || file.patch.length > 0) begin(path);
+      else file.path = path;
+    } else if (line.startsWith("@@")) {
+      const m = line.match(HUNK_RE);
+      if (!file || !m) continue;
+      const start = parseInt(m[3]!, 10);
+      const newLen = m[4] === undefined ? 1 : parseInt(m[4], 10);
+      oldLeft = m[2] === undefined ? 1 : parseInt(m[2], 10);
+      newLeft = newLen;
+      if (newLen > 0) file.ranges.push({ start, end: start + newLen - 1 });
+      file.patch.push(line);
+    }
+  }
+  flush();
+  return files;
+}
+
+/** True when `file:start–end` lies inside a hunk of the parsed diff. */
+export function locationInDiff(
+  files: readonly ParsedDiffFile[],
+  file: string,
+  start: number,
+  end: number,
+): { fileFound: boolean; linesFound: boolean } {
+  const f = files.find((x) => x.path === file);
+  if (!f) return { fileFound: false, linesFound: false };
+  const linesFound = f.ranges.some((r) => start <= r.end && end >= r.start);
+  return { fileFound: true, linesFound };
 }

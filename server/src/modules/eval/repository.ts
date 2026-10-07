@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import type { Db } from '../../db/client.js';
+import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
+import type { Db, DbExecutor } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type {
   EvalCaseRow,
@@ -82,6 +82,12 @@ export interface SuiteRunWithAgent {
   agentName: string;
 }
 
+/** A skill suite run joined with its skill's name (cross-skill dashboard). */
+export interface SuiteRunWithSkill {
+  run: EvalSuiteRunRow;
+  skillName: string;
+}
+
 /** A per-case result of a suite run joined with the case name. */
 export interface SuiteCaseResult {
   run: EvalRunRow;
@@ -131,14 +137,54 @@ export class EvalRepository {
     return row;
   }
 
-  async getCaseBySourceFinding(workspaceId: string, findingId: string): Promise<EvalCaseRow | undefined> {
+  /** Case counts per skill owner (skills with no cases are absent). */
+  async caseCountsBySkill(workspaceId: string): Promise<Map<string, number>> {
+    const rows = await this.db
+      .select({ ownerId: t.evalCases.ownerId, n: sql<number>`count(*)::int` })
+      .from(t.evalCases)
+      .where(and(eq(t.evalCases.workspaceId, workspaceId), eq(t.evalCases.ownerKind, 'skill')))
+      .groupBy(t.evalCases.ownerId);
+    return new Map(rows.map((r) => [r.ownerId, r.n]));
+  }
+
+  /** The case seeded from `findingId` for one target (a finding can seed one case per target). */
+  async getCaseBySourceFinding(
+    workspaceId: string,
+    findingId: string,
+    ownerKind: 'skill' | 'agent',
+    ownerId: string,
+  ): Promise<EvalCaseRow | undefined> {
     const [row] = await this.db
       .select()
       .from(t.evalCases)
       .where(
-        and(eq(t.evalCases.workspaceId, workspaceId), eq(t.evalCases.sourceFindingId, findingId)),
+        and(
+          eq(t.evalCases.workspaceId, workspaceId),
+          eq(t.evalCases.sourceFindingId, findingId),
+          eq(t.evalCases.ownerKind, ownerKind),
+          eq(t.evalCases.ownerId, ownerId),
+        ),
       );
     return row;
+  }
+
+  /** Every case seeded from the given findings (any target), oldest first. */
+  async casesForFindings(
+    workspaceId: string,
+    findingIds: string[],
+  ): Promise<{ findingId: string; caseId: string; ownerKind: 'skill' | 'agent'; ownerId: string }[]> {
+    if (findingIds.length === 0) return [];
+    const rows = await this.db
+      .select({
+        findingId: t.evalCases.sourceFindingId,
+        caseId: t.evalCases.id,
+        ownerKind: t.evalCases.ownerKind,
+        ownerId: t.evalCases.ownerId,
+      })
+      .from(t.evalCases)
+      .where(and(eq(t.evalCases.workspaceId, workspaceId), inArray(t.evalCases.sourceFindingId, findingIds)))
+      .orderBy(asc(t.evalCases.createdAt));
+    return rows.map((r) => ({ ...r, findingId: r.findingId! }));
   }
 
   async insertCase(values: InsertEvalCase): Promise<EvalCaseRow> {
@@ -176,6 +222,25 @@ export class EvalRepository {
       .where(and(eq(t.evalCases.workspaceId, workspaceId), eq(t.evalCases.id, id)))
       .returning();
     return row;
+  }
+
+  /** Delete every case an owner (skill/agent) has - `eval_cases.owner_id` has no FK, so owner
+   *  deletion calls this (pass the owner delete's `tx` as `executor`). Results cascade via FK. */
+  async deleteCasesForOwner(
+    workspaceId: string,
+    ownerKind: 'skill' | 'agent',
+    ownerId: string,
+    executor: DbExecutor = this.db,
+  ): Promise<void> {
+    await executor
+      .delete(t.evalCases)
+      .where(
+        and(
+          eq(t.evalCases.workspaceId, workspaceId),
+          eq(t.evalCases.ownerKind, ownerKind),
+          eq(t.evalCases.ownerId, ownerId),
+        ),
+      );
   }
 
   async deleteCase(workspaceId: string, id: string): Promise<boolean> {
@@ -235,18 +300,25 @@ export class EvalRepository {
     return row!;
   }
 
-  /** Most recent run per case (any run, suite or single), batched. Cases with
-   *  no runs have no entry in the returned map. */
+  /** Most recent run per case (any run, suite or single), batched. Results that
+   *  belong to a skill DRAFT run are excluded (SPEC-08 AC-17); single-case results
+   *  (no suite link) still count. Cases with no runs have no entry in the map. */
   async latestRunsForCases(caseIds: string[]): Promise<Map<string, EvalRunRow>> {
     if (caseIds.length === 0) return new Map();
     const rows = await this.db
-      .select()
+      .select({ run: t.evalRuns })
       .from(t.evalRuns)
-      .where(inArray(t.evalRuns.caseId, caseIds))
+      .leftJoin(t.evalSuiteRuns, eq(t.evalSuiteRuns.id, t.evalRuns.suiteRunId))
+      .where(
+        and(
+          inArray(t.evalRuns.caseId, caseIds),
+          or(isNull(t.evalRuns.suiteRunId), eq(t.evalSuiteRuns.isDraft, false)),
+        ),
+      )
       .orderBy(desc(t.evalRuns.ranAt));
     const latest = new Map<string, EvalRunRow>();
-    for (const row of rows) {
-      if (!latest.has(row.caseId)) latest.set(row.caseId, row);
+    for (const { run } of rows) {
+      if (!latest.has(run.caseId)) latest.set(run.caseId, run);
     }
     return latest;
   }
@@ -339,7 +411,13 @@ export class EvalRepository {
     const [row] = await this.db
       .select()
       .from(t.evalSuiteRuns)
-      .where(and(eq(t.evalSuiteRuns.agentId, agentId), eq(t.evalSuiteRuns.status, 'running')));
+      .where(
+        and(
+          eq(t.evalSuiteRuns.ownerKind, 'agent'),
+          eq(t.evalSuiteRuns.agentId, agentId),
+          eq(t.evalSuiteRuns.status, 'running'),
+        ),
+      );
     return row;
   }
 
@@ -348,8 +426,14 @@ export class EvalRepository {
     const rows = await this.db
       .select()
       .from(t.evalSuiteRuns)
-      .where(and(eq(t.evalSuiteRuns.workspaceId, workspaceId), eq(t.evalSuiteRuns.status, 'running')));
-    return new Map(rows.map((r) => [r.agentId, r]));
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'agent'),
+          eq(t.evalSuiteRuns.status, 'running'),
+        ),
+      );
+    return new Map(rows.map((r) => [r.agentId!, r]));
   }
 
   /** Boot reaper: every suite run still `running` belongs to a dead process. */
@@ -369,6 +453,7 @@ export class EvalRepository {
       .from(t.evalSuiteRuns)
       .where(
         and(
+          eq(t.evalSuiteRuns.ownerKind, 'agent'),
           eq(t.evalSuiteRuns.agentId, agentId),
           ...(since ? [gte(t.evalSuiteRuns.startedAt, since)] : []),
         ),
@@ -384,6 +469,7 @@ export class EvalRepository {
       .where(
         and(
           eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'agent'),
           eq(t.evalSuiteRuns.agentId, agentId),
           eq(t.evalSuiteRuns.status, 'completed'),
         ),
@@ -397,7 +483,13 @@ export class EvalRepository {
     return this.db
       .select()
       .from(t.evalSuiteRuns)
-      .where(and(eq(t.evalSuiteRuns.workspaceId, workspaceId), eq(t.evalSuiteRuns.status, 'completed')))
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'agent'),
+          eq(t.evalSuiteRuns.status, 'completed'),
+        ),
+      )
       .orderBy(desc(t.evalSuiteRuns.startedAt))
       .limit(limit);
   }
@@ -408,9 +500,175 @@ export class EvalRepository {
       .select({ run: t.evalSuiteRuns, agentName: t.agents.name })
       .from(t.evalSuiteRuns)
       .innerJoin(t.agents, eq(t.agents.id, t.evalSuiteRuns.agentId))
-      .where(eq(t.evalSuiteRuns.workspaceId, workspaceId))
+      .where(and(eq(t.evalSuiteRuns.workspaceId, workspaceId), eq(t.evalSuiteRuns.ownerKind, 'agent')))
       .orderBy(desc(t.evalSuiteRuns.startedAt))
       .limit(limit);
     return rows;
   }
+
+  // ---- skill suite runs (SPEC-08) ------------------------------------------
+
+  /** Insert a `running` skill run (suite when `skillVersion` is set, draft when null).
+   *  A unique violation means another run of the skill is already running. */
+  async insertSkillSuiteRun(values: SkillSuiteRunInput): Promise<EvalSuiteRunRow> {
+    const [row] = await this.db.insert(t.evalSuiteRuns).values(skillRunValues(values)).returning();
+    return row!;
+  }
+
+  /** Draft start in ONE transaction: drop the skill's previous (non-running) draft
+   *  run - its per-case results cascade - then insert the new one (AC-16). A still
+   *  `running` draft is kept, so the insert hits the one-running index (409). */
+  async replaceSkillDraftRun(values: SkillSuiteRunInput): Promise<EvalSuiteRunRow> {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(t.evalSuiteRuns)
+        .where(
+          and(
+            eq(t.evalSuiteRuns.workspaceId, values.workspaceId),
+            eq(t.evalSuiteRuns.skillId, values.skillId),
+            eq(t.evalSuiteRuns.isDraft, true),
+            sql`${t.evalSuiteRuns.status} <> 'running'`,
+          ),
+        );
+      const [row] = await tx.insert(t.evalSuiteRuns).values(skillRunValues(values)).returning();
+      return row!;
+    });
+  }
+
+  /** True while the suite-run row exists (a skill delete cascades it away mid-run). */
+  async suiteRunExists(id: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: t.evalSuiteRuns.id })
+      .from(t.evalSuiteRuns)
+      .where(eq(t.evalSuiteRuns.id, id));
+    return row != null;
+  }
+
+  /** A skill's NON-draft runs started at/after `since` (all when null), newest first. */
+  async listSkillSuiteRuns(workspaceId: string, skillId: string, since: Date | null): Promise<EvalSuiteRunRow[]> {
+    return this.db
+      .select()
+      .from(t.evalSuiteRuns)
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'skill'),
+          eq(t.evalSuiteRuns.skillId, skillId),
+          eq(t.evalSuiteRuns.isDraft, false),
+          ...(since ? [gte(t.evalSuiteRuns.startedAt, since)] : []),
+        ),
+      )
+      .orderBy(desc(t.evalSuiteRuns.startedAt));
+  }
+
+  /** A skill's most recent COMPLETED non-draft runs (newest first). */
+  async latestCompletedSkillSuiteRuns(
+    workspaceId: string,
+    skillId: string,
+    limit: number,
+  ): Promise<EvalSuiteRunRow[]> {
+    return this.db
+      .select()
+      .from(t.evalSuiteRuns)
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'skill'),
+          eq(t.evalSuiteRuns.skillId, skillId),
+          eq(t.evalSuiteRuns.isDraft, false),
+          eq(t.evalSuiteRuns.status, 'completed'),
+        ),
+      )
+      .orderBy(desc(t.evalSuiteRuns.startedAt))
+      .limit(limit);
+  }
+
+  /** The skill's (single) draft run, any status. */
+  async latestSkillDraftRun(workspaceId: string, skillId: string): Promise<EvalSuiteRunRow | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(t.evalSuiteRuns)
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.skillId, skillId),
+          eq(t.evalSuiteRuns.isDraft, true),
+        ),
+      )
+      .orderBy(desc(t.evalSuiteRuns.startedAt))
+      .limit(1);
+    return row;
+  }
+
+  /** Every `running` skill run (suite AND draft) in the workspace. */
+  async runningSkillRuns(workspaceId: string): Promise<EvalSuiteRunRow[]> {
+    return this.db
+      .select()
+      .from(t.evalSuiteRuns)
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'skill'),
+          eq(t.evalSuiteRuns.status, 'running'),
+        ),
+      );
+  }
+
+  /** Completed non-draft skill runs across the workspace, newest first. */
+  async completedSkillRunsForWorkspace(workspaceId: string, limit: number): Promise<EvalSuiteRunRow[]> {
+    return this.db
+      .select()
+      .from(t.evalSuiteRuns)
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'skill'),
+          eq(t.evalSuiteRuns.isDraft, false),
+          eq(t.evalSuiteRuns.status, 'completed'),
+        ),
+      )
+      .orderBy(desc(t.evalSuiteRuns.startedAt))
+      .limit(limit);
+  }
+
+  /** Most recent non-draft skill runs (any status) across the workspace's skills. */
+  async recentSkillRunsForWorkspace(workspaceId: string, limit: number): Promise<SuiteRunWithSkill[]> {
+    return this.db
+      .select({ run: t.evalSuiteRuns, skillName: t.skills.name })
+      .from(t.evalSuiteRuns)
+      .innerJoin(t.skills, eq(t.skills.id, t.evalSuiteRuns.skillId))
+      .where(
+        and(
+          eq(t.evalSuiteRuns.workspaceId, workspaceId),
+          eq(t.evalSuiteRuns.ownerKind, 'skill'),
+          eq(t.evalSuiteRuns.isDraft, false),
+        ),
+      )
+      .orderBy(desc(t.evalSuiteRuns.startedAt))
+      .limit(limit);
+  }
+}
+
+export interface SkillSuiteRunInput {
+  workspaceId: string;
+  skillId: string;
+  /** Null for a draft run. */
+  skillVersion: number | null;
+  provider: string;
+  model: string;
+  casesTotal: number;
+}
+
+function skillRunValues(v: SkillSuiteRunInput) {
+  return {
+    workspaceId: v.workspaceId,
+    ownerKind: 'skill' as const,
+    skillId: v.skillId,
+    skillVersion: v.skillVersion,
+    isDraft: v.skillVersion == null,
+    provider: v.provider,
+    model: v.model,
+    status: 'running' as const,
+    casesTotal: v.casesTotal,
+  };
 }

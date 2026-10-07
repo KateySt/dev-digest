@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { EvalSuiteRun } from '@devdigest/shared';
+import type { EvalSuiteRun, SkillEvalSuiteRun } from '@devdigest/shared';
 import {
-  aggregateLatestRuns,
   asCaseKind,
   buildRegressionAlert,
   compareCaseFlags,
@@ -13,9 +12,11 @@ import {
   isUniqueViolation,
   kebabName,
   metricDeltas,
+  orderRunsForCompare,
   parseLocations,
   pointDelta,
   rangeStart,
+  summarizeSuiteRun,
   toEvalCaseDto,
   toEvalCaseListItem,
   toEvalCaseRunDto,
@@ -72,6 +73,7 @@ function runRow(overrides: Partial<EvalRunRow> = {}): EvalRunRow {
 function suite(overrides: Partial<EvalSuiteRun> = {}): EvalSuiteRun {
   return {
     id: 's1',
+    owner_kind: 'agent',
     agent_id: 'ag1',
     agent_version: 1,
     status: 'completed',
@@ -364,7 +366,7 @@ describe('compareCaseFlags (S-42, S-43)', () => {
   });
 });
 
-describe('rangeStart / isUniqueViolation / findingDecision / aggregateLatestRuns', () => {
+describe('rangeStart / isUniqueViolation / findingDecision', () => {
   it('rangeStart returns null for all, else now minus N days', () => {
     const now = new Date('2026-06-30T00:00:00Z');
     expect(rangeStart('all', now)).toBeNull();
@@ -388,19 +390,128 @@ describe('rangeStart / isUniqueViolation / findingDecision / aggregateLatestRuns
     expect(findingDecision({ acceptedAt: t, dismissedAt: later })).toBe('dismissed');
   });
 
-  it('aggregateLatestRuns averages over provided runs, excluding never-run cases', () => {
-    const agg = aggregateLatestRuns([
-      runRow({ recall: 1, precision: 0.5, citationAccuracy: 1 }),
-      runRow({ recall: 0.5, precision: 1, citationAccuracy: 0.5 }),
-      undefined,
-    ]);
-    expect(agg.cases_evaluated).toBe(2);
-    expect(agg.recall).toBeCloseTo(0.75, 10);
-    expect(aggregateLatestRuns([undefined])).toEqual({
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-08 skill evals (pure helpers)
+// ---------------------------------------------------------------------------
+
+function skillSuite(overrides: Partial<SkillEvalSuiteRun> = {}): SkillEvalSuiteRun {
+  const { agent_id: _a, agent_version: _v, owner_kind: _o, ...base } = suite();
+  return {
+    ...base,
+    owner_kind: 'skill',
+    skill_id: 'sk1',
+    skill_version: 1,
+    is_draft: false,
+    provider: 'openrouter',
+    model: 'm1',
+    ...overrides,
+  };
+}
+
+describe('buildRegressionAlert - agent parity (AC-22)', () => {
+  it('AC-22: agent alert is byte-identical to the pre-SPEC-08 shape (no model_changed key, no suffix)', () => {
+    const alert = buildRegressionAlert(
+      suite({ agent_version: 7, precision: 0.7, recall: 0.9, citation_accuracy: 0.9 }),
+      suite({ agent_version: 6, precision: 0.8, recall: 0.8, citation_accuracy: 0.9 }),
+    );
+    expect(Object.keys(alert!).sort()).toEqual(['drops', 'message', 'others', 'previous_version', 'version']);
+    expect(alert!.message).toBe('Precision dropped 10 points in v7 vs v6. Recall rose, Citation accuracy unchanged.');
+  });
+});
+
+describe('buildRegressionAlert - skill runs (AC-22, AC-23)', () => {
+  it('AC-22: skill alert uses the same template with skill versions and flags model_changed false', () => {
+    const alert = buildRegressionAlert(
+      skillSuite({ skill_version: 3, precision: 0.7, recall: 0.9, citation_accuracy: 0.9 }),
+      skillSuite({ skill_version: 2, precision: 0.8, recall: 0.8, citation_accuracy: 0.9 }),
+    );
+    expect(alert).toMatchObject({ version: 3, previous_version: 2, drops: [{ metric: 'precision', points: 10 }], model_changed: false });
+    expect(alert!.message).toBe('Precision dropped 10 points in v3 vs v2. Recall rose, Citation accuracy unchanged.');
+  });
+
+  it('AC-22: no alert when no skill metric dropped 1 point', () => {
+    expect(buildRegressionAlert(skillSuite({ skill_version: 2, precision: 0.795 }), skillSuite({ skill_version: 1 }))).toBeNull();
+  });
+
+  it('AC-23: a provider or model change appends "(model changed between runs)" and sets model_changed', () => {
+    for (const changed of [{ model: 'm2' }, { provider: 'openai' }]) {
+      const alert = buildRegressionAlert(
+        skillSuite({ skill_version: 2, precision: 0.7, ...changed }),
+        skillSuite({ skill_version: 1 }),
+      );
+      expect(alert!.model_changed).toBe(true);
+      expect(alert!.message.endsWith(' (model changed between runs)')).toBe(true);
+    }
+  });
+
+  it('AC-23: same provider+model leaves the message without a suffix', () => {
+    const alert = buildRegressionAlert(skillSuite({ skill_version: 2, precision: 0.7 }), skillSuite({ skill_version: 1 }));
+    expect(alert!.message).not.toContain('model changed');
+  });
+});
+
+describe('orderRunsForCompare (AC-25)', () => {
+  const at = (s: string) => new Date(s);
+  it('AC-25: the lower skill version is old regardless of argument order', () => {
+    const v1 = { id: 'a', skillVersion: 1, startedAt: at('2026-06-02') };
+    const v2 = { id: 'b', skillVersion: 2, startedAt: at('2026-06-01') };
+    expect(orderRunsForCompare(v1, v2).map((r) => r.id)).toEqual(['a', 'b']);
+    expect(orderRunsForCompare(v2, v1).map((r) => r.id)).toEqual(['a', 'b']);
+  });
+  it('AC-25: equal versions fall back to start time (earlier = old)', () => {
+    const early = { id: 'a', skillVersion: 2, startedAt: at('2026-06-01') };
+    const late = { id: 'b', skillVersion: 2, startedAt: at('2026-06-02') };
+    expect(orderRunsForCompare(late, early).map((r) => r.id)).toEqual(['a', 'b']);
+    expect(orderRunsForCompare(early, late).map((r) => r.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('summarizeSuiteRun (AC-10, AC-11)', () => {
+  const sc = (over: Partial<Parameters<typeof summarizeSuiteRun>[0][number]> = {}) => ({
+    expectedTotal: 1,
+    matched: 1,
+    groundedTotal: 1,
+    noise: 0,
+    pass: true,
+    kept: 1,
+    dropped: 0,
+    costUsd: 0.01 as number | null,
+    ...over,
+  });
+
+  it('AC-10/AC-11: completed with pooled metrics, counts and summed cost', () => {
+    const s = summarizeSuiteRun([sc(), sc({ matched: 0, noise: 1, pass: false, dropped: 1, costUsd: 0.02 })], 1);
+    expect(s).toMatchObject({ status: 'completed', passedCount: 1, evaluatedCount: 2, erroredCount: 1, failureReason: null });
+    expect(s.recall).toBeCloseTo(0.5, 10);
+    expect(s.precision).toBeCloseTo(0.5, 10);
+    expect(s.citationAccuracy).toBeCloseTo(2 / 3, 10);
+    expect(s.costUsd).toBeCloseTo(0.03, 10);
+  });
+
+  it('AC-10: failed with null metrics/cost when no case finished', () => {
+    expect(summarizeSuiteRun([], 3)).toMatchObject({
+      status: 'failed',
+      evaluatedCount: 0,
+      erroredCount: 3,
       recall: null,
       precision: null,
-      citation_accuracy: null,
-      cases_evaluated: 0,
+      citationAccuracy: null,
+      costUsd: null,
     });
+  });
+
+  it('AC-11: cost is null when any finished case cost is unknown', () => {
+    expect(summarizeSuiteRun([sc(), sc({ costUsd: null })], 0).costUsd).toBeNull();
+  });
+});
+
+describe('inputFingerprint reuse for skill runs (AC-12)', () => {
+  it('AC-12: skill-owned and agent-owned cases with equal frozen inputs hash equally (owner is not an input)', () => {
+    const a = caseRow({ ownerKind: 'agent' });
+    const b = caseRow({ ownerKind: 'skill', ownerId: 'sk1', id: 'case-2' });
+    expect(inputFingerprint(a)).toBe(inputFingerprint(b));
+    expect(inputFingerprint(caseRow({ inputDiff: 'other' }))).not.toBe(inputFingerprint(a));
   });
 });

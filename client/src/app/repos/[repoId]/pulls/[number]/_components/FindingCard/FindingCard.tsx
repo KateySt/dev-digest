@@ -19,7 +19,7 @@ import {
 } from "@devdigest/ui";
 import type { FindingRecord, FindingActionKind } from "@devdigest/shared";
 import { SEV_COLOR, SEV_COLOR_FALLBACK } from "./constants";
-import { lineLabel } from "./helpers";
+import { lineLabel, type LinkedSkill } from "./helpers";
 import { githubBlobUrl } from "@/lib/github-urls";
 import { EvalCaseAction } from "./EvalCaseAction";
 import { ReplyAction } from "./ReplyAction";
@@ -35,6 +35,7 @@ export function FindingCard({
   headSha,
   prId,
   agentId,
+  linkedSkills,
 }: {
   f: FindingRecord;
   focused?: boolean;
@@ -47,6 +48,8 @@ export function FindingCard({
   prId?: string | null;
   /** The review's agent; null/undefined disables "Turn into eval case". */
   agentId?: string | null;
+  /** Skills linked to the agent (extra "Turn into eval case" targets); `null` while loading. */
+  linkedSkills?: readonly LinkedSkill[] | null;
 }) {
   const t = useTranslations("prReview");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
@@ -125,7 +128,7 @@ export function FindingCard({
                 {t("finding.learnSoon")}
               </span>
             </span>
-            <EvalCaseAction f={f} agentId={agentId} />
+            <EvalCaseAction f={f} agentId={agentId} linkedSkills={linkedSkills} />
             <ReplyAction f={f} prId={prId} />
           </div>
         </div>

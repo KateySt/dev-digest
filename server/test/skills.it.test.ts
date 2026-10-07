@@ -5,6 +5,7 @@ import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
 import { MockLLMProvider, MockEmbedder, MockGitClient, MockCatalogSource } from '../src/adapters/mocks.js';
+import { eq } from 'drizzle-orm';
 import * as t from '../src/db/schema.js';
 import type { Review } from '@devdigest/shared';
 
@@ -114,6 +115,47 @@ d('A1 skills (Testcontainers pg)', () => {
     expect(del.statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: `/skills/${skill.id}` })).statusCode).toBe(404);
 
+    await app.close();
+  });
+
+  it('SPEC-08 AC-35: deleting a skill also removes its eval cases, their results and its suite/draft runs (other skills untouched)', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const db = pg.handle.db;
+    const [ws] = await db.select().from(t.workspaces);
+    const mk = async (name: string) =>
+      (await app.inject({ method: 'POST', url: '/skills', payload: { name, type: 'convention', body: `body of ${name}` } })).json();
+    const doomed = await mk('doomed-skill');
+    const keeper = await mk('keeper-skill');
+
+    const seedEval = async (skillId: string) => {
+      const [c] = await db
+        .insert(t.evalCases)
+        .values({ workspaceId: ws!.id, ownerKind: 'skill', ownerId: skillId, name: `case-${skillId}`, kind: 'must_find', source: 'manual' })
+        .returning();
+      const [suite] = await db
+        .insert(t.evalSuiteRuns)
+        .values({ workspaceId: ws!.id, ownerKind: 'skill', skillId, skillVersion: 1, status: 'completed', casesTotal: 1 })
+        .returning();
+      const [draft] = await db
+        .insert(t.evalSuiteRuns)
+        .values({ workspaceId: ws!.id, ownerKind: 'skill', skillId, skillVersion: null, isDraft: true, status: 'completed', casesTotal: 1 })
+        .returning();
+      await db.insert(t.evalRuns).values({ caseId: c!.id, suiteRunId: suite!.id, status: 'ok', pass: true });
+      await db.insert(t.evalRuns).values({ caseId: c!.id, suiteRunId: null, status: 'ok', pass: true });
+      return { caseId: c!.id, runIds: [suite!.id, draft!.id] };
+    };
+    const gone = await seedEval(doomed.id);
+    const kept = await seedEval(keeper.id);
+
+    expect((await app.inject({ method: 'DELETE', url: `/skills/${doomed.id}` })).statusCode).toBe(200);
+
+    expect(await db.select().from(t.evalCases).where(eq(t.evalCases.id, gone.caseId))).toHaveLength(0);
+    expect(await db.select().from(t.evalRuns).where(eq(t.evalRuns.caseId, gone.caseId))).toHaveLength(0);
+    expect(await db.select().from(t.evalSuiteRuns).where(eq(t.evalSuiteRuns.skillId, doomed.id))).toHaveLength(0);
+
+    expect(await db.select().from(t.evalCases).where(eq(t.evalCases.id, kept.caseId))).toHaveLength(1);
+    expect(await db.select().from(t.evalRuns).where(eq(t.evalRuns.caseId, kept.caseId))).toHaveLength(2);
+    expect(await db.select().from(t.evalSuiteRuns).where(eq(t.evalSuiteRuns.skillId, keeper.id))).toHaveLength(2);
     await app.close();
   });
 

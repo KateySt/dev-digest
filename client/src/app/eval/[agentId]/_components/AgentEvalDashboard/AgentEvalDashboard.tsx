@@ -5,16 +5,15 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Dropdown, EmptyState, ErrorState, Icon, Skeleton } from "@devdigest/ui";
-import type { EvalRange, EvalRegressionAlert } from "@devdigest/shared";
+import type { EvalRange } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
-import { MetricTrendChart, type TrendPoint } from "@/components/eval-metrics";
+import { type TrendPoint } from "@/components/eval-metrics";
+import { MetricCards, RegressionBanner, RunsTable, TrendPanel } from "@/components/eval-dashboard";
 import { notify } from "@/lib/toast";
 import { useAgent, useAgents } from "@/lib/hooks/agents";
 import { useAgentEvalRuns, useEvalSuiteRun, useStartAgentEvalRun } from "@/lib/hooks/eval-runs";
-import { METRICS, RANGE_OPTIONS, parseRange, type MetricKey } from "@/lib/eval";
+import { RANGE_OPTIONS, parseRange } from "@/lib/eval";
 import { CompareRunsModal } from "./_components/CompareRunsModal";
-import { MetricCards } from "./_components/MetricCards";
-import { RunsTable } from "./_components/RunsTable";
 import { s } from "./styles";
 
 /** Per-agent eval dashboard (`/eval/[agentId]?range=`): regression banner,
@@ -22,6 +21,7 @@ import { s } from "./styles";
  *  range), three-series trend, selectable runs table, Compare. */
 export function AgentEvalDashboard() {
   const t = useTranslations("evalAgent");
+  const tm = useTranslations("evalMetrics");
   const { agentId } = useParams<{ agentId: string }>();
   const router = useRouter();
   const search = useSearchParams();
@@ -35,11 +35,11 @@ export function AgentEvalDashboard() {
   // even if the user switches to another agent meanwhile.
   const startRun = useStartAgentEvalRun();
   const [started, setStarted] = React.useState<{ agentId: string; runId: string } | null>(null);
-  useEvalSuiteRun(started?.runId, started?.agentId);
+  useEvalSuiteRun(started?.runId, started ? { kind: "agent", id: started.agentId } : null);
   const ownStarted = started?.agentId === agentId ? started.runId : null;
   const serverRunning = runs.data?.runs.find((r) => r.status === "running") ?? null;
   const activeRunId = ownStarted ?? serverRunning?.id ?? null;
-  const active = useEvalSuiteRun(activeRunId, agentId);
+  const active = useEvalSuiteRun(activeRunId, { kind: "agent", id: agentId });
   const running = startRun.isPending || active.data?.status === "running" || (!!serverRunning && !active.data);
 
   const [selected, setSelected] = React.useState<string[]>([]);
@@ -160,31 +160,15 @@ export function AgentEvalDashboard() {
           <>
             <MetricCards history={data.history} />
 
-            <div style={s.panel}>
-              <div style={s.panelHead}>
-                <span style={s.sectionLabel}>
-                  <Icon.TrendingUp size={14} />
-                  {t("trend.title")}
-                </span>
-                <div style={s.legend}>
-                  {METRICS.map((m) => (
-                    <span key={m.key} style={s.legendItem}>
-                      <span style={s.legendDash(m.color)} />
-                      {t(`trend.${m.key === "citation_accuracy" ? "citation" : (m.key as Exclude<MetricKey, "citation_accuracy">)}`)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <MetricTrendChart points={trend} />
-            </div>
+            <TrendPanel points={trend} />
 
             <div style={s.runsHead}>
               <span style={s.sectionLabel}>
                 <Icon.History size={14} />
                 {t("runs.title")}
               </span>
-              {selectedIds.length > 0 && <span style={s.selectedNote}>{t("runs.selected", { count: selectedIds.length })}</span>}
-              <span style={s.compareBtn} title={canCompare ? undefined : t("runs.compareHint")}>
+              {selectedIds.length > 0 && <span style={s.selectedNote}>{tm("runs.selected", { count: selectedIds.length })}</span>}
+              <span style={s.compareBtn} title={canCompare ? undefined : tm("runs.compareHint")}>
                 <Button
                   kind="primary"
                   icon="Link"
@@ -192,18 +176,18 @@ export function AgentEvalDashboard() {
                   aria-describedby={canCompare ? undefined : "compare-hint"}
                   onClick={() => setCompare([selectedIds[0]!, selectedIds[1]!])}
                 >
-                  {t("runs.compare")}
+                  {tm("runs.compare")}
                 </Button>
                 {!canCompare && (
                   <span id="compare-hint" style={s.srOnly}>
-                    {t("runs.compareHint")}
+                    {tm("runs.compareHint")}
                   </span>
                 )}
               </span>
             </div>
             <div style={s.tableWrap}>
               {data.runs.length === 0 ? (
-                <div style={s.muted}>{t("runs.emptyRange")}</div>
+                <div style={s.muted}>{tm("runs.emptyRange")}</div>
               ) : (
                 <RunsTable runs={data.runs} selected={selectedIds} onToggle={toggle} />
               )}
@@ -222,24 +206,5 @@ export function AgentEvalDashboard() {
         />
       )}
     </AppShell>
-  );
-}
-
-/** Warning banner built from the server alert's structured fields (i18n). */
-function RegressionBanner({ alert }: { alert: EvalRegressionAlert }) {
-  const t = useTranslations("evalAgent");
-  const lead = alert.drops
-    .map((d) => t("banner.dipped", { metric: t(`metrics.${d.metric}`), points: Math.round(d.points * 10) / 10 }))
-    .join(", ");
-  const others = alert.others.map((o) => t(`banner.${o.direction}`, { metric: t(`metrics.${o.metric}`) })).join(", ");
-  return (
-    <div role="status" style={s.banner}>
-      <Icon.AlertTriangle size={18} style={{ color: "var(--warn)", flexShrink: 0 }} />
-      <span style={{ minWidth: 0 }}>
-        <span style={s.bannerLead}>{lead}</span>{" "}
-        {t("banner.context", { version: alert.version, previous: alert.previous_version })}
-        {others && ` ${others}.`}
-      </span>
-    </div>
   );
 }

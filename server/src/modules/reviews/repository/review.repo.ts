@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { Finding } from '@devdigest/shared';
@@ -142,18 +142,37 @@ export async function setFindingDismissed(
   return row;
 }
 
-/** finding id -> id of the eval case seeded from it (findings without one are absent). */
-export async function evalCaseIdsForFindings(
+/** One eval case seeded from a finding, with the target (agent/skill) that owns it. */
+export interface FindingEvalCaseRef {
+  caseId: string;
+  ownerKind: 'agent' | 'skill';
+  ownerId: string;
+}
+
+/** finding id -> every eval case seeded from it, one per target (findings without one are absent). */
+export async function evalCasesForFindings(
   db: Db,
+  workspaceId: string,
   findingIds: string[],
-): Promise<Map<string, string>> {
+): Promise<Map<string, FindingEvalCaseRef[]>> {
   if (findingIds.length === 0) return new Map();
   const rows = await db
-    .select({ findingId: t.evalCases.sourceFindingId, caseId: t.evalCases.id })
+    .select({
+      findingId: t.evalCases.sourceFindingId,
+      caseId: t.evalCases.id,
+      ownerKind: t.evalCases.ownerKind,
+      ownerId: t.evalCases.ownerId,
+    })
     .from(t.evalCases)
-    .where(inArray(t.evalCases.sourceFindingId, findingIds));
-  const out = new Map<string, string>();
-  for (const r of rows) if (r.findingId) out.set(r.findingId, r.caseId);
+    .where(and(eq(t.evalCases.workspaceId, workspaceId), inArray(t.evalCases.sourceFindingId, findingIds)))
+    .orderBy(asc(t.evalCases.createdAt));
+  const out = new Map<string, FindingEvalCaseRef[]>();
+  for (const r of rows) {
+    if (!r.findingId) continue;
+    const list = out.get(r.findingId) ?? [];
+    list.push({ caseId: r.caseId, ownerKind: r.ownerKind, ownerId: r.ownerId });
+    out.set(r.findingId, list);
+  }
   return out;
 }
 
