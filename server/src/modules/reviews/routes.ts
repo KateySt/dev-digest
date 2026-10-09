@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { RunRequest } from '@devdigest/shared';
 import type { RunEvent } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
@@ -16,6 +17,9 @@ import { ReviewService } from './service.js';
  *   POST   /findings/:id/(accept|dismiss)              → finding actions
  */
 const FINDING_ACTIONS = ['accept', 'dismiss'] as const;
+
+/** Body of `POST /findings/:id/reply` - the user-edited comment, posted verbatim. */
+const ReplyBody = z.object({ reply: z.string().min(1) });
 export default async function reviewsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
@@ -42,6 +46,25 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     );
     return { pr_id: req.params.id, runs, reviews };
   });
+
+  // ---- SPEC-05: bulk "Review all" over a repo's needs_review set ----------
+  // Pre-flight cost estimate — read-only, triggers nothing.
+  app.get('/repos/:id/pulls/review-estimate', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return service.estimateBulkReview(workspaceId, req.params.id);
+  });
+
+  // Same tight per-route limit as the single-PR trigger below — each call can
+  // fan out to many expensive LLM runs at once.
+  app.post(
+    '/repos/:id/pulls/review',
+    { schema: { params: IdParams }, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (req) => {
+      const { workspaceId } = await getContext(container, req);
+      const results = await service.runBulkReview(workspaceId, req.params.id, req.log);
+      return { results };
+    },
+  );
 
   // ---- SSE: live run events (replay buffer first, then live; ends on done) -
   // No rate limit: SSE is one long-lived connection, not burst traffic.
@@ -154,4 +177,14 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
       return result;
     });
   }
+
+  // ---- Reply to author (separate from FINDING_ACTIONS: it takes a body) -----
+  app.post(
+    '/findings/:id/reply',
+    { schema: { params: IdParams, body: ReplyBody } },
+    async (req) => {
+      const { workspaceId } = await getContext(container, req);
+      return service.replyToFinding(workspaceId, req.params.id, req.body.reply);
+    },
+  );
 }

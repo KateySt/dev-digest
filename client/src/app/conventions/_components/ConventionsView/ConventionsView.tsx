@@ -2,160 +2,141 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, Skeleton, ErrorState } from "@devdigest/ui";
+import { Button, EmptyState, ErrorState, Skeleton } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
-import { useActiveRepo } from "@/lib/contexts/repoContext";
-import { useConventions, useExtractConventions } from "@/lib/hooks/conventions";
-import { ConventionCard } from "../ConventionCard/ConventionCard";
-import { CreateSkillFromConventionsModal } from "../CreateSkillFromConventionsModal/CreateSkillFromConventionsModal";
+import { useActiveRepo } from "@/lib/repo-context";
+import { useConventions, useExtractConventions, useUpdateConvention } from "@/lib/hooks/conventions";
+import { ConventionCard } from "./_components/ConventionCard";
+import { CreateSkillModal } from "./_components/CreateSkillModal";
+import { acceptedCandidates } from "./helpers";
+import { s } from "./styles";
 
 export function ConventionsView() {
   const t = useTranslations("conventions");
-  const { repoId, activeRepo } = useActiveRepo();
-  const {
-    data: conventions = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useConventions(repoId);
+  const { activeRepo, repoId, reposLoaded } = useActiveRepo();
+  const { data: conventions, isLoading, isError, refetch } = useConventions(repoId);
   const extract = useExtractConventions();
-  const [showModal, setShowModal] = React.useState(false);
+  const update = useUpdateConvention();
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
 
-  const accepted = conventions.filter((c) => c.accepted);
-  const total = conventions.length;
-  const extractError =
-    extract.error instanceof Error ? extract.error.message : null;
+  const crumb = [{ label: t("page.crumbLab") }, { label: t("page.crumbConventions") }];
 
-  const crumb = [{ label: t("page.crumbLab") }, { label: t("page.crumb") }];
+  if (reposLoaded && !repoId) {
+    return (
+      <AppShell crumb={crumb}>
+        <div style={s.page}>
+          <EmptyState icon="GitBranch" title={t("page.noRepo.title")} body={t("page.noRepo.body")} />
+        </div>
+      </AppShell>
+    );
+  }
+
+  const list = conventions ?? [];
+  const accepted = acceptedCandidates(list);
+  const hasScanned = list.length > 0;
+
+  const runExtraction = () => {
+    if (repoId) extract.mutate(repoId);
+  };
+
+  const setStatus = (id: string, status: "pending" | "accepted" | "rejected") => {
+    if (!repoId) return;
+    update.mutate({ repoId, id, patch: { status } });
+  };
+
+  const saveRule = (id: string, rule: string) => {
+    if (!repoId) return;
+    update.mutate({ repoId, id, patch: { rule } });
+  };
+
+  const deselectAll = () => {
+    for (const c of accepted) setStatus(c.id, "pending");
+  };
 
   return (
     <AppShell crumb={crumb}>
-      {showModal && repoId && (
-        <CreateSkillFromConventionsModal
-          repoId={repoId}
-          repoName={activeRepo?.name ?? "repo"}
-          acceptedCount={accepted.length}
-          onClose={() => setShowModal(false)}
-          onCreated={() => setShowModal(false)}
+      {showCreateModal && repoId && (
+        <CreateSkillModal
+          repoFullName={activeRepo?.full_name ?? repoId}
+          accepted={accepted}
+          onClose={() => setShowCreateModal(false)}
         />
       )}
-
-      <div style={{ padding: 28, maxWidth: 860 }}>
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: 20,
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
-              {t("page.heading")}{" "}
-              <span style={{ color: "var(--accent)" }}>
-                {activeRepo?.name ?? "—"}
-              </span>
+      <div style={s.page}>
+        <div style={s.header}>
+          <div style={s.headerText}>
+            <h1 style={s.h1}>
+              {t("page.headingPrefix")}
+              {activeRepo?.full_name ?? t("page.repoFallback")}
             </h1>
-            {total > 0 && (
-              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-                {t("page.acceptedCount", { count: accepted.length, total })}
-              </p>
-            )}
+            <p style={s.subtitle}>{t("page.subtitle")}</p>
           </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={s.headerActions}>
             <Button
               kind="secondary"
               icon="RefreshCw"
-              onClick={() => repoId && extract.mutate(repoId)}
-              loading={extract.isPending}
+              onClick={runExtraction}
+              disabled={extract.isPending || !repoId}
             >
-              {t("page.rescan")}
+              {extract.isPending ? t("page.scanning") : hasScanned ? t("page.rescan") : t("page.runExtraction")}
             </Button>
             {accepted.length > 0 && (
-              <Button
-                kind="primary"
-                icon="Sparkles"
-                onClick={() => setShowModal(true)}
-              >
+              <Button kind="primary" icon="Sparkles" onClick={() => setShowCreateModal(true)}>
                 {t("page.createSkill")}
               </Button>
             )}
           </div>
         </div>
 
-        {/* Extraction failure — shown above content so it surfaces whether the
-            list is empty or populated, instead of silently re-rendering empty. */}
-        {extract.isError && (
-          <div
-            role="alert"
-            style={{
-              marginBottom: 16,
-              padding: "12px 14px",
-              borderRadius: 8,
-              border: "1px solid var(--danger-border, #5b2526)",
-              background: "var(--danger-bg, rgba(220,38,38,0.08))",
-              color: "var(--danger-text, #f87171)",
-              fontSize: 13,
-            }}
-          >
-            <strong style={{ fontWeight: 600 }}>
-              {t("page.extractionFailed")}
-            </strong>
-            {extractError ? ` — ${extractError}` : null}
+        {extract.isError && <ErrorState body={t("page.extractionFailed")} onRetry={runExtraction} />}
+
+        {isLoading && (
+          <div style={s.list}>
+            <Skeleton height={140} />
+            <Skeleton height={140} />
+            <Skeleton height={140} />
           </div>
         )}
 
-        {/* List */}
-        {isLoading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Skeleton height={120} />
-            <Skeleton height={120} />
-            <Skeleton height={120} />
-          </div>
-        ) : isError ? (
-          <ErrorState body={t("page.loadError")} onRetry={() => refetch()} />
-        ) : total === 0 && !extract.isPending ? (
+        {isError && !isLoading && <ErrorState body={t("page.loadError")} onRetry={() => refetch()} />}
+
+        {!isLoading && !isError && list.length === 0 && (
           <EmptyState
-            icon="ListChecks"
+            icon="Sparkles"
             title={t("page.empty.title")}
-            body={
-              extract.isSuccess && !extract.isError
-                ? t("page.empty.bodyAfterScan")
-                : t("page.empty.body")
-            }
+            body={t("page.empty.body")}
             cta={t("page.empty.cta")}
-            onCta={() => repoId && extract.mutate(repoId)}
-            ctaLoading={extract.isPending}
+            onCta={runExtraction}
           />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {extract.isPending && (
-              <div
-                style={{
-                  padding: 16,
-                  textAlign: "center",
-                  color: "var(--text-muted)",
-                  fontSize: 13,
-                }}
-              >
-                {t("page.scanning")}
+        )}
+
+        {!isLoading && !isError && list.length > 0 && (
+          <>
+            <div style={s.toolbar}>
+              <div style={s.toolbarLeft}>
+                <span style={s.candidateCount}>{t("page.candidateCount", { count: list.length })}</span>
+                <span style={s.candidateCount}>{t("page.acceptedCount", { accepted: accepted.length, total: list.length })}</span>
               </div>
-            )}
-            {conventions.map((c) => (
-              <ConventionCard
-                key={c.id}
-                convention={c}
-                repoId={repoId!}
-                repoUrl={
-                  activeRepo
-                    ? `https://github.com/${activeRepo.full_name}`
-                    : undefined
-                }
-              />
-            ))}
-          </div>
+              {accepted.length > 0 && (
+                <button style={s.deselectAll} onClick={deselectAll}>
+                  {t("page.deselectAll")}
+                </button>
+              )}
+            </div>
+
+            <div style={s.list}>
+              {list.map((c) => (
+                <ConventionCard
+                  key={c.id}
+                  candidate={c}
+                  busy={update.isPending}
+                  onAccept={() => setStatus(c.id, "accepted")}
+                  onReject={() => setStatus(c.id, "rejected")}
+                  onSaveRule={(rule) => saveRule(c.id, rule)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </AppShell>

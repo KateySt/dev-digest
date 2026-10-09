@@ -1,4 +1,4 @@
-import type { FeatureModelDef } from "../types";
+import type { FeatureModelDef } from "./types";
 
 /**
  * Client-local copy of the per-feature model registry.
@@ -21,7 +21,7 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
   {
     id: "review_intent",
     label: "PR Review · Intent",
-    description: "Derives a PR's intent and scope before review.",
+    description: "Derives a PR’s intent and scope before review.",
     defaultProvider: "openrouter",
     defaultModel: "deepseek/deepseek-v4-flash",
   },
@@ -29,21 +29,35 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     id: "risk_brief",
     label: "Risk Brief",
     description: "Assesses merge risks for a pull request.",
-    defaultProvider: "openai",
-    defaultModel: "gpt-4.1",
+    defaultProvider: "openrouter",
+    defaultModel: "deepseek/deepseek-v4-flash",
   },
   {
     id: "conformance",
     label: "Conformance",
     description: "Checks a PR against the project spec.",
-    defaultProvider: "openai",
-    defaultModel: "gpt-4.1",
+    defaultProvider: "openrouter",
+    defaultModel: "deepseek/deepseek-v4-flash",
   },
   {
     id: "conventions",
     label: "Conventions",
     description: "Extracts coding conventions from the repo.",
-    defaultProvider: "openai",
-    defaultModel: "gpt-5.4",
+    defaultProvider: "openrouter",
+    defaultModel: "deepseek/deepseek-v4-flash",
+  },
+  {
+    id: "skill_eval",
+    label: "Skill Evals",
+    description: "Runs skill-only eval cases in the Skill Editor.",
+    defaultProvider: "openrouter",
+    defaultModel: "deepseek/deepseek-v4-flash",
+  },
+  {
+    id: "skill_scan",
+    label: "Skill Content Scan",
+    description: "Scans a skill body for prompt-injection / malicious content before it can be enabled.",
+    defaultProvider: "openrouter",
+    defaultModel: "deepseek/deepseek-v4-flash",
   },
 ];

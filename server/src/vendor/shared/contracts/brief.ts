@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Severity } from './findings.js';
 
 /**
  * PR Brief building blocks: Intent, Blast radius, Risks, PR History,
@@ -6,10 +7,28 @@ import { z } from 'zod';
  */
 
 // ---- Intent ----
+/** Which signals actually fed the derived intent — computed in code from what
+ *  was available, never self-reported by the model. */
+export const IntentSource = z.enum([
+  'description',
+  'linked_issue',
+  'spec_ref',
+  'diff_shape',
+  'commit_messages',
+]);
+export type IntentSource = z.infer<typeof IntentSource>;
+
 export const Intent = z.object({
   intent: z.string(),
   in_scope: z.array(z.string()),
   out_of_scope: z.array(z.string()),
+  /** 'low' when the PR body had no real documentation (derived from indirect
+   *  signals only) — code-derived, never asked of the model. */
+  confidence: z.enum(['high', 'low']),
+  /** Which of the available signals were actually used, code-derived. */
+  sources: z.array(IntentSource),
+  /** Same-repo spec/plan doc path the intent was partly derived from, if any. */
+  spec_ref: z.string().nullable().optional(),
 });
 export type Intent = z.infer<typeof Intent>;
 
@@ -77,8 +96,33 @@ export const PrHistory = z.object({
 });
 export type PrHistory = z.infer<typeof PrHistory>;
 
+// ---- Commit history (Overview tab "Commits" panel) ----
+/** One file touched by a commit, plus the worst (highest-severity) non-dismissed
+ *  finding on that file from the PR's latest review — `null`/`null` when the
+ *  file has no findings at all. */
+export const CommitFileRef = z.object({
+  path: z.string(),
+  severity: Severity.nullable(),
+  line: z.number().int().nullable(),
+});
+export type CommitFileRef = z.infer<typeof CommitFileRef>;
+
+export const CommitWithFiles = z.object({
+  sha: z.string(),
+  message: z.string(),
+  author: z.string(),
+  committed_at: z.string().nullish(),
+  files: z.array(CommitFileRef),
+});
+export type CommitWithFiles = z.infer<typeof CommitWithFiles>;
+
+export const PrCommitHistory = z.object({
+  commits: z.array(CommitWithFiles),
+});
+export type PrCommitHistory = z.infer<typeof PrCommitHistory>;
+
 // ---- Smart Diff ----
-export const SmartDiffRole = z.enum(['core', 'wiring', 'boilerplate']);
+export const SmartDiffRole = z.enum(['core', 'tests', 'wiring', 'docs', 'boilerplate']);
 export type SmartDiffRole = z.infer<typeof SmartDiffRole>;
 
 export const SmartDiffFile = z.object({

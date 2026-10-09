@@ -3,8 +3,10 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import { Severity, type RunSummary, type PrCommit } from "@devdigest/shared";
-import { SeverityChip } from "@/components/SeverityChip/SeverityChip";
+import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsTooltip, SeverityCountBadges } from "@/components/findings-tooltip";
+import { countBySeverity } from "@/lib/findings";
+import type { RunSummary, PrCommit, FindingRecord } from "@devdigest/shared";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -88,12 +90,22 @@ function tsOf(s: string | null | undefined): number {
 export function RunHistory({
   runs,
   commits = [],
+  findingsByRunId,
+  repoId,
+  prNumber,
+  repoFullName,
+  headSha,
   onOpenTrace,
   onGoToReview,
   onDelete,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
+  findingsByRunId?: Map<string, FindingRecord[]>;
+  repoId?: string | null;
+  prNumber?: number | null;
+  repoFullName?: string | null;
+  headSha?: string | null;
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
   /** Jump to this run's inline review accordion below (clicking the agent name). */
@@ -149,8 +161,8 @@ export function RunHistory({
 
         const r = item.run;
         const o = outcomeOf(r);
-        const tok = (r.tokens_in ?? 0) + (r.tokens_out ?? 0);
         const settled = r.status === "done";
+        const runFindings = findingsByRunId?.get(r.run_id);
         return (
           <div key={`run:${r.run_id}`} style={rowStyle}>
             <Badge color={o.color} bg={o.bg} icon={o.icon}>
@@ -190,26 +202,31 @@ export function RunHistory({
                   {r.error}
                 </div>
               )}
-              {settled && (
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
-                  {(r.findings_critical ?? 0) > 0 && (
-                    <SeverityChip sev={Severity.enum.CRITICAL} count={r.findings_critical!} />
+              {settled && ((runFindings?.length ?? 0) > 0 || (r.blockers ?? 0) > 0) && (
+                <div style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+                  {(runFindings?.length ?? 0) > 0 && (
+                    <FindingsTooltip
+                      trigger={<SeverityCountBadges counts={countBySeverity(runFindings!)} />}
+                      findings={runFindings}
+                      repoFullName={repoFullName}
+                      headSha={headSha}
+                      repoId={repoId}
+                      prNumber={prNumber}
+                    />
                   )}
-                  {(r.findings_warning ?? 0) > 0 && (
-                    <SeverityChip sev={Severity.enum.WARNING} count={r.findings_warning!} />
-                  )}
-                  {(r.findings_suggestion ?? 0) > 0 && (
-                    <SeverityChip sev={Severity.enum.SUGGESTION} count={r.findings_suggestion!} />
-                  )}
+                  {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
                 </div>
               )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
               {r.ran_at && <span>{new Date(r.ran_at).toLocaleTimeString()}</span>}
-              {tok > 0 && (
-                <span className="mono">
-                  {tok} tok{r.cost_usd != null ? ` · $${r.cost_usd.toFixed(3)}` : ""}
-                </span>
+              {settled && (
+                <RunCostBadge
+                  variant="timeline"
+                  costUsd={r.cost_usd}
+                  tokensIn={r.tokens_in}
+                  tokensOut={r.tokens_out}
+                />
               )}
             </div>
             <button

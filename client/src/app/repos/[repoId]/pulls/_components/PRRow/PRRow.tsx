@@ -4,32 +4,78 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Icon, Avatar, Badge, CircularScore } from "@devdigest/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { Icon, Avatar, Badge, CircularScore, HoverPopover } from "@devdigest/ui";
+import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsTooltip, SeverityCountBadges } from "@/components/findings-tooltip";
+import { RunReviewDropdown } from "@/components/run-review-dropdown";
+import { usePrActiveRuns, usePrReviews, usePrRuns } from "@/lib/hooks/reviews";
+import { latestReview } from "@/lib/findings";
 import type { PrMeta } from "@/lib/types";
-import { RunCostBadge } from "@/components/RunCostBadge/RunCostBadge";
-import { SeverityChip } from "@/components/SeverityChip/SeverityChip";
-import { usePrReviews } from "@/lib/hooks/reviews";
-import { FINDINGS_FIELDS, SIZE_COLOR, STATUS_META } from "../../constants";
+import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
-import { FindingsPopover } from "../FindingsPopover/FindingsPopover";
 
-export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
+const EMPTY_FINDINGS_COUNTS = { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 } as const;
+
+export function PRRow({
+  pr,
+  repoId,
+  repoFullName,
+  showRiskTooltip,
+}: {
+  pr: PrMeta;
+  repoId: string;
+  repoFullName?: string | null;
+  /** SPEC-05 C-AC-33 — explain the "Highest risk" sort's ranking values;
+   *  only meaningful (and rendered) while that sort is selected. */
+  showRiskTooltip?: boolean;
+}) {
   const t = useTranslations("prReview");
   const router = useRouter();
+  const qc = useQueryClient();
   const [h, setH] = React.useState(false);
-  const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null);
   const st = STATUS_META[pr.status] ?? STATUS_META.needs_review!;
   const { size, lines } = sizeOf(pr);
   const reviewed = pr.score != null; // null score ⇒ PR has never been reviewed
-  const totalFindings =
-    (pr.findings_critical ?? 0) + (pr.findings_warning ?? 0) + (pr.findings_suggestion ?? 0);
 
-  const { data: reviewsData, isLoading: reviewsLoading } = usePrReviews(
-    anchorRect && totalFindings > 0 ? pr.id : undefined,
+  // SPEC-05 C-AC-14/15 — the row's own Run Review action (and any run
+  // "Review all" started for this PR) reflected in place. `usePrActiveRuns`
+  // already self-stops polling once nothing is running (client/src/lib/hooks/
+  // reviews.ts) — reused as-is rather than opening a new EventSource per row,
+  // which is exactly the fan-out C-AC-28 forbids.
+  const { data: activeRuns } = usePrActiveRuns(pr.id);
+  const isRunning = (activeRuns?.length ?? 0) > 0;
+  const wasRunningRef = React.useRef(false);
+  // Flips true once a run this row watched has settled; only then is the run
+  // history fetched (C-AC-15/25) - no extra request while it is still running,
+  // and nothing is ever retried automatically (C-AC-27).
+  const [settled, setSettled] = React.useState(false);
+  React.useEffect(() => {
+    if (wasRunningRef.current && !isRunning) {
+      // Just settled - refresh the list so this row's score/findings/status/
+      // cost update without a manual reload.
+      qc.invalidateQueries({ queryKey: ["pulls", repoId] });
+      setSettled(true);
+    }
+    wasRunningRef.current = isRunning;
+  }, [isRunning, qc, repoId]);
+  // `undefined` (not fetched) stays distinct from `[]` (fetched, no runs).
+  const { data: runs } = usePrRuns(settled ? pr.id : null);
+  const newestRun = runs?.reduce<(typeof runs)[number] | undefined>(
+    (best, r) => (!best || Date.parse(r.ran_at ?? "") > Date.parse(best.ran_at ?? "") ? r : best),
+    undefined,
   );
-  const latestReview = reviewsData?.find((r) => r.kind === "review");
+  const failedRun = !isRunning && newestRun?.status === "failed" ? newestRun : null;
 
+  const [hasHoveredFindings, setHasHoveredFindings] = React.useState(false);
+  const { data: reviews } = usePrReviews(hasHoveredFindings ? pr.id : null);
+  const hoveredFindings = reviews ? latestReview(reviews)?.findings : undefined;
+  const findingsCounts = pr.findings ?? EMPTY_FINDINGS_COUNTS;
+  const totalFindings = findingsCounts.CRITICAL + findingsCounts.WARNING + findingsCounts.SUGGESTION;
+  const handleFindingsOpenChange = React.useCallback((open: boolean) => {
+    if (open) setHasHoveredFindings(true);
+  }, []);
   return (
     <div
       onMouseEnter={() => setH(true)}
@@ -47,17 +93,38 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
         </div>
       </div>
       <div style={s.authorCell}>
-        <Avatar name={pr.author} size={18} />
+        <Avatar name={pr.author} avatarUrl={pr.avatar_url} size={18} />
         {pr.author}
       </div>
-      <div>
-        <Badge
-          color={SIZE_COLOR[size]}
-          bg="transparent"
-          style={s.sizeBadgeBorder(SIZE_COLOR[size]!)}
-        >
-          {size} · {lines}
-        </Badge>
+      <div onClick={(e) => e.stopPropagation()}>
+        {showRiskTooltip ? (
+          <HoverPopover
+            trigger={
+              <Badge color={SIZE_COLOR[size]} bg="transparent" style={s.sizeBadgeBorder(SIZE_COLOR[size]!)}>
+                {size} · {lines}
+              </Badge>
+            }
+            width={220}
+          >
+            <div style={s.riskTooltip}>
+              <div>{t("list.riskTooltip.diffSize", { lines })}</div>
+              <div>
+                {pr.blast_size != null
+                  ? t("list.riskTooltip.blastSize", { count: pr.blast_size })
+                  : t("list.riskTooltip.blastSizeUnavailable")}
+              </div>
+              <div>
+                {pr.score != null
+                  ? t("list.riskTooltip.score", { score: pr.score })
+                  : t("list.riskTooltip.scoreUnavailable")}
+              </div>
+            </div>
+          </HoverPopover>
+        ) : (
+          <Badge color={SIZE_COLOR[size]} bg="transparent" style={s.sizeBadgeBorder(SIZE_COLOR[size]!)}>
+            {size} · {lines}
+          </Badge>
+        )}
       </div>
       <div style={s.scoreCell}>
         {reviewed ? (
@@ -66,32 +133,20 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
           <span style={s.muted}>—</span>
         )}
       </div>
-      <div
-        style={s.findingsCell}
-        onMouseEnter={(e) => {
-          e.stopPropagation();
-          setAnchorRect(e.currentTarget.getBoundingClientRect());
-        }}
-        onMouseLeave={(e) => {
-          e.stopPropagation();
-          setAnchorRect(null);
-        }}
-      >
-        {!reviewed || totalFindings === 0 ? (
-          <span style={s.muted}>—</span>
-        ) : (
-          FINDINGS_FIELDS.map(({ sev, field }) => {
-            const n = pr[field] ?? 0;
-            if (!n) return null;
-            return <SeverityChip key={sev} sev={sev} count={n} />;
-          })
-        )}
-        {anchorRect && totalFindings > 0 && (
-          <FindingsPopover
-            review={latestReview}
-            isLoading={reviewsLoading}
-            anchorRect={anchorRect}
+      <div onClick={(e) => e.stopPropagation()}>
+        {totalFindings > 0 ? (
+          <FindingsTooltip
+            trigger={<SeverityCountBadges counts={findingsCounts} />}
+            findings={hoveredFindings}
+            loading={hasHoveredFindings && !reviews}
+            repoFullName={repoFullName}
+            headSha={pr.head_sha}
+            repoId={repoId}
+            prNumber={pr.number}
+            onOpenChange={handleFindingsOpenChange}
           />
+        ) : (
+          <span style={s.muted}>—</span>
         )}
       </div>
       <div>
@@ -99,10 +154,40 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
           {t(`list.status.${st.labelKey}`)}
         </Badge>
       </div>
-      <div style={s.costCell}>
-        <RunCostBadge cost={pr.last_run_cost_usd} />
+      <div>
+        <RunCostBadge costUsd={pr.cost_usd ?? null} />
       </div>
       <div style={s.updatedCell}>{relativeTime(pr.updated_at)}</div>
+      <div onClick={(e) => e.stopPropagation()} style={s.actionsCell}>
+        {failedRun && (
+          <span
+            title={
+              failedRun.error
+                ? t("list.rowFailedTitle", { error: failedRun.error })
+                : t("list.rowFailedNoReason")
+            }
+          >
+            <Badge icon="AlertTriangle" color="var(--crit)" bg="transparent">
+              {t("list.rowFailed")}
+            </Badge>
+          </span>
+        )}
+        {isRunning ? (
+          <Badge icon="RefreshCw" color="var(--accent)" bg="var(--accent-bg)">
+            {t("runReview.running")}
+          </Badge>
+        ) : (
+          pr.id && (
+            <RunReviewDropdown
+              prId={pr.id}
+              size="sm"
+              kind="secondary"
+              warnMerged={pr.status === "merged" || pr.status === "closed"}
+              ariaLabel={t("runReview.runReviewFor", { number: pr.number, title: pr.title })}
+            />
+          )
+        )}
+      </div>
     </div>
   );
 }

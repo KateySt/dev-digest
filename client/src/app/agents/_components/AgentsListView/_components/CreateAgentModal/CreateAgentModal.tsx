@@ -3,9 +3,10 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Modal, FormField, TextInput, SelectInput, Textarea } from "@devdigest/ui";
+import { Button, Modal, FormField, TextInput, Select, SearchableSelect, Textarea } from "@devdigest/ui";
 import type { Provider } from "@devdigest/shared";
-import { useCreateAgent } from "../../../../../../lib/hooks/agents";
+import { useCreateAgent, useProviderModels } from "@/lib/hooks/agents";
+import { toModelOptions } from "@/lib/model-label";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, MODAL_WIDTH, PROVIDER_OPTIONS } from "./constants";
 import { s } from "./styles";
 
@@ -20,6 +21,13 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
   const [model, setModel] = React.useState(DEFAULT_MODEL);
   const [systemPrompt, setSystemPrompt] = React.useState(t("create.defaultSystemPrompt"));
 
+  const { data: models } = useProviderModels(provider);
+  const modelOptions = toModelOptions(models);
+  const hasModel = modelOptions.some((o) => (typeof o === "string" ? o : o.value) === model);
+  if (!hasModel) modelOptions.unshift(model);
+  // Empty list after load = provider key missing/invalid (listModels failed).
+  const noModels = models !== undefined && models.length === 0;
+
   const submit = async () => {
     const agent = await create.mutateAsync({
       name: name.trim() || t("create.defaultName"),
@@ -33,22 +41,8 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal
-      width={MODAL_WIDTH}
-      title={t("create.title")}
-      subtitle={t("create.subtitle")}
-      onClose={onClose}
-      footer={
-        <div style={s.footer}>
-          <Button kind="ghost" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button kind="primary" icon="Plus" onClick={submit} disabled={create.isPending}>
-            {create.isPending ? t("create.creating") : t("create.create")}
-          </Button>
-        </div>
-      }
-    >
+    <Modal width={MODAL_WIDTH} onClose={onClose}>
+      <Modal.Header title={t("create.title")} subtitle={t("create.subtitle")} onClose={onClose} />
       <div style={s.body}>
         <FormField label={t("create.fields.name")} required>
           <TextInput value={name} onChange={setName} placeholder={t("create.fields.namePlaceholder")} />
@@ -61,19 +55,38 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
           />
         </FormField>
         <FormField label={t("create.fields.provider")}>
-          <SelectInput
+          <Select
             value={provider}
             onChange={(v) => setProvider(v as Provider)}
             options={[...PROVIDER_OPTIONS]}
           />
         </FormField>
-        <FormField label={t("create.fields.model")}>
-          <TextInput value={model} onChange={setModel} mono />
+        <FormField
+          label={t("create.fields.model")}
+          hint={noModels ? t("create.fields.modelEmptyHint", { provider }) : t("create.fields.modelHint")}
+        >
+          <SearchableSelect
+            value={model}
+            onChange={setModel}
+            options={modelOptions}
+            placeholder={t("create.fields.modelSearch")}
+          />
         </FormField>
         <FormField label={t("create.fields.systemPrompt")}>
           <Textarea value={systemPrompt} onChange={setSystemPrompt} rows={6} mono />
         </FormField>
       </div>
+
+      <Modal.Footer>
+        <div style={s.footer}>
+          <Button kind="ghost" onClick={onClose}>
+            {t("create.cancel")}
+          </Button>
+          <Button kind="primary" icon="Plus" onClick={submit} disabled={create.isPending}>
+            {create.isPending ? t("create.creating") : t("create.create")}
+          </Button>
+        </div>
+      </Modal.Footer>
     </Modal>
   );
 }

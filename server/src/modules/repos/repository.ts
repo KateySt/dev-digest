@@ -77,6 +77,11 @@ export class RepoRepository {
       .where(eq(t.repos.id, repoId));
   }
 
+  /** Persist the repo-wide bytes-per-language breakdown (GitHub /languages). */
+  async updateLanguages(repoId: string, languages: Record<string, number>): Promise<void> {
+    await this.db.update(t.repos).set({ languages }).where(eq(t.repos.id, repoId));
+  }
+
   async remove(workspaceId: string, id: string): Promise<boolean> {
     const deleted = await this.db
       .delete(t.repos)

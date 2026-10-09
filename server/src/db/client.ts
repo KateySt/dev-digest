@@ -4,6 +4,10 @@ import { schema } from './schema.js';
 
 export type Db = PostgresJsDatabase<typeof schema>;
 
+/** A `Db` or the transaction handle passed to a `db.transaction(async (tx) => ...)` callback, so a
+ *  service can run several repositories' writes inside one transaction. */
+export type DbExecutor = Db | Parameters<Parameters<Db['transaction']>[0]>[0];
+
 export interface DbHandle {
   db: Db;
   sql: postgres.Sql;

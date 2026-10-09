@@ -4,11 +4,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Toggle, EmptyState, SEV, Icon } from "@devdigest/ui";
+import { Toggle, EmptyState, Chip, SEV } from "@devdigest/ui";
 import type { FindingRecord, Severity } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
+import { useLinkedSkills } from "@/lib/hooks/agents";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
-import { KEY_TO_ACTION, SEVERITY_FILTERS } from "./constants";
+import { countBySeverity } from "../../../../../../../lib/findings";
+import { KEY_TO_ACTION, SEVERITY_FILTER_ORDER } from "./constants";
 import { visibleFindings } from "./helpers";
 import { s } from "./styles";
 
@@ -17,33 +19,59 @@ export function FindingsPanel({
   prId,
   repoFullName,
   headSha,
+  targetFindingId,
+  agentId,
 }: {
   findings: FindingRecord[];
   prId: string;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** Deep-linked finding (e.g. from the PR-list tooltip) — expanded and
+   *  keyboard-focused on mount instead of the usual first row. */
+  targetFindingId?: string | null;
+  /** The review's agent (null for agentless reviews) — gates "Turn into eval case". */
+  agentId?: string | null;
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
+  const linkedSkills = useLinkedSkills(agentId);
   const [hideLow, setHideLow] = React.useState(false);
-  const [activeSeverity, setActiveSeverity] = React.useState<Severity | null>(
-    null,
-  );
-  const [focusIdx, setFocusIdx] = React.useState(0);
+  const [severityFilter, setSeverityFilter] = React.useState<Severity | null>(null);
+  const [focusIdx, setFocusIdx] = React.useState(() => {
+    if (!targetFindingId) return 0;
+    const idx = visibleFindings(findings, false).findIndex((f) => f.id === targetFindingId);
+    return idx >= 0 ? idx : 0;
+  });
 
-  const counts = React.useMemo(
-    () => ({
-      CRITICAL: findings.filter((f) => f.severity === "CRITICAL").length,
-      WARNING: findings.filter((f) => f.severity === "WARNING").length,
-      SUGGESTION: findings.filter((f) => f.severity === "SUGGESTION").length,
-    }),
-    [findings],
+  const confidenceFiltered = React.useMemo(
+    () => visibleFindings(findings, hideLow),
+    [findings, hideLow],
   );
-
+  const severityCounts = React.useMemo(
+    () => countBySeverity(confidenceFiltered),
+    [confidenceFiltered],
+  );
   const shown = React.useMemo(
-    () => visibleFindings(findings, hideLow, activeSeverity),
-    [findings, hideLow, activeSeverity],
+    () =>
+      severityFilter
+        ? confidenceFiltered.filter((f) => f.severity === severityFilter)
+        : confidenceFiltered,
+    [confidenceFiltered, severityFilter],
   );
+
+  // A narrower filter can leave focus pointing past the end (or at a card
+  // that's no longer shown) — snap back to the first visible card.
+  React.useEffect(() => {
+    setFocusIdx(0);
+  }, [severityFilter]);
+
+  const lastTargetRef = React.useRef<string | null>(targetFindingId ?? null);
+  React.useEffect(() => {
+    if (!targetFindingId || lastTargetRef.current === targetFindingId) return;
+    lastTargetRef.current = targetFindingId;
+    const idx = shown.findIndex((f) => f.id === targetFindingId);
+    if (idx >= 0) setFocusIdx(idx);
+  }, [targetFindingId, shown]);
 
   // j/k navigation + a/d shortcuts on the focused finding (keyboard).
   React.useEffect(() => {
@@ -53,11 +81,7 @@ export function FindingsPanel({
       if (e.key === "j") setFocusIdx((i) => Math.min(i + 1, shown.length - 1));
       else if (e.key === "k") setFocusIdx((i) => Math.max(i - 1, 0));
       else if (KEY_TO_ACTION[e.key] && shown[focusIdx]) {
-        action.mutate({
-          findingId: shown[focusIdx]!.id,
-          action: KEY_TO_ACTION[e.key]!,
-          prId,
-        });
+        action.mutate({ findingId: shown[focusIdx]!.id, action: KEY_TO_ACTION[e.key]!, prId });
       }
     };
     window.addEventListener("keydown", handler);
@@ -67,52 +91,50 @@ export function FindingsPanel({
   return (
     <div>
       <div style={s.toolbar}>
-        <div style={s.sevPills}>
-          {SEVERITY_FILTERS.map(({ sev }) => {
-            const n = counts[sev];
-            if (!n) return null;
-            const meta = SEV[sev];
-            const SIcon = Icon[meta.icon];
-            const active = activeSeverity === sev;
-            return (
-              <button
-                key={sev}
-                type="button"
-                style={s.sevPill(active, meta.c)}
-                onClick={() => setActiveSeverity(active ? null : sev)}
-              >
-                <SIcon size={12} />
-                {n} {t(`panel.severity${sev}`)}
-              </button>
-            );
-          })}
+        <div style={s.severityGroup}>
+          <Chip
+            active={severityFilter === null}
+            count={confidenceFiltered.length}
+            onClick={() => setSeverityFilter(null)}
+          >
+            {t("panel.all")}
+          </Chip>
+          {SEVERITY_FILTER_ORDER.filter((sev) => severityCounts[sev] > 0).map((sev) => (
+            <Chip
+              key={sev}
+              icon={SEV[sev].icon}
+              color={SEV[sev].c}
+              count={severityCounts[sev]}
+              active={severityFilter === sev}
+              onClick={() => setSeverityFilter(sev)}
+            >
+              {SEV[sev].label}
+            </Chip>
+          ))}
         </div>
-        <div style={s.divider} />
         <div style={s.toggleGroup}>
           {t("panel.hideLowConfidence")}
           <Toggle on={hideLow} onChange={setHideLow} size={16} />
         </div>
       </div>
+
       <div style={s.list}>
         {shown.length === 0 ? (
-          <EmptyState
-            icon="Filter"
-            title={t("panel.noMatchTitle")}
-            body={t("panel.noMatchBody")}
-          />
+          <EmptyState icon="Filter" title={t("panel.noMatchTitle")} body={t("panel.noMatchBody")} />
         ) : (
           shown.map((f, i) => (
             <FindingCard
-              key={f.id}
+              key={f.id === targetFindingId ? `${f.id}:target` : f.id}
               f={f}
               focused={i === focusIdx}
-              defaultExpanded={i === 0}
+              defaultExpanded={i === 0 || f.id === targetFindingId}
               pending={action.isPending}
               repoFullName={repoFullName}
               headSha={headSha}
-              onAction={(act) =>
-                action.mutate({ findingId: f.id, action: act, prId })
-              }
+              prId={prId}
+              agentId={agentId}
+              linkedSkills={linkedSkills}
+              onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
             />
           ))
         )}

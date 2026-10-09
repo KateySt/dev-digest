@@ -1,117 +1,61 @@
-# Dependency Rule
+# The dependency rule
 
-The single most important rule: **imports flow inward only**. A file in an outer layer may import from any inner layer. A file in an inner layer may NEVER import from an outer layer.
+> "Draw all coupling arrows toward the center." — Jeffrey Palermo, [The Onion
+> Architecture: part 1](https://jeffreypalermo.com/2008/07/the-onion-architecture-part-1/)
 
-```
-Domain ←── Application ←── Infrastructure ←── Presentation
-  ↑                                                  │
-  └──────────────────────────────────────────────────┘
-                 (only inward)
-```
+Every other rule in this skill is a restatement of one thing: **an import
+may only point from an outer ring to an inner ring, never the reverse.**
+Onion, Hexagonal, and Clean Architecture are the same idea wearing different
+names — see Milan Jovanović's [comparison](https://milanjovanovic.tech/blog/clean-architecture-vs-onion-vs-hexagonal)
+— and the idea is the Dependency Inversion Principle applied at the
+package/module level, not just the class level.
 
----
+## The check
 
-## Allow-List Per Layer
+For any file you're adding or editing, ask: **does this file import something
+that knows about Fastify, Drizzle, Postgres, Octokit, or a concrete adapter
+class?**
 
-### Domain (`vendor/shared/contracts/`, domain entities)
+- If it's `reviewer-core/src/**` → answer must be no. This package has no
+  DB/GitHub/filesystem dependency at all — its only side effect is an
+  injected `LLMProvider` (see `reviewer-core/AGENTS.md`). That's ring 0.
+- If it's `server/src/modules/<name>/service.ts` → it may import
+  `Container`'s *type* and the port interfaces from
+  `server/src/vendor/shared/adapters.ts` (`GitClient`, `GitHubClient`,
+  `LLMProvider`, `SecretsProvider`, …). It must **not** import
+  `drizzle-orm`, `postgres`, `octokit`, or a concrete class from
+  `server/src/adapters/*` — those come in through `Container`, already
+  resolved to an interface.
+- If it's `server/src/modules/<name>/repository.ts` → it's allowed to import
+  Drizzle and the schema (`server/src/db/schema.ts`). It's the outermost
+  edge of the *persistence* port, so this is where SQL is supposed to live.
+- If it's `server/src/modules/<name>/routes.ts` → it may import Fastify,
+  zod schemas, and its own module's `service.ts`. It must **not** import
+  `repository.ts` directly, and it must not contain business logic (branching
+  on domain state, computing derived values) — that belongs in `service.ts`.
+- If it's `server/src/platform/container.ts` → this is the composition root.
+  It's the *only* file allowed to `new` a concrete adapter class
+  (`OctokitGitHubClient`, `SimpleGitClient`, `OpenAIProvider`, …) and hand it
+  out through a typed interface getter. Every other file receives adapters
+  already resolved through `Container`.
 
-| May import | May NOT import |
-|---|---|
-| Other domain types/interfaces | `drizzle-orm` |
-| `platform/errors.ts` (AppError base) | `fastify` |
-| Node built-ins (rare) | `zod` |
-| Nothing else | Any module's `service.ts`, `repository.ts`, `routes.ts` |
+## Why this matters here specifically
 
-### Application (`modules/*/service.ts`)
+`server/AGENTS.md` already documents two conventions that are dependency-rule
+violations if broken:
+- "Routes validate `params`/`body` with zod schemas — never hand-roll
+  `Schema.parse(req.body)` in a handler" (business logic leaking into ring 3).
+- "Secrets never go through `AppConfig` — always through `SecretsProvider`"
+  (ring 1/2 code must depend on the port, not reach for a ring-3 config
+  object as a shortcut).
 
-| May import | May NOT import |
-|---|---|
-| Domain contracts (`vendor/shared/contracts/`) | `drizzle-orm` |
-| `platform/container.ts` (Container type) | `fastify` |
-| `platform/errors.ts` | Another module's `routes.ts` |
-| `platform/jobs.ts`, `platform/sse.ts` | `db/schema/*` directly |
-| Other services (cross-module orchestration) | `adapters/*` directly (use `container.llm()` etc.) |
-| `zod` for precondition checks only | |
+Treat both as instances of the same underlying rule, not separate rules to
+memorize.
 
-### Infrastructure (`modules/*/repository.ts`, `adapters/`)
+## Fast litmus test
 
-| May import | May NOT import |
-|---|---|
-| Domain contracts | `fastify` |
-| `drizzle-orm` | Any module's `routes.ts` or `service.ts` |
-| `db/schema/*` | Another module's `repository.ts` (use its service instead) |
-| `platform/errors.ts` | |
-| External SDKs (octokit, openai, etc.) in adapters | |
-
-### Presentation (`modules/*/routes.ts`)
-
-| May import | May NOT import |
-|---|---|
-| Own module's `service.ts` | Own module's `repository.ts` (skip service!) |
-| `_shared/schemas.ts`, `_shared/context.ts` | `drizzle-orm` |
-| Domain contracts (for response types) | `db/schema/*` |
-| `zod` for HTTP schemas | `adapters/*` |
-| `platform/errors.ts` | |
-
-### Container (`platform/container.ts`)
-
-May import anything — it is the composition root. This is the only exception.
-
----
-
-## Violation Examples
-
-```typescript
-// ❌ VIOLATION: service imports from repository of another module
-// modules/reviews/service.ts
-import { AgentsRepository } from '../agents/repository';  // BAD — cross-module repo access
-
-// ✅ CORRECT: use the other module's service, or share via container
-import { Container } from '../../platform/container';
-// then: this.container.agentsRepo  (already on Container)
-```
-
-```typescript
-// ❌ VIOLATION: route skips service layer
-// modules/agents/routes.ts
-const agents = await new AgentsRepository(container.db).list(workspaceId);  // BAD
-
-// ✅ CORRECT
-const service = new AgentsService(container);
-const agents = await service.list(workspaceId);
-```
-
-```typescript
-// ❌ VIOLATION: repository imports domain service
-// modules/repos/repository.ts
-import { ReposService } from './service';  // BAD — infra importing application
-```
-
-```typescript
-// ❌ VIOLATION: service imports Drizzle schema
-// modules/pulls/service.ts
-import { pullRequests } from '../../db/schema/pulls';  // BAD
-const rows = await this.container.db.select().from(pullRequests)...  // BAD
-
-// ✅ CORRECT: delegate to repo
-const pulls = await this.repo.listByWorkspace(workspaceId);
-```
-
----
-
-## Cross-Module Communication
-
-Modules communicate **only through their service layer**:
-
-```typescript
-// ✅ CORRECT: ReviewService uses Container to get agents (not AgentsRepository directly)
-export class ReviewService {
-  constructor(private container: Container) {
-    this.agents = container.agentsRepo;  // Pre-built on Container
-  }
-}
-```
-
-Never reach into another module's `repository.ts` from a service. If you need data from another module, either:
-1. Use its service (already on `Container` or instantiate it)
-2. Add a property to `Container` that exposes its repository
+If deleting Fastify, Drizzle, and every file under `server/src/adapters/`
+would still leave a `service.ts` compiling (against its port interfaces, with
+mocks swapped in), the dependency rule holds. `reviewer-core`'s test suite —
+hermetic, stubbed `LLMProvider`, no network — is what this looks like when
+it's done right.

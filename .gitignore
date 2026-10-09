@@ -19,3 +19,7 @@ test-results/
 
 # emdash worktree config (local)
 .emdash.json
+
+.claude/.pr-self-review-stamp.json
+/.playwright-mcp/
+.emdash.json

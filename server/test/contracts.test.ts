@@ -8,7 +8,7 @@ import {
   PrHistory,
   SmartDiff,
   Conformance,
-  Onboarding,
+  OnboardingTour,
   EvalRun,
   MemoryItem,
   RunTrace,
@@ -67,7 +67,13 @@ describe('AI contracts parse fixtures', () => {
 
   it('Intent / BlastRadius / Risks / PrHistory', () => {
     expect(() =>
-      Intent.parse({ intent: 'x', in_scope: ['a'], out_of_scope: ['b'] }),
+      Intent.parse({
+        intent: 'x',
+        in_scope: ['a'],
+        out_of_scope: ['b'],
+        confidence: 'high',
+        sources: ['description'],
+      }),
     ).not.toThrow();
     expect(() =>
       BlastRadius.parse({
@@ -111,10 +117,22 @@ describe('AI contracts parse fixtures', () => {
           role: 'core',
           files: [{ path: 'a.ts', additions: 84, deletions: 0, finding_lines: [28, 52] }],
         },
+        // SmartDiffRole was widened from 3 to 5 values (core/wiring/boilerplate →
+        // + tests/docs) — exercise two of the new roles here so the fixture
+        // actually covers the widened enum, not just the original 3.
+        {
+          role: 'tests',
+          files: [{ path: 'a.test.ts', additions: 12, deletions: 0, finding_lines: [] }],
+        },
+        {
+          role: 'docs',
+          files: [{ path: 'README.md', additions: 3, deletions: 1, finding_lines: [] }],
+        },
       ],
       split_suggestion: { too_big: false, total_lines: 285, proposed_splits: [] },
     });
     expect(d.groups[0]!.role).toBe('core');
+    expect(d.groups.map((g) => g.role)).toEqual(['core', 'tests', 'docs']);
   });
 
   it('Conformance / Onboarding / EvalRun / MemoryItem', () => {
@@ -127,8 +145,20 @@ describe('AI contracts parse fixtures', () => {
       }),
     ).not.toThrow();
     expect(() =>
-      Onboarding.parse({
-        sections: [{ kind: 'architecture', title: 'T', body: 'b', links: [] }],
+      OnboardingTour.parse({
+        index_status: 'full',
+        files_indexed: 10,
+        files_discovered: 10,
+        generated_at: '2026-10-07T00:00:00Z',
+        blob_ref: 'main',
+        blob_ref_kind: 'branch',
+        schema_version: 1,
+        reading_path: [{ position: 1, path: 'src/index.ts', rationale: null }],
+        critical_paths: [],
+        run_commands: [],
+        env_keys: [],
+        diagram_nodes: [],
+        diagram_edges: [],
       }),
     ).not.toThrow();
     expect(() =>
@@ -157,12 +187,12 @@ describe('AI contracts parse fixtures', () => {
   it('RunTrace (data2.jsx TRACE single-document)', () => {
     const trace = RunTrace.parse({
       config: { agent: 'Security Reviewer', version: 'v7', model: 'gpt-4.1', pr: 482, source: 'local' },
-      stats: { duration_ms: 8200, tokens_in: 14820, tokens_out: 1240, cost_usd: 0.06, findings: 3, grounding: '3/3 passed' },
+      stats: { duration_ms: 8200, tokens_in: 14820, tokens_out: 1240, cost_usd: null, findings: 3, grounding: '3/3 passed' },
       prompt_assembly: { system: 's', user: 'u' },
       tool_calls: [{ tool: 'read_file', args: "'src/config.ts'", meta: '1,240 bytes', ms: 120 }],
       raw_output: '{}',
       memory_pulled: [{ pr: 288, text: 'verified via stripe-signature' }],
-      specs_read: ['specs/security-baseline.md'],
+      specs_read: [{ path: 'specs/security-baseline.md', outcome: 'injected' }],
       log: [{ t: '00.00', kind: 'info', msg: 'started' }],
     });
     expect(trace.tool_calls).toHaveLength(1);
@@ -186,6 +216,7 @@ describe('platform DTOs', () => {
         full_name: 'acme/payments-api',
         default_branch: 'main',
         clone_path: null,
+        languages: null,
         last_polled_at: null,
         created_by: null,
       }),
@@ -195,6 +226,7 @@ describe('platform DTOs', () => {
         number: 482,
         title: 't',
         author: 'a',
+        avatar_url: null,
         branch: 'b',
         base: 'main',
         head_sha: 'sha',

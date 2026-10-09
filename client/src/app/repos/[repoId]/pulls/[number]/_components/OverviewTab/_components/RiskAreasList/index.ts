@@ -1,0 +1,1 @@
+export { RiskAreasList } from "./RiskAreasList";

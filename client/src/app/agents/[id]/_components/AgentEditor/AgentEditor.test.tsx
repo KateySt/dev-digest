@@ -9,6 +9,17 @@ import { ToastProvider } from "../../../../../lib/contexts/toast";
 vi.mock("../../../../../lib/hooks/agents", () => ({
   useUpdateAgent: () => ({ mutate: vi.fn(), isPending: false, isSuccess: false, data: undefined }),
   useProviderModels: () => ({ data: [{ id: "gpt-4.1", provider: "openai" }] }),
+  useAgentSkillLinks: () => ({ data: [{ agent_id: "ag1", skill_id: "sk1", order: 0 }] }),
+  useSetAgentSkills: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("../../../../../lib/hooks/skills", () => ({
+  useSkills: () => ({
+    data: [
+      { id: "sk1", name: "pr-quality-rubric", description: "", type: "rubric", source: "manual", body: "", enabled: true, version: 1 },
+      { id: "sk2", name: "no-then-chains", description: "", type: "convention", source: "manual", body: "", enabled: true, version: 1 },
+    ],
+    isLoading: false,
+  }),
 }));
 
 import { AgentEditor } from "./AgentEditor";
@@ -45,5 +56,13 @@ describe("A2 Agent Editor (smoke)", () => {
     expect(screen.getByText("Config")).toBeInTheDocument();
     expect(screen.getByText("Configuration")).toBeInTheDocument();
     expect(screen.getByText("Save agent")).toBeInTheDocument();
+  });
+
+  it("renders the Skills tab instead of Config when tab=skills", () => {
+    renderWithIntl(<AgentEditor agent={AGENT} tab="skills" onTab={() => {}} />);
+    expect(screen.queryByText("Configuration")).not.toBeInTheDocument();
+    expect(screen.getByText("pr-quality-rubric")).toBeInTheDocument();
+    expect(screen.getByText("no-then-chains")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2 enabled")).toBeInTheDocument();
   });
 });

@@ -1,287 +1,127 @@
 ---
 name: pr-self-review
-description: >
-  PR self-review orchestrator for DevDigest. Runs before git push (PreToolUse hook) or on demand.
-  Collects the git diff against origin/main, routes changed files into three buckets (UI Frontend,
-  Backend/Domain, Tests), spawns one sub-agent per bucket, collects structured findings, deduplicates,
-  and applies the merge gate: CRITICAL findings block the push. Non-critical findings are reported
-  as HIGH / MEDIUM recommendations.
-  TRIGGER when: "review my changes", "self review", "pr review", "check before push",
-  "pr self review", "review pr", "check my diff", or automatically on PreToolUse(Bash git push).
-  Does NOT cover: e2e tests (added later), vercel config, node_modules, migrations, vendor/.
+description: "Runs the repo's own skill library against the local diff before a PR is opened, so violations get caught before they reach GitHub. Matches each touched file to the skills that actually govern it (UI skills for client/, backend/architecture skills for server/ and reviewer-core/), reviews only the matched hunks, and blocks merging if any finding is CRITICAL. Triggered automatically by the PreToolUse hook right before `gh pr create` / `git push` (see .claude/hooks/check-pr-self-review.mjs), or on request — 'self review', 'review before I open a PR', 'pre-PR check', 'can I open this PR', 'run pr self review'."
+metadata:
+  tags: pr-review, gate, pre-pr, self-review, ci
 ---
 
-# PR Self-Review
+## When to use
 
-> **Перевір зміни локально до відкриття PR. Знайди критичні проблеми до того, як вони потраплять у ревью.**
+- Forced by the `PreToolUse` hook right before `gh pr create` or `git push`
+  (see `.claude/hooks/check-pr-self-review.mjs`) — the hook blocks the
+  command until this skill has produced a `pass` stamp for the *current*
+  diff.
+- On request, any time before opening a PR — "self review", "check my
+  changes before I open a PR", "can I open this PR".
 
-## How to invoke
+## Procedure
+
+### 1. Compute the diff
 
-- **Manually:** "review my changes" / "pr self review" / "check before push"
-- **Automatically:** fires on `PreToolUse` when a `git push` command is detected
+Run:
 
-## Setup (one-time)
+    node .claude/hooks/lib/diff-hash.mjs
 
-Add the following to `.claude/settings.json` to enable the automatic `git push` hook:
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash(git push*)",
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Before executing this git push command, invoke the pr-self-review skill and follow its execution algorithm exactly."
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-For manual invocation, no setup needed — just ask Claude to run the skill.
-
-## Execution algorithm
-
-### Step 1 — Collect diff
-
-```bash
-git diff $(git merge-base origin/main HEAD)...HEAD --name-only --diff-filter=AM
-```
-
-`--diff-filter=AM` — only Added and Modified files. Skip Deleted/Renamed.
-
-### Step 1.5 — Diff size guard
-
-Count total changed lines:
-
-```bash
-git diff $(git merge-base origin/main HEAD)...HEAD --stat | tail -1
-```
-
-- If **files > 50** OR **lines changed > 1000** → print a warning before the report:
-  ```
-  ⚠️  Large PR detected: N files, N lines changed.
-  Consider splitting into smaller PRs for more accurate review.
-  ```
-  Continue the review regardless — this is a warning, not a blocker.
-
-### Step 2 — Filter noise
-
-Exclude the following from analysis (do not pass to sub-agents):
-
-- `**/node_modules/**`
-- `**/vendor/**` (but CHECK if `client/src/vendor/shared/contracts/` differs from `server/src/vendor/shared/contracts/` — see [severity-levels](rules/severity-levels.md))
-- `**/migrations/**`
-- `**/*.log`
-- `**/*.md`
-- `**/*.json`
-- `e2e/**`
-
-Also skip any **line** in a file that has the annotation:
-
-```ts
-// pr-self-review-ignore: <reason>
-```
-
-Do not report findings on that line. The reason is logged in the report footer as: `Ignored: file:line — reason`.
-
-### Step 3 — Route files to buckets
-
-See [file-routing](rules/file-routing.md) for exact rules.
-
-| Bucket             | Pattern                                                                                  |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| **UI Frontend**    | `client/**/*.ts`, `client/**/*.tsx`, `client/**/*.css` (excluding `vendor/`, `*.test.*`) |
-| **Backend/Domain** | `server/**/*`, `reviewer-core/**/*` (excluding `*.test.*`)                               |
-| **Tests**          | `**/*.test.ts`, `**/*.test.tsx` (from any module)                                        |
-
-If a bucket has zero files after filtering → skip that sub-agent entirely.
-
-### Step 4 — Spawn sub-agents (fan-out, parallel)
-
-Spawn **one sub-agent per non-empty bucket**. Each sub-agent receives:
-
-1. Only its slice of the diff — **full `git diff` content** (not just file names) for each file in the bucket
-2. Explicit skill rules extracted from each assigned skill file
-3. The structured output schema (see Step 5)
-
-**Diff format to pass to sub-agents:**
-
-```bash
-# Get full diff content for specific files only:
-git diff $(git merge-base origin/main HEAD)...HEAD -- <file1> <file2> ...
-```
-
-If the total diff content exceeds ~8000 tokens, split into batches of files and spawn multiple sub-agents per bucket, merging their findings afterward.
-
-**Sub-agent instructions template:**
-
-```
-You are a code reviewer for a Next.js 15 + Fastify + Drizzle project.
-
-Invoke each of the following skills in order using the Skill tool, then apply their rules to the diff:
-  1. Call the Skill tool with skill: "<skill-name>" — read its rules and check the diff against them
-  [repeat for each skill in this bucket]
-
-For each violation found, return a finding in this exact JSON format:
-{ "file": "path/to/file.ts", "line": 42, "severity": "CRITICAL|HIGH|MEDIUM", "skill": "skill-name", "issue": "one sentence", "fix": "one sentence" }
-
-Return ONLY a JSON array of findings. No prose. No explanations outside the array.
-If no issues found, return [].
-
-Changed files diff:
-[FULL GIT DIFF CONTENT]
-```
-
-**Important:** The sub-agent must call the Skill tool for each assigned skill — it does not automatically know the rules unless it loads each skill file via the Skill tool. Listing skill names without calling the tool = no rules loaded = hallucinated review.
-
-**Skill assignments per bucket:**
-
-| Bucket         | Skills                                                                                                                                    |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| UI Frontend    | `frontend-architecture`, `react-best-practices`, `next-best-practices`, `typescript-expert`, `zod`, `security`                            |
-| Backend/Domain | `onion-architecture`, `fastify-best-practices`, `drizzle-orm-patterns`, `postgresql-table-design`, `typescript-expert`, `zod`, `security` |
-| Tests          | `react-testing-library`, `typescript-expert`                                                                                              |
-
-### Step 5 — Collect and deduplicate findings
-
-Collect findings arrays from all sub-agents. Deduplicate on `file + line`: if two skills report the same `file:line`, keep the one with higher severity; if equal severity, merge `issue` fields.
-
-### Step 6 — Contract sync check
-
-Run separately from sub-agents:
-
-```bash
-diff -r client/src/vendor/shared/contracts/ server/src/vendor/shared/contracts/
-```
-
-If any differences found → add a CRITICAL finding:
-
-```json
-{
-  "file": "vendor/shared/contracts/[filename]",
-  "line": 0,
-  "severity": "CRITICAL",
-  "skill": "pr-self-review",
-  "issue": "Contract file differs between client and server vendor copies",
-  "fix": "Sync the contract file to both client/src/vendor/shared/contracts/ and server/src/vendor/shared/contracts/"
-}
-```
-
-### Step 6.5 — Test coverage gate
-
-For each changed source file (UI Frontend + Backend/Domain buckets), check if a corresponding test file was also changed:
-
-```
-client/src/components/Foo.tsx changed?
-→ look for client/src/components/Foo.test.tsx in the diff
-→ if missing → HIGH finding
-```
-
-Finding format:
-
-```json
-{
-  "file": "client/src/components/Foo.tsx",
-  "line": 0,
-  "severity": "HIGH",
-  "skill": "pr-self-review",
-  "issue": "Component changed but no test file updated",
-  "fix": "Update or add Foo.test.tsx to cover the changes"
-}
-```
-
-Skip this check for:
-
-- Files in `lib/`, `i18n/`, `vendor/`, `contexts/`, `utils/`, `constants/`, `types/` — these are utilities/config, not components with required test coverage
-- Next.js page files: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx` — framework files, not directly testable
-- Files that are themselves test files
-- Files where the entire file is new (Added) and no test exists yet → downgrade to **MEDIUM**
-- Files with < 20 lines changed (minor edits unlikely to break existing tests)
-
-### Step 6.6 — npm audit check
-
-Run only if `package.json` appears in the raw diff (before noise filtering).
-
-Run from the package directory that contains the changed `package.json`:
-
-```bash
-# If client/package.json changed:
-cd client && npm audit --audit-level=high --json 2>/dev/null | head -50
-
-# If server/package.json changed:
-cd server && npm audit --audit-level=high --json 2>/dev/null | head -50
-
-# If reviewer-core/package.json changed:
-cd reviewer-core && npm audit --audit-level=high --json 2>/dev/null | head -50
-```
-
-If vulnerabilities with severity `high` or `critical` found → add one CRITICAL finding per vulnerability:
-
-```json
-{
-  "file": "package.json",
-  "line": 0,
-  "severity": "CRITICAL",
-  "skill": "security",
-  "issue": "npm dependency has high/critical vulnerability: <package>@<version>",
-  "fix": "Run npm audit fix or update <package> to a safe version"
-}
-```
-
-If `npm audit` is not available or exits with non-JSON output → skip silently.
-
-### Step 7 — Apply merge gate and output report
-
-See [severity-levels](rules/severity-levels.md) for severity definitions.
-See [output-format](rules/output-format.md) for exact report format.
-
-**Merge gate:**
-
-- `CRITICAL count > 0` → **BLOCKER** — do NOT execute `git push`, tell user to fix CRITICAL issues
-- `CRITICAL count === 0` → **PASS** — execute `git push` (or allow user to proceed), show HIGH/MEDIUM as recommendations
-
-### Step 8 — PR description generator (on PASS only)
-
-After `✅ PASS`, automatically generate a PR description template based on the diff:
-
-```
-## What changed
-<1-3 sentences summarizing the main change based on diff>
-
-## Modules affected
-- client/ — <summary of UI changes>
-- server/ — <summary of backend changes>
-- reviewer-core/ — <summary if changed>
-
-## How to test
-- [ ] <suggested manual test step based on changed files>
-
-## Screenshots
-<!-- Add screenshot or GIF of UI changes if applicable -->
-```
-
-Print this after the findings report under heading `### 📝 Suggested PR Description`.
-Do not generate it if verdict is BLOCKER.
-
----
-
-## Related skills (used by sub-agents, not directly)
-
-| Skill                     | Bucket                       |
-| ------------------------- | ---------------------------- |
-| `frontend-architecture`   | UI Frontend                  |
-| `react-best-practices`    | UI Frontend                  |
-| `next-best-practices`     | UI Frontend                  |
-| `react-testing-library`   | Tests                        |
-| `onion-architecture`      | Backend/Domain               |
-| `fastify-best-practices`  | Backend/Domain               |
-| `drizzle-orm-patterns`    | Backend/Domain               |
-| `postgresql-table-design` | Backend/Domain               |
-| `typescript-expert`       | All buckets                  |
-| `zod`                     | UI Frontend + Backend/Domain |
-| `security`                | UI Frontend + Backend/Domain |
+This prints `{ diffHash, base, branch, defaultBranch }`. `base` is the
+merge-base with the repo's default branch — use it to see the actual changed
+content:
+
+    git diff <base>...HEAD                          # committed branch changes
+    git diff HEAD                                    # uncommitted/staged working-tree changes
+    git status --porcelain --untracked-files=all      # + new files
+
+Together these three are "all open changes" — the full set this skill
+reviews (matches what `diff-hash.mjs` hashes, so the stamp in step 6 stays
+accurate). List the changed file paths, dropping deletions and anything on
+the do-not-touch list from `AGENTS.md` (`package-lock.json`,
+`pnpm-lock.yaml`, `server/src/vendor/*`, `client/src/vendor/*`).
+
+### 2. Match skills to files
+
+Don't hardcode a mapping — read `.claude/skills/README.md`'s catalog table
+for the `Scope` column as a coarse filter, then confirm each candidate with
+its own `SKILL.md` "When to use" section (the `Scope` column is a
+pre-filter, not the final answer):
+
+- `client/**` → Frontend-scoped skills (`next-best-practices`,
+  `react-best-practices`, `react-project-structure`, `tanstack-query` (any
+  `useQuery`/`useMutation`/`lib/hooks` change), and
+  `react-testing-library` for `*.test.tsx` files).
+- `server/**` and `reviewer-core/**` → Backend-scoped skills
+  (`fastify-best-practices`, `drizzle-orm-patterns`,
+  `postgresql-table-design`, `onion-architecture`).
+- Full-stack skills (`zod`, `typescript-expert`, `security`) — only when
+  their own "When to use" section actually matches the touched files (e.g.
+  `zod` only if a schema file changed, `security` only if routes/auth/input
+  handling changed). Don't run these unconditionally — that's noise.
+- `e2e/**` changes have no dedicated skill in the catalog today — skip
+  matching for them rather than force-fitting an unrelated skill.
+
+If a candidate's "When to use" section doesn't actually match the touched
+files, drop it.
+
+### 3. Review
+
+For each matched skill, read it and review only the hunks in the files it
+matched, against that skill's own rules — not the whole repo, not files
+another skill already owns.
+
+### 4. Score
+
+Use the same taxonomy as `reviewer-core`
+(`reviewer-core/src/output/to-review.ts`: `SEV_RANK`) — `CRITICAL` /
+`WARNING` / `SUGGESTION`, don't invent new labels. Gate policy is `critical`
+by default: any `CRITICAL` finding fails the gate (mirrors
+`FAIL_ON_MIN_RANK.critical` in the same file).
+
+### 5. Report
+
+Print findings grouped by file → skill, each with severity, a one-line
+rationale, and a concrete fix. End with a one-line verdict:
+
+- `PASS` — no `CRITICAL` findings (`WARNING`/`SUGGESTION` are still shown,
+  just non-blocking).
+- `BLOCKED` — at least one `CRITICAL` finding, plus the explicit next step
+  ("fix the above, then re-run pr-self-review").
+
+### 6. Stamp the result
+
+Write `.claude/.pr-self-review-stamp.json`:
+
+    { "diffHash": "<diffHash from step 1>", "result": "pass" | "blocked", "at": "<ISO timestamp>" }
+
+This file is gitignored (local-only) — it's the artifact
+`.claude/hooks/check-pr-self-review.mjs` checks before allowing
+`gh pr create` / `git push`. Only a `pass` stamp whose `diffHash` matches the
+*current* diff satisfies the hook; editing anything afterward invalidates it,
+and the hook blocks again until this skill is re-run.
+
+### 7. Feed durable learnings into `engineering-insights`
+
+Most runs stop at step 6 — most findings are one-off and don't belong in
+`INSIGHTS.md`. Only hand off to the `engineering-insights` skill when either
+is true:
+
+- The **same violation category** from a matched skill has now fired across
+  more than one self-review run (check the module's `INSIGHTS.md` and recent
+  session context) — a real recurring pattern worth flagging to whoever
+  works here next, not a one-off.
+- A matched skill's rule turned out to be a **false positive for this
+  codebase** — it doesn't actually fit how this repo does things. This is a
+  `Decision` entry explaining the exception, so the next run doesn't
+  re-flag it.
+
+When either applies, follow `engineering-insights`' own procedure exactly:
+route to the right module's `INSIGHTS.md` (`server/`, `client/`,
+`reviewer-core/`, `e2e/`), same dated `### YYYY-MM-DD — short title` format,
+same cold-read quality bar. Don't manufacture an entry just to have one —
+"nothing durable this run" is a correct, common outcome.
+
+## Bypass
+
+`.claude/hooks/check-pr-self-review.mjs` honors
+`PR_SELF_REVIEW_BYPASS=<reason>` as an emergency override. It still logs the
+bypass (branch, diff hash, reason, timestamp) to
+`.claude/.pr-self-review-bypass.log`, which is committed and visible in
+history — don't suggest this as a routine way to skip review; it exists for
+genuine emergencies and every use is traceable.

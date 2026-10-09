@@ -1,103 +1,43 @@
+/* hooks/conventions.ts — React Query hooks for the Conventions Lab page.
+   Repo-scoped: candidates live under a repo, addressed by the active repo id
+   from repo-context. */
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { ConventionCandidate, Skill } from "@devdigest/shared";
+import type { ConventionCandidate, ConventionStatus } from "@devdigest/shared";
 
 export function useConventions(repoId: string | null | undefined) {
   return useQuery({
     queryKey: ["conventions", repoId],
-    queryFn: () =>
-      api.get<ConventionCandidate[]>(`/repos/${repoId}/conventions`),
+    queryFn: () => api.get<ConventionCandidate[]>(`/repos/${repoId}/conventions`),
     enabled: !!repoId,
   });
 }
 
+/** (Re-)scan the repo. Replaces every NOT-accepted candidate (pending or
+ *  rejected) server-side; previously accepted ones survive — see the
+ *  server's `extract()` doc. */
 export function useExtractConventions() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (repoId: string) =>
-      api.post<ConventionCandidate[]>(
-        `/repos/${repoId}/conventions/extract`,
-        {},
-      ),
-    onSuccess: (_data, repoId) => {
-      qc.invalidateQueries({ queryKey: ["conventions", repoId] });
-    },
+      api.post<ConventionCandidate[]>(`/repos/${repoId}/conventions/extract`),
+    onSuccess: (data, repoId) => qc.setQueryData(["conventions", repoId], data),
   });
 }
 
-export function useAcceptConvention() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ repoId, id }: { repoId: string; id: string }) =>
-      api.patch<ConventionCandidate>(`/repos/${repoId}/conventions/${id}`, {
-        accepted: true,
-      }),
-    onSuccess: (_d, { repoId }) => {
-      qc.invalidateQueries({ queryKey: ["conventions", repoId] });
-    },
-  });
-}
-
-export function useRejectConvention() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ repoId, id }: { repoId: string; id: string }) =>
-      api.patch<{ ok: boolean }>(`/repos/${repoId}/conventions/${id}`, {
-        accepted: false,
-      }),
-    onSuccess: (_d, { repoId }) => {
-      qc.invalidateQueries({ queryKey: ["conventions", repoId] });
-    },
-  });
-}
-
-export function useUpdateConventionRule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      repoId,
-      id,
-      rule,
-    }: {
-      repoId: string;
-      id: string;
-      rule: string;
-    }) =>
-      api.patch<ConventionCandidate>(`/repos/${repoId}/conventions/${id}`, {
-        rule,
-      }),
-    onSuccess: (_d, { repoId }) => {
-      qc.invalidateQueries({ queryKey: ["conventions", repoId] });
-    },
-  });
-}
-
-export interface CreateSkillFromConventionsInput {
+export interface PatchConventionInput {
   repoId: string;
-  name: string;
-  description: string;
+  id: string;
+  patch: { status?: ConventionStatus; rule?: string };
 }
 
-export function useCreateSkillFromConventions() {
+export function useUpdateConvention() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ repoId, ...body }: CreateSkillFromConventionsInput) =>
-      api.post<Skill>(`/repos/${repoId}/conventions/skill`, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["skills"] });
-    },
-  });
-}
-
-export function useImportSkillFromUrl() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { url: string; name: string; description?: string }) =>
-      api.post<Skill>("/skills/import-url", input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["skills"] });
-    },
+    mutationFn: ({ id, patch }: PatchConventionInput) =>
+      api.patch<ConventionCandidate>(`/conventions/${id}`, patch),
+    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ["conventions", vars.repoId] }),
   });
 }

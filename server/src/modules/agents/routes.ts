@@ -1,26 +1,33 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { CiFailOn, Provider, ReviewStrategy, SetAttachedDocsBody } from '@devdigest/shared';
+import { CiFailOn, Provider, ReviewStrategy } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { NotFoundError } from '../../platform/errors.js';
-import { AgentsService } from './service.js';
 
 /** `/providers/:id` addresses a provider by name, not a uuid. */
 const ProviderParams = z.object({ id: Provider });
 
+/** `/agents/:id/versions/:version` — id is a uuid, version a positive integer. */
+const VersionParams = z.object({
+  id: z.string().uuid(),
+  version: z.coerce.number().int().positive(),
+});
+
 /**
  * A2 — agents module (owner A2).
- *   GET    /agents                       → list (workspace-scoped)
- *   GET    /agents/:id                   → one agent
- *   POST   /agents                       → create
- *   PUT    /agents/:id                   → update / toggle enabled (versions config)
- *   PUT    /agents/:id/attached-docs     → set attached doc paths (no version bump)
- *   GET    /agents/:id/skills            → linked skills (ordered)
- *   POST   /agents/:id/skills            → set/reorder linked skills OR link one
- *   GET    /agents/:id/models            → dynamic model list for the agent's provider
- *   GET    /providers/:id/models         → dynamic model list for a provider (editor)
+ *   GET    /agents                  → list (workspace-scoped)
+ *   GET    /agents/:id              → one agent
+ *   POST   /agents                  → create
+ *   PUT    /agents/:id              → update / toggle enabled (versions config)
+ *   GET    /agents/:id/versions     → config history (newest first)
+ *   GET    /agents/:id/versions/:version → one config snapshot
+ *   POST   /agents/:id/versions/:version/promote → apply snapshot N as a new version
+ *   GET    /agents/:id/skills       → linked skills (ordered)
+ *   POST   /agents/:id/skills       → set/reorder linked skills OR link one
+ *   GET    /agents/:id/models       → dynamic model list for the agent's provider
+ *   GET    /providers/:id/models    → dynamic model list for a provider (editor)
  */
 
 const CreateAgentBody = z.object({
@@ -62,7 +69,7 @@ const SetSkillsBody = z
 
 export default async function agentsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
-  const service = new AgentsService(app.container);
+  const service = app.container.agentsService;
 
   app.get('/agents', async (req) => {
     const { workspaceId } = await getContext(app.container, req);
@@ -110,23 +117,41 @@ export default async function agentsRoutes(appBase: FastifyInstance) {
     },
   );
 
-  app.put(
-    '/agents/:id/attached-docs',
-    { schema: { params: IdParams, body: SetAttachedDocsBody } },
-    async (req) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const agent = await service.setAttachedDocs(workspaceId, req.params.id, req.body.paths);
-      if (!agent) throw new NotFoundError('Agent not found');
-      return agent;
-    },
-  );
-
   app.delete('/agents/:id', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     const ok = await service.delete(workspaceId, req.params.id);
     if (!ok) throw new NotFoundError('Agent not found');
     return { ok: true };
   });
+
+  app.get('/agents/:id/versions', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const versions = await service.listVersions(workspaceId, req.params.id);
+    if (!versions) throw new NotFoundError('Agent not found');
+    return versions;
+  });
+
+  app.get(
+    '/agents/:id/versions/:version',
+    { schema: { params: VersionParams } },
+    async (req) => {
+      const { workspaceId } = await getContext(app.container, req);
+      const version = await service.getVersion(workspaceId, req.params.id, req.params.version);
+      if (!version) throw new NotFoundError('Agent version not found');
+      return version;
+    },
+  );
+
+  app.post(
+    '/agents/:id/versions/:version/promote',
+    { schema: { params: VersionParams } },
+    async (req) => {
+      const { workspaceId } = await getContext(app.container, req);
+      const agent = await service.promote(workspaceId, req.params.id, req.params.version);
+      if (!agent) throw new NotFoundError('Agent version not found');
+      return agent;
+    },
+  );
 
   app.get('/agents/:id/skills', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);

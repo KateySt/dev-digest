@@ -9,6 +9,10 @@ export const REFRESH_JOB_KIND = 'repo-intel-refresh';
 /** Manual "re-analyze": fetch latest from origin + incremental reindex. */
 export const RESYNC_JOB_KIND = 'repo-intel-resync';
 
+/** Prefix of the persisted/returned refusal reason (S-AC-28/35/36); the client parses it. */
+export const PROJECT_CONTEXT_BLOCKED_PREFIX = 'project_context_blocked:';
+export const PROJECT_CONTEXT_BLOCKED_CODE = 'project_context_blocked';
+
 // --- Walk / parse scope -----------------------------------------------------
 /** [T1] Files we parse (diff-scoped in T1; whole walk in T2). */
 export const SUPPORTED_EXT = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'] as const;

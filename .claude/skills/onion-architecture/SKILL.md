@@ -1,135 +1,68 @@
 ---
 name: onion-architecture
-description: >
-  Onion Architecture enforcement for the DevDigest backend: Fastify 5, Drizzle ORM, Zod, TypeScript.
-  Defines the four concentric layers (Domain, Application, Infrastructure, Presentation), the inward-only
-  dependency rule, and how each tool maps to a layer.
-  TRIGGER when: adding a new backend module, touching routes.ts / service.ts / repository.ts,
-  "where does X go", "what layer", "can I import", adding new adapter, touching container.ts,
-  service directly queries DB, route handler contains business logic, Drizzle schema imported in service.
-  Does NOT cover: Fastify plugin API details (use fastify-best-practices), Drizzle query syntax
-  (use drizzle-orm-patterns), Zod schema syntax (use zod), PostgreSQL schema design (use postgresql-table-design).
+description: "Forces Onion Architecture (dependency rule, ports & adapters, layer isolation) for DevDigest's backend modules (server/, reviewer-core/). Use when adding a new Fastify module, a new adapter/port, a new repository, or when reviewing backend code for layering violations — e.g. business logic in routes.ts, services importing concrete adapters instead of interfaces, or domain code touching Drizzle/Postgres directly. Trigger terms: onion architecture, layered architecture, ports and adapters, dependency rule, domain layer, application service, DI container, repository pattern."
+metadata:
+  tags: architecture, ddd, onion, hexagonal, backend, fastify, di
 ---
 
-# Onion Architecture
+## When to use
 
-> **Dependencies point inward. The domain knows nothing about the outside world.**
+Use this skill when you:
+- Add a new Fastify module under `server/src/modules/<name>/`
+- Add a new port/adapter under `server/src/adapters/`
+- Touch `server/src/platform/container.ts` (the composition root)
+- Work anywhere in `reviewer-core/` (the project's one pure-domain package)
+- Review backend code for layering violations (business logic in routes,
+  services depending on concrete infrastructure, domain code touching
+  Drizzle/Postgres directly)
 
-This skill enforces four concentric layers for every backend module in `server/src/modules/`. It answers "where does this code go?" and "can this file import from that file?" — not "how do I write this Drizzle query?" or "how does Fastify's plugin system work?".
+Not in scope: `client/` (Next.js) and `e2e/` — this skill governs backend
+modules only.
 
-## When to invoke this skill
+**Ordering with other skills**: pick module/layer boundaries with this skill
+first, then implement each ring's file with the framework-specific skill —
+`fastify-best-practices` for `routes.ts`, `drizzle-orm-patterns` for
+`repository.ts`. This skill decides *where code is allowed to live and what
+it's allowed to import*; the others decide *how to write that file well*.
 
-- Adding or scaffolding a new `modules/<name>/` directory
-- Deciding where business logic, a Zod schema, or a Drizzle query belongs
-- A service method calls `this.container.db.select()` directly
-- A route handler builds domain objects or calls repositories
-- A repository imports from another module's service
-- Unsure whether a new file is `service.ts`, `repository.ts`, or a helper
-- Adding a new external adapter (LLM, GitHub, Git, etc.)
-- Touching `src/platform/container.ts`
+## The one rule
 
-## Related skills
+**Dependencies point inward, only.** An outer ring may import an inner ring.
+An inner ring must never import an outer ring. If you're unsure which ring a
+file belongs to, ask: "does this file know about Fastify, Drizzle, or
+Postgres?" If yes, it's an outer ring. See `rules/dependency-rule.md`.
 
-| Skill | What it covers (NOT this skill) |
-|---|---|
-| `fastify-best-practices` | Plugin API, decorators, lifecycle hooks, serialization, SSE |
-| `drizzle-orm-patterns` | Query builder syntax, relations, migrations, transactions |
-| `zod` | Schema definition, safeParse, z.infer, coerce |
-| `postgresql-table-design` | Table design, indexes, constraints, pgvector |
+## The four rings, mapped onto this repo
 
-## Reading paths
+| Ring | What it is | Where it lives here |
+|---|---|---|
+| 0 — Domain | Business rules, zero framework/infra knowledge | `reviewer-core/src/` |
+| 1 — Application services | Use-case orchestration, depends on port interfaces only | `server/src/modules/<name>/service.ts` |
+| 2 — Ports & infrastructure | Interfaces + their concrete implementations (DB, HTTP clients, LLMs) | `server/src/vendor/shared/adapters.ts` (ports) + `server/src/adapters/*` and `server/src/modules/<name>/repository.ts` (implementations) |
+| 3 — Composition / transport | Wires concrete adapters into services, exposes them over HTTP | `server/src/platform/container.ts` + `server/src/modules/<name>/routes.ts` |
 
-- **New module** → [layers](rules/layers.md) → [presentation-layer](rules/presentation-layer.md) → [application-layer](rules/application-layer.md) → [infrastructure-layer](rules/infrastructure-layer.md)
-- **"Where does this go?"** → [dependency-rule](rules/dependency-rule.md) → [layers](rules/layers.md)
-- **"Where does validation go?"** → [validation-stack](rules/validation-stack.md)
-- **DI / adapters** → [di-container](rules/di-container.md)
-- **Domain entities / errors** → [domain-layer](rules/domain-layer.md)
+Full detail and reasoning: `rules/layers.md`.
 
----
+## How to use
 
-## Quick Decision Trees
+Read the rule file for the layer you're touching:
 
-### Where does this code belong?
+- [rules/dependency-rule.md](rules/dependency-rule.md) — the inward-only rule, how to check it, why it exists
+- [rules/layers.md](rules/layers.md) — the four rings mapped onto `server/` and `reviewer-core/`
+- [rules/module-anatomy.md](rules/module-anatomy.md) — building a new `src/modules/<name>/` the Onion way
+- [rules/ports-and-di.md](rules/ports-and-di.md) — defining ports, wiring adapters through the DI container
+- [rules/testing-boundaries.md](rules/testing-boundaries.md) — what to mock vs. what to hit for real, per ring
+- [rules/anti-patterns.md](rules/anti-patterns.md) — concrete violations to flag in review, phrased against this codebase
+- [rules/enforcement.md](rules/enforcement.md) — optional `dependency-cruiser` config to make the rule machine-checkable
 
-```
-Does it describe a business concept with invariants (entity, domain error)?
-├── YES → domain-layer  (vendor/shared/contracts/ or domain entities)
-└── NO
-    Does it orchestrate a workflow — combining repo + adapter calls?
-    ├── YES → application-layer  (modules/*/service.ts)
-    └── NO
-        Does it talk to the DB, GitHub, LLM, Git, or any I/O?
-        ├── YES → infrastructure-layer  (modules/*/repository.ts or adapters/)
-        └── NO (HTTP shape, Fastify handler) → presentation-layer  (modules/*/routes.ts)
-```
+## Further reading
 
-### Can this file import from that file?
-
-```
-I'm in...                 Can I import from...
-──────────────────────────────────────────────────
-domain/                   → NOTHING outside domain
-service.ts (application)  → domain only (no DB, no Fastify)
-repository.ts (infra)     → domain + drizzle-orm + db/schema
-routes.ts (presentation)  → service.ts + Zod HTTP schemas only
-container.ts              → everything (composition root)
-```
-
-### Where does this Zod schema go?
-
-```
-Does it validate HTTP request/response shape (params, body, reply)?
-├── YES → top of routes.ts  or  _shared/schemas.ts  (presentation layer)
-└── NO
-    Does it check application-level preconditions in a service method?
-    ├── YES → z.safeParse() inline in service.ts  (application layer)
-    └── NO (domain invariant)
-        → plain guard clause:  if (!valid) throw new AppError(...)
-           (domain layer — NO Zod import)
-```
-
-### New module scaffold
-
-```
-modules/<name>/
-├── routes.ts        ← Fastify plugin: validate → service call → reply
-├── service.ts       ← Orchestration: no SQL, no adapter instantiation
-├── repository.ts    ← Drizzle queries: toDomain() + toDb() mappers
-├── helpers.ts       ← Pure transforms, DTO converters (optional)
-└── constants.ts     ← String/number literals (optional)
-```
-
----
-
-## Core Principles
-
-1. **Inward-only dependencies** — `routes.ts` can import `service.ts`; `service.ts` can NEVER import `routes.ts`. Violations break testability and create circular dependencies.
-
-2. **Domain knows nothing** — `vendor/shared/contracts/` and domain entities have zero imports from Fastify, Drizzle, Zod, or any adapter. If you need to add one, the code belongs in a different layer.
-
-3. **One composition root** — all `new ConcreteClass()` calls live exclusively in `src/platform/container.ts`. Services receive a `Container` and pull what they need. Instantiating adapters in service constructors (e.g., `new OpenAIProvider()`) is forbidden.
-
-4. **Drizzle stays in infrastructure** — `$inferSelect` and `$inferInsert` types never leave the repository file. Services and routes work with DTO types defined in `vendor/shared/contracts/`.
-
-5. **Thin routes** — Fastify handlers do exactly three things: (1) validate input with Zod, (2) call one service method, (3) send the reply. Business rules, branching logic, and DB queries in routes are violations.
-
-6. **Validation is a stack** — every layer validates what it owns. See [validation-stack](rules/validation-stack.md). Never duplicate validation across layers.
-
----
-
-## Rules Reference
-
-| File | What it covers |
-|---|---|
-| [rules/layers.md](rules/layers.md) | Four-layer model, project folder mapping, what belongs in each |
-| [rules/dependency-rule.md](rules/dependency-rule.md) | Import allow-list per layer, violation examples |
-| [rules/domain-layer.md](rules/domain-layer.md) | Entities, domain errors, invariant guards, what NOT to import |
-| [rules/application-layer.md](rules/application-layer.md) | Service pattern, orchestration rules, fire-and-forget |
-| [rules/infrastructure-layer.md](rules/infrastructure-layer.md) | Repository pattern, data mappers, adapter placement |
-| [rules/presentation-layer.md](rules/presentation-layer.md) | Fastify route rules, HTTP Zod schemas, error propagation |
-| [rules/validation-stack.md](rules/validation-stack.md) | Where each validation type lives across all four layers |
-| [rules/di-container.md](rules/di-container.md) | Container pattern, composition root, test doubles |
-
-## Sources
-
-All 13 research URLs → [references.md](references.md)
+- Jeffrey Palermo, *The Onion Architecture* (original 2008 series) — [part 1](https://jeffreypalermo.com/2008/07/the-onion-architecture-part-1/), [part 2](https://jeffreypalermo.com/2008/07/the-onion-architecture-part-2/), [part 3](https://jeffreypalermo.com/blog/the-onion-architecture-part-3/)
+- Milan Jovanović, [Clean vs Onion vs Hexagonal Architecture](https://milanjovanovic.tech/blog/clean-architecture-vs-onion-vs-hexagonal)
+- NDepend Blog, [Onion Architecture: Going Beyond Layers](https://blog.ndepend.com/onion-architecture-layers/)
+- Ritesh Kapoor (Expedia Group Tech), [Onion Architecture. Let's slice it like a Pro](https://medium.com/expedia-group-tech/onion-architecture-deed8a554423)
+- André Bazaglia, [Clean architecture with TypeScript: DDD, Onion](https://bazaglia.com/clean-architecture-with-typescript-ddd-onion/)
+- remojansen (dev.to), [Enforce Clean Architecture in your TypeScript projects with fresh-onion](https://dev.to/remojansen/enforce-clean-architecture-in-your-typescript-projects-with-fresh-onion-45pi)
+- Sentry Blog, [Atomic Repositories in Clean Architecture and TypeScript](https://blog.sentry.io/atomic-repositories-in-clean-architecture-and-typescript/)
+- Microsoft Learn, [Designing the infrastructure persistence layer](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design) (framework-agnostic repository/port framing)
+- Wikipedia, [Hexagonal architecture (software)](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software)) — Ports & Adapters terminology, used interchangeably with Onion in this skill

@@ -69,10 +69,13 @@ flowchart TB
     polling["polling<br/>/repos/:id/poll"]
   end
   subgraph Review["Review & runs"]
-    reviews["reviews<br/>/pulls/:id/review · /reviews · /findings/:id/(accept|dismiss)<br/>/runs/:id/(events|trace)"]
+    reviews["reviews<br/>/pulls/:id/review · /reviews · /findings/:id/(accept|dismiss|reply)<br/>/runs/:id/(events|trace)"]
   end
   subgraph Agents["Agents"]
-    agents["agents<br/>/agents · /agents/:id"]
+    agents["agents<br/>/agents · /agents/:id<br/>/agents/:id/versions · /versions/:v/promote"]
+  end
+  subgraph Evals["Evals"]
+    evalMod["eval<br/>/eval-cases · /findings/:id/eval-case<br/>/agents/:id/eval-runs (+ /compare)<br/>/eval-suite-runs/:id · /eval-dashboard (+ /run-all)<br/>/skills/:id/eval-runs (+ /compare) · /eval-dashboard/skills (+ /run-all)"]
   end
   subgraph Intel["Repo intelligence"]
     repoIntel["repo-intel<br/>/repos/:id/index-state · /resync"]
@@ -83,6 +86,84 @@ flowchart TB
   end
   HEALTH["/health (liveness) · /health/ready (DB ping → 200/503)"]
 ```
+
+## Evals (suite runs)
+
+Owned by `modules/eval/` (spec: [`specs/eval.md`](specs/eval.md)). Scoring is
+pure and lives in `reviewer-core` (`scoreEvalCase`, `aggregateSuiteScores`:
+file + line-overlap matching, pooled recall/precision/citation accuracy, `null`
+when a denominator is zero).
+
+- **Cases** (`eval_cases`) have a `kind` (`must_find` / `must_not_flag`) and a
+  `source` (`manual` or promoted from a finding via
+  `POST /findings/:id/eval-case`, tracked by `source_finding_id`; one case per
+  finding, a repeat call is a `409` carrying the existing `case_id`).
+- **Suite runs** (`eval_suite_runs`) are started with
+  `POST /agents/:id/eval-runs` (`202`, or `409 eval_run_in_progress` — a partial
+  unique index allows one `running` run per agent) or for every eligible agent
+  with `POST /eval-dashboard/run-all`. Cases run **sequentially in the
+  background**; poll `GET /eval-suite-runs/:id` for `cases_done / cases_total`
+  and per-case results. A case that errors is recorded (`status = errored`) and
+  excluded from the pooled metrics; the run fails only if every case errored.
+- **Versioning:** a run is pinned to the agent version at start (a snapshot is
+  ensured first). Agent versions now include skill links with per-skill
+  versions; `POST /agents/:id/versions/:v/promote` restores one, and
+  `GET /agents/:id/eval-runs/compare?base=&head=` diffs two runs.
+- **Boot reaper:** `EvalService.reapStaleSuiteRuns()` runs next to the review
+  reaper in `app.ts` and fails any suite run left `running` by a dead process.
+
+### Skill evals (SPEC-08)
+
+Same module and table as agent runs (spec: [`specs/skill-evals.md`](specs/skill-evals.md)).
+`eval_suite_runs` carries `owner_kind` (`agent` | `skill`), `skill_id` (FK,
+cascade), `skill_version`, `is_draft`, `provider`, `model`; a CHECK constrains
+the row shape per owner kind, and partial unique indexes allow one `running`
+run and one draft per skill. `eval_cases` is unique per
+(`source_finding_id`, `owner_kind`, `owner_id`).
+
+- **Isolation:** a skill run uses the baseline `SKILL_EVAL_SYSTEM_PROMPT` plus
+  only that skill, on the workspace `skill_eval` model. Text, version,
+  provider and model are captured at start; cases run sequentially in the
+  background.
+- **Routes:** `POST /skills/:id/eval-runs` (body `{ draft_body? }`, max 50k;
+  `202`; `400` no cases; `422 skill_scan_not_passed` with
+  `details.scan_status` when the scan is pending/error/blocking; `409` if any
+  run of the skill is running; a draft identical to the saved text becomes a
+  normal suite run), `GET /skills/:id/eval-runs?range=` (runs, history, alert,
+  `cases_total`, `latest_draft`), `GET /skills/:id/eval-runs/compare?base=&head=`,
+  `GET /eval-dashboard/skills`, `POST /eval-dashboard/skills/run-all`
+  (includes disabled skills; skips scan-blocked and running ones).
+  `GET /eval-suite-runs/:id` serves agent, skill and draft runs, discriminated
+  by `owner_kind`. `POST /findings/:id/eval-case` takes an optional
+  `{ target: { kind, id } }` (`409` per finding + target); findings expose
+  `eval_cases` per target. The old `POST /skills/:id/eval-cases/run-all` is
+  **removed**.
+- **Drafts:** draft text is never persisted; only the latest draft run per
+  skill is kept, and drafts are excluded from history, alert, stats and the
+  dashboard.
+- **Alert:** for skill runs the regression alert appends
+  " (model changed between runs)" and sets `model_changed` when provider/model
+  differ.
+- **Delete:** `SkillsService.delete` removes the skill and its eval cases in
+  one transaction (runs cascade via FK).
+- **Boot reaper** also fails running skill suite and draft runs
+  ("interrupted").
+- **Known gaps:** the client hook `useRunAllSkillEvals` still calls the removed
+  route (404 until client SPEC-08); restore/promote does not re-scan skill text.
+
+```mermaid
+stateDiagram-v2
+  [*] --> running: start (row inserted, 202)
+  running --> running: case done, cases_done + 1 (errored cases skipped in metrics)
+  running --> completed: all cases processed, at least one evaluated
+  running --> failed: input build failed or every case errored
+  running --> failed: boot reaper (process died)
+  completed --> [*]
+  failed --> [*]
+```
+
+`POST /findings/:id/reply` (reviews module) posts the reply body to GitHub as a PR
+comment and records `reply_url` / `replied_at` on the finding.
 
 ## Environment
 
@@ -105,8 +186,13 @@ through `SecretsProvider` (`~/.devdigest/secrets.json`, mode `0600`, with
 `process.env` as a fallback), per the **Where keys live** note at the top.
 
 Migrations are **not** applied on boot — run `pnpm db:migrate` (pgvector is
-enabled by migration `0000`). `pnpm db:seed` is idempotent demo data
-(`acme/payments-api`, PR #482, the two built-in agents).
+enabled by migration `0000`; `0020` adds `eval_suite_runs` and the eval-case /
+finding-reply columns, `0021` generalises it for skill runs — Evals routes fail without them). `pnpm db:seed` also
+seeds eval demo data (`src/db/seed-eval.ts`). `pnpm db:seed` is idempotent demo data
+(`acme/payments-api`, PR #482, the two built-in agents). The eval seed skips an
+agent that already has cases or suite runs, so a DB seeded before the 8-case
+Security Reviewer set (SPEC-09) keeps its old 4 cases — reset the DB and re-seed
+to get the new set.
 
 ## Review context (non-obvious)
 
@@ -131,6 +217,14 @@ What the reviewer actually sends to the model is assembled in
 - **Grounding is mandatory.** Every finding must cite a line that exists in the
   diff or it is dropped (`groundFindings`), and the score is recomputed from the
   surviving findings — the model's self-reported score is ignored.
+- **Project context is now live.** `PromptParts.specs` (rendered as a
+  `## Project context` section, `wrapUntrusted`-delimited, already covered by
+  `INJECTION_GUARD`) used to be passed as `null` unconditionally. It's now
+  filled per run by `modules/project-context/` from each agent's and its
+  attached skills' ordered document sets — resolved fresh from storage every
+  run (nothing cached on the agent row), deduped by path, and dropped whole-
+  document past the project-context token budget rather than truncated. See
+  [`specs/project-context.md`](specs/project-context.md).
 
 ## Testing
 
@@ -142,7 +236,8 @@ hermetic:
 - **integration** — `pnpm exec vitest run .it.test` — the `*.it.test.ts` files.
   Each starts a real Postgres via testcontainers (`test/helpers/pg.ts`), builds
   the app, migrates + seeds, and exercises routes end-to-end. They self-skip when
-  Docker is absent.
+  Docker is absent. Run them with `--no-file-parallelism` — several containers
+  starting at once can blow the docker-check timeout.
 - `pnpm test` runs both.
 
 A DB-backed test (one that imports `test/helpers/pg.ts`) **must** use the

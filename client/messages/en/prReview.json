@@ -1,27 +1,4 @@
 {
-  "blastRadius": {
-    "title": "Blast Radius",
-    "symbols": "{count} symbols",
-    "callers": "{count} callers",
-    "endpoints": "{count} endpoints",
-    "crons": "{count} crons",
-    "tree": "Tree",
-    "graph": "Graph",
-    "degraded": "Degraded",
-    "emptyTitle": "No blast radius data",
-    "emptyBody": "Run at least one review agent to compute impact.",
-    "priorPrs": "Prior PRs touching these files",
-    "callerAt": "line {line}",
-    "loadingTitle": "Computing blast radius…",
-    "callersCount": "{count} callers",
-    "changedSymbol": "Changed symbol",
-    "caller": "Caller",
-    "endpoint": "Endpoint",
-    "openGraph": "Graph",
-    "graphTitle": "Blast Radius Graph",
-    "closeGraph": "Close graph",
-    "error": "Failed to load blast radius"
-  },
   "finding": {
     "accepted": "accepted",
     "dismissed": "dismissed",
@@ -32,7 +9,34 @@
     "replyToAuthor": "Reply to author",
     "replyPlaceholder": "Reply to the author about this finding…",
     "sendReply": "Send reply",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "learnSoon": "Coming soon",
+    "turnIntoEval": "Turn into eval case",
+    "inEvalSet": "In eval set",
+    "evalDecideFirst": "Accept or dismiss first",
+    "evalAgentOnly": "Only findings from an agent review can seed an eval case.",
+    "evalCreating": "Creating…",
+    "evalCreated": "Added to the eval set as a {kind} case.",
+    "evalKindMustFind": "must find",
+    "evalKindMustNotFlag": "must not flag",
+    "viewEvalCase": "View in the agent's Evals tab",
+    "viewSkillEvalCase": "View in the skill's Evals tab",
+    "evalCreatedFor": "Added to {target} as a {kind} case.",
+    "evalTargetAgent": "This agent (default)",
+    "evalTargetAgentName": "the agent",
+    "evalTargetsLabel": "Add the case to",
+    "evalAddTo": "Add to {target}",
+    "evalLoadingSkills": "Loading linked skills…",
+    "evalTargetKindSkill": "skill",
+    "replyPosted": "Posted · View on GitHub",
+    "replyDialogTitle": "Reply to author",
+    "replyDialogSubtitle": "Posts an inline comment on the pull request. Nothing is sent until you confirm.",
+    "replyTarget": "Posting to",
+    "replyBodyLabel": "Comment",
+    "replyPost": "Post to GitHub",
+    "replyPosting": "Posting…",
+    "replyFailed": "Couldn't post the reply: {message}",
+    "replySuggestionHeading": "Suggested fix"
   },
   "trifecta": {
     "lethal": "LETHAL TRIFECTA — ALL 3 PRESENT",
@@ -47,15 +51,16 @@
     "comment": "Comment",
     "findingsCount": "{count} findings",
     "blockers": " · {count} blockers",
-    "prScore": "PR SCORE"
+    "prScore": "PR SCORE",
+    "findingsInfo": "View findings",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…"
   },
   "panel": {
+    "all": "All",
     "hideLowConfidence": "Hide low confidence",
     "noMatchTitle": "No findings match",
-    "noMatchBody": "Adjust the filters above, or run a review to generate findings.",
-    "severityCRITICAL": "Critical",
-    "severityWARNING": "Warning",
-    "severitySUGGESTION": "Suggestion"
+    "noMatchBody": "Adjust the filters above, or run a review to generate findings."
   },
   "runReview": {
     "runAll": "Run all enabled agents",
@@ -63,7 +68,9 @@
     "running": "Running…",
     "runReview": "Run Review",
     "mergedWarning": "Already merged — review is informational",
-    "mergedTooltip": "This PR is already merged; running a review won’t affect the merged code."
+    "mergedTooltip": "This PR is already merged; running a review won’t affect the merged code.",
+    "runReviewFor": "Run Review for #{number} {title}",
+    "alreadyRunning": "A review is already running for this pull request."
   },
   "runStatus": {
     "elapsed": "Running · {count} agent(s)",
@@ -78,13 +85,32 @@
   },
   "smartDiff": {
     "coreLabel": "Core",
+    "coreLabelDescription": "The substance of the change — review closely",
+    "testsLabel": "Tests",
+    "testsLabelDescription": "Test coverage for the changes",
     "wiringLabel": "Wiring",
+    "wiringLabelDescription": "Hooks the core into the app",
+    "docsLabel": "Docs",
+    "docsLabelDescription": "Documentation and comments",
     "boilerplateLabel": "Boilerplate",
+    "boilerplateLabelDescription": "Generated / mechanical — skim",
     "largeTitle": "This PR is large ({lines} changed lines)",
     "largeBody": "Consider splitting it into smaller, focused PRs for easier review:",
     "filesCount": "{count} files",
+    "filesWithFindings": "{count} with findings",
     "findingLines": "{count} finding-lines",
-    "groupedByRole": "Smart Diff · grouped by role"
+    "groupedByRole": "Smart Diff · grouped by role",
+    "smartOrder": "Smart order",
+    "originalOrder": "Original order",
+    "notRunYet": "Run a review to see inline findings here."
+  },
+  "diffFindings": {
+    "show": "Show findings & comments",
+    "hide": "Hide findings & comments",
+    "unanchored": "Findings not shown inline ({count})",
+    "severityBlocker": "blocker",
+    "severityWarning": "warning",
+    "severitySuggestion": "suggestion"
   },
   "list": {
     "breadcrumb": "Pull Requests",
@@ -110,7 +136,44 @@
     "filterPlaceholder": "Filter pull requests…",
     "sort": {
       "newest": "Sort: Newest",
-      "oldest": "Sort: Oldest"
+      "oldest": "Sort: Oldest",
+      "highestRisk": "Sort: Highest risk"
+    },
+    "triageQueue": "Triage queue",
+    "reviewAll": {
+      "button": "Review all ({count})",
+      "unavailable": "No pull requests need review",
+      "dialogTitle": "Review all pull requests that need review",
+      "loading": "Estimating…",
+      "estimateError": "Couldn’t estimate the cost of this batch.",
+      "counts": "{prs, plural, one {# pull request} other {# pull requests}} × {agents, plural, one {# enabled agent} other {# enabled agents}} = {runs, plural, one {# review run} other {# review runs}}",
+      "approxCost": "Approximate cost: about {cost} (based on previous runs, not an exact price).",
+      "noCostHistory": "No cost estimate yet - no completed run has a recorded cost.",
+      "skipped": "{count, plural, one {# pull request already has a review running and will be skipped.} other {# pull requests already have a review running and will be skipped.}}",
+      "allInFlight": "Nothing to do - every pull request that needs review already has a review running.",
+      "noPrs": "No pull requests currently need review.",
+      "noAgents": "No agents are enabled. Enable at least one agent before running a bulk review.",
+      "tooMany": "{count} pull requests need review, which exceeds the maximum of {max} for one batch. No review will be started. Narrow the set (review some individually) and try again.",
+      "serverTooLarge": "The set of pull requests now exceeds the maximum of {max}. No review was started.",
+      "serverNothing": "No pull requests currently need review. No review was started.",
+      "serverNoAgents": "No agents are enabled. No review was started.",
+      "confirm": "Start reviews",
+      "starting": "Starting…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "resultSummary": "{started, plural, one {# pull request started} other {# pull requests started}}, {skipped} skipped, {failed} failed to start.",
+      "failedHeading": "Could not start",
+      "failedItem": "#{number} {title}: {reason}"
+    },
+    "rowFailed": "Failed",
+    "rowFailedTitle": "Last review run failed: {error}",
+    "rowFailedNoReason": "Last review run failed.",
+    "riskTooltip": {
+      "diffSize": "Diff size: {lines} lines",
+      "blastSize": "Blast size: {count} caller(s)",
+      "blastSizeUnavailable": "Blast size: not available",
+      "score": "Score: {score}",
+      "scoreUnavailable": "Score: not yet reviewed"
     },
     "columns": {
       "pullRequest": "Pull request",
@@ -120,7 +183,8 @@
       "findings": "Findings",
       "status": "Status",
       "cost": "Cost",
-      "updated": "Updated"
+      "updated": "Updated",
+      "actions": ""
     },
     "filesCount": "{count} files",
     "errorTitle": "Couldn’t load pull requests",
@@ -133,16 +197,5 @@
     "goToReview": "Jump to this run’s findings below",
     "openTrace": "Open run trace & logs",
     "deleteRun": "Delete run"
-  },
-  "overview": {
-    "descriptionLabel": "Description"
-  },
-  "intent": {
-    "sectionLabel": "Intent",
-    "recompute": "Recompute",
-    "recomputeAriaLabel": "Recompute PR intent",
-    "inScopeLabel": "In scope",
-    "outOfScopeLabel": "Out of scope",
-    "error": "Could not load intent. Click Recompute to try again."
   }
 }

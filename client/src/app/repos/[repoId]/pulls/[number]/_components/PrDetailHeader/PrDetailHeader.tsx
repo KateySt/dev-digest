@@ -2,7 +2,8 @@
 
 import React, { useCallback } from "react";
 import { Icon, Avatar, Badge, Button, Tabs } from "@devdigest/ui";
-import { RunReviewDropdown } from "../RunReviewDropdown";
+import { RunReviewDropdown } from "@/components/run-review-dropdown";
+import { formatAbsoluteDateTime, fullRelativeTime } from "@/app/repos/[repoId]/pulls/helpers";
 import { s } from "./styles";
 import type { PrDetail } from "@/lib/types";
 
@@ -55,9 +56,15 @@ export function PrDetailHeader({
           </h1>
           <div style={s.meta}>
             <span style={s.authorChip}>
-              <Avatar name={pr.author} size={17} />
+              <Avatar name={pr.author} avatarUrl={pr.avatar_url} size={17} />
               {pr.author}
             </span>
+            {pr.opened_at && (
+              <span style={s.openedChip} title={formatAbsoluteDateTime(pr.opened_at)}>
+                <Icon.Clock size={13} style={{ color: "var(--text-muted)" }} />
+                opened {fullRelativeTime(pr.opened_at)}
+              </span>
+            )}
             <span style={s.branchChip}>
               <Icon.GitBranch size={13} style={{ color: "var(--text-muted)" }} />
               <span className="mono" style={s.branchMono}>

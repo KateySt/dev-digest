@@ -47,6 +47,7 @@ import {
   DEFAULT_REPO_MAP_TOKEN_BUDGET,
   INDEX_JOB_KIND,
   INDEXER_VERSION,
+  PROJECT_CONTEXT_BLOCKED_PREFIX,
   MAX_CALLERS_PER_SYMBOL,
   REFRESH_JOB_KIND,
   RESYNC_JOB_KIND,
@@ -54,6 +55,7 @@ import {
 } from './constants.js';
 import { runFullIndex, type IndexPayload } from './pipeline/full.js';
 import { runIncremental } from './pipeline/incremental.js';
+import { filterAllowedPaths } from '../project-context/helpers.js';
 
 /**
  * GLOBALS allowlist — common JS/TS builtins + runtime that appear as bare
@@ -139,6 +141,15 @@ export class RepoIntelService implements RepoIntel {
    * is unreachable or the indexer version moved, so this is always
    * correct — never a destructive re-clone. Degrades (never throws) when the
    * repo isn't cloned yet or the fetch fails.
+   *
+   * SPEC-04 S-AC-28: refuses the advance (leaving the working tree untouched)
+   * when project-context documents (`specs/`/`docs/`/`insights/` markdown)
+   * are modified in the working tree but not committed — advancing would
+   * silently discard a user's saved-but-uncommitted edit (Project Context's
+   * save writes to the working tree only, no commit; see
+   * `server/specs/project-context.md`'s design decision). Non-project-context
+   * dirt doesn't block (that AC is scoped to the documents this feature can
+   * write).
    */
   async resyncRepo(repoId: string): Promise<IndexResult> {
     const startedAt = Date.now();
@@ -146,6 +157,28 @@ export class RepoIntelService implements RepoIntel {
     if (!repo || !repo.clonePath) {
       return { status: 'degraded', filesIndexed: 0, filesSkipped: 0, durationMs: Date.now() - startedAt, reason: 'no_clone' };
     }
+
+    // In-job race check (S-AC-36): documents may have become modified after
+    // the route's synchronous pre-check accepted the job. The refusal reason
+    // is merged into the persisted index stats (status unchanged) so the
+    // caller — who already got a 202 — can still find out.
+    const blocking = await this.blockingPaths(repo.clonePath);
+    if (blocking.length > 0) {
+      const reason = `${PROJECT_CONTEXT_BLOCKED_PREFIX}${blocking.join(',')}`;
+      try {
+        await this.repo.mergeIndexStats(repoId, { reason });
+      } catch {
+        // persistence is best-effort; the refusal result below is still returned
+      }
+      return {
+        status: 'degraded',
+        filesIndexed: 0,
+        filesSkipped: 0,
+        durationMs: Date.now() - startedAt,
+        reason,
+      };
+    }
+
     const ref: RepoRef = { owner: repo.owner, name: repo.name };
     try {
       await this.container.git.sync(ref, repo.defaultBranch);
@@ -158,7 +191,27 @@ export class RepoIntelService implements RepoIntel {
         reason: `sync_failed:${err instanceof Error ? err.message : String(err)}`,
       };
     }
+    // S-AC-37: a successful advance clears any persisted refusal reason.
+    await this.repo.clearIndexStatsReason(repoId, PROJECT_CONTEXT_BLOCKED_PREFIX);
     return runIncremental(this.container, this.repo, { repoId });
+  }
+
+  /**
+   * Synchronous pre-check for `POST /repos/:id/resync` (S-AC-35). Returns
+   * `null` when the repo isn't in `workspaceId`, otherwise the repo-relative
+   * project-context paths that would block a clone advance (`[]` = clear, also
+   * when there is no clone yet).
+   */
+  async findResyncBlockers(workspaceId: string, repoId: string): Promise<string[] | null> {
+    if (!(await this.repo.repoInWorkspace(workspaceId, repoId))) return null;
+    const repo = await this.repo.getRepoBasics(repoId);
+    if (!repo?.clonePath) return [];
+    return this.blockingPaths(repo.clonePath);
+  }
+
+  private async blockingPaths(clonePath: string): Promise<string[]> {
+    const modified = await this.container.gitStatus.modifiedPaths(clonePath);
+    return filterAllowedPaths(modified);
   }
 
   /**

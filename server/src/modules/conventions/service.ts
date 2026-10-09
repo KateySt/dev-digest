@@ -1,157 +1,157 @@
-import { eq } from "drizzle-orm";
-import { stat } from "node:fs/promises";
-import type { Container } from "../../platform/container.js";
-import type { ConventionCandidate, Skill } from "@devdigest/shared";
-import * as t from "../../db/schema.js";
-import { NotFoundError, ValidationError } from "../../platform/errors.js";
-import { ConventionsRepository } from "./repository.js";
-import { extractConventions } from "./extractor.js";
-import { SkillsService } from "../skills/service.js";
-import { resolveFeatureModel } from "../settings/feature-models.js";
-import type { ConventionRow } from "./repository.js";
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { z } from 'zod';
+import { ConventionCategory, type ConventionCandidate, type ConventionStatus } from '@devdigest/shared';
+import type { Container } from '../../platform/container.js';
+import { NotFoundError } from '../../platform/errors.js';
+import { RepoRepository } from '../repos/repository.js';
+import { resolveFeatureModel } from '../settings/feature-models.js';
+import { ConventionsRepository } from './repository.js';
+import {
+  CODE_SAMPLE_FILE_COUNT,
+  CONFIG_FILE_CANDIDATES,
+  EXTRACTION_SCHEMA_NAME,
+  MAX_CANDIDATES,
+  MAX_FILE_CHARS,
+} from './constants.js';
+import { clampEvidenceLine, evidenceExistsInSource, toConventionDto } from './helpers.js';
+import { EXTRACTION_SYSTEM_PROMPT } from './prompts.js';
 
-function toDto(row: ConventionRow): ConventionCandidate {
-  return {
-    id: row.id,
-    rule: row.rule,
-    evidence_path: row.evidencePath ?? "",
-    evidence_snippet: row.evidenceSnippet ?? "",
-    confidence: row.confidence ?? 0,
-    accepted: row.accepted,
-  };
+/**
+ * Conventions Extractor. File selection is entirely code-driven (no model
+ * call): well-known lint/format/compiler configs, read verbatim, plus the
+ * top-N ranked code files from `repoIntel.getConventionSamples()`. Only the
+ * ANALYSIS step calls a (cheap) model — see `resolveFeatureModel(..,
+ * 'conventions')`. Every candidate the model returns is then checked in code
+ * against the actual sampled file content; candidates whose evidence doesn't
+ * really exist are discarded before they ever reach the DB.
+ */
+
+const LLMCandidate = z.object({
+  category: ConventionCategory,
+  rule: z.string().min(1),
+  rationale: z.string().min(1).optional(),
+  evidence_path: z.string().min(1),
+  evidence_snippet: z.string().min(1),
+  evidence_line: z.number().int().positive().optional(),
+  confidence: z.number().min(0).max(1),
+});
+
+const ExtractionResponse = z.object({
+  candidates: z.array(LLMCandidate).max(MAX_CANDIDATES),
+});
+
+interface Sample {
+  path: string;
+  content: string;
 }
 
 export class ConventionsService {
   private repo: ConventionsRepository;
-  private skills: SkillsService;
+  private repos: RepoRepository;
 
   constructor(private container: Container) {
     this.repo = new ConventionsRepository(container.db);
-    this.skills = new SkillsService(container);
+    this.repos = new RepoRepository(container.db);
   }
 
-  async list(
-    workspaceId: string,
-    repoId: string,
-  ): Promise<ConventionCandidate[]> {
-    const rows = await this.repo.listByRepo(workspaceId, repoId);
-    return rows.map(toDto);
+  async list(workspaceId: string, repoId: string): Promise<ConventionCandidate[]> {
+    const rows = await this.repo.list(workspaceId, repoId);
+    return rows.map(toConventionDto);
   }
 
-  async extract(
-    workspaceId: string,
-    repoId: string,
-  ): Promise<ConventionCandidate[]> {
-    const [repoRow] = await this.container.db
-      .select()
-      .from(t.repos)
-      .where(eq(t.repos.id, repoId));
-
-    if (!repoRow) throw new NotFoundError("Repository not found");
-    if (!repoRow.clonePath)
-      throw new ValidationError("Repository not cloned — clone it first");
-
-    // clonePath is a stored absolute path; it can go stale if the repo was
-    // moved on disk. Verify the directory actually exists so we fail loudly
-    // here instead of silently returning [] when every file read misses.
-    const cloneDirOk = await stat(repoRow.clonePath)
-      .then((s) => s.isDirectory())
-      .catch(() => false);
-    if (!cloneDirOk)
-      throw new ValidationError(
-        "Clone directory is missing — refresh the repository to re-clone it, then scan again",
-      );
-
-    const samplePaths = await this.container.repoIntel.getConventionSamples(
-      repoId,
-      12,
-    );
-
-    // Provider + model are selected per-workspace in Settings (feature_models),
-    // falling back to the registry default for the 'conventions' feature. Never
-    // hardcode the model here — respect the workspace's configured choice.
-    const { provider, model } = await resolveFeatureModel(
-      this.container,
-      workspaceId,
-      "conventions",
-    );
-    const llm = await this.container.llm(provider);
-
-    const candidates = await extractConventions({
-      clonePath: repoRow.clonePath,
-      samplePaths,
-      repoName: repoRow.name,
-      llm,
-      model,
-    });
-
-    const rows = await this.repo.replaceAll(workspaceId, repoId, candidates);
-    return rows.map(toDto);
+  async setStatus(workspaceId: string, id: string, status: ConventionStatus): Promise<ConventionCandidate> {
+    const row = await this.repo.setStatus(workspaceId, id, status);
+    if (!row) throw new NotFoundError('Convention candidate not found');
+    return toConventionDto(row);
   }
 
-  async accept(
-    workspaceId: string,
-    id: string,
-  ): Promise<ConventionCandidate | undefined> {
-    const row = await this.repo.accept(workspaceId, id);
-    return row ? toDto(row) : undefined;
-  }
-
-  async reject(workspaceId: string, id: string): Promise<boolean> {
-    return this.repo.reject(workspaceId, id);
-  }
-
-  async updateRule(
-    workspaceId: string,
-    id: string,
-    rule: string,
-  ): Promise<ConventionCandidate | undefined> {
-    const row = await this.repo.updateRule(workspaceId, id, rule);
-    return row ? toDto(row) : undefined;
+  async updateRule(workspaceId: string, id: string, rule: string): Promise<ConventionCandidate> {
+    const row = await this.repo.updateRule(workspaceId, id, rule.trim());
+    if (!row) throw new NotFoundError('Convention candidate not found');
+    return toConventionDto(row);
   }
 
   /**
-   * Створює скіл з усіх accepted конвенцій.
+   * (Re-)scan a repo for convention candidates. Re-scanning replaces every
+   * NOT-accepted candidate (pending or rejected); previously accepted ones
+   * are left alone.
    */
-  async createSkillFromAccepted(
-    workspaceId: string,
-    repoId: string,
-    skillName: string,
-    skillDescription: string,
-  ): Promise<Skill> {
-    const [repoRow] = await this.container.db
-      .select()
-      .from(t.repos)
-      .where(eq(t.repos.id, repoId));
+  async extract(workspaceId: string, repoId: string): Promise<ConventionCandidate[]> {
+    const repo = await this.repos.getById(workspaceId, repoId);
+    if (!repo) throw new NotFoundError('Repo not found');
+    if (!repo.clonePath) throw new NotFoundError('Repo has not been cloned yet');
 
-    const accepted = await this.repo.listAccepted(workspaceId, repoId);
-    if (accepted.length === 0)
-      throw new ValidationError("No accepted conventions to create skill from");
+    const samples = await this.gatherSamples(repo.clonePath, repoId);
+    if (samples.length === 0) return this.list(workspaceId, repoId);
 
-    const repoName = repoRow?.name ?? "repo";
+    const { provider, model } = await resolveFeatureModel(this.container, workspaceId, 'conventions');
+    const llm = await this.container.llm(provider);
 
-    const sections = accepted.map((c) => {
-      const snippetBlock = c.evidenceSnippet
-        ? `\nDetected in \`${c.evidencePath}\`:\n\`\`\`\n${c.evidenceSnippet}\n\`\`\``
-        : "";
-      return `## ${c.rule}${snippetBlock}`;
+    const sampleBlock = samples
+      .map((s) => `### ${s.path}\n\`\`\`\n${numberLines(s.content)}\n\`\`\``)
+      .join('\n\n');
+
+    const result = await llm.completeStructured({
+      model,
+      schema: ExtractionResponse,
+      schemaName: EXTRACTION_SCHEMA_NAME,
+      messages: [
+        { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
+        { role: 'user', content: `## Sampled files\n\n${sampleBlock}` },
+      ],
     });
 
-    const body = [
-      `# ${skillName}`,
-      "",
-      `House conventions for \`${repoName}\`. Flag changes that violate any rule below and cite the offending \`file:line\`.`,
-      "",
-      ...sections,
-    ].join("\n\n");
-
-    return this.skills.create(workspaceId, {
-      name: skillName,
-      description: skillDescription,
-      type: "convention",
-      source: "extracted",
-      body,
-      enabled: true,
+    const sourceByPath = new Map(samples.map((s) => [s.path, s.content]));
+    const verified = result.data.candidates.filter((c) => {
+      const source = sourceByPath.get(c.evidence_path);
+      return source != null && evidenceExistsInSource(source, c.evidence_snippet);
     });
+
+    await this.repo.deleteNotAccepted(workspaceId, repoId);
+    await this.repo.insertMany(
+      verified.map((c) => {
+        const source = sourceByPath.get(c.evidence_path)!;
+        return {
+          workspaceId,
+          repoId,
+          category: c.category,
+          rule: c.rule,
+          rationale: c.rationale ?? null,
+          evidencePath: c.evidence_path,
+          evidenceSnippet: c.evidence_snippet,
+          evidenceLine: clampEvidenceLine(source, c.evidence_line),
+          confidence: c.confidence,
+        };
+      }),
+    );
+    return this.list(workspaceId, repoId);
   }
+
+  /** Config files (verbatim, no ranking) + top-N ranked code files. Missing
+   *  files (a repo without eslint, say) are silently skipped. */
+  private async gatherSamples(clonePath: string, repoId: string): Promise<Sample[]> {
+    const codePaths = await this.container.repoIntel.getConventionSamples(repoId, CODE_SAMPLE_FILE_COUNT);
+    const paths = [...CONFIG_FILE_CANDIDATES, ...codePaths];
+
+    const samples: Sample[] = [];
+    for (const path of paths) {
+      const content = await readFile(join(clonePath, path), 'utf8').catch(() => null);
+      if (content == null) continue;
+      samples.push({
+        path,
+        content: content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content,
+      });
+    }
+    return samples;
+  }
+}
+
+/** Prefix each line with its 1-based line number, so the model can cite an
+ *  `evidence_line` we can later sanity-check against the file's line count. */
+function numberLines(content: string): string {
+  return content
+    .split('\n')
+    .map((line, i) => `${i + 1}| ${line}`)
+    .join('\n');
 }

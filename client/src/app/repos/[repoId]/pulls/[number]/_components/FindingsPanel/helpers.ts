@@ -1,16 +1,8 @@
-import type { FindingRecord, Severity } from "@devdigest/shared";
-import { LOW_CONFIDENCE_THRESHOLD, SEVERITY_ORDER } from "./constants";
+import type { FindingRecord } from "@devdigest/shared";
+import { sortBySeverity } from "@/lib/findings";
+import { LOW_CONFIDENCE_THRESHOLD } from "./constants";
 
-/** Optionally drop low-confidence findings, filter by severity, and sort. */
-export function visibleFindings(
-  findings: FindingRecord[],
-  hideLow: boolean,
-  activeSeverity?: Severity | null,
-): FindingRecord[] {
-  let shown = findings;
-  if (hideLow) shown = shown.filter((f) => f.confidence >= LOW_CONFIDENCE_THRESHOLD);
-  if (activeSeverity) shown = shown.filter((f) => f.severity === activeSeverity);
-  return [...shown].sort(
-    (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9),
-  );
+export function visibleFindings(findings: FindingRecord[], hideLow: boolean): FindingRecord[] {
+  const shown = hideLow ? findings.filter((f) => f.confidence >= LOW_CONFIDENCE_THRESHOLD) : findings;
+  return sortBySeverity(shown);
 }

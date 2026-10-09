@@ -45,6 +45,7 @@ describe("A5 Run Trace drawer (smoke)", () => {
     expect(screen.getByText("Stats")).toBeInTheDocument();
     expect(screen.getByText("2/2 passed")).toBeInTheDocument();
     expect(screen.getByText("Tool calls")).toBeInTheDocument();
+    expect(screen.getByText("$0.06")).toBeInTheDocument();
   });
 
   it("switches to the live log tab", () => {

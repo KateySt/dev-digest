@@ -1,15 +1,16 @@
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
-import type { Finding, Intent, RunSummary, RunTrace } from '@devdigest/shared';
+import type { Finding, RunSummary, RunTrace } from '@devdigest/shared';
 
 /**
  * A2 — review data-access. The ONLY layer touching the DB for the review
- * domain. Owns `reviews`, `findings`, `pr_intent`, and persists the
- * observability rows `agent_runs` + `run_traces` (one trace doc per run).
+ * domain. Owns `reviews`, `findings`, and persists the observability rows
+ * `agent_runs` + `run_traces` (one trace doc per run). `pr_intent` is owned by
+ * `modules/intent/repository.ts` instead (see that file's doc comment).
  * Workspace scoping is enforced via the PR (which carries workspace_id).
  *
  * The query implementations are colocated, split by aggregate, under
- * `./repository/` (review+findings, agent runs, pull/intent). This class
+ * `./repository/` (review+findings, agent runs, pull lookup). This class
  * composes them so its public API stays identical.
  */
 
@@ -19,6 +20,8 @@ export type { FindingRow, PullRow };
 export type ReviewRow = typeof t.reviews.$inferSelect;
 
 import * as reviewRepo from './repository/review.repo.js';
+import type { FindingEvalCaseRef } from './repository/review.repo.js';
+export type { FindingEvalCaseRef };
 import * as runRepo from './repository/run.repo.js';
 import * as pullRepo from './repository/pull.repo.js';
 
@@ -37,6 +40,11 @@ export class ReviewRepository {
 
   getPrFiles(prId: string): Promise<(typeof t.prFiles.$inferSelect)[]> {
     return pullRepo.getPrFiles(this.db, prId);
+  }
+
+  /** Every PR row for a repo — bulk review's needs_review set derivation. */
+  listPullsForRepo(repoId: string): Promise<PullRow[]> {
+    return pullRepo.listPullsForRepo(this.db, repoId);
   }
 
   // ---- reviews + findings -------------------------------------------------
@@ -81,6 +89,33 @@ export class ReviewRepository {
     return runRepo.activeRunsForPull(this.db, workspaceId, prId);
   }
 
+  /** Batch in-flight check for the bulk review trigger's skip logic (SPEC-05
+   *  S-AC-4) and cost estimate's skip count. */
+  prIdsWithActiveRun(workspaceId: string, prIds: string[]): Promise<Set<string>> {
+    return runRepo.prIdsWithActiveRun(this.db, workspaceId, prIds);
+  }
+
+  /** Atomic per-PR "check in-flight + create one run per agent" (S-AC-21..24).
+   *  Null when any run for the PR is already in flight (nothing created). */
+  createRunsIfIdle(
+    workspaceId: string,
+    prId: string,
+    agents: { id: string; provider: string | null; model: string | null }[],
+  ): Promise<string[] | null> {
+    return runRepo.createRunsIfIdle(this.db, workspaceId, prId, agents);
+  }
+
+  /** Mark still-running runs failed with a reason (bulk start failure, S-AC-22). */
+  failRunningRuns(runIds: string[], reason: string): Promise<void> {
+    return runRepo.failRunningRuns(this.db, runIds, reason);
+  }
+
+  /** Mean recorded cost of a repo's completed runs — the bulk cost estimate's
+   *  basis (SPEC-05 S-AC-13), null when that repo has no completed run yet. */
+  meanCostForRepo(repoId: string): Promise<number | null> {
+    return runRepo.meanCostForRepo(this.db, repoId);
+  }
+
   /** All runs for a PR (any status), newest first — the PR run history. */
   listRunsForPull(workspaceId: string, prId: string): Promise<RunSummary[]> {
     return runRepo.listRunsForPull(this.db, workspaceId, prId);
@@ -121,22 +156,21 @@ export class ReviewRepository {
     return reviewRepo.findingContext(this.db, findingId);
   }
 
+  /** finding id -> eval cases seeded from it, one per target (read-only lookup). */
+  evalCasesForFindings(workspaceId: string, findingIds: string[]): Promise<Map<string, FindingEvalCaseRef[]>> {
+    return reviewRepo.evalCasesForFindings(this.db, workspaceId, findingIds);
+  }
+
+  setFindingReply(findingId: string, url: string, at: Date): Promise<FindingRow | null> {
+    return reviewRepo.setFindingReply(this.db, findingId, url, at);
+  }
+
   setFindingAccepted(findingId: string, at: Date | null): Promise<FindingRow | undefined> {
     return reviewRepo.setFindingAccepted(this.db, findingId, at);
   }
 
   setFindingDismissed(findingId: string, at: Date | null): Promise<FindingRow | undefined> {
     return reviewRepo.setFindingDismissed(this.db, findingId, at);
-  }
-
-  // ---- intent -------------------------------------------------------------
-
-  upsertIntent(prId: string, intent: Intent): Promise<void> {
-    return pullRepo.upsertIntent(this.db, prId, intent);
-  }
-
-  getIntent(prId: string): Promise<Intent | undefined> {
-    return pullRepo.getIntent(this.db, prId);
   }
 
   // ---- observability: agent_runs + run_traces ----------------------------
@@ -159,7 +193,7 @@ export class ReviewRepository {
       durationMs: number;
       tokensIn: number;
       tokensOut: number;
-      costUsd: number | null;
+      costUsd?: number | null;
       findingsCount: number;
       grounding: string;
       /** Review score (0-100); null on failed/cancelled runs. */

@@ -1,0 +1,7 @@
+{
+  "label": "Commits",
+  "empty": "No commits found for this PR yet.",
+  "fileCount": "{count, plural, one {# file} other {# files}}",
+  "unavailable": "Commits not available yet",
+  "unavailableHint": "Commit history hasn't been fetched for this PR yet."
+}

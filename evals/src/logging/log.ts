@@ -38,7 +38,7 @@ export function logVerdict(label: string, verdict: Verdict): void {
   console.log(`\n  judge: ${label} — ${scoreColor}${verdict.passed}/${verdict.total} (${pct}%)${RESET}`);
   for (const r of verdict.results) {
     const mark = r.passed ? `${GREEN}PASS${RESET}` : `${RED}FAIL${RESET}`;
-    console.log(`    [${mark}] ${r.practice}`);
+    console.log(`    [${mark}] ${r.practice}${r.fabricated ? ` ${RED}(fabricated quote)${RESET}` : ""}`);
     console.log(`      ${DIM}evidence: ${r.evidence || "(none)"}${RESET}`);
   }
 }

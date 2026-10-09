@@ -1,0 +1,53 @@
+{
+  "page": {
+    "crumbSkillsLab": "Skills Lab",
+    "crumbEvalDashboard": "Eval Dashboard",
+    "agentFallback": "Agent"
+  },
+  "header": {
+    "back": "All agents",
+    "subtitle": "Regression harness · {runs, plural, one {# run} other {# runs}} on the {cases}-case set",
+    "agentPicker": "Switch agent",
+    "rangeLabel": "Date range",
+    "runEval": "Run eval",
+    "runningProgress": "Running {done}/{total}…",
+    "currentVersion": "Current version",
+    "promotedToast": "Promoted — {name} is now v{version}"
+  },
+  "ranges": {
+    "7d": "7 days",
+    "30d": "30 days",
+    "90d": "90 days",
+    "all": "All time"
+  },
+  "runs": {
+    "title": "Recent runs"
+  },
+  "empty": {
+    "title": "No eval runs yet",
+    "body": "Run this agent's eval cases to see recall, precision and citation accuracy over time.",
+    "noCases": "This agent has no eval cases yet. Add some in its Evals tab first."
+  },
+  "compare": {
+    "title": "Compare runs · v{old} → v{new}",
+    "subtitle": "Old config vs new — metric deltas and prompt diff on the {cases}-case set",
+    "promptDiff": "System prompt diff",
+    "configTitle": "Model & skills",
+    "model": "Model",
+    "skills": "Skills",
+    "noSkills": "none",
+    "unchanged": "unchanged",
+    "snapshotMissing": "Config snapshot unavailable for v{version}.",
+    "close": "Close",
+    "promote": "Promote v{version}",
+    "promoting": "Promoting…",
+    "alreadyCurrent": "v{version} is already the current config.",
+    "confirmTitle": "Promote v{version}?",
+    "confirmBody": "This applies v{version}'s provider, model, system prompt, strategy and skill links as a new version. Skills are re-linked with their current text, not the text they had at v{version}.",
+    "confirm": "Promote",
+    "cancel": "Cancel",
+    "missingSkills": "Can't promote: these skills no longer exist — {skills}. The agent was not changed.",
+    "failed": "Promote failed: {message}",
+    "loadFailed": "Couldn't load the comparison."
+  }
+}

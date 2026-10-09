@@ -1,13 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { PrMeta, PrDetail, GitHubClient, PrReviewComment } from '@devdigest/shared';
-import { PrCommentInput } from '@devdigest/shared';
+import { PrCommentInput, PrCommentUpdateInput } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
-import { deriveReviewStatus, rollupSeverities, type SeverityCounts } from './status.js';
+import { deriveReviewStatus } from './status.js';
+import { BlastRepository } from '../blast/repository.js';
+import { callerCount } from '../blast/helpers.js';
+
+/** `/pulls/:id/comments/:commentId` — `id` is our uuid, `commentId` is
+ *  GitHub's numeric review-comment id (not ours to generate — coerce from
+ *  the URL string). */
+const CommentParams = z.object({ id: z.string().uuid(), commentId: z.coerce.number().int() });
 
 /**
  * F1 — pulls module. PR import via Octokit (list + per-PR detail).
@@ -52,6 +60,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
               number: pr.number,
               title: pr.title,
               author: pr.author,
+              avatarUrl: pr.avatar_url ?? null,
               branch: pr.branch,
               base: pr.base,
               headSha: pr.head_sha,
@@ -66,6 +75,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
               target: [t.pullRequests.repoId, t.pullRequests.number],
               set: {
                 title: pr.title,
+                avatarUrl: pr.avatar_url ?? null,
                 headSha: pr.head_sha,
                 status: pr.status,
                 updatedAt: pr.updated_at ? new Date(pr.updated_at) : null,
@@ -111,29 +121,13 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
-    // Latest-review rollup per PR (score + findings severity counts), so the
-    // list can show a SCORE ring and FINDINGS breakdown. Computed on read from
-    // reviews/findings (no FK denorm); the list is small, so two IN-queries +
-    // JS grouping is cheap.
+    // Latest-review SCORE + per-severity FINDINGS counts per PR, for the
+    // list's score ring and findings badges. Computed on read from reviews
+    // (no FK denorm); the list is small, so IN-query + JS grouping is cheap.
+    // Both are derived from the SAME latest review per PR, so the findings
+    // badge always agrees with the score ring.
     const prIds = rows.map((r) => r.id);
-    const latestReviewByPr = new Map<string, { id: string; score: number | null }>();
-    const sevByReview = new Map<string, SeverityCounts>();
-    // Total accumulated cost across all agent runs per PR — SUM so errored runs
-    // (cost_usd = null) don't zero out the column when they happen to be the latest run.
-    const lastRunCostByPr = new Map<string, number | null>();
-    if (prIds.length > 0) {
-      const runRows = await container.db
-        .select({
-          prId: t.agentRuns.prId,
-          costUsd: sql<number | null>`sum(${t.agentRuns.costUsd})`,
-        })
-        .from(t.agentRuns)
-        .where(and(eq(t.agentRuns.workspaceId, workspaceId), inArray(t.agentRuns.prId, prIds)))
-        .groupBy(t.agentRuns.prId);
-      for (const row of runRows) {
-        if (row.prId) lastRunCostByPr.set(row.prId, row.costUsd ?? null);
-      }
-    }
+    const latestReviewByPr = new Map<string, { reviewId: string; score: number | null }>();
     if (prIds.length > 0) {
       const reviewRows = await container.db
         .select({ id: t.reviews.id, prId: t.reviews.prId, score: t.reviews.score })
@@ -142,33 +136,66 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         .orderBy(desc(t.reviews.createdAt));
       // Rows are newest-first → first seen per PR is the latest review.
       for (const rv of reviewRows) {
-        if (!latestReviewByPr.has(rv.prId)) latestReviewByPr.set(rv.prId, { id: rv.id, score: rv.score });
-      }
-      const latestIds = [...latestReviewByPr.values()].map((v) => v.id);
-      if (latestIds.length > 0) {
-        const findingRows = await container.db
-          .select({ reviewId: t.findings.reviewId, severity: t.findings.severity })
-          .from(t.findings)
-          .where(inArray(t.findings.reviewId, latestIds));
-        const byReview = new Map<string, { severity: string }[]>();
-        for (const f of findingRows) {
-          const list = byReview.get(f.reviewId) ?? [];
-          list.push({ severity: f.severity });
-          byReview.set(f.reviewId, list);
-        }
-        for (const [reviewId, fs] of byReview) sevByReview.set(reviewId, rollupSeverities(fs));
+        if (!latestReviewByPr.has(rv.prId)) latestReviewByPr.set(rv.prId, { reviewId: rv.id, score: rv.score });
       }
     }
+
+    const findingsCountByReviewId = new Map<
+      string,
+      { CRITICAL: number; WARNING: number; SUGGESTION: number }
+    >();
+    const latestReviewIds = [...latestReviewByPr.values()].map((v) => v.reviewId);
+    if (latestReviewIds.length > 0) {
+      const findingRows = await container.db
+        .select({ reviewId: t.findings.reviewId, severity: t.findings.severity })
+        .from(t.findings)
+        .where(inArray(t.findings.reviewId, latestReviewIds));
+      for (const f of findingRows) {
+        const bucket = findingsCountByReviewId.get(f.reviewId) ?? {
+          CRITICAL: 0,
+          WARNING: 0,
+          SUGGESTION: 0,
+        };
+        if (f.severity === 'CRITICAL' || f.severity === 'WARNING' || f.severity === 'SUGGESTION') {
+          bucket[f.severity] += 1;
+        }
+        findingsCountByReviewId.set(f.reviewId, bucket);
+      }
+    }
+
+    const latestRunCostByPr = new Map<string, number | null>();
+    if (prIds.length > 0) {
+      const runRows = await container.db
+        .select({ prId: t.agentRuns.prId, costUsd: t.agentRuns.costUsd })
+        .from(t.agentRuns)
+        .where(and(inArray(t.agentRuns.prId, prIds), eq(t.agentRuns.status, 'done')))
+        .orderBy(desc(t.agentRuns.ranAt));
+      for (const run of runRows) {
+        if (run.prId && !latestRunCostByPr.has(run.prId)) latestRunCostByPr.set(run.prId, run.costUsd);
+      }
+    }
+
+    // Blast size (SPEC-05 S-AC-17..20): read-only cache lookup, never
+    // computed here. A slice only counts as fresh when it was cached for the
+    // PR's CURRENT head sha and wasn't computed on the degraded path —
+    // otherwise the field is absent, never a stale or zero figure.
+    const blastRepo = new BlastRepository(container.db);
+    const blastByPr = await blastRepo.getSlices(prIds);
 
     const now = Date.now();
     return rows.map((r) => {
       const review = latestReviewByPr.get(r.id);
-      const sev = review ? sevByReview.get(review.id) : undefined;
+      const blastSlice = blastByPr.get(r.id);
+      const blastSize =
+        blastSlice && blastSlice.headSha === r.headSha && !blastSlice.degraded
+          ? callerCount(blastSlice.blast)
+          : null;
       return {
         id: r.id,
         number: r.number,
         title: r.title,
         author: r.author,
+        avatar_url: r.avatarUrl,
         branch: r.branch,
         base: r.base,
         head_sha: r.headSha,
@@ -185,10 +212,15 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         opened_at: r.openedAt?.toISOString() ?? null,
         updated_at: r.updatedAt?.toISOString() ?? null,
         score: review ? review.score : null,
-        findings_critical: review ? (sev?.critical ?? 0) : null,
-        findings_warning: review ? (sev?.warning ?? 0) : null,
-        findings_suggestion: review ? (sev?.suggestion ?? 0) : null,
-        last_run_cost_usd: lastRunCostByPr.get(r.id) ?? null,
+        cost_usd: latestRunCostByPr.get(r.id) ?? null,
+        blast_size: blastSize,
+        findings: review
+          ? findingsCountByReviewId.get(review.reviewId) ?? {
+              CRITICAL: 0,
+              WARNING: 0,
+              SUGGESTION: 0,
+            }
+          : { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 },
       };
     });
   });
@@ -243,6 +275,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         .update(t.pullRequests)
         .set({
           body: detail.body ?? null,
+          avatarUrl: detail.avatar_url ?? null,
           // Diff stats aren't on GitHub's PR-list payload — backfill them from
           // the detail fetch so the Pull Requests list shows real size/files.
           additions: detail.additions,
@@ -261,6 +294,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         number: pr.number,
         title: pr.title,
         author: pr.author,
+        avatar_url: pr.avatarUrl,
         branch: pr.branch,
         base: pr.base,
         head_sha: pr.headSha,
@@ -353,6 +387,55 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       } catch (err) {
         // GitHub rejects comments on lines outside the diff / on closed PRs (422).
         const msg = err instanceof Error ? err.message : 'Failed to post the comment to GitHub.';
+        throw new AppError('github_comment_failed', msg, 400, { cause: String(err) });
+      }
+    },
+  );
+
+  app.patch(
+    '/pulls/:id/comments/:commentId',
+    { schema: { params: CommentParams, body: PrCommentUpdateInput } },
+    async (req): Promise<PrReviewComment> => {
+      const { workspaceId } = await getContext(container, req);
+      const { repo } = await resolvePrAndRepo(req.params.id, workspaceId);
+      let gh: GitHubClient;
+      try {
+        gh = await container.github();
+      } catch {
+        throw new AppError('github_unavailable', 'Connect a GitHub token to edit comments.', 400);
+      }
+      try {
+        return await gh.updateReviewComment(
+          { owner: repo.owner, name: repo.name },
+          req.params.commentId,
+          req.body.body,
+        );
+      } catch (err) {
+        // GitHub rejects editing a comment you didn't author (403).
+        const msg = err instanceof Error ? err.message : 'Failed to update the comment on GitHub.';
+        throw new AppError('github_comment_failed', msg, 400, { cause: String(err) });
+      }
+    },
+  );
+
+  app.delete(
+    '/pulls/:id/comments/:commentId',
+    { schema: { params: CommentParams } },
+    async (req): Promise<{ ok: true }> => {
+      const { workspaceId } = await getContext(container, req);
+      const { repo } = await resolvePrAndRepo(req.params.id, workspaceId);
+      let gh: GitHubClient;
+      try {
+        gh = await container.github();
+      } catch {
+        throw new AppError('github_unavailable', 'Connect a GitHub token to delete comments.', 400);
+      }
+      try {
+        await gh.deleteReviewComment({ owner: repo.owner, name: repo.name }, req.params.commentId);
+        return { ok: true };
+      } catch (err) {
+        // GitHub rejects deleting a comment you didn't author (403).
+        const msg = err instanceof Error ? err.message : 'Failed to delete the comment on GitHub.';
         throw new AppError('github_comment_failed', msg, 400, { cause: String(err) });
       }
     },

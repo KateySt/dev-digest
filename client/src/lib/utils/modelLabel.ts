@@ -28,7 +28,7 @@ export function modelLabel(m: PricedModel): string {
   return parts.length ? `${m.id} — ${parts.join(" · ")}` : m.id;
 }
 
-/** Build SearchableSelect/SelectInput options: priced models get a rich label. */
+/** Build SearchableSelect/Select options: priced models get a rich label. */
 export function toModelOptions(
   models: PricedModel[] | undefined,
 ): (string | { value: string; label: string })[] {

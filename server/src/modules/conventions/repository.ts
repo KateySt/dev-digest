@@ -1,140 +1,101 @@
-import { and, eq } from "drizzle-orm";
-import type { Db } from "../../db/client.js";
-import * as t from "../../db/schema.js";
-import type { ConventionRow } from "../../db/rows.js";
-export type { ConventionRow };
+import { and, eq, ne } from 'drizzle-orm';
+import type { ConventionCategory, ConventionStatus } from '@devdigest/shared';
+import type { Db } from '../../db/client.js';
+import * as t from '../../db/schema.js';
+
+/**
+ * Conventions data-access. Owns the `conventions` table (repo-scoped
+ * candidates surfaced by `ConventionsService.extract`). Workspace-scoped
+ * throughout.
+ */
+
+export type ConventionRow = typeof t.conventions.$inferSelect;
+
+export interface InsertConvention {
+  workspaceId: string;
+  repoId: string;
+  category: ConventionCategory;
+  rule: string;
+  rationale: string | null;
+  evidencePath: string;
+  evidenceSnippet: string;
+  evidenceLine: number | null;
+  confidence: number;
+}
 
 export class ConventionsRepository {
   constructor(private db: Db) {}
 
-  /** Всі конвенції репо: accepted першими, потім по confidence desc */
-  async listByRepo(
-    workspaceId: string,
-    repoId: string,
-  ): Promise<ConventionRow[]> {
-    const rows = await this.db
+  async list(workspaceId: string, repoId: string): Promise<ConventionRow[]> {
+    return this.db
       .select()
       .from(t.conventions)
-      .where(
-        and(
-          eq(t.conventions.workspaceId, workspaceId),
-          eq(t.conventions.repoId, repoId),
-        ),
-      );
-    return rows.sort((a, b) => {
-      if (a.accepted !== b.accepted) return a.accepted ? -1 : 1;
-      return (b.confidence ?? 0) - (a.confidence ?? 0);
-    });
+      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.repoId, repoId)));
   }
 
-  /**
-   * Re-scan: видаляємо всі старі конвенції репо і вставляємо нові.
-   * Так при кожному скані маємо свіжі результати.
-   */
-  async replaceAll(
-    workspaceId: string,
-    repoId: string,
-    candidates: Array<{
-      rule: string;
-      evidencePath: string;
-      evidenceSnippet: string;
-      confidence: number;
-    }>,
-  ): Promise<ConventionRow[]> {
+  async getById(workspaceId: string, id: string): Promise<ConventionRow | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(t.conventions)
+      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.id, id)));
+    return row;
+  }
+
+  async insertMany(rows: InsertConvention[]): Promise<ConventionRow[]> {
+    if (rows.length === 0) return [];
+    return this.db
+      .insert(t.conventions)
+      .values(
+        rows.map((r) => ({
+          workspaceId: r.workspaceId,
+          repoId: r.repoId,
+          category: r.category,
+          rule: r.rule,
+          rationale: r.rationale,
+          evidencePath: r.evidencePath,
+          evidenceSnippet: r.evidenceSnippet,
+          evidenceLine: r.evidenceLine,
+          confidence: r.confidence,
+          status: 'pending' as const,
+        })),
+      )
+      .returning();
+  }
+
+  /** Drop every NOT-accepted candidate (pending or rejected) for a repo —
+   *  called right before a re-scan inserts fresh ones, so accepted decisions
+   *  survive a re-scan. */
+  async deleteNotAccepted(workspaceId: string, repoId: string): Promise<void> {
     await this.db
       .delete(t.conventions)
       .where(
         and(
           eq(t.conventions.workspaceId, workspaceId),
           eq(t.conventions.repoId, repoId),
+          ne(t.conventions.status, 'accepted'),
         ),
       );
-
-    if (candidates.length === 0) return [];
-
-    const rows = await this.db
-      .insert(t.conventions)
-      .values(
-        candidates.map((c) => ({
-          workspaceId,
-          repoId,
-          rule: c.rule,
-          evidencePath: c.evidencePath,
-          evidenceSnippet: c.evidenceSnippet,
-          confidence: c.confidence,
-          accepted: false,
-        })),
-      )
-      .returning();
-
-    return rows;
   }
 
-  /** Accept: позначаємо як прийняту */
-  async accept(
+  async setStatus(
     workspaceId: string,
     id: string,
+    status: ConventionStatus,
   ): Promise<ConventionRow | undefined> {
     const [row] = await this.db
       .update(t.conventions)
-      .set({ accepted: true })
-      .where(
-        and(
-          eq(t.conventions.workspaceId, workspaceId),
-          eq(t.conventions.id, id),
-        ),
-      )
+      .set({ status })
+      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.id, id)))
       .returning();
     return row;
   }
 
-  /** Reject = фізично видаляємо */
-  async reject(workspaceId: string, id: string): Promise<boolean> {
-    const rows = await this.db
-      .delete(t.conventions)
-      .where(
-        and(
-          eq(t.conventions.workspaceId, workspaceId),
-          eq(t.conventions.id, id),
-        ),
-      )
-      .returning({ id: t.conventions.id });
-    return rows.length > 0;
-  }
-
-  /** Inline edit: оновити текст правила */
-  async updateRule(
-    workspaceId: string,
-    id: string,
-    rule: string,
-  ): Promise<ConventionRow | undefined> {
+  async updateRule(workspaceId: string, id: string, rule: string): Promise<ConventionRow | undefined> {
     const [row] = await this.db
       .update(t.conventions)
       .set({ rule })
-      .where(
-        and(
-          eq(t.conventions.workspaceId, workspaceId),
-          eq(t.conventions.id, id),
-        ),
-      )
+      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.id, id)))
       .returning();
     return row;
-  }
-
-  /** Тільки accepted — для створення скіла */
-  async listAccepted(
-    workspaceId: string,
-    repoId: string,
-  ): Promise<ConventionRow[]> {
-    return this.db
-      .select()
-      .from(t.conventions)
-      .where(
-        and(
-          eq(t.conventions.workspaceId, workspaceId),
-          eq(t.conventions.repoId, repoId),
-          eq(t.conventions.accepted, true),
-        ),
-      );
   }
 }

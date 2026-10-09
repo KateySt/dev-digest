@@ -2,23 +2,19 @@ import type { CSSProperties } from "react";
 
 /** Co-located styles for FindingCard (extracted from inline styles). */
 export const s = {
-  card: (
-    focused: boolean,
-    sevColor: string,
-    muted: boolean,
-  ): CSSProperties => ({
+  card: (focused: boolean, sevColor: string, muted: boolean): CSSProperties => ({
     borderRadius: 8,
-    // All-longhand (never mix `border` shorthand with `borderLeft` — React warns
-    // about updating shorthand + non-shorthand on the same rerender).
+    // Per-side longhand only — `borderColor` is itself a shorthand for all
+    // four sides, so setting it alongside `borderLeftColor` makes React warn
+    // about a shorthand/non-shorthand conflict on rerender. Top/right/bottom
+    // get the focus color explicitly instead, left keeps the severity color.
     borderStyle: "solid",
+    borderWidth: 1,
     borderTopColor: focused ? sevColor : "var(--border)",
     borderRightColor: focused ? sevColor : "var(--border)",
     borderBottomColor: focused ? sevColor : "var(--border)",
-    borderLeftColor: sevColor,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
     borderLeftWidth: 3,
+    borderLeftColor: sevColor,
     background: "var(--bg-elevated)",
     overflow: "hidden",
     opacity: muted ? 0.6 : 1,
@@ -46,11 +42,7 @@ export const s = {
     color: muted ? "var(--text-muted)" : "var(--text-primary)",
     textDecoration: dismissed ? "line-through" : "none",
   }),
-  acceptedTag: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: "var(--ok)",
-  } satisfies CSSProperties,
+  acceptedTag: { fontSize: 12, fontWeight: 600, color: "var(--ok)" } satisfies CSSProperties,
   dismissedTag: {
     fontSize: 12,
     fontWeight: 600,
@@ -69,10 +61,7 @@ export const s = {
     marginTop: 2,
     flexShrink: 0,
   }),
-  body: {
-    padding: "14px 16px 16px",
-    borderTop: "1px solid var(--border)",
-  } satisfies CSSProperties,
+  body: { padding: "14px 16px 16px", borderTop: "1px solid var(--border)" } satisfies CSSProperties,
   trifectaWrap: { marginBottom: 14 } satisfies CSSProperties,
   prose: {
     fontSize: 14,
@@ -94,6 +83,91 @@ export const s = {
     marginTop: 14,
     flexWrap: "wrap",
   } satisfies CSSProperties,
+  hintWrap: { display: "inline-flex" } satisfies CSSProperties,
+  srOnly: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    overflow: "hidden",
+    clip: "rect(0 0 0 0)",
+    whiteSpace: "nowrap",
+  } satisfies CSSProperties,
+  inlineLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: "var(--accent)",
+    textDecoration: "none",
+    padding: "0 4px",
+  } satisfies CSSProperties,
+  evalSetLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: 12.5,
+    fontWeight: 500,
+    color: "var(--accent)",
+    textDecoration: "none",
+    border: "1px solid var(--accent)",
+    borderRadius: 6,
+    padding: "5px 9px",
+  } satisfies CSSProperties,
+  pickerWrap: { position: "relative", display: "inline-flex", flexDirection: "column", gap: 6 } satisfies CSSProperties,
+  picker: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    padding: 6,
+    border: "1px solid var(--border-strong)",
+    borderRadius: 8,
+    background: "var(--bg-elevated)",
+    minWidth: 240,
+    maxWidth: 360,
+  } satisfies CSSProperties,
+  pickerRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, minWidth: 0 } satisfies CSSProperties,
+  pickerName: {
+    flex: 1,
+    fontSize: 13,
+    color: "var(--text-primary)",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+  } satisfies CSSProperties,
+  pickerBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+    padding: "6px 8px",
+    borderRadius: 6,
+    border: "none",
+    background: "transparent",
+    color: "var(--text-primary)",
+    fontSize: 13,
+    textAlign: "left",
+    cursor: "pointer",
+    minWidth: 0,
+  } satisfies CSSProperties,
+  confirmation: { fontSize: 12.5, color: "var(--ok)", alignSelf: "center", overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0 } satisfies CSSProperties,
+  dialogBody: { padding: "16px 24px", display: "flex", flexDirection: "column", gap: 8 } satisfies CSSProperties,
+  dialogLabel: {
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    marginTop: 4,
+  } satisfies CSSProperties,
+  // file:line is one unbreakable mono word - give it somewhere to wrap (client/INSIGHTS.md 2026-09-24).
+  dialogTarget: {
+    fontSize: 13,
+    color: "var(--text-primary)",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    minWidth: 0,
+  } satisfies CSSProperties,
+  dialogError: { fontSize: 13, color: "var(--crit)", overflowWrap: "anywhere", minWidth: 0 } satisfies CSSProperties,
+  dialogFooter: { display: "flex", justifyContent: "flex-end", gap: 8 } satisfies CSSProperties,
   composer: {
     marginTop: 12,
     display: "flex",

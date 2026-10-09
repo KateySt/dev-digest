@@ -1,6 +1,6 @@
 {
-  "id": "e1d27221-cd6d-407b-a47a-c23d33e338ae",
-  "prevId": "796e63cf-521b-45a0-8385-cc394e9262d0",
+  "id": "e2e47fab-0816-4c9b-a987-64d75be837d4",
+  "prevId": "aa4f40f7-0bc9-4905-8c64-01a9964eb020",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1499,11 +1499,37 @@
           "primaryKey": false,
           "notNull": false
         },
+        "evidence_line": {
+          "name": "evidence_line",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "confidence": {
           "name": "confidence",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'general'"
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
         },
         "accepted": {
           "name": "accepted",
@@ -1520,7 +1546,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "conventions_repo_created_idx": {
+          "name": "conventions_repo_created_idx",
+          "columns": [
+            {
+              "expression": "repo_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "conventions_workspace_id_workspaces_id_fk": {
           "name": "conventions_workspace_id_workspaces_id_fk",

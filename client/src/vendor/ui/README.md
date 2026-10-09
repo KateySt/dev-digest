@@ -27,7 +27,7 @@ components live as flat files at the root.
 |-------|--------|--------------|
 | **Tokens** | `primitives/tokens.ts` | `Severity`/`Category` unions, the `SEV` & `CAT` maps (color + icon + label), `ButtonProps` |
 | **Primitives** | `primitives/` | `Button`, `IconBtn`, `Badge`/`SeverityBadge`/`CategoryTag`, `Chip`, `Avatar`, `ConfidenceNum`, `MonoLink`, `ProgressBar`/`PercentProgress`, `CircularScore`, `Toggle`, `Kbd`, `SectionLabel`, `Card`, `EmptyState`, `Skeleton`, `ErrorState`, `Markdown` |
-| **Kit** | `kit/` | `Drawer`, `Modal`, `Tabs`, `Dropdown`, `FormField`, `TextInput`, `SelectInput`, `SearchableSelect`, `Textarea`, `Checkbox` |
+| **Kit** | `kit/` | `Drawer`, `Modal`, `Tabs`, `Dropdown`, `FormField`, `TextInput`, `Select`, `SearchableSelect`, `Textarea`, `Checkbox` |
 | **Charts** | `charts/` | `Sparkline`, `LineChart`, `Donut`, `BarRow`, `MetricCard` (Recharts + lightweight inline SVG) |
 | **Shell** | `shell/` | `AppFrame`, `Sidebar`, `Topbar`, `NavItem`, `RepoSwitcher` — the app frame |
 | **Command palette** | `command-palette/` | `CommandPalette` (Cmd+K), `ShortcutsHelp` (`?`) |
@@ -64,3 +64,11 @@ fails CI. When you add or change a component, add it to the showcase.
 - **Inline styles** keyed off CSS variables (no per-component stylesheet).
 - Prop types are exported alongside the component when consumers need them
   (e.g. `ButtonProps`, `Command`, `ChartSeries`).
+- **Compound slots over config props.** When a component has a section with
+  its own chrome (e.g. `Modal`'s title row and action row), expose it as a
+  static sub-component — `Modal.Header`, `Modal.Footer` — placed as a child,
+  not as a `title`/`subtitle`/`footer`-style prop. `Modal` detects them via
+  `child.type === Modal.Header` / `Modal.Footer` and renders them outside the
+  scrollable body. `Modal`'s own `onClose` prop still drives the backdrop
+  click; pass it again to `Modal.Header` to wire its close button. Follow this
+  pattern for any new slot rather than adding another render-prop.

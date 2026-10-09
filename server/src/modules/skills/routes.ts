@@ -1,256 +1,172 @@
-import type { FastifyInstance } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { z } from "zod";
-import { SetAttachedDocsBody, SkillSource, SkillType } from "@devdigest/shared";
-import { getContext } from "../_shared/context.js";
-import { IdParams } from "../_shared/schemas.js";
-import { NotFoundError } from "../../platform/errors.js";
-import { SkillsService } from "./service.js";
-import { regexScan, llmScan, THREAT_LEVEL } from "./scanner.js";
-import type { ThreatLevel } from "./scanner.js";
+import type { FastifyInstance } from 'fastify';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
+import { SkillType } from '@devdigest/shared';
+import { getContext } from '../_shared/context.js';
+import { IdParams } from '../_shared/schemas.js';
+import { NotFoundError } from '../../platform/errors.js';
 
 /**
- * A1 — skills module routes.
- *   GET    /skills                  → list (workspace-scoped)
+ * A1 — skills module (owner A1).
+ *   GET    /skills                  → list (workspace-scoped; optional
+ *                                      ?repo_id= project filter, 2026-10-02
+ *                                      amendment — omitted ⇒ unfiltered
+ *                                      default, 'none' ⇒ global-only, a repo
+ *                                      id ⇒ that project + global)
  *   GET    /skills/:id              → one skill
- *   POST   /skills                  → create (201)
- *   POST   /skills/import           → import from external source (201)
- *   PUT    /skills/:id              → update / toggle enabled (versions body)
- *   DELETE /skills/:id              → delete → { ok: true }
- *   GET    /skills/:id/stats        → skill stats
- *   GET    /skills/:id/versions     → version history
- *   POST   /skills/:id/restore      → restore body from historical version (201)
- *   PUT    /skills/:id/attached-docs → set ordered attached doc paths (no version bump)
- *
- * NOTE: /skills/import and /:id/stats, /:id/versions, /:id/restore, /:id/attached-docs
- * are registered BEFORE the plain /:id routes so Fastify does not treat these segments
- * as uuid params.
+ *   POST   /skills                  → create (manual create, or client-side
+ *                                      file import — same endpoint; optional
+ *                                      repo_id for project scope, SPEC-07)
+ *   PUT    /skills/:id              → update (body change bumps version;
+ *                                      optional repo_id reassigns project
+ *                                      scope without bumping version, 2026-
+ *                                      10-02 amendment)
+ *   DELETE /skills/:id              → delete
+ *   POST   /skills/import-url       → server-side fetch, stored disabled
+ *   GET    /skills/community        → live catalog listing (SPEC-07), q + tag filter
+ *   POST   /skills/community/refresh → discard the cached listing, re-fetch
+ *   POST   /skills/import-community → import a catalog entry by path, disabled
+ *   GET    /skills/:id/versions             → version history (Versions tab)
+ *   POST   /skills/:id/versions/:version/restore → restore a past body as a new version
+ *   GET    /skills/:id/stats                → Stats tab aggregate
+ *   POST   /skills/:id/scan                 → re-run the content-malware scan
  */
 
 const CreateSkillBody = z.object({
-  name: z.string().min(1),
-  description: z.string().default(""),
+  name: z.string().optional(),
+  description: z.string().optional(),
   type: SkillType,
   body: z.string().min(1),
-  source: SkillSource.optional(),
+  source: z.enum(['manual', 'imported_url', 'extracted', 'community']).optional(),
   enabled: z.boolean().optional(),
-});
-
-const ImportSkillBody = z.object({
-  name: z.string().min(1),
-  body: z.string().min(1),
-  source: SkillSource.optional(),
-  description: z.string().optional(),
+  // SPEC-07 — optional project scope; absent ⇒ global (AC-23).
+  // AC-50: must be a UUID before any lookup.
+  repo_id: z.string().uuid().optional(),
 });
 
 const UpdateSkillBody = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   type: SkillType.optional(),
-  body: z.string().optional(),
+  body: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
+  override: z.boolean().optional(),
+  // 2026-10-02 amendment — project scope reassignment (AC-41/AC-43).
+  // Omitted ⇒ not touched; null ⇒ cleared to global; a string ⇒ reassigned.
+  repo_id: z.string().uuid().nullable().optional(),
 });
 
-const RestoreBody = z.object({ version: z.number().int().min(1) });
-
-const ImportUrlBody = z.object({
-  url: z.string().url(),
-  name: z.string().min(1),
-  source: SkillSource.optional(),
-  description: z.string().optional(),
+// 2026-10-02 amendment — AC-35/AC-36/AC-37: omitted ⇒ workspace-wide
+// (unchanged default); the reserved literal 'none' ⇒ global-only; any other
+// value ⇒ that project's skills plus every global skill.
+// 2026-10-07 AC-51: 'none' or a UUID — anything else is 422.
+const ListSkillsQuery = z.object({
+  repo_id: z.union([z.literal('none'), z.string().uuid()]).optional(),
 });
+
+const ImportUrlBody = z.object({ url: z.string().min(1) });
+
+const CommunityQuery = z.object({ q: z.string().optional(), tag: z.string().optional() });
+
+const ImportCommunityBody = z.object({ path: z.string().min(1), repo_id: z.string().uuid() });
+
+const VersionParams = z.object({ id: z.string(), version: z.coerce.number().int() });
 
 export default async function skillsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
-  const service = new SkillsService(app.container);
+  const service = app.container.skillsService;
 
-  // ---- /skills/import — must come before /skills/:id -------------------------
-
-  app.post(
-    "/skills/import",
-    { schema: { body: ImportSkillBody } },
-    async (req, reply) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const skill = await service.import(workspaceId, req.body);
-      reply.status(201);
-      return skill;
-    },
-  );
-
-  app.post(
-    "/skills/import-url",
-    { schema: { body: ImportUrlBody } },
-    async (req, reply) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const body = await app.container.webFetch.fetch(req.body.url);
-
-      // Layer 1: instant regex scan — blocks obvious injection immediately.
-      const regexResult = regexScan(body);
-
-      const skill = await service.import(workspaceId, {
-        name: req.body.name,
-        body,
-        source: req.body.source ?? "imported_url",
-        description: req.body.description,
-        // URL-imported skills start disabled — must be manually vetted before use.
-        enabled: false,
-        threatLevel: regexResult.threatLevel,
-      });
-
-      // Layer 2: async LLM scan — runs in background after response is sent.
-      app.container
-        .llm("openai")
-        .then((llm) =>
-          llmScan(body, llm)
-            .then((llmResult) => {
-              // LLM result upgrades threat level but never downgrades from 'dangerous'.
-              const finalLevel =
-                regexResult.threatLevel === THREAT_LEVEL.DANGEROUS
-                  ? THREAT_LEVEL.DANGEROUS
-                  : llmResult.threatLevel;
-              return service.updateThreatLevel(skill.id, finalLevel);
-            })
-            .catch(() => {
-              /* LLM scan failure is non-fatal */
-            }),
-        )
-        .catch(() => {
-          /* container.llm failure is non-fatal */
-        });
-
-      reply.status(201);
-      return skill;
-    },
-  );
-
-  // ---- /skills/:id/stats, /versions, /restore — before plain /:id -----------
-
-  app.get(
-    "/skills/:id/stats",
-    { schema: { params: IdParams } },
-    async (req) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const stats = await service.stats(workspaceId, req.params.id);
-      if (!stats) throw new NotFoundError("Skill not found");
-      return stats;
-    },
-  );
-
-  app.get(
-    "/skills/:id/versions",
-    { schema: { params: IdParams } },
-    async (req) => {
-      const { workspaceId } = await getContext(app.container, req);
-      return service.versions(workspaceId, req.params.id);
-    },
-  );
-
-  app.post(
-    "/skills/:id/restore",
-    { schema: { params: IdParams, body: RestoreBody } },
-    async (req, reply) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const skill = await service.restore(
-        workspaceId,
-        req.params.id,
-        req.body.version,
-      );
-      if (!skill) throw new NotFoundError("Skill or version not found");
-      reply.status(201);
-      return skill;
-    },
-  );
-
-  // ---- /skills/:id/attached-docs — before plain /:id -----------------------
-
-  app.put(
-    "/skills/:id/attached-docs",
-    { schema: { params: IdParams, body: SetAttachedDocsBody } },
-    async (req) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const skill = await service.setAttachedDocs(
-        workspaceId,
-        req.params.id,
-        req.body.paths,
-      );
-      if (!skill) throw new NotFoundError("Skill not found");
-      return skill;
-    },
-  );
-
-  // ---- /skills (collection) --------------------------------------------------
-
-  app.get("/skills", async (req) => {
+  app.get('/skills', { schema: { querystring: ListSkillsQuery } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
-    return service.list(workspaceId);
+    return service.list(workspaceId, req.query.repo_id);
   });
 
-  app.post(
-    "/skills",
-    { schema: { body: CreateSkillBody } },
-    async (req, reply) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const skill = await service.create(workspaceId, req.body);
-      reply.status(201);
-      return skill;
-    },
-  );
-
-  // ---- /skills/:id (item) ----------------------------------------------------
-
-  app.get("/skills/:id", { schema: { params: IdParams } }, async (req) => {
+  app.get('/skills/:id', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     const skill = await service.get(workspaceId, req.params.id);
-    if (!skill) throw new NotFoundError("Skill not found");
+    if (!skill) throw new NotFoundError('Skill not found');
     return skill;
   });
 
-  app.put(
-    "/skills/:id",
-    { schema: { params: IdParams, body: UpdateSkillBody } },
+  app.post('/skills', { schema: { body: CreateSkillBody } }, async (req, reply) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const { repo_id, ...rest } = req.body;
+    const skill = await service.create(workspaceId, { ...rest, repoId: repo_id });
+    reply.status(201);
+    return skill;
+  });
+
+  app.put('/skills/:id', { schema: { params: IdParams, body: UpdateSkillBody } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const { repo_id, ...rest } = req.body;
+    const skill = await service.update(workspaceId, req.params.id, {
+      ...rest,
+      ...(repo_id !== undefined ? { repoId: repo_id } : {}),
+    });
+    if (!skill) throw new NotFoundError('Skill not found');
+    return skill;
+  });
+
+  app.delete('/skills/:id', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const ok = await service.delete(workspaceId, req.params.id);
+    if (!ok) throw new NotFoundError('Skill not found');
+    return { ok: true };
+  });
+
+  app.post('/skills/import-url', { schema: { body: ImportUrlBody } }, async (req, reply) => {
+    const { workspaceId } = await getContext(app.container, req);
+    const skill = await service.importFromUrl(workspaceId, req.body.url);
+    reply.status(201);
+    return skill;
+  });
+
+  app.get('/skills/community', { schema: { querystring: CommunityQuery } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.communityCatalogListing(workspaceId, { query: req.query.q, tag: req.query.tag });
+  });
+
+  app.post(
+    '/skills/community/refresh',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
     async (req) => {
       const { workspaceId } = await getContext(app.container, req);
-      const skill = await service.update(workspaceId, req.params.id, req.body);
-      if (!skill) throw new NotFoundError("Skill not found");
+      return service.communityCatalogListing(workspaceId, { forceRefresh: true });
+    },
+  );
 
-      // If body was updated, re-scan synchronously so the response contains the final threat_level.
-      if (req.body.body !== undefined) {
-        const newBody = req.body.body;
-        const regexResult = regexScan(newBody);
-        // Start with regex result — SAFE/SUSPICIOUS/DANGEROUS. Only skip LLM if already DANGEROUS.
-        let finalLevel: ThreatLevel = regexResult.threatLevel;
-
-        if (finalLevel !== THREAT_LEVEL.DANGEROUS) {
-          try {
-            const llm = await app.container.llm("openai");
-            const llmResult = await llmScan(newBody, llm);
-            // Take the more severe of the two results — LLM can upgrade but not downgrade.
-            const severity: Record<ThreatLevel, number> = {
-              safe: 0,
-              unknown: 1,
-              suspicious: 2,
-              dangerous: 3,
-            };
-            if (severity[llmResult.threatLevel] > severity[finalLevel]) {
-              finalLevel = llmResult.threatLevel;
-            }
-          } catch {
-            // LLM unavailable — keep regex result (SAFE if body was clean)
-          }
-        }
-
-        await service.updateThreatLevel(skill.id, finalLevel);
-        return { ...skill, threat_level: finalLevel };
-      }
-
+  app.post(
+    '/skills/import-community',
+    { schema: { body: ImportCommunityBody } },
+    async (req, reply) => {
+      const { workspaceId } = await getContext(app.container, req);
+      const skill = await service.importCommunitySkill(workspaceId, req.body.path, req.body.repo_id);
+      reply.status(201);
       return skill;
     },
   );
 
-  app.delete("/skills/:id", { schema: { params: IdParams } }, async (req) => {
+  app.get('/skills/:id/versions', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
-    const ok = await service.delete(workspaceId, req.params.id);
-    if (!ok) throw new NotFoundError("Skill not found");
-    return { ok: true };
+    return service.listVersions(workspaceId, req.params.id);
+  });
+
+  app.post(
+    '/skills/:id/versions/:version/restore',
+    { schema: { params: VersionParams } },
+    async (req) => {
+      const { workspaceId } = await getContext(app.container, req);
+      return service.restoreVersion(workspaceId, req.params.id, req.params.version);
+    },
+  );
+
+  app.get('/skills/:id/stats', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.stats(workspaceId, req.params.id);
+  });
+
+  app.post('/skills/:id/scan', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.scanSkill(workspaceId, req.params.id);
   });
 }

@@ -1,5 +1,5 @@
 {
-  "id": "796e63cf-521b-45a0-8385-cc394e9262d0",
+  "id": "738dfce6-6324-4391-b2f4-41331e0847aa",
   "prevId": "43296349-3fa6-4ef6-90ad-549092e4526c",
   "version": "7",
   "dialect": "postgresql",
@@ -1490,13 +1490,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         }
       },
       "indexes": {},

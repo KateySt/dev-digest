@@ -1,5 +1,6 @@
-import type { Agent, CiFailOn, Provider, ReviewStrategy } from '@devdigest/shared';
-import type { AgentRow } from './repository.js';
+import type { Agent, AgentVersion, CiFailOn, Provider, ReviewStrategy } from '@devdigest/shared';
+import { AgentVersionConfig } from '@devdigest/shared';
+import type { AgentRow, AgentVersionRow } from './repository.js';
 
 /**
  * Pure helpers for the agents module — DB row ⇄ DTO mapping and the
@@ -23,6 +24,21 @@ export function toAgentDto(row: AgentRow): Agent {
     ci_fail_on: row.ciFailOn as CiFailOn,
     repo_intel: row.repoIntel,
     attached_doc_paths: row.attachedDocPaths ?? [],
+  };
+}
+
+/**
+ * Map a persisted `agent_versions` row to the public `AgentVersion` DTO. The
+ * stored `config_json` is untyped jsonb (a snapshot from an older config shape
+ * could drift), so it is parsed through `AgentVersionConfig` — a malformed
+ * snapshot throws here rather than leaking an unvalidated blob to the client.
+ */
+export function toAgentVersionDto(row: AgentVersionRow): AgentVersion {
+  return {
+    agent_id: row.agentId,
+    version: row.version,
+    config: AgentVersionConfig.parse(row.configJson),
+    created_at: row.createdAt.toISOString(),
   };
 }
 
@@ -68,4 +84,14 @@ export function isConfigChange(
     (patch.repoIntel !== undefined && patch.repoIntel !== existing.repoIntel) ||
     patch.outputSchema !== undefined
   );
+}
+
+/** Skill id of a snapshot entry - old snapshots hold plain ids, new ones `{id, version}`. */
+export function snapshotSkillId(entry: AgentVersionConfig['skills'][number]): string {
+  return typeof entry === 'string' ? entry : entry.id;
+}
+
+/** True when two ordered skill-id lists are identical (same ids, same order). */
+export function sameOrderedIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
 }

@@ -1,0 +1,14 @@
+{
+  "eval_id": 2,
+  "eval_name": "spec-creator-scope",
+  "prompt": "retro just the spec-creator dialog from the saved session at evals/files/session-multi-agent.md — nothing else.",
+  "assertions": [
+    "States the narrowed scope (spec-creator dialog only) at the top of the report",
+    "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total",
+    "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline",
+    "Reports 2 resume round-trips for spec-creator and what new info each supplied",
+    "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer",
+    "Ledger entry Scope field names the spec-creator dialog, not the whole session",
+    "Recommendation says to fold the write-back scope question into spec-creator's initial dialog"
+  ]
+}

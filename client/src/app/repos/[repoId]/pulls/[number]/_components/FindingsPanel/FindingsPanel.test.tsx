@@ -8,6 +8,12 @@ vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+// The panel loads the agent's linked skills once for the eval-case target picker;
+// this test renders without a QueryClient, so stub it (no linked skills).
+vi.mock("@/lib/hooks/agents", () => ({
+  useLinkedSkills: () => [],
+}));
+
 import { FindingsPanel } from "./FindingsPanel";
 
 afterEach(cleanup);
@@ -24,6 +30,24 @@ const FINDINGS: FindingRecord[] = [
     rationale: "A secret is committed.",
     suggestion: null,
     confidence: 0.95,
+    kind: "finding",
+    trifecta_components: null,
+    evidence: null,
+    review_id: "r1",
+    accepted_at: null,
+    dismissed_at: null,
+  },
+  {
+    id: "f2",
+    severity: "WARNING",
+    category: "bug",
+    title: "Retry-After header omitted",
+    file: "src/middleware/ratelimit.ts",
+    start_line: 52,
+    end_line: 52,
+    rationale: "Clients can't back off correctly.",
+    suggestion: null,
+    confidence: 0.81,
     kind: "finding",
     trifecta_components: null,
     evidence: null,
@@ -53,26 +77,18 @@ describe("FindingsPanel (smoke)", () => {
     expect(screen.getByText("No findings match")).toBeInTheDocument();
   });
 
-  it("filters by severity when a pill is clicked", () => {
-    const findings: FindingRecord[] = [
-      { ...FINDINGS[0]! },
-      {
-        ...FINDINGS[0]!,
-        id: "f2",
-        severity: "WARNING",
-        title: "Warn finding",
-      },
-    ];
-    renderWithIntl(<FindingsPanel findings={findings} prId="pr1" />);
-    // Both visible initially
+  it("defaults to the All pill, filters to one severity on click, and back to all via the All pill", () => {
+    renderWithIntl(<FindingsPanel findings={FINDINGS} prId="pr1" />);
+    expect(screen.getByText("All")).toBeInTheDocument();
     expect(screen.getByText("Hardcoded secret")).toBeInTheDocument();
-    expect(screen.getByText("Warn finding")).toBeInTheDocument();
-    // Click CRITICAL pill
-    fireEvent.click(screen.getByRole("button", { name: /critical/i }));
+    expect(screen.getByText("Retry-After header omitted")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Warning"));
+    expect(screen.queryByText("Hardcoded secret")).not.toBeInTheDocument();
+    expect(screen.getByText("Retry-After header omitted")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("All"));
     expect(screen.getByText("Hardcoded secret")).toBeInTheDocument();
-    expect(screen.queryByText("Warn finding")).not.toBeInTheDocument();
-    // Click again → reset
-    fireEvent.click(screen.getByRole("button", { name: /critical/i }));
-    expect(screen.getByText("Warn finding")).toBeInTheDocument();
+    expect(screen.getByText("Retry-After header omitted")).toBeInTheDocument();
   });
 });

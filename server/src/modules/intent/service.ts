@@ -1,190 +1,229 @@
-/**
- * service.ts — IntentService: orchestrates intent computation for a PR.
- *
- * Onion layer: application layer — orchestrates repo + adapters; no SQL here.
- * - Loads PR + repo via ReviewRepository (no new repo class).
- * - Loads UnifiedDiff via loadDiff (falls back to pr_files reconstruction).
- * - Resolves linked issue + reference set via references.ts.
- * - Resolves feature model via resolveFeatureModel (review_intent slot).
- * - Calls classifyIntent (classifier.ts).
- * - Upserts result via repo.upsertIntent.
- *
- * Security: GitHub/git/webFetch are best-effort; missing PAT/clone/URL skips
- * that enricher, never fails compute. Only a missing PR throws NotFoundError.
- */
+import { z } from 'zod';
+import type { Intent, IntentSource, IssueMeta, RepoRef } from '@devdigest/shared';
 import type { Container } from '../../platform/container.js';
-import type { Intent, PrIntentRecord, UnifiedDiff } from '@devdigest/shared';
-import { NotFoundError } from '../../platform/errors.js';
-import { ReviewRepository } from '../reviews/repository.js';
-import type { PullRow } from '../reviews/repository.js';
-import * as schema from '../../db/schema.js';
-import { loadDiff } from '../reviews/diff-loader.js';
-import { parseReferences, resolveReferences } from './references.js';
-import { classifyIntent } from './classifier.js';
+import type { RunLogger } from '../../platform/run-logger.js';
+import type { PullRow } from '../../db/rows.js';
+import type { RepoRow } from '../repos/repository.js';
+import type { ReviewRepository } from '../reviews/repository.js';
 import { resolveFeatureModel } from '../settings/feature-models.js';
-import type { Logger } from '../reviews/run-executor.js';
+import { IntentRepository, type IntentRow } from './repository.js';
+import { INTENT_SCHEMA_NAME, ISSUE_REF_PATTERN, MAX_SPEC_CHARS } from './constants.js';
+import { detectSpecRef, hasRealDocumentation, resolveSpecPath } from './helpers.js';
+import { INTENT_SYSTEM_PROMPT } from './prompts.js';
+
+/**
+ * IntentService — derives a PR's intent/scope with a separate (cheap) model
+ * before/alongside the main review, per-PR, cached by head sha. Source
+ * gathering (linked issue, spec doc, fallback signals) is entirely best-effort
+ * in code; only the final derivation step calls a model — see
+ * `resolveFeatureModel(.., 'review_intent')`. `confidence`/`sources` are
+ * always computed here from which inputs were actually available, never
+ * asked of or trusted from the model (mirrors `ConventionsService`'s
+ * evidence-verification split between code and model).
+ */
+
+const IntentModelResponse = z.object({
+  intent: z.string().min(1),
+  in_scope: z.array(z.string()),
+  out_of_scope: z.array(z.string()),
+});
 
 export class IntentService {
-  private repo: ReviewRepository;
-  private logger: Logger | undefined;
+  private repo: IntentRepository;
+  private reviews: ReviewRepository;
 
-  constructor(private container: Container, logger?: Logger) {
-    this.repo = new ReviewRepository(container.db);
-    // Optional pino-compatible logger. Route paths pass Fastify's `app.log`;
-    // a review run passes its run logger. When present, the reference resolver
-    // and classifier emit HOW the prompt was assembled — which specs/plans were
-    // resolved, token savings, and the full prompt at debug level — so the
-    // computation is verifiable post-hoc instead of inferred from the output.
-    // Defaults to undefined so the service degrades gracefully in tests.
-    this.logger = logger;
+  constructor(private container: Container) {
+    this.repo = new IntentRepository(container.db);
+    this.reviews = container.reviewRepo;
+  }
+
+  /** Load a persisted row → public `Intent`, or `undefined` if never computed. */
+  async get(prId: string): Promise<Intent | undefined> {
+    const row = await this.repo.getByPrId(prId);
+    return row ? toIntentDto(row) : undefined;
   }
 
   /**
-   * Return stored intent if present (cache-hit: no LLM call).
-   * Compute + store on miss.
+   * Return the cached intent when it's still fresh (row's `head_sha` matches
+   * the PR's current head — no model call, a cache hit), else gather sources
+   * and (re)derive it via the workspace's configured cheap model. `runLog` is
+   * optional (the GET route has no run to log against) — when supplied, emits
+   * a distinct line for the cache-hit vs. cache-miss branch, so a Live Log
+   * reader can tell "reused" apart from "called the model" instead of only
+   * inferring it from elapsed ms. `force` (default falsy) bypasses the
+   * cache-freshness check entirely and always re-derives — used by the PR
+   * Brief's manual refresh action; the review-run call site never passes it,
+   * so its own intent computation stays cache-respecting.
    */
-  async getOrCompute(workspaceId: string, prId: string): Promise<PrIntentRecord> {
-    const stored = await this.repo.getIntent(prId);
-    if (stored) {
-      return { ...stored, pr_id: prId };
-    }
-    return this.compute(workspaceId, prId);
-  }
-
-  /**
-   * Always re-computes + upserts, even if a stored intent exists.
-   */
-  async recompute(workspaceId: string, prId: string): Promise<PrIntentRecord> {
-    return this.compute(workspaceId, prId);
-  }
-
-  /**
-   * Compute intent reusing a pre-loaded UnifiedDiff (for run-executor T6).
-   * Does NOT call loadDiff again — avoids double diff-loading in a review run.
-   * Returns the raw Intent (not PrIntentRecord) so the caller can thread it
-   * into the prompt without caring about the pr_id wrapper.
-   *
-   * Side effect: upserts the intent in the DB so subsequent getOrCompute calls
-   * return it without another LLM call.
-   */
-  async computeForRun(
+  async getOrCompute(
     workspaceId: string,
     pull: PullRow,
-    repoRow: typeof schema.repos.$inferSelect,
-    diff: UnifiedDiff,
+    repo: RepoRow,
+    runLog?: RunLogger,
+    force?: boolean,
   ): Promise<Intent> {
-    const record = await this.compute(workspaceId, pull.id, diff);
-    const { pr_id: _pr_id, ...intent } = record;
-    return intent as Intent;
-  }
+    const existing = await this.repo.getByPrId(pull.id);
+    if (!force && existing && existing.headSha === pull.headSha) {
+      runLog?.info('Intent cache hit — head_sha unchanged, reusing persisted intent (no model call)');
+      return toIntentDto(existing);
+    }
+    if (force) {
+      runLog?.info('Intent force-refresh requested — bypassing cache, deriving via cheap model');
+    } else {
+      runLog?.info('Intent cache miss — head_sha changed or no prior intent, deriving via cheap model');
+    }
 
-  // ---- private shared orchestration -----------------------------------------
+    const repoRef: RepoRef = { owner: repo.owner, name: repo.name };
+    const sources = new Set<IntentSource>();
 
-  private async compute(
-    workspaceId: string,
-    prId: string,
-    preloadedDiff?: UnifiedDiff,
-  ): Promise<PrIntentRecord> {
-    // 1. Load the PR row (workspace-scoped). Missing → NotFoundError.
-    const pull = await this.repo.getPull(workspaceId, prId);
-    if (!pull) throw new NotFoundError(`Pull request not found: ${prId}`);
+    const body = pull.body ?? '';
+    if (body.trim().length > 0) sources.add('description');
 
-    // 2. Load the repo row.
-    const repoRow = await this.repo.getRepo(pull.repoId);
-    if (!repoRow) throw new NotFoundError(`Repository not found for PR: ${prId}`);
+    const linkedIssue = await this.resolveLinkedIssue(repoRef, body);
+    if (linkedIssue) sources.add('linked_issue');
 
-    // 3. Load the diff (or reuse a pre-loaded one to avoid double loading).
-    const diff = preloadedDiff ?? await loadDiff(this.container, this.repo, workspaceId, pull, repoRow);
+    let specRefPath: string | null = detectSpecRef(body);
+    let specExcerpt: string | null = null;
+    if (specRefPath) {
+      specExcerpt = await this.readSpecExcerpt(repoRef, specRefPath);
+      if (specExcerpt != null) sources.add('spec_ref');
+      else specRefPath = null; // couldn't safely/actually read it — don't claim it as a source
+    }
 
-    // 4. Build the repoRef for git.readFile / GitHub issue resolution.
-    const repoRef = { owner: repoRow.owner, name: repoRow.name };
+    const confidence: 'high' | 'low' = hasRealDocumentation(body, linkedIssue) ? 'high' : 'low';
 
-    // 5. Resolve GitHub client — best-effort; missing PAT → null.
-    const github = await this.container.github().catch(() => null);
-
-    // 6. Determine if external URL fetching is enabled.
-    const webFetch = this.container.config.externalFetchEnabled
-      ? this.container.webFetch
-      : null;
-
-    // 7. Parse references from the PR body + resolve them best-effort.
-    const parsedRefs = parseReferences(pull.body, repoRef);
-    const references = await resolveReferences(parsedRefs, {
-      repoRef,
-      git: this.container.git,
-      github,
-      webFetch,
-      logger: this.logger,
-    });
-
-    // Verification signal: surface exactly which references were found in the PR
-    // body and which were actually resolved into the classifier input. An empty
-    // `resolved` array here means NO spec/plan reached the model — the intent was
-    // derived from title + file list + hunk headers alone.
-    this.logger?.info(
-      {
-        prId,
-        parsed: {
-          total: parsedRefs.length,
-          repoFile: parsedRefs.filter((r) => r.kind === 'repo-file').length,
-          github: parsedRefs.filter((r) => r.kind === 'github').length,
-          url: parsedRefs.filter((r) => r.kind === 'url').length,
-        },
-        resolved: references.map((r) => ({ kind: r.kind, source: r.source })),
-      },
-      `intent: parsed ${parsedRefs.length} reference(s) from PR body, resolved ${references.length}`,
-    );
-
-    // 8. Extract the first linked issue as a dedicated `issue` parameter for
-    //    the classifier. The resolved references already contain GitHub issues,
-    //    but passing the first one separately sharpens the "Linked Issue" section
-    //    in the prompt. Best-effort: use the first github ref content if available.
-    let issue: { title: string; body: string | null } | null = null;
-    if (github) {
-      const firstGithubRef = parsedRefs.find((r) => r.kind === 'github');
-      if (firstGithubRef?.issueNumber != null) {
-        const n = firstGithubRef.issueNumber;
-        const targetRef =
-          firstGithubRef.targetOwner && firstGithubRef.targetRepo
-            ? { owner: firstGithubRef.targetOwner, name: firstGithubRef.targetRepo }
-            : repoRef;
-        try {
-          const fetched = await github.getIssue(targetRef, n);
-          issue = { title: fetched.title, body: fetched.body ?? null };
-        } catch {
-          // Fall back to getPullRequest on 404.
-          try {
-            const pr = await github.getPullRequest(targetRef, n);
-            issue = { title: pr.title, body: pr.body ?? null };
-          } catch {
-            // Best-effort: skip the linked issue if both fetches fail.
-          }
-        }
+    let diffShape: string | null = null;
+    let commitMessages: string | null = null;
+    if (confidence === 'low') {
+      const files = await this.reviews.getPrFiles(pull.id);
+      if (files.length > 0) {
+        diffShape = files.map((f) => f.path).join('\n');
+        sources.add('diff_shape');
+      }
+      const messages = await this.repo.getCommitMessages(pull.id);
+      if (messages.length > 0) {
+        commitMessages = messages.join('\n');
+        sources.add('commit_messages');
       }
     }
 
-    // 9. Resolve the feature model for the review_intent slot.
-    const { provider, model } = await resolveFeatureModel(
-      this.container,
-      workspaceId,
-      'review_intent',
-    );
+    const { provider, model } = await resolveFeatureModel(this.container, workspaceId, 'review_intent');
     const llm = await this.container.llm(provider);
 
-    // 10. Call the intent classifier.
-    const { intent } = await classifyIntent({
+    const userMessage = buildUserMessage({
       title: pull.title,
-      body: pull.body,
-      issue,
-      references,
-      diff,
-      llm,
-      model,
-      logger: this.logger,
+      body,
+      linkedIssue,
+      specRefPath,
+      specExcerpt,
+      diffShape,
+      commitMessages,
     });
 
-    // 11. Persist + return.
-    await this.repo.upsertIntent(prId, intent);
-    return { ...intent, pr_id: prId };
+    const result = await llm.completeStructured({
+      model,
+      schema: IntentModelResponse,
+      schemaName: INTENT_SCHEMA_NAME,
+      messages: [
+        { role: 'system', content: INTENT_SYSTEM_PROMPT },
+        { role: 'user', content: userMessage },
+      ],
+    });
+
+    const row = await this.repo.upsert({
+      prId: pull.id,
+      intent: result.data.intent,
+      inScope: result.data.in_scope,
+      outOfScope: result.data.out_of_scope,
+      headSha: pull.headSha,
+      confidence,
+      sources: Array.from(sources),
+      specRefPath,
+      provider,
+      model,
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      costUsd: result.costUsd,
+    });
+
+    return toIntentDto(row);
   }
+
+  /** Best-effort: a GitHub failure must never fail intent computation. */
+  private async resolveLinkedIssue(repo: RepoRef, body: string): Promise<IssueMeta | undefined> {
+    const m = body.match(ISSUE_REF_PATTERN);
+    if (!m?.[1]) return undefined;
+    try {
+      const github = await this.container.github();
+      return await github.getIssue(repo, Number(m[1]));
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Best-effort: a clone/fs failure (or an unsafe path) must never fail
+   *  intent computation — just omit the spec source. */
+  private async readSpecExcerpt(repo: RepoRef, refPath: string): Promise<string | null> {
+    try {
+      const clonePath = this.container.git.clonePathFor(repo);
+      const safePath = resolveSpecPath(clonePath, refPath);
+      if (!safePath) return null;
+      const content = await this.container.git.readFile(repo, safePath);
+      return content.slice(0, MAX_SPEC_CHARS);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function toIntentDto(row: IntentRow): Intent {
+  return {
+    intent: row.intent,
+    in_scope: row.inScope,
+    out_of_scope: row.outOfScope,
+    confidence: row.confidence === 'high' ? 'high' : 'low',
+    sources: row.sources as IntentSource[],
+    spec_ref: row.specRefPath,
+  };
+}
+
+/** Compose the untrusted, clearly-delimited user message for the derivation call. */
+function buildUserMessage(input: {
+  title: string;
+  body: string;
+  linkedIssue: IssueMeta | undefined;
+  specRefPath: string | null;
+  specExcerpt: string | null;
+  diffShape: string | null;
+  commitMessages: string | null;
+}): string {
+  const sections: string[] = [`## PR title\n<untrusted>\n${input.title}\n</untrusted>`];
+
+  sections.push(
+    `## PR description\n<untrusted>\n${input.body.trim().length > 0 ? input.body : '(no description provided)'}\n</untrusted>`,
+  );
+
+  if (input.linkedIssue) {
+    sections.push(
+      `## Linked issue #${input.linkedIssue.number}\n<untrusted>\n${input.linkedIssue.title}\n\n${input.linkedIssue.body ?? ''}\n</untrusted>`,
+    );
+  }
+
+  if (input.specRefPath && input.specExcerpt) {
+    sections.push(`## Spec/plan excerpt (${input.specRefPath})\n<untrusted>\n${input.specExcerpt}\n</untrusted>`);
+  }
+
+  if (input.diffShape) {
+    sections.push(
+      `## Fallback signal: changed file paths (no real PR documentation was found)\n<untrusted>\n${input.diffShape}\n</untrusted>`,
+    );
+  }
+
+  if (input.commitMessages) {
+    sections.push(
+      `## Fallback signal: commit messages (no real PR documentation was found)\n<untrusted>\n${input.commitMessages}\n</untrusted>`,
+    );
+  }
+
+  return sections.join('\n\n');
 }

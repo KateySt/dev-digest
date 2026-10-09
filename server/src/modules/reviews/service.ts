@@ -1,12 +1,15 @@
+import PQueue from 'p-queue';
 import type { Container } from '../../platform/container.js';
-import type { FindingActionKind, RunEventKind, RunTrace } from '@devdigest/shared';
+import type { BulkReviewOutcome, FindingActionKind, PrReviewComment, ReviewEstimate, RunEventKind, RunTrace } from '@devdigest/shared';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
 import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
-import { actOnFinding as actOnFindingImpl } from './findings.js';
+import { actOnFinding as actOnFindingImpl, replyToFinding as replyToFindingImpl } from './findings.js';
 import { reviewToDto } from './helpers.js';
+import { needsReviewPrIds } from '../pulls/status.js';
+import { BULK_REVIEW_CONCURRENCY, BULK_REVIEW_MAX_PRS } from './constants.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -155,22 +158,26 @@ export class ReviewService {
     const repo = await this.repo.getRepo(pull.repoId);
     if (!repo) throw new NotFoundError('Repo not found');
 
-    // Create the agent_run rows up front so a runId is available IMMEDIATELY —
+    // Create the agent_run rows up front so a runId is available IMMEDIATELY -
     // the client persists these in global state and subscribes to the SSE
-    // stream. The actual (slow) review runs in the background below.
+    // stream. The actual (slow) review runs in the background below. The
+    // in-flight check and the inserts are ONE atomic step per PR (S-AC-23/24):
+    // a second concurrent trigger for the same PR is refused, not queued.
+    const runIds = await this.repo.createRunsIfIdle(
+      workspaceId,
+      prId,
+      targets.map((a) => ({ id: a.id, provider: a.provider, model: a.model })),
+    );
+    if (runIds === null) {
+      throw new AppError('review_in_progress', 'A review is already running for this pull request.', 409);
+    }
     const runs: { run_id: string; agent_id: string; agent_name: string }[] = [];
     const jobs: { agent: AgentRow; runId: string }[] = [];
-    for (const agent of targets) {
-      const runId = await this.repo.createAgentRun({
-        workspaceId,
-        agentId: agent.id,
-        prId,
-        provider: agent.provider,
-        model: agent.model,
-      });
+    targets.forEach((agent, i) => {
+      const runId = runIds[i]!;
       runs.push({ run_id: runId, agent_id: agent.id, agent_name: agent.name });
       jobs.push({ agent, runId });
-    }
+    });
 
     // Fire-and-forget: the HTTP response returns now with the runIds; reviews
     // are persisted as each agent finishes and the client refetches on SSE done.
@@ -186,6 +193,137 @@ export class ReviewService {
   }
 
   // ===========================================================================
+  // SPEC-05 — bulk "Review all" over a repo's needs_review set.
+  // ===========================================================================
+
+  /** Repo ownership check (S-AC-11) + the repo's current needs_review set,
+   *  shared by the estimate and the trigger so they can never derive the set
+   *  two different ways (S-AC-16). */
+  private async resolveRepoScope(workspaceId: string, repoId: string) {
+    const repo = await this.repo.getRepo(repoId);
+    if (!repo || repo.workspaceId !== workspaceId) throw new NotFoundError('Repo not found');
+    const pulls = await this.repo.listPullsForRepo(repoId);
+    const prIds = needsReviewPrIds(pulls);
+    return { repo, pulls, prIds };
+  }
+
+  /** GET .../pulls/review-estimate — what "Review all" would cost, computed
+   *  from history (S-AC-12..16). Never triggers anything. */
+  async estimateBulkReview(workspaceId: string, repoId: string): Promise<ReviewEstimate> {
+    const { prIds } = await this.resolveRepoScope(workspaceId, repoId);
+    const enabled = await this.agents.listEnabled(workspaceId);
+    const inFlight = await this.repo.prIdsWithActiveRun(workspaceId, prIds);
+    const targetable = prIds.filter((id) => !inFlight.has(id));
+    const runCount = targetable.length * enabled.length;
+    const meanCost = await this.repo.meanCostForRepo(repoId);
+    return {
+      pr_count: prIds.length,
+      agent_count: enabled.length,
+      run_count: runCount,
+      approx_cost_usd: meanCost == null ? null : meanCost * runCount,
+      approximate: true,
+      skip_count: inFlight.size,
+    };
+  }
+
+  /**
+   * POST .../pulls/review — bulk-trigger every PR in the repo's OWN derived
+   * needs_review set (S-AC-1; a client-supplied list is never accepted, so a
+   * caller cannot widen a batch). Each targeted PR's agent_run rows are
+   * created synchronously (so the response can report real run ids), then
+   * the actual (slow) execution runs in the background with bounded
+   * concurrency across PRs — never awaited by this method.
+   */
+  async runBulkReview(
+    workspaceId: string,
+    repoId: string,
+    logger?: Logger,
+  ): Promise<BulkReviewOutcome[]> {
+    const enabled = await this.agents.listEnabled(workspaceId);
+    if (enabled.length === 0) {
+      throw new AppError('no_enabled_agents', 'Enable at least one agent before running a bulk review.', 400);
+    }
+
+    const { repo, pulls, prIds } = await this.resolveRepoScope(workspaceId, repoId);
+    if (prIds.length === 0) {
+      throw new AppError('nothing_to_review', 'No pull requests currently need review.', 400);
+    }
+    if (prIds.length > BULK_REVIEW_MAX_PRS) {
+      throw new AppError(
+        'bulk_review_too_large',
+        `${prIds.length} pull requests need review — the maximum for one "Review all" is ${BULK_REVIEW_MAX_PRS}.`,
+        400,
+      );
+    }
+
+    const pullById = new Map(pulls.map((p) => [p.id, p]));
+
+    // Each PR's "check in-flight + create runs" is its own short atomic step
+    // (`createRunsIfIdle`, S-AC-21), walked in a fixed PR-id order so two
+    // overlapping batches take their per-PR locks in the same order. Outcomes
+    // are reported in the derived set's order regardless.
+    const outcomes = new Map<string, BulkReviewOutcome>();
+    const toExecute: { pull: (typeof pulls)[number]; jobs: { agent: AgentRow; runId: string }[] }[] = [];
+    const agentRefs = enabled.map((a) => ({ id: a.id, provider: a.provider, model: a.model }));
+
+    for (const prId of [...prIds].sort()) {
+      const pull = pullById.get(prId);
+      if (!pull) {
+        // Vanishingly unlikely (deleted between the two reads above), but a
+        // batch's per-PR isolation (S-AC-8) covers this shape too.
+        outcomes.set(prId, { pr_id: prId, outcome: 'failed', run_ids: [], reason: 'Pull request no longer exists' });
+        continue;
+      }
+      // Per-PR isolation (S-AC-8, S-AC-22): whatever goes wrong starting this
+      // PR is contained to it - rows already created for it are marked failed
+      // (never left running), its outcome is `failed`, the batch carries on.
+      let createdRunIds: string[] | null = null;
+      try {
+        createdRunIds = await this.repo.createRunsIfIdle(workspaceId, prId, agentRefs);
+        if (createdRunIds === null) {
+          outcomes.set(prId, { pr_id: prId, outcome: 'skipped', run_ids: [], reason: 'already has a run in flight' });
+          continue;
+        }
+        const ids = createdRunIds;
+        const jobs = enabled.map((agent, i) => ({ agent, runId: ids[i]! }));
+        toExecute.push({ pull, jobs });
+        outcomes.set(prId, { pr_id: prId, outcome: 'started', run_ids: ids });
+      } catch (err) {
+        const reason = `Failed to start review: ${(err as Error).message}`;
+        logger?.error({ prId, err: (err as Error).message }, 'bulk review: failed to start one PR');
+        if (createdRunIds && createdRunIds.length > 0) {
+          await this.repo.failRunningRuns(createdRunIds, reason).catch(() => undefined);
+          // Never execute a PR that was reported as failed.
+          const idx = toExecute.findIndex((e) => e.pull.id === prId);
+          if (idx >= 0) toExecute.splice(idx, 1);
+        }
+        outcomes.set(prId, { pr_id: prId, outcome: 'failed', run_ids: [], reason });
+      }
+    }
+    const results: BulkReviewOutcome[] = prIds.map((id) => outcomes.get(id)!);
+
+    // Fire-and-forget: the HTTP response returns now with every outcome
+    // already decided; actual review execution happens in the background.
+    // Bounded to BULK_REVIEW_CONCURRENCY PRs at once — each PR's own jobs
+    // already run sequentially inside executeRuns, so this bound is also the
+    // bound on total concurrent runs (S-AC-7). One PR's executeRuns throwing
+    // never stops the queue from draining the rest (S-AC-8).
+    const queue = new PQueue({ concurrency: BULK_REVIEW_CONCURRENCY });
+    for (const { pull, jobs } of toExecute) {
+      void queue.add(() =>
+        this.executor.executeRuns(workspaceId, pull, repo, jobs, logger).catch((err) => {
+          logger?.error(
+            { prId: pull.id, err: (err as Error).message },
+            'bulk review: background execution crashed for one PR',
+          );
+        }),
+      );
+    }
+
+    return results;
+  }
+
+  // ===========================================================================
   // Finding actions
   // ===========================================================================
 
@@ -195,6 +333,11 @@ export class ReviewService {
     action: FindingActionKind,
   ): Promise<{ finding: ReviewDtoFinding }> {
     return actOnFindingImpl(this.repo, workspaceId, findingId, action);
+  }
+
+  /** "Reply to author" - post `body` to GitHub, record the comment URL/time on the finding. */
+  async replyToFinding(workspaceId: string, findingId: string, body: string): Promise<PrReviewComment> {
+    return replyToFindingImpl(this.container, this.repo, workspaceId, findingId, body);
   }
 
   // ===========================================================================
@@ -212,8 +355,12 @@ export class ReviewService {
         if (a) names.set(review.agentId, a.name);
       }
     }
+    const evalCases = await this.repo.evalCasesForFindings(
+      workspaceId,
+      rows.flatMap(({ findings }) => findings.map((f) => f.id)),
+    );
     return rows.map(({ review, findings }) =>
-      reviewToDto(review, findings, review.agentId ? names.get(review.agentId) : null),
+      reviewToDto(review, findings, review.agentId ? names.get(review.agentId) : null, evalCases),
     );
   }
 

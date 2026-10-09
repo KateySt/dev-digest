@@ -25,7 +25,9 @@
     "memory": "Memory",
     "multi-agent": "Multi-Agent Review",
     "agent-performance": "Agent Performance",
-    "ci-runs": "CI Runs"
+    "ci-runs": "CI Runs",
+    "conformance": "Conformance",
+    "first-run-setup": "First-run setup"
   },
   "featurePlaceholder": {
     "defaultBody": "This screen is owned by {owner}. The app shell, routing, theming and data layer are wired — {owner} fills in the screen here."
@@ -40,6 +42,14 @@
     "reply": "Reply",
     "viewOnGitHub": "View on GitHub",
     "postedToGitHub": "Posts to GitHub immediately",
-    "outdatedTitle": "{count} comment(s) on older revisions"
+    "outdatedTitle": "{count} comment(s) on older revisions",
+    "edit": "Edit",
+    "editLabel": "Edit comment",
+    "save": "Save",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "deleteLabel": "Delete comment",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete this comment from GitHub? This can't be undone."
   }
 }

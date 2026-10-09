@@ -51,6 +51,8 @@ export interface IndexPayload {
   /** Optional ref hint — when omitted we look up the repo's owner/name from the DB. */
   owner?: string;
   name?: string;
+  /** Test seam: override the walk's file cap (defaults to MAX_INDEXED_FILES). */
+  maxIndexedFiles?: number;
 }
 
 /** Per-file parse error captured into `stats.parseDegraded` (capped). */
@@ -97,7 +99,7 @@ export async function runFullIndex(
   const currentSha = await safeCurrentHead(container, ref);
 
   // Walk + filter -------------------------------------------------------
-  const walk = await walkClone(repo.clonePath);
+  const walk = await walkClone(repo.clonePath, payload.maxIndexedFiles);
   if (walk.files.length === 0) {
     await safePersist(repository, repoId, currentSha, 'partial', 0, walk.stats.skippedTooLarge, {
       ...walk.stats,
@@ -119,7 +121,10 @@ export async function runFullIndex(
   const factsBuf: IndexerFileFactsRow[] = [];
   const parseDegraded: ParseDegradedEntry[] = [];
   let filesIndexed = 0;
-  let filesSkipped = walk.stats.skippedTooLarge;
+  // Files left out by the cap are skipped too (S-AC-31): indexed + skipped
+  // must equal the files discovered.
+  const bounded = walk.stats.bounded;
+  let filesSkipped = walk.stats.skippedTooLarge + bounded;
   let softBudgetReached = false;
 
   const concurrency = Math.max(1, cpus().length - 1);
@@ -247,9 +252,10 @@ export async function runFullIndex(
     await repository.replaceFileFacts(repoId, factsBuf);
   }
 
-  // Clean pass → 'full'. Any degradation (soft budget, graph failure, or a
-  // parse error) keeps it honestly 'partial'.
-  const clean = !softBudgetReached && !graphFailed && parseDegraded.length === 0;
+  // Clean pass → 'full'. Any degradation (soft budget, graph failure, a
+  // parse error, or files left unindexed by the file cap) keeps it honestly
+  // 'partial' (S-AC-30).
+  const clean = !softBudgetReached && !graphFailed && parseDegraded.length === 0 && bounded === 0;
   const status: IndexStatus = clean ? 'full' : 'partial';
   const stats: Record<string, unknown> = {
     ...walk.stats,
@@ -261,6 +267,7 @@ export async function runFullIndex(
     factsWritten: factsBuf.length,
     hotnessAvailable: false, // Option B — rank = pagerank only
     ...(graphFailed ? { graphFailed } : {}),
+    ...(bounded > 0 ? { degradedReason: 'repo_too_large' } : {}),
     softBudgetReached,
     parseDegraded,
     durationMs: Date.now() - startedAt,
@@ -281,7 +288,13 @@ export async function runFullIndex(
     filesIndexed,
     filesSkipped,
     durationMs: Date.now() - startedAt,
-    reason: softBudgetReached ? 'soft_budget' : graphFailed ? 'graph_failed' : undefined,
+    reason: softBudgetReached
+      ? 'soft_budget'
+      : graphFailed
+        ? 'graph_failed'
+        : bounded > 0
+          ? 'repo_too_large'
+          : undefined,
   };
 }
 

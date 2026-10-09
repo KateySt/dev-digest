@@ -1,16 +1,15 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
- * Conformance, Onboarding, Eval, Memory, Conventions, Skills,
- * Agents and their DTOs.
+ * Conformance, Eval, Memory, Conventions, Skills,
+ * Agents and their DTOs. The Onboarding Tour contract lives in its own
+ * `contracts/onboarding.ts` (SPEC-06) — the legacy `Onboarding`/
+ * `OnboardingSection`/`OnboardingLink` placeholders that used to live here
+ * had zero consumers anywhere in the repo and were removed.
  */
 
 // ---- Conformance ----
-export const ConformanceStatus = z.enum([
-  "implemented",
-  "missing",
-  "out_of_scope",
-]);
+export const ConformanceStatus = z.enum(['implemented', 'missing', 'out_of_scope']);
 export type ConformanceStatus = z.infer<typeof ConformanceStatus>;
 
 export const ConformanceItem = z.object({
@@ -28,27 +27,6 @@ export const Conformance = z.object({
   completeness_pct: z.number().min(0).max(100),
 });
 export type Conformance = z.infer<typeof Conformance>;
-
-// ---- Onboarding ----
-export const OnboardingLink = z.object({
-  label: z.string(),
-  path: z.string(),
-});
-export type OnboardingLink = z.infer<typeof OnboardingLink>;
-
-export const OnboardingSection = z.object({
-  kind: z.string(),
-  title: z.string(),
-  body: z.string(), // markdown
-  diagram: z.string().nullish(), // mermaid
-  links: z.array(OnboardingLink),
-});
-export type OnboardingSection = z.infer<typeof OnboardingSection>;
-
-export const Onboarding = z.object({
-  sections: z.array(OnboardingSection),
-});
-export type Onboarding = z.infer<typeof Onboarding>;
 
 // ---- Eval ----
 export const EvalPerTrace = z.object({
@@ -71,8 +49,17 @@ export const EvalRun = z.object({
 });
 export type EvalRun = z.infer<typeof EvalRun>;
 
-export const EvalOwnerKind = z.enum(["skill", "agent"]);
+export const EvalOwnerKind = z.enum(['skill', 'agent']);
 export type EvalOwnerKind = z.infer<typeof EvalOwnerKind>;
+
+/** What an eval case asserts: `must_find` expects findings, `must_not_flag`
+ *  forbids them (at listed locations, or anywhere when the list is empty). */
+export const EvalCaseKind = z.enum(['must_find', 'must_not_flag']);
+export type EvalCaseKind = z.infer<typeof EvalCaseKind>;
+
+/** Where a case came from: hand-written, or seeded from a decided finding. */
+export const EvalCaseSource = z.enum(['manual', 'finding_accepted', 'finding_dismissed']);
+export type EvalCaseSource = z.infer<typeof EvalCaseSource>;
 
 export const EvalCase = z.object({
   id: z.string(),
@@ -84,19 +71,54 @@ export const EvalCase = z.object({
   input_meta: z.unknown(),
   expected_output: z.unknown(),
   notes: z.string().nullish(),
+  kind: EvalCaseKind.default('must_find'),
+  source: EvalCaseSource.default('manual'),
+  /** Finding this case was seeded from; null once that finding is deleted. */
+  source_finding_id: z.string().nullish(),
 });
 export type EvalCase = z.infer<typeof EvalCase>;
 
+/** One `eval_runs` row — the result of running a SINGLE eval case once (`POST
+ *  /eval-cases/:id/run`). Distinct from `EvalRun` above, which is a
+ *  workspace-wide BATCH result ("Run eval (N)" on the Eval Dashboard) —
+ *  that one aggregates many of these into `per_trace[]`. */
+export const EvalCaseRun = z.object({
+  id: z.string(),
+  case_id: z.string(),
+  ran_at: z.string(),
+  actual_output: z.unknown(),
+  pass: z.boolean().nullable(),
+  recall: z.number().min(0).max(1).nullable(),
+  precision: z.number().min(0).max(1).nullable(),
+  citation_accuracy: z.number().min(0).max(1).nullable(),
+  duration_ms: z.number().int().nullable(),
+  cost_usd: z.number().nullable(),
+  /** Suite run this result belongs to; null for single-case runs. */
+  suite_run_id: z.string().nullish(),
+  /** `errored` = the case failed to execute (excluded from metrics). */
+  status: z.enum(['ok', 'errored']).default('ok'),
+  error: z.string().nullish(),
+});
+export type EvalCaseRun = z.infer<typeof EvalCaseRun>;
+
+/** An eval case with its most recent run embedded — what the Evals tab's
+ *  case list actually renders (pass/fail/never-run + recall%) without a
+ *  second round-trip per case. */
+export const EvalCaseListItem = EvalCase.extend({
+  last_run: EvalCaseRun.nullable(),
+});
+export type EvalCaseListItem = z.infer<typeof EvalCaseListItem>;
+
 // ---- Memory ----
-export const MemoryScope = z.enum(["repo", "global", "team"]);
+export const MemoryScope = z.enum(['repo', 'global', 'team']);
 export type MemoryScope = z.infer<typeof MemoryScope>;
 
 export const MemoryKind = z.enum([
-  "decision",
-  "convention",
-  "preference",
-  "fact",
-  "learning",
+  'decision',
+  'convention',
+  'preference',
+  'fact',
+  'learning',
 ]);
 export type MemoryKind = z.infer<typeof MemoryKind>;
 
@@ -116,24 +138,40 @@ export const MemoryItem = z.object({
 export type MemoryItem = z.infer<typeof MemoryItem>;
 
 // ---- Skills ----
-export const SkillType = z.enum(["rubric", "convention", "security", "custom"]);
+export const SkillType = z.enum(['rubric', 'convention', 'security', 'custom']);
 export type SkillType = z.infer<typeof SkillType>;
 
-export const SkillSource = z.enum([
-  "manual",
-  "imported_url",
-  "extracted",
-  "community",
-]);
+export const SkillSource = z.enum(['manual', 'imported_url', 'extracted', 'community']);
 export type SkillSource = z.infer<typeof SkillSource>;
 
-export const SkillThreatLevel = z.enum([
-  "unknown",
-  "safe",
-  "suspicious",
-  "dangerous",
+// ---- Skill content scan (malicious-content / prompt-injection gate) ----
+// Every skill body is scanned before it can be enabled and pulled into a
+// reviewing agent's prompt — see server `modules/skills/prompts.ts` for the
+// scanner's system prompt and `service.ts` for when scans run.
+export const SkillScanStatus = z.enum(['pending', 'clean', 'flagged', 'error']);
+export type SkillScanStatus = z.infer<typeof SkillScanStatus>;
+
+export const SkillScanSeverity = z.enum(['critical', 'high', 'medium', 'low']);
+export type SkillScanSeverity = z.infer<typeof SkillScanSeverity>;
+
+export const SkillScanCategory = z.enum([
+  'instruction_override',
+  'exfiltration',
+  'bias_injection',
+  'obfuscation',
+  'external_fetch',
+  'delimiter_escape',
 ]);
-export type SkillThreatLevel = z.infer<typeof SkillThreatLevel>;
+export type SkillScanCategory = z.infer<typeof SkillScanCategory>;
+
+export const SkillScanFinding = z.object({
+  severity: SkillScanSeverity,
+  category: SkillScanCategory,
+  excerpt: z.string(),
+  location: z.string(),
+  explanation: z.string(),
+});
+export type SkillScanFinding = z.infer<typeof SkillScanFinding>;
 
 export const Skill = z.object({
   id: z.string(),
@@ -143,46 +181,95 @@ export const Skill = z.object({
   source: SkillSource,
   body: z.string(),
   enabled: z.boolean(),
-  version: z.number(),
-  evidence_files: z.array(z.string()).nullable(),
-  threat_level: SkillThreatLevel.optional(),
-  /** Ordered list of repo-relative markdown paths attached to this skill for
-   *  project-context injection. Additive; does NOT trigger a version bump. */
-  attached_doc_paths: z.array(z.string()).default([]),
+  version: z.number().int(),
+  evidence_files: z.array(z.string()).nullish(),
+  scan_status: SkillScanStatus,
+  scan_findings: z.array(SkillScanFinding).nullish(),
+  scanned_at: z.string().nullish(),
+  // Project scope (SPEC-07): null = global, non-null = scoped to that repo.
+  // Nullish because several existing producers (manual/file create, legacy
+  // fixture-sourced community rows) never fill it — see server INSIGHTS.md
+  // 2026-09-15 on required-field breakage across unrelated producers.
+  repo_id: z.string().nullish(),
+  // Catalog tag slugs (SPEC-07); nullish for the same reason as repo_id —
+  // only community imports from the live catalog populate this.
+  tags: z.array(z.string()).nullish(),
 });
 export type Skill = z.infer<typeof Skill>;
 
 export const CommunitySkill = z.object({
+  path: z.string(),
+  folder: z.string(),
   name: z.string(),
-  repo: z.string(),
-  stars: z.number().int(),
-  lang: z.string(),
-  desc: z.string(),
+  description: z.string(),
+  tags: z.array(z.string()),
+  type: SkillType,
 });
 export type CommunitySkill = z.infer<typeof CommunitySkill>;
 
+/** Listing-level wrapper returned by `GET /skills/community` — the entries
+ *  grouped/filtered server-side plus whether the catalog was reachable at
+ *  all (SPEC-07 S-AC-8, S-AC-31). `available: false` means the upstream
+ *  catalog could not be retrieved; `entries` is `[]` in that case, never a
+ *  fixture/placeholder fallback. */
+export const CommunityCatalogListing = z.object({
+  available: z.boolean(),
+  message: z.string().nullish(),
+  entries: z.array(CommunitySkill),
+});
+export type CommunityCatalogListing = z.infer<typeof CommunityCatalogListing>;
+
+/** Outcome of the Settings catalog test action (SPEC-07 S-AC-4) — a sibling
+ *  type to `ConnTestResult`, NOT a `ConnTestProvider` widening: the catalog
+ *  test has no `provider` dimension, only a resolved repo + boolean outcome
+ *  + human-readable message (folder/entry counts on success, failure reason
+ *  on error). */
+export const CatalogTestResult = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+});
+export type CatalogTestResult = z.infer<typeof CatalogTestResult>;
+
 // ---- Conventions ----
+export const ConventionCategory = z.enum([
+  'naming',
+  'structure',
+  'errors',
+  'testing',
+  'imports',
+  'typing',
+  'api',
+  'general',
+]);
+export type ConventionCategory = z.infer<typeof ConventionCategory>;
+
+export const ConventionStatus = z.enum(['pending', 'accepted', 'rejected']);
+export type ConventionStatus = z.infer<typeof ConventionStatus>;
+
 export const ConventionCandidate = z.object({
   id: z.string(),
+  category: ConventionCategory,
   rule: z.string(),
+  rationale: z.string().nullish(),
   evidence_path: z.string(),
   evidence_snippet: z.string(),
+  evidence_line: z.number().int().nullish(),
   confidence: z.number().min(0).max(1),
-  accepted: z.boolean(),
+  status: ConventionStatus,
 });
 export type ConventionCandidate = z.infer<typeof ConventionCandidate>;
 
 // ---- Agents ----
 // 'openrouter' routes through the OpenAI-compatible API (OpenAIProvider with a
 // custom baseURL) — used by the CI runner for cheap models (DeepSeek/GLM/MiniMax).
-export const Provider = z.enum(["openai", "anthropic", "openrouter"]);
+export const Provider = z.enum(['openai', 'anthropic', 'openrouter']);
 export type Provider = z.infer<typeof Provider>;
 
 // Review execution strategy (matches @devdigest/reviewer-core's ReviewStrategy):
 //  - single-pass: send the WHOLE diff in ONE model call (default)
 //  - map-reduce:  one model call PER changed file (for very large diffs)
 //  - auto:        single-pass, switching to map-reduce when the diff is large
-export const ReviewStrategy = z.enum(["single-pass", "map-reduce", "auto"]);
+export const ReviewStrategy = z.enum(['single-pass', 'map-reduce', 'auto']);
 export type ReviewStrategy = z.infer<typeof ReviewStrategy>;
 
 // CI gate policy — when a review should BLOCK (REQUEST_CHANGES + fail the check)
@@ -191,7 +278,7 @@ export type ReviewStrategy = z.infer<typeof ReviewStrategy>;
 //  - critical: block iff >=1 CRITICAL finding (default)
 //  - warning:  block iff >=1 WARNING or CRITICAL finding
 //  - any:      block iff >=1 finding of any severity
-export const CiFailOn = z.enum(["never", "critical", "warning", "any"]);
+export const CiFailOn = z.enum(['never', 'critical', 'warning', 'any']);
 export type CiFailOn = z.infer<typeof CiFailOn>;
 
 export const Agent = z.object({
@@ -204,15 +291,11 @@ export const Agent = z.object({
   output_schema: z.unknown().nullish(),
   enabled: z.boolean(),
   version: z.number().int(),
-  strategy: ReviewStrategy.default("single-pass"),
-  ci_fail_on: CiFailOn.default("critical"),
+  strategy: ReviewStrategy.default('single-pass'),
+  ci_fail_on: CiFailOn.default('critical'),
   // Inject repo-intel context (repo skeleton + callers + rank note) into this
   // agent's review prompt. Default on; gated again by the global flag.
   repo_intel: z.boolean().default(true),
-  skill_count: z.number().int().optional(),
-  /** Ordered list of repo-relative markdown paths attached to this agent for
-   *  project-context injection. Additive; does NOT trigger a version bump. */
-  attached_doc_paths: z.array(z.string()).default([]),
 });
 export type Agent = z.infer<typeof Agent>;
 
@@ -222,3 +305,36 @@ export const AgentSkillLink = z.object({
   order: z.number().int(),
 });
 export type AgentSkillLink = z.infer<typeof AgentSkillLink>;
+
+// The immutable config snapshot captured in `agent_versions` whenever an agent's
+// config changes (everything but `enabled`). Mirrors the shape written by the
+// agents repository — provider/model/prompt/output_schema/strategy/gate/repo_intel
+// plus the ordered skill ids linked at snapshot time. Used for reproducibility
+// (eval replays a past version) and for surfacing an agent's edit history.
+export const AgentVersionConfig = z.object({
+  provider: Provider,
+  model: z.string(),
+  system_prompt: z.string(),
+  output_schema: z.unknown().nullish(),
+  strategy: ReviewStrategy,
+  ci_fail_on: CiFailOn,
+  repo_intel: z.boolean(),
+  // New snapshots store `{id, version}` (the skill's own version at snapshot
+  // time); snapshots written before that hold plain ids — accept both.
+  skills: z.array(
+    z.union([
+      z.string(),
+      // `name` lets Promote name a skill that was deleted since the snapshot.
+      z.object({ id: z.string(), version: z.number().int(), name: z.string().optional() }),
+    ]),
+  ),
+});
+export type AgentVersionConfig = z.infer<typeof AgentVersionConfig>;
+
+export const AgentVersion = z.object({
+  agent_id: z.string(),
+  version: z.number().int(),
+  config: AgentVersionConfig,
+  created_at: z.string(),
+});
+export type AgentVersion = z.infer<typeof AgentVersion>;

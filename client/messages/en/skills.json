@@ -11,6 +11,10 @@
       "fromUrl": "Import from URL",
       "community": "Search community skills…"
     },
+    "scope": {
+      "all": "All projects",
+      "global": "Global only"
+    },
     "empty": {
       "title": "No skills yet",
       "body": "Import a skill from a file, a URL, or the community catalog.",
@@ -61,19 +65,37 @@
   },
   "community": {
     "searchPlaceholder": "Search community skills (e.g. security)…",
-    "allLanguages": "All languages",
-    "loadError": "Could not load community skills",
-    "retry": "Retry",
+    "projectLabel": "Project",
+    "noRepos": "Connect a project to import community skills into it.",
+    "addRepoLink": "Add a repository",
+    "clearFilter": "Clear filter",
+    "suggestedFor": "Suggested for {project}",
+    "suggestionsCardTitle": "Suggested skills",
+    "importing": "Importing…",
+    "import": "Import",
+    "importSuccess": "Imported \"{name}\" into {project}.",
+    "importSuccessSimple": "Imported \"{name}\".",
+    "importFailed": "Import failed",
+    "unavailable": {
+      "title": "Catalog unavailable",
+      "fallbackBody": "Could not reach the community catalog.",
+      "settingsLink": "Check the Catalog setting →"
+    },
+    "empty": {
+      "title": "Catalog is empty",
+      "body": "The catalog was reached successfully, but it has no entries yet."
+    },
     "noMatch": {
       "title": "No matching skills",
-      "body": "Try a different search term."
-    },
-    "importing": "Importing…",
-    "import": "Import"
+      "body": "Try a different search term or clear the active filter."
+    }
   },
   "listItem": {
     "needsVetting": "needs vetting",
     "vettingTitle": "Untrusted source — vet before enabling",
+    "scanFlagged": "{count, plural, one {# issue found} other {# issues found}}",
+    "scanFlaggedTitle": "Content scan flagged this skill — open it to see what and why",
+    "scanning": "scanning…",
     "type": {
       "rubric": "rubric",
       "convention": "convention",
@@ -84,29 +106,140 @@
       "manual": "Manual",
       "extracted": "Extracted",
       "community": "Community",
-      "imported_url": "Imported (URL)"
-    }
-  },
-  "context": {
-    "title": "Context",
-    "attachedCount": "{count, plural, one {# attached} other {# attached}}",
-    "inheritanceNote": "Any agent using this skill inherits these documents.",
-    "filterPlaceholder": "Filter documents…",
-    "noMatch": "No documents match.",
-    "reorderHint": "Drag to reorder, or use ↑↓ arrow keys when focused",
-    "rowAriaAttached": "Attached document: {name}",
-    "rowAriaDetached": "Available document: {name}",
-    "serializesAs": "Serializes as"
+      "imported_url": "Imported"
+    },
+    "usage": "{agents} {agents, plural, one {agent} other {agents}} · {pull}% pull · {accept}% accept"
   },
   "preview": {
     "untrustedBadge": "untrusted source",
     "enabled": "Enabled",
     "disabled": "Disabled",
     "save": "Save",
+    "delete": "Delete",
+    "deleteError": "Failed to delete skill. Please try again.",
     "edit": "Edit",
     "untrustedNotice": "This skill came from an untrusted source. Its body is stored as data (delimiter-wrapped) and must be vetted before it is enabled for an agent.",
+    "scanPendingNotice": "Content scan in progress — this skill can't be enabled until it finishes.",
+    "scanErrorNotice": "Content scan failed and could not confirm this skill is safe. It's treated as unsafe until re-scanned — use \"Re-scan\" above.",
+    "scanFlaggedNotice": "Content scan flagged {count, plural, one {# issue} other {# issues}} in this skill's body — reasons below.",
+    "severity": {
+      "critical": "critical",
+      "high": "high",
+      "medium": "medium",
+      "low": "low"
+    },
+    "category": {
+      "instruction_override": "instruction override",
+      "exfiltration": "data exfiltration",
+      "bias_injection": "bias injection",
+      "obfuscation": "obfuscation",
+      "external_fetch": "external fetch",
+      "delimiter_escape": "delimiter escape"
+    },
+    "enableBlockedHint": "Blocked by the content scan — a critical/high finding (or a scan that hasn't completed/failed) must be resolved or re-scanned clean before this skill can be enabled.",
+    "enableBlockedError": "Could not enable this skill — the content scan blocks it.",
+    "enableOverrideConfirm": "This skill's content scan found lower-severity issues (not critical/high). Enable it anyway?",
+    "rescanError": "Re-scan failed. Please try again.",
+    "typeLabel": "Type",
+    "descriptionLabel": "Description",
+    "descriptionHint": "This is the skill's interface — phrase it directively (what the agent should do with it), not as a summary.",
     "bodyLabel": "Skill body (Markdown)",
     "bodyHint": "Saving a changed body creates a new immutable version.",
-    "version": "v{version}"
+    "version": "v{version}",
+    "scope": {
+      "label": "Project",
+      "hint": "Global skills apply everywhere. Scoping to a project hides it from other projects' filtered lists and deletes it if that project is removed.",
+      "global": "Global (all projects)",
+      "reassignError": "Could not change this skill's project. Please try again."
+    }
+  },
+  "previewTab": {
+    "title": "Preview",
+    "subtitle": "Rendered as the reviewing agent receives it."
+  },
+  "editor": {
+    "runOnEvals": "Run on evals",
+    "rescan": "Re-scan",
+    "tabs": {
+      "config": "Config",
+      "preview": "Preview",
+      "context": "Context",
+      "evals": "Evals",
+      "stats": "Stats",
+      "versions": "Versions"
+    }
+  },
+  "context": {
+    "title": "Context",
+    "attachedBadge": "{count, plural, one {# attached} other {# attached}}",
+    "inheritNote": "Any agent using this skill inherits these documents.",
+    "serializesAs": "SERIALIZES AS",
+    "filterPlaceholder": "Filter documents…",
+    "noMatch": "No documents match your filter.",
+    "empty": "No documents discovered in this repo yet.",
+    "loadError": "Could not load project context documents.",
+    "preview": "Preview",
+    "dragHandleLabel": "Reorder {name}",
+    "dragHandleInertLabel": "Reordering is disabled while the filter is active",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
+  },
+  "stats": {
+    "loadError": "Could not load stats.",
+    "empty": {
+      "title": "Not used by any agent yet",
+      "body": "Attach this skill to an agent to start collecting usage stats."
+    },
+    "tiles": {
+      "usedBy": "Used by",
+      "pullFrequency": "Pull frequency",
+      "acceptRate": "Accept rate",
+      "findings30d": "Findings (30D)"
+    },
+    "agentsUsing": "Agents using this skill",
+    "noAgents": "No agents currently use this skill.",
+    "openAgent": "Open",
+    "findingsByCategory": "Findings by category",
+    "noFindings": "No findings in the last 30 days."
+  },
+  "versions": {
+    "loadError": "Could not load version history.",
+    "empty": {
+      "title": "No version history",
+      "body": "Versions are recorded whenever the skill body changes."
+    },
+    "currentBadge": "current",
+    "diff": "Diff",
+    "restore": "Restore",
+    "restoreConfirm": "Restore version {version}? This creates a new version with its body.",
+    "diffTitle": "Diff — v{version} vs. current",
+    "diffOld": "v{version}",
+    "diffCurrent": "Current (v{version})"
+  },
+  "evals": {
+    "trend": {
+      "title": "Trend · last {count, plural, one {# run} other {# runs}}",
+      "open": "Open this skill's full eval dashboard",
+      "empty": "No finished runs yet — run the evals to start a trend."
+    },
+    "draft": {
+      "title": "Draft results",
+      "badge": "draft",
+      "hint": "Unsaved text — these results don't change the metrics above.",
+      "running": "Running {done}/{total}…",
+      "noResults": "No results yet.",
+      "pass": "Pass",
+      "fail": "Fail",
+      "errored": "Errored",
+      "failedRun": "The draft run failed: {reason}"
+    },
+    "reason": {
+      "scanPending": "Content scan hasn't finished — evals can't run until it passes.",
+      "scanError": "Content scan failed — re-scan this skill before running evals.",
+      "scanFlagged": "Content scan flagged blocking issues — resolve them before running evals.",
+      "running": "A run is already in progress.",
+      "noCases": "Add an eval case first."
+    },
+    "startFailed": "Couldn't start the run: {message}"
   }
 }

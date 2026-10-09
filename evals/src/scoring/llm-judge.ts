@@ -16,55 +16,50 @@ const JUDGE_RUBRIC =
   "evidence. (3) Reply with ONLY minified JSON:\n" +
   '{"results":[{"practice":"<text>","passed":true,"evidence":"<verbatim quote>"}]}';
 
+export interface PracticeResult {
+  practice: string;
+  passed: boolean;
+  evidence: string;
+  /** Set when the judge said PASS but its evidence quote is not a verbatim substring of the output. */
+  fabricated?: true;
+}
+
 export interface Verdict {
-  results: { practice: string; passed: boolean; evidence: string }[];
+  results: PracticeResult[];
   passed: number;
   total: number;
   score: number;
 }
 
 /**
- * Best-effort extraction of the verdict array from a judge reply. Cheap non-Anthropic models
- * (DeepSeek, Gemini Flash) wrap the JSON in ```json fences or trail prose after it, and sometimes
- * emit outright invalid JSON. Strip fences, take the outermost braces, and return null on any
- * failure so the caller can retry rather than crash the whole test on a single flaky reply.
+ * Trust but verify: a judge PASS only counts if its evidence quote appears verbatim in the task
+ * output (exact substring, surrounding whitespace trimmed). Otherwise the practice is demoted to
+ * FAIL and flagged `fabricated`. Pure — no model call. Applied before the score is computed.
  */
-function parseVerdict(text: string): Verdict["results"] | null {
-  const unfenced = text.replace(/```(?:json)?/gi, "");
-  const start = unfenced.indexOf("{");
-  const end = unfenced.lastIndexOf("}");
-  if (start === -1 || end === -1 || end < start) return null;
-  try {
-    const obj = JSON.parse(unfenced.slice(start, end + 1));
-    return Array.isArray(obj.results) ? obj.results : null;
-  } catch {
-    return null;
-  }
+export function verifyEvidence(output: string, results: PracticeResult[]): PracticeResult[] {
+  return results.map((r) => {
+    if (!r.passed) return r;
+    const quote = typeof r.evidence === "string" ? r.evidence.trim() : "";
+    if (quote !== "" && output.includes(quote)) return r;
+    return { ...r, passed: false, fabricated: true };
+  });
 }
 
-/**
- * Judge an output against a list of practices. Model defaults to the stronger judge family.
- *
- * The judge runs on whatever model EVAL_JUDGE_MODEL selects — including cheap ones that
- * occasionally break their own JSON. On an unparseable reply we retry ONCE with an explicit
- * "valid JSON only" correction (a different prompt yields a different completion even at
- * temperature 0); only if that also fails do we surface the error.
- */
+export function parseVerdict(text: string): PracticeResult[] {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) throw new Error(`judge returned no JSON: ${text.slice(0, 200)}`);
+  const obj = JSON.parse(text.slice(start, end + 1));
+  if (!Array.isArray(obj.results)) throw new Error("judge JSON missing results[]");
+  return obj.results;
+}
+
+/** Judge an output against a list of practices. Model defaults to the stronger judge family. */
 export async function llmJudge(output: string, practices: string[], model = EVAL_JUDGE_MODEL): Promise<Verdict> {
   const listed = practices.map((p, i) => `${i + 1}. ${p}`).join("\n");
   const prompt = `${JUDGE_RUBRIC}\n\n## PRACTICES\n${listed}\n\n## OUTPUT\n${output}\n\nReturn the JSON now.`;
-
-  let res = await runContent(prompt, { allowedTools: [], maxTurns: 1, model });
-  let results = parseVerdict(res.text);
-  if (!results) {
-    const correction =
-      `${prompt}\n\nYour previous reply was NOT valid JSON. Reply with ONLY the minified JSON ` +
-      "object matching the schema — no markdown fences, no prose before or after.";
-    res = await runContent(correction, { allowedTools: [], maxTurns: 1, model });
-    results = parseVerdict(res.text);
-  }
-  if (!results) throw new Error(`judge returned no parseable JSON after retry: ${res.text.slice(0, 200)}`);
-
+  const res = await runContent(prompt, { allowedTools: [], maxTurns: 1, model });
+  const results = verifyEvidence(output, parseVerdict(res.text));
   const total = results.length || 1;
   const passed = results.filter((r) => r.passed).length;
   return { results, passed, total, score: passed / total };

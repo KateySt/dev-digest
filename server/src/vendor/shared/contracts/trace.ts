@@ -36,6 +36,24 @@ export const ToolCall = z.object({
 });
 export type ToolCall = z.infer<typeof ToolCall>;
 
+/**
+ * SPEC-04 (Project Context) — outcome of one attached document at run time.
+ * `injected` = its full text reached the prompt's `## Project context` slot;
+ * every other value is a reason it did NOT (missing = path not found in the
+ * clone, empty = whitespace-only content, dropped_for_budget = the whole
+ * document was dropped from the end of resolved order under AC-18).
+ */
+export const SpecReadOutcome = z.enum(['injected', 'missing', 'empty', 'dropped_for_budget']);
+export type SpecReadOutcome = z.infer<typeof SpecReadOutcome>;
+
+/** One entry of `RunTrace.specs_read` — a repo-relative attached path plus
+ *  its outcome for this run (SPEC-04 AC-19). */
+export const SpecReadEntry = z.object({
+  path: z.string(),
+  outcome: SpecReadOutcome,
+});
+export type SpecReadEntry = z.infer<typeof SpecReadEntry>;
+
 export const PromptAssembly = z.object({
   system: z.string(),
   skills: z.string().nullish(),
@@ -48,6 +66,8 @@ export const PromptAssembly = z.object({
   repo_map: z.string().nullish(),
   /** PR author's description/body (truncated); null when absent. */
   pr_description: z.string().nullish(),
+  /** Derived PR intent/scope digest (untrusted); null when absent. */
+  intent: z.string().nullish(),
   user: z.string(),
 });
 export type PromptAssembly = z.infer<typeof PromptAssembly>;
@@ -83,8 +103,7 @@ export const RunTrace = z.object({
   tool_calls: z.array(ToolCall),
   raw_output: z.string(),
   memory_pulled: z.array(MemoryPulled),
-  specs_read: z.array(z.string()),
-  specs_missing: z.array(z.string()).optional(),
+  specs_read: z.array(SpecReadEntry),
   log: z.array(RunLogLine),
 });
 export type RunTrace = z.infer<typeof RunTrace>;
@@ -97,6 +116,7 @@ export const RunSummary = z.object({
   run_id: z.string(),
   agent_id: z.string().nullable(),
   agent_name: z.string().nullable(),
+  pr_number: z.number().int().nullable(),
   provider: z.string().nullable(),
   model: z.string().nullable(),
   status: z.string().nullable(), // running | done | failed | cancelled
@@ -104,6 +124,7 @@ export const RunSummary = z.object({
   duration_ms: z.number().int().nullable(),
   tokens_in: z.number().int().nullable(),
   tokens_out: z.number().int().nullable(),
+  /** USD spent on the run (usage × pricing); null when unknown — UI shows "—". */
   cost_usd: z.number().nullable(),
   findings_count: z.number().int().nullable(),
   grounding: z.string().nullable(),
@@ -113,8 +134,5 @@ export const RunSummary = z.object({
   // findings that trip the agent's gate. Null on failed/cancelled runs.
   score: z.number().int().nullable(),
   blockers: z.number().int().nullable(),
-  findings_critical: z.number().int().nullish(),
-  findings_warning: z.number().int().nullish(),
-  findings_suggestion: z.number().int().nullish(),
 });
 export type RunSummary = z.infer<typeof RunSummary>;

@@ -1,17 +1,25 @@
-import type { FastifyPluginAsync } from "fastify";
-import settings from "./settings/routes.js";
-import repos from "./repos/routes.js";
-import pulls from "./pulls/routes.js";
-import polling from "./polling/routes.js";
-import workspace from "./workspace/routes.js";
-import agents from "./agents/routes.js";
-import reviews from "./reviews/routes.js";
-import repoIntel from "./repo-intel/routes.js";
-import skills from "./skills/routes.js";
-import conventions from "./conventions/routes.js";
-import intent from "./intent/routes.js";
-import blast from "./blast/routes.js";
-import projectContext from "./project-context/routes.js";
+import type { FastifyPluginAsync } from 'fastify';
+import settings from './settings/routes.js';
+import repos from './repos/routes.js';
+import pulls from './pulls/routes.js';
+import polling from './polling/routes.js';
+import workspace from './workspace/routes.js';
+import agents from './agents/routes.js';
+import reviews from './reviews/routes.js';
+import repoIntel from './repo-intel/routes.js';
+import skills from './skills/routes.js';
+import projectContext from './project-context/routes.js';
+import conventions from './conventions/routes.js';
+import agentPerformance from './agent-performance/routes.js';
+import evalModule from './eval/routes.js';
+import ci from './ci/routes.js';
+import intent from './intent/routes.js';
+import smartDiff from './smart-diff/routes.js';
+import risks from './risks/routes.js';
+import blast from './blast/routes.js';
+import commits from './commits/routes.js';
+import history from './history/routes.js';
+import onboarding from './onboarding/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -36,8 +44,16 @@ export const modules: Record<string, FastifyPluginAsync> = {
   reviews,
   repoIntel,
   skills,
-  conventions,
-  intent,
-  blast,
   projectContext,
+  conventions,
+  agentPerformance,
+  eval: evalModule,
+  ci,
+  intent,
+  smartDiff,
+  risks,
+  blast,
+  commits,
+  history,
+  onboarding,
 };

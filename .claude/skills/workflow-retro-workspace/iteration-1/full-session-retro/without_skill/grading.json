@@ -1,0 +1,36 @@
+{
+  "expectations": [
+    {"text": "Report has all seven sections: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations", "passed": false, "evidence": "Headings are 'Token spend', 'Agent timeline', 'Round-trips per agent', 'Per-agent friction', 'User question load', 'Orchestration mistakes', 'Recommendations', plus an extra 'Caveats'. Content is equivalent, but two required sections ('Token ledger', 'Orchestration self-critique') are named differently, so the expected structure is not matched."},
+    {"text": "Spec-creator tokens summed correctly to 71600 (41200+18300+12100)", "passed": true, "evidence": "Table row: '71,600 (41,200 + 18,300 + 12,100)'."},
+    {"text": "Implementer tokens summed correctly to 216000 (188400+27600)", "passed": true, "evidence": "Table row: '216,000 (188,400 + 27,600)'."},
+    {"text": "Total subagent tokens reported as 429600", "passed": true, "evidence": "Total row: '**429,600**'. Sums correctly against the fixture."},
+    {"text": "States plainly that the total session token count is not knowable from inside the session, instead of inventing a number", "passed": false, "evidence": "It does not invent a number. It says only 'the orchestrator's own tokens and the user's wait time ... are not in the transcript, so they are not counted' and, in Caveats, that orchestrator tokens are not measured. It never states that the total session token count cannot be known from inside the session. That is implied, not plain."},
+    {"text": "Reports spec-creator was resumed twice and traces the extra rounds to the missing write-back scope question", "passed": true, "evidence": "'spec-creator: 2 resumes (3 invocations)'. Friction: 'The write-back scope question (repo files vs DB only) was foreseeable and should have been in round 1.'"},
+    {"text": "Orchestration self-critique names the duplicate architecture-reviewer spawn (b2) that was stopped via TaskStop", "passed": true, "evidence": "Orchestration mistakes #1: 'Duplicate reviewer spawn (b2) ... launched a second identical reviewer and then stopped it. Cost: 4.1k tokens and a TaskStop call.'"},
+    {"text": "User question load reports 2 AskUserQuestion rounds (3 + 1 questions) and flags the free-text 'Other' answer as a signal options did not fit", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1)' and 'the option set missed the real intent'."},
+    {"text": "Flags implementation-planner re-reading INSIGHTS.md / onion skill as duplicated work", "passed": true, "evidence": "Planner friction: 're-read server/INSIGHTS.md and the onion-architecture skill from scratch ... Duplicated reading'."},
+    {"text": "Recommendations are split into prompt wording / orchestration process / tooling-automation buckets and name specific files", "passed": false, "evidence": "Recommendations are one flat numbered list of 7. Items are only loosely prefixed by actor (spec-creator, Orchestrator, implementer prompt/plan). There are no prompt/process/tooling buckets, and almost no specific files are named beyond INSIGHTS.md."},
+    {"text": "Report ends with the top 1-3 recommendations, not a long list", "passed": false, "evidence": "Ends with 7 recommendations followed by a Caveats paragraph. There is no top-1-to-3 prioritisation."},
+    {"text": "Ledger file created at docs/retro/ledger.md with a header and an entry containing Scope, Agents, Tokens, Friction, Recommendations fields", "passed": false, "evidence": "The file exists with a header and a dated entry. Its fields are Agents, Biggest spend, Round-trips, User questions, Mistakes, Outcome, Actions. There is no explicit Scope, Tokens, Friction or Recommendations field. Scope is only in the entry title and tokens are folded into Agents."},
+    {"text": "Did not run in --deep mode (no attempt to read subagent output files)", "passed": true, "evidence": "The report relies only on the <usage> blocks and the transcript text. Caveats: 'Token numbers come from the <usage> blocks only.' There is no sign of subagent output files being read."}
+  ],
+  "summary": {"passed": 8, "failed": 5, "total": 13, "pass_rate": 0.62},
+  "execution_metrics": {},
+  "timing": {"total_tokens": 36390, "duration_ms": 61618, "total_duration_seconds": 61.6},
+  "claims": [
+    {"claim": "Summed agent time is about 1,236 s (about 20.6 min)", "type": "factual", "verified": true, "evidence": "Fixture durations 96+41+30+140+612+9+71+98+84+55 s = 1236 s."},
+    {"claim": "Total tool uses are 156", "type": "factual", "verified": true, "evidence": "14+6+4+22+61+2+12+11+15+9 = 156."},
+    {"claim": "The transcript does not show the planner's up-front pipeline-vs-single-agent question", "type": "factual", "verified": true, "evidence": "The fixture shows no such question. The claim is correctly hedged."},
+    {"claim": "test-writer never ran and this deviates from the pipeline", "type": "factual", "verified": true, "evidence": "No test-writer call appears in the fixture. This is a good extra observation."},
+    {"claim": "The reviewer was not re-run after the CRITICAL fix", "type": "factual", "verified": true, "evidence": "The fixture shows plan-verifier after the fix, with no second reviewer call."}
+  ],
+  "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []},
+  "eval_feedback": {
+    "suggestions": [
+      {"assertion": "Report has all seven sections", "reason": "Heading names are brittle. Say whether semantic equivalents count, or the baseline will fail on naming alone even when the content is complete."},
+      {"reason": "No assertion covers the real findings the baseline surfaced: reviewer not re-run after the CRITICAL fix, and test-writer skipped. Consider adding them if the skill is meant to catch them."},
+      {"assertion": "Ledger file created ... with Scope, Agents, Tokens, Friction, Recommendations fields", "reason": "Field names are very specific to the skill's template. This is discriminating for the skill but will always fail a no-skill baseline."}
+    ],
+    "overall": "The numeric assertions are solid and discriminating. The structural assertions (section names, buckets, top 1-3, ledger fields) measure template compliance, which is where the no-skill run differs most. Add an assertion on the 'not knowable' total, since the baseline only implied it."
+  }
+}

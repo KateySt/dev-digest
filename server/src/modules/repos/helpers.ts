@@ -50,6 +50,7 @@ export function toRepoDto(row: typeof t.repos.$inferSelect): Repo {
     full_name: row.fullName,
     default_branch: row.defaultBranch,
     clone_path: row.clonePath,
+    languages: row.languages ?? null,
     last_polled_at: row.lastPolledAt?.toISOString() ?? null,
     created_by: row.createdBy,
   };

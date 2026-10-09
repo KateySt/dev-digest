@@ -1,4 +1,4 @@
-import * as t from "./schema.js";
+import * as t from './schema.js';
 
 /**
  * Shared row types inferred from the Drizzle schema.
@@ -10,8 +10,16 @@ import * as t from "./schema.js";
  * re-exports its row from here to keep its public type API unchanged.
  */
 export type AgentRow = typeof t.agents.$inferSelect;
+export type AgentVersionRow = typeof t.agentVersions.$inferSelect;
 export type FindingRow = typeof t.findings.$inferSelect;
 export type PullRow = typeof t.pullRequests.$inferSelect;
 export type AgentRunRow = typeof t.agentRuns.$inferSelect;
 export type SkillRow = typeof t.skills.$inferSelect;
-export type ConventionRow = typeof t.conventions.$inferSelect;
+export type SkillVersionRow = typeof t.skillVersions.$inferSelect;
+export type AgentContextDocumentRow = typeof t.agentContextDocuments.$inferSelect;
+export type SkillContextDocumentRow = typeof t.skillContextDocuments.$inferSelect;
+export type EvalCaseRow = typeof t.evalCases.$inferSelect;
+export type EvalSuiteRunRow = typeof t.evalSuiteRuns.$inferSelect;
+export type EvalRunRow = typeof t.evalRuns.$inferSelect;
+export type CiInstallationRow = typeof t.ciInstallations.$inferSelect;
+export type CiRunRow = typeof t.ciRuns.$inferSelect;

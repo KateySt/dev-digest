@@ -1,24 +1,73 @@
 {
   "title": "Project Context",
-  "chunks": "{count} chunks",
-  "reindex": "Re-index",
-  "indexing": "Indexing…",
-  "resync": "Resync",
-  "resyncing": "Resyncing…",
-  "indexStatus": "Index status: {status}",
-  "loadError": "Couldn’t load specs",
-  "kb": "{kb}kb",
-  "empty": {
-    "title": "No spec files yet",
-    "body": "Drop your PRDs, tech specs, and acceptance criteria under .devdigest/specs/. Every agent and the PR brief read them as grounding context."
+  "subtitle": "Specs, docs, and insights your agents and skills can read as grounding context.",
+  "listHeader": {
+    "label": "Project Context",
+    "scope": "specs/ · docs/ · insights/"
+  },
+  "footer": {
+    "documentCount": "{count, plural, one {# document} other {# documents}}",
+    "tokenTotal": "≈{tokens} tokens (estimated)",
+    "lastRefreshed": "Refreshed {time} ago",
+    "neverRefreshed": "Not yet refreshed"
+  },
+  "refresh": "Refresh",
+  "refreshing": "Refreshing…",
+  "resync": "Sync latest from origin",
+  "resyncing": "Syncing…",
+  "addFolder": "Add folder",
+  "upload": "Upload",
+  "uploading": "Uploading…",
+  "addFolderDialog": {
+    "title": "Add folder",
+    "folderLabel": "Folder",
+    "folderHint": "Must live under specs/, docs/, or insights/.",
+    "folderPlaceholder": "specs/onboarding",
+    "documentLabel": "First document",
+    "documentPlaceholder": "overview.md",
+    "create": "Create",
+    "creating": "Creating…",
+    "cancel": "Cancel"
   },
   "mode": {
-    "preview": "preview",
-    "edit": "edit"
+    "preview": "Preview",
+    "edit": "Edit"
   },
   "editor": {
-    "loadError": "Couldn’t load spec",
     "save": "Save",
-    "saving": "Saving…"
-  }
+    "saving": "Saving…",
+    "saved": "Saved",
+    "loadError": "Couldn’t load this document."
+  },
+  "locallyModified": "locally modified",
+  "usedBy": "Used by {count, plural, one {# agent} other {# agents}}",
+  "coverage": {
+    "label": "Coverage",
+    "notApplicable": "n/a — no enabled agents or skills yet"
+  },
+  "refusal": {
+    "title": "Sync refused — locally modified documents",
+    "body": "These project-context documents are edited in the clone but not committed. Commit or revert them in the repo itself, then try again:"
+  },
+  "validation": {
+    "extension": "Documents must end in .md.",
+    "folder": "Path must live under specs/, docs/, or insights/.",
+    "outsideClone": "Path resolves outside this repo’s clone.",
+    "generic": "Could not save this document."
+  },
+  "empty": {
+    "noClone": {
+      "title": "No clone yet",
+      "body": "This repo hasn’t been cloned yet — Project Context needs a local clone to discover documents."
+    },
+    "noDocuments": {
+      "title": "No documents yet",
+      "body": "Add a folder under specs/, docs/, or insights/ to create your first document."
+    }
+  },
+  "selectPrompt": {
+    "title": "Select a document",
+    "body": "Pick a document on the left to preview or edit it."
+  },
+  "loadError": "Could not load project context."
 }

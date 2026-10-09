@@ -1,0 +1,92 @@
+{
+  "expectations": [
+    {
+      "text": "States the narrowed scope (spec-creator dialog only) at the top of the report",
+      "passed": true,
+      "evidence": "chat_report.md title is 'Workflow retro: spec-creator dialog (Project Context)'. The first line of the body is 'Scope used: only the spec-creator dialog...'."
+    },
+    {
+      "text": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total",
+      "passed": true,
+      "evidence": "The ledger shows 'Total in scope 71,600' (41,200 + 18,300 + 12,100, which matches the fixture). 429,600 does not appear. The report says it gives no session-wide total."
+    },
+    {
+      "text": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline",
+      "passed": true,
+      "evidence": "The ledger has only the a1 spawn and two resumes. The timeline has 5 steps, all spec-creator or user. The other agents are named only in the scope sentence, as explicitly out of scope."
+    },
+    {
+      "text": "Reports 2 resume round-trips for spec-creator and what new info each supplied",
+      "passed": true,
+      "evidence": "Round-trips section: 'a1 was resumed 2 times'. 'Resume 1 supplied: Postgres table, 8 KB, any user.' 'Resume 2 supplied: DB only, plus on-demand export to server/specs via a button.' Both match the fixture."
+    },
+    {
+      "text": "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer",
+      "passed": true,
+      "evidence": "User question load: '2 AskUserQuestion rounds, 4 questions total (3 + 1)'. It flags that 1 of 4 answers was free text ('Other') and quotes 'DB only, but export to server/specs on demand via a button'."
+    },
+    {
+      "text": "Ledger entry Scope field names the spec-creator dialog, not the whole session",
+      "passed": true,
+      "evidence": "ledger.md: '**Scope:** only the spec-creator dialog (spawn + 2 resumes, 2 AskUserQuestion rounds). Later pipeline stages were not analyzed.'"
+    },
+    {
+      "text": "Recommendation says to fold the write-back scope question into spec-creator's initial dialog",
+      "passed": true,
+      "evidence": "Top recommendation 1: 'Make spec-creator ask write-back/side-effect scope in its first question batch, before drafting ACs.' The prompt-wording recommendation says the same."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {},
+  "timing": {
+    "total_tokens": 37935,
+    "duration_ms": 52531,
+    "total_duration_seconds": 52.5
+  },
+  "claims": [
+    {
+      "claim": "Total in scope is 24 tool uses and 167 s",
+      "type": "factual",
+      "verified": true,
+      "evidence": "14+6+4 = 24 tool uses. 96+41+30 = 167 s."
+    },
+    {
+      "claim": "The extra round cost about 30k tokens across resumes 1 and 2",
+      "type": "quality",
+      "verified": true,
+      "evidence": "18.3k + 12.1k = 30.4k. The report also notes that part of this is the draft itself, so it is not all attributable to the miss."
+    },
+    {
+      "claim": "The second resume was avoidable because write-back scope was knowable at the start",
+      "type": "quality",
+      "verified": false,
+      "evidence": "This is an inference. The fixture says only that the scope 'was not asked in round 1'. It does not show whether the user could have answered it earlier. The report's wording is also slightly inconsistent: it says one resume was 'not new information', but the same section lists the hybrid answer as new info that added AC-7."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline",
+        "reason": "A grader has to judge by hand that naming the other agents in the scope sentence is acceptable. Say explicitly that mentioning them as out of scope is allowed, or check that none of their token figures appear (52,800, 188,400, 33,500, 29,900, 21,700)."
+      },
+      {
+        "assertion": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total",
+        "reason": "The run also correctly refused to give a session total. No assertion covers that. Consider adding one that checks no session-wide figure is invented."
+      },
+      {
+        "reason": "No assertion checks the per-call breakdown (41,200 / 18,300 / 12,100) or the tool-use and duration totals. A wrong breakdown that still summed to 71,600 would pass."
+      }
+    ],
+    "overall": "The assertions cover scope handling well and are discriminating for the scoping behaviour. They are thinner on the correctness of the per-call numbers and on avoiding hallucinated session totals."
+  }
+}

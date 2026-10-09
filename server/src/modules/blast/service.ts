@@ -1,91 +1,88 @@
-import type { Container } from "../../platform/container.js";
-import type { BlastRadiusResult, Provider } from "@devdigest/shared";
-import { NotFoundError } from "../../platform/errors.js";
-import { BlastRepository } from "./repository.js";
-import { resolveFeatureModel } from "../settings/feature-models.js";
+import type { BlastRadius } from '@devdigest/shared';
+import type { Container } from '../../platform/container.js';
+import type { RunLogger } from '../../platform/run-logger.js';
+import type { PullRow } from '../../db/rows.js';
+import type { ReviewRepository } from '../reviews/repository.js';
+import { BlastRepository } from './repository.js';
+import { toBlastRadius, buildSummary } from './helpers.js';
 
+/**
+ * BlastService — derives a PR's blast radius (changed symbols → downstream
+ * callers → affected endpoints/crons) per-PR, cached by head sha. No LLM
+ * call, ever — this is a pure structural read over `container.repoIntel`
+ * (see `SmartDiffService`'s header comment for the same "no prompts.ts"
+ * precedent). Mirrors `RisksService`'s cache-check shape.
+ */
 export class BlastService {
-  private readonly repo: BlastRepository;
+  private repo: BlastRepository;
+  private reviews: ReviewRepository;
 
-  constructor(private readonly container: Container) {
+  constructor(private container: Container) {
     this.repo = new BlastRepository(container.db);
+    this.reviews = container.reviewRepo;
   }
 
-  async getForPr(
-    prId: string,
-    workspaceId: string,
-  ): Promise<BlastRadiusResult> {
-    const { pr, repo } = await this.repo.resolvePrAndRepo(prId, workspaceId);
-    if (!pr) throw new NotFoundError("Pull request not found");
-    if (!repo) throw new NotFoundError("Repo not found");
-
-    const changedFiles = await this.repo.getChangedFilePaths(pr.id);
-
-    if (changedFiles.length === 0) {
-      return {
-        changedSymbols: [],
-        callers: [],
-        impactedEndpoints: [],
-        degraded: true,
-        reason: "no_data",
-      };
+  /**
+   * Cache check: reuse the persisted slice when the head sha matches, the
+   * repo's index hasn't advanced since (`indexedSha` still matches
+   * `repo_index_state.last_indexed_sha`), AND the slice wasn't computed on
+   * the degraded path. A resync/incremental reindex doesn't change
+   * `pull.headSha` but CAN change every downstream caller/endpoint fact
+   * (e.g. resolving `references.decl_file` for the first time), so pinning
+   * the cache to headSha alone would serve a stale blast radius forever
+   * after a reindex — hence the extra `indexedSha` check. A degraded result
+   * is always treated as a cache miss too, even when both shas match, so the
+   * panel recomputes once the repo-intel index catches up.
+   */
+  // `workspaceId` is unused here (no model call, so no feature-model resolution
+  // to scope) but kept for signature parity with sibling services (RisksService,
+  // IntentService) that DO need it.
+  async getOrCompute(workspaceId: string, pull: PullRow, runLog?: RunLogger): Promise<BlastRadius> {
+    const indexState = await this.container.repoIntel.getIndexState(pull.repoId);
+    const existing = await this.repo.getSlice(pull.id);
+    if (
+      existing &&
+      existing.headSha === pull.headSha &&
+      existing.indexedSha === indexState.lastIndexedSha &&
+      !existing.degraded
+    ) {
+      runLog?.info('Blast radius cache hit — head_sha and repo index unchanged, reusing persisted blast radius (no recompute)');
+      return existing.blast;
     }
-
-    const blastResult = await this.container.repoIntel.getBlastRadius(
-      repo.id,
-      changedFiles,
+    runLog?.info(
+      'Blast radius cache miss — head_sha changed, repo was reindexed, no prior blast radius, or prior result was degraded; recomputing',
     );
 
-    const priorPrsRaw = await this.repo.findPriorPrsTouchingSameFiles(
-      repo.id,
-      pr.id,
-      changedFiles,
-    );
+    const files = await this.reviews.getPrFiles(pull.id);
 
-    const priorPrs = priorPrsRaw.map(
-      (p: {
-        id: string;
-        number: number;
-        title: string;
-        openedAt: Date | null;
-        status: string;
-      }) => ({
-        id: p.id,
-        number: p.number,
-        title: p.title,
-        openedAt: p.openedAt ? p.openedAt.toISOString() : null,
-        status: p.status,
-      }),
-    );
-
-    let summary: string | undefined;
-    try {
-      const { provider, model } = await resolveFeatureModel(
-        this.container,
-        workspaceId,
-        "review_intent",
-      );
-      const llm = await this.container.llm(provider as Provider);
-      const result = await llm.complete({
-        model,
-        messages: [
-          {
-            role: "system",
-            content: "You summarize code impact maps in one concise sentence.",
-          },
-          {
-            role: "user",
-            content: `Blast radius: ${blastResult.changedSymbols.map((s) => s.name).join(", ")} changed. ${blastResult.callers.length} callers, ${blastResult.impactedEndpoints.length} endpoints affected. Summarize in one sentence.`,
-          },
-        ],
-        maxTokens: 150,
-        temperature: 0.2,
+    // No changed files to attribute a blast radius to — persist an empty,
+    // fresh (non-degraded) slice instead of calling the facade on nothing.
+    if (files.length === 0) {
+      const blast: BlastRadius = { changed_symbols: [], downstream: [], summary: buildSummary({ changed_symbols: [], downstream: [] }) };
+      await this.repo.upsertSlice(pull.id, {
+        blast,
+        headSha: pull.headSha,
+        indexedSha: indexState.lastIndexedSha,
+        degraded: false,
       });
-      summary = result.text.trim();
-    } catch {
-      // LLM failure must not block the response
+      return blast;
     }
 
-    return { ...blastResult, priorPrs, summary };
+    const result = await this.container.repoIntel.getBlastRadius(
+      pull.repoId,
+      files.map((f) => f.path),
+    );
+
+    const radius = toBlastRadius(result);
+    const blast: BlastRadius = { ...radius, summary: buildSummary(radius) };
+
+    await this.repo.upsertSlice(pull.id, {
+      blast,
+      headSha: pull.headSha,
+      indexedSha: indexState.lastIndexedSha,
+      degraded: result.degraded ?? false,
+    });
+
+    return blast;
   }
 }

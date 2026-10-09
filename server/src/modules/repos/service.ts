@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import { type Repo } from '@devdigest/shared';
+import { type Repo, type CommunityCatalogListing } from '@devdigest/shared';
 import { NotFoundError } from '../../platform/errors.js';
 import { RepoRepository } from './repository.js';
 import { parseRepoUrl, withGitHubToken, toRepoDto } from './helpers.js';
@@ -56,6 +56,17 @@ export class RepoService {
       depth: CLONE_DEPTH,
     });
     await this.repo.updateClonePath(repoId, path);
+
+    // Language bar (repo-wide, GitHub has no per-PR breakdown) — best-effort,
+    // never fails the clone job when GitHub is unavailable.
+    try {
+      const gh = await this.container.github();
+      const languages = await gh.getLanguages({ owner, name });
+      await this.repo.updateLanguages(repoId, languages);
+    } catch {
+      // No token / offline / API error — language bar stays hidden until a
+      // later refresh succeeds.
+    }
 
     // T2.2 — kick off the indexer in the background. ENQUEUE (not call) so the
     // clone job closes immediately and the (heavier) index runs as its own
@@ -140,5 +151,18 @@ export class RepoService {
   async remove(workspaceId: string, id: string): Promise<void> {
     const ok = await this.repo.remove(workspaceId, id);
     if (!ok) throw new NotFoundError('Repo not found');
+  }
+
+  /**
+   * SPEC-07 — community catalog entries matching this repo's stored
+   * language breakdown, excluding entries already imported into it. Reads
+   * `repos.languages` only (never triggers a refetch) and tolerates a null
+   * breakdown (S-AC-30, yields an empty list, not an error). Delegates the
+   * actual catalog/tag matching to `SkillsService`, which owns the catalog.
+   */
+  async skillSuggestions(workspaceId: string, repoId: string): Promise<CommunityCatalogListing> {
+    const repo = await this.repo.getById(workspaceId, repoId);
+    if (!repo) throw new NotFoundError('Repo not found');
+    return this.container.skillsService.suggestionsForRepo(workspaceId, repoId, repo.languages);
   }
 }

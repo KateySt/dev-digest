@@ -28,12 +28,27 @@ interface Basics {
 }
 
 /** Build a service with a stubbed repository (no DB) + a MockGitClient. */
-function makeService(opts: { basics: Basics | null; state?: IndexState | null; git: MockGitClient }) {
+function makeService(opts: {
+  basics: Basics | null;
+  state?: IndexState | null;
+  git: MockGitClient;
+  modified?: string[];
+  inWorkspace?: boolean;
+}) {
   let state = opts.state ?? null;
   const touched = { n: 0 };
+  const merged: Array<Record<string, unknown>> = [];
+  const cleared: string[] = [];
   const repo = {
     getRepoBasics: async () => opts.basics,
     tryGetIndexState: async () => state,
+    repoInWorkspace: async () => opts.inWorkspace ?? true,
+    mergeIndexStats: async (_id: string, patch: Record<string, unknown>) => {
+      merged.push(patch);
+    },
+    clearIndexStatsReason: async (_id: string, prefix: string) => {
+      cleared.push(prefix);
+    },
     touchIndexState: async () => {
       touched.n += 1;
       if (state) state = { ...state, updatedAt: new Date() };
@@ -45,11 +60,14 @@ function makeService(opts: { basics: Basics | null; state?: IndexState | null; g
     db: {}, // never queried — service.repo is overridden below
     depgraph: { buildEdges: async () => [] },
     tokenizer: { count: (text: string) => Math.ceil(text.length / 4) },
+    // SPEC-04 S-AC-28 — resyncRepo consults this before advancing the clone;
+    // no locally-modified project-context docs in these fixtures.
+    gitStatus: { modifiedPaths: async () => opts.modified ?? [] },
   } as unknown as Container;
 
   const service = new RepoIntelService(container);
   (service as unknown as { repo: RepoIntelRepository }).repo = repo;
-  return { service, touched };
+  return { service, touched, merged, cleared };
 }
 
 function stateAt(sha: string): IndexState {
@@ -112,5 +130,59 @@ describe('RepoIntelService.resyncRepo', () => {
 
     expect(result.status).toBe('degraded');
     expect(result.reason).toMatch(/^sync_failed:/);
+  });
+
+  it('B6 / S-AC-36: an in-job refusal does NOT sync, merges the reason into stats, leaves status untouched', async () => {
+    const git = new MockGitClient({ head: 'sha-1', syncedHead: 'sha-2' });
+    const { service, merged, cleared, touched } = makeService({
+      basics: { id: 'r1', owner: 'acme', name: 'app', defaultBranch: 'main', clonePath: '/mock/clone' },
+      state: stateAt('sha-1'),
+      git,
+      modified: ['docs/guide.md', 'src/unrelated.ts', 'specs/a.md'],
+    });
+
+    const result = await service.resyncRepo('r1');
+
+    expect(git.syncs).toHaveLength(0);
+    expect(result.status).toBe('degraded');
+    expect(result.reason).toBe('project_context_blocked:docs/guide.md,specs/a.md');
+    // Reason persisted via mergeIndexStats only (no upsert / status change / touch).
+    expect(merged).toEqual([{ reason: 'project_context_blocked:docs/guide.md,specs/a.md' }]);
+    expect(cleared).toHaveLength(0);
+    expect(touched.n).toBe(0);
+  });
+
+  it('B6 / S-AC-37: a successful advance clears the persisted refusal reason', async () => {
+    const git = new MockGitClient({ head: 'sha-1', syncedHead: 'sha-1' });
+    const { service, cleared } = makeService({
+      basics: { id: 'r1', owner: 'acme', name: 'app', defaultBranch: 'main', clonePath: '/mock/clone' },
+      state: stateAt('sha-1'),
+      git,
+    });
+
+    await service.resyncRepo('r1');
+
+    expect(git.syncs).toHaveLength(1);
+    expect(cleared).toEqual(['project_context_blocked:']);
+  });
+});
+
+describe('RepoIntelService.findResyncBlockers', () => {
+  const basics = { id: 'r1', owner: 'acme', name: 'app', defaultBranch: 'main', clonePath: '/mock/clone' };
+
+  it('B6 / S-AC-35: returns only project-context paths that are modified', async () => {
+    const { service } = makeService({
+      basics,
+      git: new MockGitClient({}),
+      modified: ['docs/a.md', 'src/x.ts', 'insights/b.md'],
+    });
+    expect(await service.findResyncBlockers('w1', 'r1')).toEqual(['docs/a.md', 'insights/b.md']);
+  });
+
+  it('B6: returns null for a repo outside the workspace and [] when there is no clone', async () => {
+    const foreign = makeService({ basics, git: new MockGitClient({}), inWorkspace: false });
+    expect(await foreign.service.findResyncBlockers('w1', 'r1')).toBeNull();
+    const noClone = makeService({ basics: { ...basics, clonePath: null }, git: new MockGitClient({}) });
+    expect(await noClone.service.findResyncBlockers('w1', 'r1')).toEqual([]);
   });
 });

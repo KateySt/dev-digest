@@ -32,6 +32,7 @@ export function ReviewRunAccordion({
   headSha,
   targetRunId = null,
   targetNonce = 0,
+  targetFindingId = null,
 }: {
   review: ReviewRecord;
   prId: string;
@@ -42,16 +43,27 @@ export function ReviewRunAccordion({
    *  (driven from the Timeline: clicking an agent name navigates here). */
   targetRunId?: string | null;
   targetNonce?: number;
+  targetFindingId?: string | null;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [pendingScroll, setPendingScroll] = React.useState(false);
   React.useEffect(() => {
     if (review.run_id && review.run_id === targetRunId) {
       setOpen(true);
-      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setPendingScroll(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetRunId, targetNonce, review.run_id]);
+
+  React.useEffect(() => {
+    if (!open || !pendingScroll) return;
+    setPendingScroll(false);
+    const findingEl = targetFindingId
+      ? document.querySelector(`[data-finding-id="${targetFindingId}"]`)
+      : null;
+    (findingEl ?? rootRef.current)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [open, pendingScroll, targetFindingId]);
   const del = useDeleteReview(prId);
   const findings = review.findings;
   const blockers = findings.filter((f) => f.severity === Severity.enum.CRITICAL && !f.dismissed_at).length;
@@ -162,6 +174,8 @@ export function ReviewRunAccordion({
             prId={prId}
             repoFullName={repoFullName}
             headSha={headSha}
+            targetFindingId={targetFindingId}
+            agentId={review.agent_id}
           />
         </div>
       )}

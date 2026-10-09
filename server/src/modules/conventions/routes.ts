@@ -1,105 +1,56 @@
-import type { FastifyInstance } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { z } from "zod";
-import { getContext } from "../_shared/context.js";
-import { NotFoundError, ValidationError } from "../../platform/errors.js";
-import { ConventionsService } from "./service.js";
+import type { FastifyInstance } from 'fastify';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { ConventionCandidate, ConventionStatus } from '@devdigest/shared';
+import { z } from 'zod';
+import { getContext } from '../_shared/context.js';
+import { IdParams } from '../_shared/schemas.js';
+import { ValidationError } from '../../platform/errors.js';
+import { ConventionsService } from './service.js';
 
-const RepoParams = z.object({ repoId: z.string().uuid() });
-const ConventionParams = z.object({
-  repoId: z.string().uuid(),
-  id: z.string().uuid(),
-});
+/**
+ * Conventions module.
+ *   GET  /repos/:id/conventions          → list a repo's candidates
+ *   POST /repos/:id/conventions/extract  → (re)scan; returns the full list
+ *   PATCH /conventions/:id               → accept/reject (status) and/or edit
+ *                                            one candidate's rule text
+ */
 
-const PatchBody = z.object({
-  accepted: z.boolean().optional(),
+const PatchConventionBody = z.object({
+  status: ConventionStatus.optional(),
   rule: z.string().min(1).optional(),
-});
-
-const CreateSkillBody = z.object({
-  name: z.string().min(1),
-  description: z.string().default(""),
 });
 
 export default async function conventionsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
+  const service = new ConventionsService(app.container);
 
-  /** POST /repos/:repoId/conventions/extract — запустити екстракцію */
-  app.post(
-    "/repos/:repoId/conventions/extract",
-    { schema: { params: RepoParams } },
-    async (req, reply) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const service = new ConventionsService(app.container);
-      const candidates = await service.extract(workspaceId, req.params.repoId);
-      reply.status(201);
-      return candidates;
-    },
-  );
+  app.get('/repos/:id/conventions', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.list(workspaceId, req.params.id);
+  });
 
-  /** GET /repos/:repoId/conventions — список конвенцій */
-  app.get(
-    "/repos/:repoId/conventions",
-    { schema: { params: RepoParams } },
-    async (req) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const service = new ConventionsService(app.container);
-      return service.list(workspaceId, req.params.repoId);
-    },
-  );
+  app.post('/repos/:id/conventions/extract', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.extract(workspaceId, req.params.id);
+  });
 
-  /**
-   * PATCH /repos/:repoId/conventions/:id
-   * { accepted: true }  → прийняти
-   * { accepted: false } → відхилити (видалити)
-   * { rule: "..." }     → оновити текст правила (inline edit)
-   */
   app.patch(
-    "/repos/:repoId/conventions/:id",
-    { schema: { params: ConventionParams, body: PatchBody } },
+    '/conventions/:id',
+    { schema: { params: IdParams, body: PatchConventionBody } },
     async (req) => {
       const { workspaceId } = await getContext(app.container, req);
-      const service = new ConventionsService(app.container);
-      const { id } = req.params;
-      const { accepted, rule } = req.body;
-
+      const { rule, status } = req.body;
+      if (rule === undefined && status === undefined) {
+        throw new ValidationError('No fields to update');
+      }
+      let result: ConventionCandidate | undefined;
       if (rule !== undefined) {
-        const result = await service.updateRule(workspaceId, id, rule);
-        if (!result) throw new NotFoundError("Convention not found");
-        return result;
+        result = await service.updateRule(workspaceId, req.params.id, rule);
       }
-
-      if (accepted === true) {
-        const result = await service.accept(workspaceId, id);
-        if (!result) throw new NotFoundError("Convention not found");
-        return result;
+      if (status !== undefined) {
+        result = await service.setStatus(workspaceId, req.params.id, status);
       }
-
-      if (accepted === false) {
-        const ok = await service.reject(workspaceId, id);
-        if (!ok) throw new NotFoundError("Convention not found");
-        return { ok: true };
-      }
-
-      throw new ValidationError("Nothing to update: provide accepted or rule");
-    },
-  );
-
-  /** POST /repos/:repoId/conventions/skill — створити скіл з accepted */
-  app.post(
-    "/repos/:repoId/conventions/skill",
-    { schema: { params: RepoParams, body: CreateSkillBody } },
-    async (req, reply) => {
-      const { workspaceId } = await getContext(app.container, req);
-      const service = new ConventionsService(app.container);
-      const skill = await service.createSkillFromAccepted(
-        workspaceId,
-        req.params.repoId,
-        req.body.name,
-        req.body.description,
-      );
-      reply.status(201);
-      return skill;
+      return result!;
     },
   );
 }

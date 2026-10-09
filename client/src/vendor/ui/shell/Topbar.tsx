@@ -61,7 +61,6 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
           fontSize: 13,
         }}
       >
-        <Icon.Search size={14} />
         <span style={{ flex: 1, textAlign: "left" }}>Search or jump to…</span>
         <Kbd>⌘K</Kbd>
       </button>

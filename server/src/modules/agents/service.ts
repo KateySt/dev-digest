@@ -1,7 +1,16 @@
 import type { Container } from '../../platform/container.js';
-import type { Agent, AgentSkillLink, CiFailOn, ModelInfo, Provider, ReviewStrategy } from '@devdigest/shared';
-import { AgentsRepository } from './repository.js';
-import { toAgentDto } from './helpers.js';
+import type {
+  Agent,
+  AgentSkillLink,
+  AgentVersion,
+  CiFailOn,
+  ModelInfo,
+  Provider,
+  ReviewStrategy,
+} from '@devdigest/shared';
+import { AgentsRepository, type AgentRow } from './repository.js';
+import { snapshotSkillId, toAgentDto, toAgentVersionDto } from './helpers.js';
+import { ConflictError } from '../../platform/errors.js';
 
 /**
  * A2 — agents service. Business logic for the Agents tab + Agent Editor.
@@ -49,16 +58,12 @@ export class AgentsService {
 
   async list(workspaceId: string): Promise<Agent[]> {
     const rows = await this.repo.list(workspaceId);
-    // Attach skill_count to each agent (one extra query for all agents).
-    const skillCounts = await this.repo.skillCountsForWorkspace(workspaceId);
-    return rows.map((row) => ({ ...toAgentDto(row), skill_count: skillCounts.get(row.id) ?? 0 }));
+    return rows.map(toAgentDto);
   }
 
   async get(workspaceId: string, id: string): Promise<Agent | undefined> {
     const row = await this.repo.getById(workspaceId, id);
-    if (!row) return undefined;
-    const skillCount = await this.repo.skillCount(id);
-    return { ...toAgentDto(row), skill_count: skillCount };
+    return row ? toAgentDto(row) : undefined;
   }
 
   /** Delete an agent (and its versions/skill-links, via cascade). */
@@ -105,20 +110,30 @@ export class AgentsService {
   }
 
   /**
-   * Persist an ordered list of repo-relative markdown paths as the agent's
-   * attached context documents. Does NOT bump version (AC-14). Array order IS
-   * the attach order (AC-10). Returns the updated Agent DTO, or undefined if
-   * the agent is not found in the workspace.
+   * Config history for an agent, newest version first. Workspace-scoped: returns
+   * undefined when the agent isn't in this workspace (the route maps that to 404)
+   * so version snapshots can't be read across tenants.
    */
-  async setAttachedDocs(
+  async listVersions(workspaceId: string, agentId: string): Promise<AgentVersion[] | undefined> {
+    const agent = await this.repo.getById(workspaceId, agentId);
+    if (!agent) return undefined;
+    const rows = await this.repo.listVersions(agentId);
+    return rows.map(toAgentVersionDto);
+  }
+
+  /**
+   * A single config snapshot for an agent. Returns undefined when the agent isn't
+   * in this workspace OR that version was never recorded (route → 404).
+   */
+  async getVersion(
     workspaceId: string,
-    id: string,
-    paths: string[],
-  ): Promise<Agent | undefined> {
-    const row = await this.repo.setAttachedDocs(workspaceId, id, paths);
-    if (!row) return undefined;
-    const skillCount = await this.repo.skillCount(id);
-    return { ...toAgentDto(row), skill_count: skillCount };
+    agentId: string,
+    version: number,
+  ): Promise<AgentVersion | undefined> {
+    const agent = await this.repo.getById(workspaceId, agentId);
+    if (!agent) return undefined;
+    const row = await this.repo.getVersion(agentId, version);
+    return row ? toAgentVersionDto(row) : undefined;
   }
 
   /** Linked skills for an agent as AgentSkillLink[] (ordered). */
@@ -155,6 +170,60 @@ export class AgentsService {
     const resolvedOrder = order ?? existing.length;
     await this.repo.linkSkill(agentId, skillId, resolvedOrder);
     return this.skillLinks(agentId);
+  }
+
+  /**
+   * Make sure the agent's CURRENT version has an `agent_versions` row.
+   * Seeded / pre-versioning agents have none, and a suite run must reference
+   * a snapshot, so eval runs call this before starting.
+   */
+  async ensureSnapshot(agent: AgentRow): Promise<void> {
+    const existing = await this.repo.getVersion(agent.id, agent.version);
+    if (!existing) await this.repo.snapshotVersion(agent, agent.version);
+  }
+
+  /**
+   * "Promote vN": make snapshot N the agent's current config as a new version.
+   * Returns undefined when the agent (in this workspace) or that version doesn't
+   * exist (route -> 404). Refuses with 409 - changing nothing - when a skill the
+   * snapshot references no longer exists; skills that do exist are re-linked
+   * with their CURRENT text (skill text is not rolled back).
+   */
+  async promote(workspaceId: string, agentId: string, version: number): Promise<Agent | undefined> {
+    const agent = await this.repo.getById(workspaceId, agentId);
+    if (!agent) return undefined;
+    const snapshot = await this.repo.getVersion(agentId, version);
+    if (!snapshot) return undefined;
+    const config = toAgentVersionDto(snapshot).config;
+
+    const skillIds = config.skills.map(snapshotSkillId);
+    const existing = await this.repo.existingSkillIds(workspaceId, skillIds);
+    const missing = config.skills
+      .filter((entry) => !existing.has(snapshotSkillId(entry)))
+      .map((entry) =>
+        typeof entry === 'string'
+          ? { id: entry, name: null }
+          : { id: entry.id, name: entry.name ?? null },
+      );
+    if (missing.length > 0) {
+      throw new ConflictError(
+        `Cannot promote v${version}: ${missing.length} linked skill(s) no longer exist.`,
+        { missing_skills: missing },
+        'skills_missing',
+      );
+    }
+
+    const row = await this.repo.applyAsNewVersion(
+      agentId,
+      {
+        provider: config.provider,
+        model: config.model,
+        systemPrompt: config.system_prompt,
+        strategy: config.strategy,
+      },
+      skillIds,
+    );
+    return row ? toAgentDto(row) : undefined;
   }
 
   /**

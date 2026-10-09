@@ -31,8 +31,10 @@ import {
   Dropdown,
   FormField,
   TextInput,
-  SelectInput,
+  Select,
+  SearchableSelect,
   Textarea,
+  CodeField,
   Checkbox,
   Sparkline,
   LineChart,
@@ -63,6 +65,7 @@ export function Gallery() {
   const [sel, setSel] = React.useState("gpt-4.1");
   const [drawer, setDrawer] = React.useState(false);
   const [modal, setModal] = React.useState(false);
+  const [code, setCode] = React.useState("# Rubric\n\nEvaluate for **correctness** and _security_.\n");
 
   return (
     <div style={s.gallery}>
@@ -90,6 +93,9 @@ export function Gallery() {
       <Group title="Badges & Severity (icon + label, WCAG AA)">
         {SEVERITIES.map((sev) => (
           <SeverityBadge key={sev} severity={sev} count={3} />
+        ))}
+        {SEVERITIES.map((sev) => (
+          <SeverityBadge key={`${sev}-compact`} severity={sev} count={3} compact />
         ))}
         <Badge icon="GitBranch">branch</Badge>
         <Badge dot color="var(--ok)" bg="transparent">
@@ -159,7 +165,12 @@ export function Gallery() {
         </div>
         <div style={s.w220}>
           <FormField label="Model">
-            <SelectInput value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
+            <Select value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
+          </FormField>
+        </div>
+        <div style={s.w220}>
+          <FormField label="Model (searchable)">
+            <SearchableSelect value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
           </FormField>
         </div>
         <div style={s.w280}>
@@ -168,6 +179,11 @@ export function Gallery() {
           </FormField>
         </div>
         <Checkbox checked={check} onChange={setCheck} label="On new PR" />
+        <div style={s.w420}>
+          <FormField label="Skill body">
+            <CodeField value={code} onChange={setCode} filename="pr-quality-rubric.md" dirty minHeight={140} />
+          </FormField>
+        </div>
       </Group>
 
       <Group title="Tabs / Dropdown / Overlays">
@@ -250,7 +266,8 @@ export function Gallery() {
         </Drawer>
       )}
       {modal && (
-        <Modal title="Example Modal" subtitle="centered" onClose={() => setModal(false)} width={480}>
+        <Modal onClose={() => setModal(false)} width={480}>
+          <Modal.Header title="Example Modal" subtitle="centered" onClose={() => setModal(false)} />
           <div style={s.modalBody}>Modal body content.</div>
         </Modal>
       )}

@@ -14,7 +14,18 @@ export function Tabs({
   pad?: string;
 }) {
   return (
-    <div style={{ display: "flex", gap: 2, padding: pad, borderBottom: "1px solid var(--border)" }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 2,
+        padding: pad,
+        // Inset shadow instead of border-bottom: the active underline paints over it
+        // without a negative margin, so nothing overflows vertically.
+        boxShadow: "inset 0 -1px 0 var(--border)",
+        overflowX: "auto",
+        overflowY: "hidden",
+      }}
+    >
       {tabs.map((t) => {
         const k = typeof t === "string" ? t : t.key;
         const label = typeof t === "string" ? t : t.label;
@@ -33,11 +44,12 @@ export function Tabs({
               border: "none",
               background: "transparent",
               borderBottom: "2px solid " + (on ? "var(--accent)" : "transparent"),
-              marginBottom: -1,
               cursor: "pointer",
               fontSize: 14,
               fontWeight: on ? 600 : 500,
               color: on ? "var(--text-primary)" : "var(--text-secondary)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {I && <I size={14} style={{ color: on ? "var(--accent)" : "var(--text-muted)" }} />}

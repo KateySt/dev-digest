@@ -51,6 +51,7 @@ export class OctokitGitHubClient implements GitHubClient {
             number: pr.number,
             title: pr.title,
             author: pr.user?.login ?? 'unknown',
+            avatar_url: pr.user?.avatar_url ?? null,
             branch: pr.head.ref,
             base: pr.base.ref,
             head_sha: pr.head.sha,
@@ -93,6 +94,7 @@ export class OctokitGitHubClient implements GitHubClient {
             number: pr.number,
             title: pr.title,
             author: pr.user?.login ?? 'unknown',
+            avatar_url: pr.user?.avatar_url ?? null,
             branch: pr.head.ref,
             base: pr.base.ref,
             head_sha: pr.head.sha,
@@ -242,6 +244,38 @@ export class OctokitGitHubClient implements GitHubClient {
     );
   }
 
+  async updateReviewComment(repo: RepoRef, commentId: number, body: string): Promise<PrReviewComment> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.pulls.updateReviewComment({
+            owner: repo.owner,
+            repo: repo.name,
+            comment_id: commentId,
+            body,
+          });
+          return this.mapReviewComment(res.data);
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async deleteReviewComment(repo: RepoRef, commentId: number): Promise<void> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          await this.octokit.rest.pulls.deleteReviewComment({
+            owner: repo.owner,
+            repo: repo.name,
+            comment_id: commentId,
+          });
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
   async openPullRequest(repo: RepoRef, payload: OpenPrPayload): Promise<{ url: string }> {
     return withRetry(() =>
       withTimeout(
@@ -348,6 +382,22 @@ export class OctokitGitHubClient implements GitHubClient {
     );
   }
 
+  async listCommitFiles(repo: RepoRef, sha: string): Promise<string[]> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.repos.getCommit({
+            owner: repo.owner,
+            repo: repo.name,
+            ref: sha,
+          });
+          return res.data.files?.map((f) => f.filename) ?? [];
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
   async getIssue(repo: RepoRef, n: number): Promise<IssueMeta> {
     const res = await withRetry(() =>
       withTimeout(
@@ -368,5 +418,15 @@ export class OctokitGitHubClient implements GitHubClient {
       withTimeout(this.octokit.rest.users.getAuthenticated(), TIMEOUT),
     );
     return res.data.login;
+  }
+
+  async getLanguages(repo: RepoRef): Promise<Record<string, number>> {
+    const res = await withRetry(() =>
+      withTimeout(
+        this.octokit.rest.repos.listLanguages({ owner: repo.owner, repo: repo.name }),
+        TIMEOUT,
+      ),
+    );
+    return res.data;
   }
 }

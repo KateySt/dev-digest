@@ -26,21 +26,20 @@ const EnvSchema = z.object({
   // Note: even when on, sections only populate once the repo is indexed; an
   // unindexed repo degrades gracefully. Per-agent override: agents.repo_intel.
   REPO_INTEL_ENABLED: z.string().optional(),
-  // Outbound HTTP fetch for external URL references (e.g. Google Docs, Notion).
-  // Default ON — SSRF-guarded via WebFetchAdapter. Set EXTERNAL_FETCH_ENABLED=false
-  // to disable all external-URL fetching org-wide (repo-file and github references
-  // are unaffected by this flag).
-  EXTERNAL_FETCH_ENABLED: z.string().optional(),
   API_PORT: z.coerce.number().int().default(3001),
   WEB_PORT: z.coerce.number().int().default(3000),
   DEVDIGEST_CLONE_DIR: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  // dotenv loads a blank `LOG_LEVEL=` line as '' (not undefined), which would
-  // fail the enum. Treat empty/whitespace as unset so the default below applies.
+  // `.env` (and .env.example) ship `LOG_LEVEL=` empty; an empty string is not a
+  // valid enum member, so coerce '' → undefined to fall through to the default.
   LOG_LEVEL: z.preprocess(
-    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    (v) => (v === '' ? undefined : v),
     z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   ),
+  // SPEC-07 — community skill catalog default repo (`owner/name`). Non-secret
+  // (never routed through SecretsProvider — must be displayable in Settings).
+  // Empty-string-safe: falls back to the hardcoded default below.
+  COMMUNITY_CATALOG_REPO: z.string().optional(),
 });
 
 export type AppConfig = {
@@ -65,11 +64,12 @@ export type AppConfig = {
    */
   repoIntelEnabled: boolean;
   /**
-   * Whether outbound HTTP fetch for external URL references is enabled.
-   * Default true — SSRF-guarded. Set EXTERNAL_FETCH_ENABLED=false to disable
-   * org-wide (repo-file and github references are unaffected).
+   * Default community skill catalog repository (`owner/name`), used when a
+   * workspace has no `community_catalog_repo` setting override (SPEC-07
+   * S-AC-1). Falls back to `KateySt/SKILLS` when COMMUNITY_CATALOG_REPO is
+   * unset or empty.
    */
-  externalFetchEnabled: boolean;
+  communityCatalogRepoDefault: string;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -88,6 +88,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webOrigin: `http://localhost:${parsed.WEB_PORT}`,
     embeddingsEnabled: parsed.EMBEDDINGS_ENABLED === 'true',
     repoIntelEnabled: parsed.REPO_INTEL_ENABLED !== 'false',
-    externalFetchEnabled: parsed.EXTERNAL_FETCH_ENABLED !== 'false',
+    communityCatalogRepoDefault: parsed.COMMUNITY_CATALOG_REPO?.trim() || 'KateySt/SKILLS',
   };
 }

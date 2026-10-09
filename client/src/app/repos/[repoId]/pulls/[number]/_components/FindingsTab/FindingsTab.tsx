@@ -18,9 +18,12 @@ interface FindingsTabProps {
   prRuns: RunSummary[] | undefined;
   prCommits: PrCommit[];
   cancelMutation: UseMutationResult<any, any, string, any>;
+  repoId?: string | null;
+  prNumber?: number | null;
   /** owner/repo + head sha — used to deep-link a finding's file:line to GitHub. */
   repoFullName?: string | null;
   headSha?: string | null;
+  targetFindingId?: string | null;
   onOpenTrace: (id: string) => void;
   onDelete: (id: string) => void;
   onRunDone: () => void;
@@ -35,8 +38,11 @@ export function FindingsTab({
   prRuns,
   prCommits,
   cancelMutation,
+  repoId,
+  prNumber,
   repoFullName,
   headSha,
+  targetFindingId,
   onOpenTrace,
   onDelete,
   onRunDone,
@@ -70,6 +76,21 @@ export function FindingsTab({
   const handleGoToReview = useCallback((runId: string) => {
     setTarget((p) => ({ runId, n: (p?.n ?? 0) + 1 }));
   }, []);
+
+  const processedFindingRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!targetFindingId || processedFindingRef.current === targetFindingId) return;
+    const run = runs.find((r) => r.findings.some((f) => f.id === targetFindingId));
+    if (!run?.run_id) return;
+    processedFindingRef.current = targetFindingId;
+    setTarget((p) => ({ runId: run.run_id!, n: (p?.n ?? 0) + 1 }));
+  }, [targetFindingId, runs]);
+
+  const findingsByRunId = React.useMemo(() => {
+    const m = new Map<string, FindingRecord[]>();
+    for (const r of runs) if (r.run_id) m.set(r.run_id, r.findings);
+    return m;
+  }, [runs]);
 
   return (
     <section>
@@ -131,6 +152,11 @@ export function FindingsTab({
           <RunHistory
             runs={prRuns ?? []}
             commits={prCommits}
+            findingsByRunId={findingsByRunId}
+            repoId={repoId}
+            prNumber={prNumber}
+            repoFullName={repoFullName}
+            headSha={headSha}
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
             onDelete={handleDelete}
@@ -164,6 +190,7 @@ export function FindingsTab({
             headSha={headSha}
             targetRunId={target?.runId ?? null}
             targetNonce={target?.n ?? 0}
+            targetFindingId={targetFindingId}
           />
         ))
       )}

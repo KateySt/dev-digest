@@ -1,123 +1,124 @@
 ---
 name: dependency-checker
-description: "Analyzes external npm dependencies and internal cross-package/module dependencies across DevDigest's packages (client, server, reviewer-core, e2e, server/src/vendor/shared). Produces a Mermaid dependency graph, a size breakdown table, and a prioritized list of findings with concrete recommendations. Use when the user asks to audit dependencies, check bundle/package size, find unused or duplicate packages, review cross-package coupling, or wants a 'dependency report' / 'dependency map' / 'what depends on what'. Trigger phrases: dependency checker, dependency audit, dependency graph, package size, bundle size, unused dependency, duplicate dependency, circular dependency, what depends on X."
+description: "Audits DevDigest's dependencies across its four standalone packages (client/, server/, reviewer-core/, e2e/) and produces a prioritized report: a Mermaid package-relationship graph, an installed-size breakdown table, and findings ranked P0/P1/P2/Info. Use when asked to check, audit, or analyze dependencies — unused or declared-but-unimported packages, version drift of the same package across packages, heavy or duplicated node_modules, cross-package imports that bypass a package's entry point, or 'what can we remove / what should we upgrade first'. Trigger terms: dependency check, dependency audit, package.json, node_modules size, unused dependencies, version drift, duplicate versions, cross-package imports, tsconfig paths alias, bundle weight."
+metadata:
+  tags: dependencies, npm, audit, package-json, monorepo-like, report
 ---
 
-# Dependency Checker
+# Dependency checker
 
-Audit dependencies at two levels — **external** (npm packages per `package.json`) and **internal** (cross-package/module imports via TypeScript path aliases, since this repo is not a monorepo) — and report a graph, sizes, and prioritized, actionable findings.
+## When to use
 
-Always run all four steps below and produce all four output sections. A dependency report with a graph but no prioritization, or findings with no severity, is incomplete.
+Use this skill when the user asks to check, audit, or analyze the repo's
+dependencies: what is installed, how big it is, what is unused or duplicated,
+and how the packages depend on each other.
 
----
+This repo is **not a monorepo**. `client/`, `server/`, `reviewer-core/` and
+`e2e/` are standalone packages, each with its own `package.json` and lockfile.
+There is no workspace tool: never claim `workspace:*` links, pnpm workspaces,
+turborepo or nx. Code is shared through **tsconfig `paths` aliases**
+(`@devdigest/shared`, `@devdigest/reviewer-core`, `@devdigest/ui`) pointing at
+`src/vendor/*`, or occasionally by relative path.
 
-## Scope
+## Read-only, always
 
-| Package | Path | package.json |
-|---------|------|---------------|
-| `@devdigest/api` | `server/` | `server/package.json` |
-| `@devdigest/web` | `client/` | `client/package.json` |
-| `@devdigest/reviewer-core` | `reviewer-core/` | `reviewer-core/package.json` |
-| `@devdigest/e2e` | `e2e/` | `e2e/package.json` |
-| `@devdigest/shared` | `server/src/vendor/shared/` | alias only, no own package.json |
+Gather data with Read, Grep, Glob and read-only Bash (`du -sh`, `ls`). Never
+run `pnpm remove`, `pnpm install`, `npm uninstall` or edit any `package.json`
+or lockfile. Every removal or upgrade is a **recommendation for the user to
+confirm** — phrase it as "recommend removing X (confirm first)", never "I
+removed X".
 
-Internal dependencies are **not** `workspace:*` entries — they are TypeScript path aliases (`tsconfig.json` `paths`) and relative imports crossing package boundaries. Treat "internal dependency" and "external npm dependency" as separate analyses; do not conflate them in the graph or the size table.
+## Procedure
 
----
+1. **Scope.** Read each package's `package.json` (`dependencies`,
+   `devDependencies`). Record which of `client/`, `server/`, `reviewer-core/`,
+   `e2e/` you analyzed and which you skipped (and why).
+2. **Sizes.** `du -sh <pkg>/node_modules/<dep>` for the heaviest dependencies
+   (or use sizes the user already supplied). If `node_modules` is absent, say
+   sizes are unavailable rather than guessing.
+3. **Internal vs external.** Classify every dependency edge:
+   - **External** — an npm package declared in `package.json`.
+   - **Internal** — a tsconfig-alias import (`@devdigest/*`, `@shared/*`) or a
+     relative path that crosses a package boundary (`../../reviewer-core/...`).
+     Internal edges are not in any `package.json`; find them with Grep over
+     `src/` and the `paths` block of each `tsconfig.json`.
+4. **Unused.** For each declared dependency, Grep `src/` (and config files) for
+   an import of it. Declared but never imported = candidate unused. Note
+   dependencies loaded only by tooling config (e.g. a plugin named in a config
+   file) before calling them unused.
+5. **Drift.** Compare versions of the same package across the four
+   `package.json` files. Different resolved versions of one package are drift.
+6. **Boundary check.** A relative import that reaches into another package's
+   `src/` (for example `../../reviewer-core/src/pipeline.js`) bypasses that
+   package's public entry point and the alias contract. Flag it.
 
-## Step 1 — Discover dependencies
+## Report format
 
-**External, per package:** read each `package.json`'s `dependencies` and `devDependencies`. Note version, and flag if a package appears in more than one `package.json` with different major versions (version drift).
+Produce the report with exactly these sections, in this order.
 
-**Internal, per package:** grep each package's `tsconfig.json` for `paths`, then grep `src/` for imports matching those aliases or relative paths that cross a package boundary (e.g. `server/` importing from `reviewer-core/`). Record the direction of each edge (importer → imported) and count occurrences to gauge coupling strength.
+### 1. Scope
 
-Do not count devDependencies used only for tooling (vitest, eslint, tsc, prettier) as architectural dependencies in the graph — list them separately in the size table if relevant to size, but exclude them from the Mermaid diagram to keep it readable.
+List the packages analyzed (client, server, reviewer-core, e2e), the data
+sources used, and any limits (missing `node_modules`, skipped package).
 
----
+### 2. Dependency graph
 
-## Step 2 — Draw the dependency graph
+A fenced Mermaid `flowchart` of how the packages relate. Draw internal edges
+(alias / relative imports) between packages and group external npm packages
+separately. Label each internal edge with its mechanism.
 
-Produce one Mermaid `flowchart LR` (see the `mermaid-diagram` skill for syntax if needed) with:
-
-- One subgraph per package in scope, labeled with the package name from the table above
-- Edges between packages for internal (alias) dependencies, labeled with the alias or a short description (e.g. `types via shared`)
-- External dependencies only included if they are large (>5MB unpacked) or shared across ≥2 packages — draw these as a single shared node (e.g. `zod`) with edges to each consuming package, not one node per package
-- Do not draw edges for transitive dependencies — only direct imports
-
-Example shape:
-
+````
 ```mermaid
 flowchart LR
-  subgraph server["@devdigest/api (server/)"]
-  end
-  subgraph shared["@devdigest/shared (alias)"]
-  end
-  subgraph reviewer["@devdigest/reviewer-core"]
-  end
-  subgraph client["@devdigest/web (client/)"]
-  end
-
-  server -->|"types via shared alias"| shared
-  server -->|"invokes review pipeline"| reviewer
-  client -->|"zod schemas (shared)"| shared
-  zod(["zod (external, shared by 3 pkgs)"])
-  server --> zod
-  client --> zod
-  reviewer --> zod
+  server -->|"@devdigest/shared alias"| shared[vendor/shared]
+  server -.->|"relative import (violation)"| core[reviewer-core]
+  client -->|"@devdigest/shared alias"| shared
+  server --> npmS[(npm: fastify, drizzle-orm, ...)]
 ```
+````
 
-If the graph would exceed ~20 nodes, collapse leaf packages with only one edge into a "misc" note rather than omitting them silently — state what was collapsed.
+Use a dotted edge for a boundary violation.
 
----
+### 3. Size breakdown
 
-## Step 3 — Size breakdown
+A table, heaviest first. Never a vague "some packages are large".
 
-For each package, produce a table of its heaviest **direct** dependencies by installed size. Get sizes with:
-
-```bash
-du -sh <package>/node_modules/<dep-name> 2>/dev/null
-```
-
-or, if `node_modules` isn't installed for a package, report "not installed — run pnpm install to size" rather than guessing.
-
-Table format, one per package, sorted descending by size:
-
-| Dependency | Version | Installed size | Used by (files) | devDependency? |
+| Package | Dependency | Version | Installed size | Notes |
 |---|---|---|---|---|
-| `next` | 15.x | 120M | client/src/app/**/*.tsx | no |
+| client | next | 15.0.3 | 132M | framework, expected |
 
-Then a **repo-wide total**: sum of `node_modules` size per package (`du -sh <package>/node_modules`), and call out the single largest dependency across the whole repo.
+### 4. Findings & Priorities
 
----
+Group every finding under one of these tiers. Never leave findings unranked.
 
-## Step 4 — Prioritize findings and give recommendations
+- **P0** — breaks the architecture or is a correctness/security risk: a deep
+  relative import into another package's `src/` bypassing its entry point;
+  a dependency with a known critical issue.
+- **P1** — real cost, fix soon: version drift of the same package across
+  packages; a declared-but-unimported dependency that is heavy (large installed
+  size) or runtime-critical to remove.
+- **P2** — hygiene: small unused dependencies, devDependency placed under
+  `dependencies`, avoidable duplicates.
+- **Info** — observations needing no action: large but justified frameworks,
+  expected overlap such as `typescript`/`vitest` in every package.
 
-Classify every finding into exactly one severity tier. Do not invent additional tiers.
+**Every finding names a concrete package, dependency, or file** (for example
+`server/package.json`, `moment`, `server/src/services/review-service.ts`) and
+gives a specific recommendation. Generic advice such as "consider optimizing
+dependencies" is not a finding. State each removal as a recommendation for the
+user to confirm.
 
-| Tier | Criteria |
-|------|----------|
-| **P0 — Fix soon** | Circular internal dependency; a package importing directly from another package's `src/` internals instead of its public entry point/alias; a dependency with a known critical CVE (only claim this if you actually checked, e.g. via `pnpm audit`, don't guess) |
-| **P1 — Should address** | Version drift (same package, different majors, across packages); a heavy dependency (>20MB) used for a trivial subset of its functionality; an unused dependency (declared but no matching import found) |
-| **P2 — Worth considering** | A devDependency that could be a peerDependency/optional; duplicate functionality across two different packages solving the same problem (e.g. two date libraries); tooling-only package installed in a package that doesn't need it |
-| **Info** | Notable but not actionable — e.g. "reviewer-core intentionally has zero runtime deps per its build constraint" |
+### 5. Summary
 
-For each finding: state the tier, the exact package(s)/file(s) involved, why it matters, and one concrete recommended action (e.g. "replace X with Y", "remove unused Z from server/package.json", "move edge behind the shared alias instead of a relative cross-package import"). Do not give vague advice like "consider optimizing dependencies" — every recommendation must name a specific dependency or file.
+3 to 5 takeaways, ordered by priority (P0 first), each one actionable and
+naming its target. End the report here.
 
-If a finding requires a destructive or hard-to-reverse action (removing a dependency, force-resolving a version), flag it as a **recommendation to confirm with the user**, not something to execute directly.
+## Common mistakes
 
----
-
-## Output Report
-
-Structure the final output in exactly this order, with these headings:
-
-1. **Scope** — which packages were analyzed, and any that were skipped (with reason, e.g. no node_modules installed)
-2. **Dependency Graph** — the Mermaid diagram from Step 2
-3. **Size Breakdown** — per-package tables from Step 3, plus the repo-wide total and largest offender
-4. **Findings & Priorities** — findings grouped by tier (P0 → P1 → P2 → Info), each with package/file, reason, and one concrete recommendation
-5. **Summary** — 3-5 bullet takeaways a developer can act on today, ordered by tier
-
-Do not omit a section even if empty — state "none found" explicitly so the report reads as complete rather than partial.
-
-<!-- Every finding must carry an explicit severity; an unprioritized finding is treated as incomplete. -->
-
+- Treating a tsconfig alias or relative cross-package import as an npm
+  dependency, or an npm dependency as an internal one.
+- Saying the repo uses pnpm workspaces or `workspace:*`.
+- Ranking drift or an unused dependency as P0 — P0 is for boundary and
+  correctness breaks.
+- Reporting "unused" from `package.json` alone without Grepping imports.
+- Executing a removal instead of recommending it.
