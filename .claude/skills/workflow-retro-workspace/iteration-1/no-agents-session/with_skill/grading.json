@@ -1,0 +1,69 @@
+{
+  "expectations": [
+    {
+      "text": "States plainly that no subagents ran in this session",
+      "passed": true,
+      "evidence": "chat_report.md: 'this was not a multi-agent workflow. No Agent or SendMessage calls were made.' Matches the fixture, which has only Grep/Read/Edit/Bash."
+    },
+    {
+      "text": "Does not fabricate token counts, durations, or round-trips",
+      "passed": true,
+      "evidence": "Report gives 'Subagent tokens: none', 'Round-trips: None', and no durations. The only figures are 4 tool calls and 41 tests passed, and both are in the fixture."
+    },
+    {
+      "text": "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar",
+      "passed": true,
+      "evidence": "Friction is 'Not applicable'. Recommendations: 'Nothing in this run clears the quality bar'. Top recommendations: 'none'. The two minor observations are explicitly labelled 'not strong enough to count as findings'."
+    },
+    {
+      "text": "Notes that session-level token total is not knowable",
+      "passed": true,
+      "evidence": "chat_report.md: 'Total session token count: not readable from inside a skill, so I'm not giving a number.' ledger.md: 'Total session token count is not knowable from within a skill.'"
+    },
+    {
+      "text": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format",
+      "passed": true,
+      "evidence": "outputs/docs/retro/ledger.md has the header and one entry '### 2026-10-05 — Run all button fix ...' with the Scope/Agents/Tokens/Friction/Recommendations fields in SKILL.md order. The date matches the fixture's session date."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "timing": {
+    "total_tokens": 33795,
+    "duration_ms": 27502,
+    "total_duration_seconds": 27.5
+  },
+  "claims": [
+    {
+      "claim": "4 tool calls, tests 41 passed, root cause was isRunning cleared only on success",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Matches session-single-agent.md."
+    },
+    {
+      "claim": "0 AskUserQuestion rounds",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The fixture has no question tool calls."
+    }
+  ],
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Does not fabricate token counts, durations, or round-trips",
+        "reason": "This is a negative check with no positive form, so a vague report would pass too. Consider requiring an explicit statement like 'zero round-trips' or 'no subagent tokens'."
+      },
+      {
+        "reason": "No assertion covers the chat report's required headings. No assertion checks that the ledger entry is appended at the top, newest first, either. This run created the file fresh, so the case was not exercised."
+      },
+      {
+        "reason": "The eval did not check for the self-referential note that the retro was run on a session with nothing to analyze. This is a useful behavior and could be asserted."
+      }
+    ],
+    "overall": "Assertions are reasonable but mostly check absence of bad behavior, so a minimal or empty-ish report would also pass them. Add a few positive content and format checks."
+  }
+}

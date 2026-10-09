@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Verdict, Finding } from './findings.js';
-import { EvalRun, EvalOwnerKind, Conformance, Provider, CiFailOn } from './knowledge.js';
+import { EvalRun, EvalOwnerKind, EvalCaseKind, Conformance, Provider, CiFailOn } from './knowledge.js';
 
 /**
  * A4 — Eval / CI / Compose / Conformance API contracts (L06).
@@ -26,6 +26,8 @@ export const EvalCaseInput = z.object({
   input_meta: z.unknown().nullish(),
   expected_output: z.unknown(),
   notes: z.string().nullish(),
+  /** Defaults to must_find when omitted; manual cases are always source manual. */
+  kind: EvalCaseKind.optional(),
 });
 export type EvalCaseInput = z.infer<typeof EvalCaseInput>;
 

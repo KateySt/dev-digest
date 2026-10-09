@@ -7,7 +7,7 @@ import type { ConventionCandidate, SkillType } from "@devdigest/shared";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/slug";
-import { SKILL_TYPES } from "@/app/skills/_components/SkillsListView/constants";
+import { SKILL_TYPES } from "@/lib/skill-constants";
 import { buildSkillBody, buildSkillDescription, buildSkillName } from "../../helpers";
 import { s } from "./styles";
 

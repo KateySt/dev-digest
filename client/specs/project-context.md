@@ -32,6 +32,14 @@ and would be premature while plan-verifier's gate reads INCOMPLETE.
 
 ## Changelog
 
+- 2026-10-07 — Pinned AC-9's data source to the server's new transport
+  (S-AC-35/S-AC-36): AC-29 renders the refusal from a synchronous 409
+  `project_context_blocked` response's `details.paths` and stops polling;
+  AC-30 keeps rendering it from the persisted index-stats reason for the
+  in-job race. Added AC-31 – AC-33: Context-tab attach/detach/reorder is
+  optimistic, serialized per owner (each request built from the latest local
+  set, so two quick toggles both persist), and rolls back on failure — the
+  client half of S-AC-38. No AC renumbered.
 - 2026-09-30 — resolved the two open clarifications from the initial draft:
   reordering is disabled while the filter is active (AC-18) and "add folder" is
   a combined folder-plus-first-document flow (AC-6). Added the surfaces for the
@@ -128,6 +136,15 @@ cost, and proof in the trace of exactly what was injected.
   page shall render an empty state instead of an empty panel or an error.
   (verify via: unit test)
 
+- AC-29: IF a refresh/re-analyze request is answered with 409 and error code
+  `project_context_blocked`, THEN the page shall render AC-9's refusal naming
+  each path from the response's `details.paths`, and shall stop polling the
+  index status for that request. (verify via: unit test)
+- AC-30: WHERE the repo's index status carries a persisted
+  `project_context_blocked` reason (a refusal that happened inside an
+  already-accepted job), the page shall render AC-9's refusal naming each path
+  from that reason. (verify via: unit test)
+
 **Agent editor — Context tab**
 
 - AC-13: WHEN a user opens an agent's Context tab, it shall list every
@@ -162,6 +179,19 @@ cost, and proof in the trace of exactly what was injected.
 - AC-22: WHEN a skill's attached set changes, the "SERIALIZES AS" box shall
   show the literal serialized block listing the attached documents in their
   current order. (verify via: unit test)
+
+**Context tabs — attach concurrency (2026-10-07, both Agent and Skill tabs)**
+
+- AC-31: WHEN a user toggles a checkbox or reorders rows on an agent's or a
+  skill's Context tab, the table, badge and token total shall reflect the new
+  set immediately, before the server responds. (verify via: unit test)
+- AC-32: WHEN a user makes several attach/detach/reorder changes in quick
+  succession on the same tab, the client shall send the set-replace requests
+  one at a time in order, each carrying the full set built from the latest
+  local state, so the last request contains every change. (verify via: unit
+  test)
+- AC-33: IF a set-replace request fails, THEN the tab shall restore the last
+  server-confirmed set and surface the failure. (verify via: unit test)
 
 **Run trace — Prompt assembly**
 
@@ -217,6 +247,13 @@ cost, and proof in the trace of exactly what was injected.
 - **A run from before this feature.** An older trace has no project-context
   data at all; AC-23/AC-25 must render the labeled empty block rather than
   failing on a missing field.
+- *(2026-10-07)* **Refusal from the response vs from stored stats.** The same
+  refusal can arrive two ways (AC-29 synchronous 409, AC-30 persisted reason);
+  both render the identical refusal UI so the user cannot tell, and need not
+  tell, which path caught it.
+- *(2026-10-07)* **Toggle while a previous save is in flight.** A second
+  toggle must not be computed from the stale server copy of the set — that is
+  what used to drop the first toggle (AC-32).
 - **Zero-document repo with attachments elsewhere.** The page's empty state
   (AC-12) can coexist with agents that have attachments pointing at other
   repos, since attachment paths are repo-relative and resolved per run.
@@ -244,7 +281,9 @@ cost, and proof in the trace of exactly what was injected.
 - [reused: server Project Context endpoints] Document list, source-folder
   tags, sizes, token counts and their `estimated` flag, coverage, used-by
   counts, locally-modified markers, and the refused-advance blocking paths —
-  see `server/specs/project-context.md`.
+  see `server/specs/project-context.md`. *(2026-10-07)* Blocking paths come
+  from the 409's `details.paths` (S-AC-35) or the persisted index-stats reason
+  (S-AC-36), read through the existing `ApiError.details`.
 - [reused: existing run trace] `prompt_assembly.specs` and `specs_read`, read
   through the client's existing trace hook and rendered by the existing
   `RunTraceDrawer`/`TraceBody` surface rather than a new panel.

@@ -9,6 +9,7 @@
   "regenerating": "Regenerating…",
   "unknownError": "Unknown error",
   "generateFailed": "Couldn't start generation: {message}",
+  "generateTimedOut": "Generation didn't finish in time. Try regenerating.",
 
   "anchorNav": {
     "label": "Sections"

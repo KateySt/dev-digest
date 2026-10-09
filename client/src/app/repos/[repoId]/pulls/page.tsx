@@ -23,6 +23,7 @@ import { s } from "./styles";
 import { compareByRisk } from "./helpers";
 import { PRRow } from "./_components/PRRow";
 import { FilterBar } from "./_components/FilterBar";
+import { ReviewAllButton } from "./_components/ReviewAllButton";
 
 /** Open PRs carry a derived review status; everything else is merged/closed. */
 const OPEN_STATUSES = new Set(["needs_review", "reviewed", "stale"]);
@@ -150,6 +151,7 @@ export default function PullsPage() {
           >
             {t("list.triageQueue")}
           </Button>
+          <ReviewAllButton repoId={repoId} pulls={pulls} />
         </div>
       </div>
 

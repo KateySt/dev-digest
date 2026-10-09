@@ -1,9 +1,10 @@
-import { and, eq, inArray } from 'drizzle-orm';
-import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { constants as fsConstants } from 'node:fs';
+import { lstat, mkdir, open, readdir, realpath, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
-import { EXCLUDED_DIRS } from './constants.js';
+import { EXCLUDED_DIRS, MAX_DOCUMENT_BYTES } from './constants.js';
 import { isAllowedDocumentPath, isWithinRoot } from './helpers.js';
 
 /**
@@ -25,6 +26,29 @@ export interface RepoCloneRow {
 export interface DiscoveredFile {
   path: string;
   size: number;
+}
+
+/** Outcome of one document read. `missing` covers nonexistent, non-file,
+ *  symlink, and escapes-the-clone alike (AC-30: refused ⇒ "nonexistent"). */
+export type ReadDocumentResult =
+  | { kind: 'ok'; content: string }
+  | { kind: 'missing' }
+  | { kind: 'too_large'; size: number };
+
+export type WriteDocumentResult = { ok: true } | { ok: false };
+
+/** `O_NOFOLLOW` exists on POSIX only; on Windows it is undefined and the
+ *  explicit `lstat` + real-path checks carry the policy instead. */
+const O_NOFOLLOW: number = (fsConstants as { O_NOFOLLOW?: number }).O_NOFOLLOW ?? 0;
+
+/** `isWithinRoot` is false for the root itself; for a DIRECTORY check
+ *  (nearest ancestor / parent) the root is a valid answer. */
+function isRootOrInside(realRoot: string, realDir: string): boolean {
+  return realDir === realRoot || isWithinRoot(realRoot, realDir);
+}
+
+function isEnoent(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 }
 
 export class ProjectContextRepository {
@@ -56,13 +80,16 @@ export class ProjectContextRepository {
       .where(eq(t.agentContextDocuments.agentId, agentId));
   }
 
-  /** Replace the whole set (AC-9). */
+  /** Replace the whole set (AC-9) in ONE transaction, serialized per agent
+   *  (S-AC-38/39): concurrent replaces queue on a transaction-scoped advisory
+   *  lock, and a failure partway rolls back to the previous set. */
   async setAgentDocuments(agentId: string, paths: string[]): Promise<void> {
-    await this.db.delete(t.agentContextDocuments).where(eq(t.agentContextDocuments.agentId, agentId));
-    if (paths.length === 0) return;
-    await this.db
-      .insert(t.agentContextDocuments)
-      .values(paths.map((path, order) => ({ agentId, path, order })));
+    await this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`agent-context:${agentId}`}, 0))`);
+      await tx.delete(t.agentContextDocuments).where(eq(t.agentContextDocuments.agentId, agentId));
+      if (paths.length === 0) return;
+      await tx.insert(t.agentContextDocuments).values(paths.map((path, order) => ({ agentId, path, order })));
+    });
   }
 
   async listSkillDocuments(skillId: string): Promise<{ path: string; order: number }[]> {
@@ -72,13 +99,15 @@ export class ProjectContextRepository {
       .where(eq(t.skillContextDocuments.skillId, skillId));
   }
 
-  /** Replace the whole set (AC-10). */
+  /** Replace the whole set (AC-10) — same atomic, per-skill-serialized shape
+   *  as {@link setAgentDocuments}. */
   async setSkillDocuments(skillId: string, paths: string[]): Promise<void> {
-    await this.db.delete(t.skillContextDocuments).where(eq(t.skillContextDocuments.skillId, skillId));
-    if (paths.length === 0) return;
-    await this.db
-      .insert(t.skillContextDocuments)
-      .values(paths.map((path, order) => ({ skillId, path, order })));
+    await this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`skill-context:${skillId}`}, 0))`);
+      await tx.delete(t.skillContextDocuments).where(eq(t.skillContextDocuments.skillId, skillId));
+      if (paths.length === 0) return;
+      await tx.insert(t.skillContextDocuments).values(paths.map((path, order) => ({ skillId, path, order })));
+    });
   }
 
   /**
@@ -195,40 +224,112 @@ export class ProjectContextRepository {
   }
 
   /**
-   * Read one document's content, or null when it doesn't exist (AC-16).
-   * SECURITY (defense in depth): re-confirms clone-root containment on the
-   * RESOLVED absolute path here too (same `isWithinRoot` check
-   * `writeDocument` below already applies) so a future caller can't
-   * reintroduce a path-traversal read by skipping the service-layer
-   * `normalizeRelativePath`/`isAllowedDocumentPath` validation — this is the
-   * one place actual bytes leave the clone, so it must not trust its input.
+   * Read one document's content (AC-16, AC-30, AC-32, AC-34).
+   * SECURITY: this is the one place bytes leave the clone, so it trusts
+   * nothing about its input. Policy is "no symlinks" — the target itself must
+   * not be a symlink (`lstat`), and the REAL path of the target must stay
+   * inside the REAL path of the root (catches symlinked/junctioned parent
+   * directories). Size is checked with `stat` BEFORE any content is read, and
+   * re-checked on the open handle (TOCTOU). On POSIX the open also passes
+   * `O_NOFOLLOW`. Never throws — every refusal is `missing`.
    */
-  async readDocument(clonePath: string, relPath: string): Promise<string | null> {
-    const root = resolve(clonePath);
-    const target = resolve(root, relPath);
-    if (!isWithinRoot(root, target)) return null;
+  async readDocument(clonePath: string, relPath: string): Promise<ReadDocumentResult> {
+    const missing: ReadDocumentResult = { kind: 'missing' };
     try {
-      return await readFile(target, 'utf8');
+      const root = resolve(clonePath);
+      const target = resolve(root, relPath);
+      if (!isWithinRoot(root, target)) return missing;
+
+      const realRoot = await realpath(root);
+      const link = await lstat(target);
+      if (link.isSymbolicLink() || !link.isFile()) return missing;
+
+      const realTarget = await realpath(target);
+      if (!isWithinRoot(realRoot, realTarget)) return missing;
+
+      if (link.size > MAX_DOCUMENT_BYTES) return { kind: 'too_large', size: link.size };
+
+      const fh = await open(realTarget, fsConstants.O_RDONLY | O_NOFOLLOW);
+      try {
+        const st = await fh.stat();
+        if (!st.isFile()) return missing;
+        if (st.size > MAX_DOCUMENT_BYTES) return { kind: 'too_large', size: st.size };
+        return { kind: 'ok', content: await fh.readFile('utf8') };
+      } finally {
+        await fh.close();
+      }
     } catch {
-      return null;
+      return missing;
     }
   }
 
   /**
    * Write a document into the clone working tree — NO git add/commit/push
    * (design decision in the spec). Creates the parent directory when it
-   * doesn't exist yet (AC-26, the "add folder" flow). The caller (service)
-   * must have already validated `relPath` with `helpers.normalizeRelativePath`
-   * + `isAllowedDocumentPath`; this method additionally re-confirms
-   * clone-root containment on the RESOLVED absolute path (AC-25) since that
-   * check needs a real path, not just string shape.
+   * doesn't exist yet (AC-26). The caller (service) has already validated
+   * `relPath` shape and content size; this method enforces the filesystem
+   * half (AC-25, AC-31): string containment, then the REAL path of the
+   * nearest existing ancestor must be inside the REAL clone root BEFORE any
+   * `mkdir` (so a symlinked/junctioned ancestor creates nothing outside),
+   * re-checked after `mkdir`; an existing symlink target is refused; the
+   * file is opened with `O_NOFOLLOW` on POSIX (Windows relies on the `lstat`
+   * check, which has no atomic equivalent).
    */
-  async writeDocument(clonePath: string, relPath: string, content: string): Promise<{ ok: true } | { ok: false }> {
+  async writeDocument(clonePath: string, relPath: string, content: string): Promise<WriteDocumentResult> {
+    const refused: WriteDocumentResult = { ok: false };
     const root = resolve(clonePath);
     const target = resolve(root, relPath);
-    if (!isWithinRoot(root, target)) return { ok: false };
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, content, 'utf8');
+    if (!isWithinRoot(root, target)) return refused;
+
+    const realRoot = await realpath(root).catch(() => null);
+    if (realRoot == null) return refused;
+    const parent = dirname(target);
+
+    // Nearest existing ancestor, by real path, before creating anything.
+    let ancestor = parent;
+    for (;;) {
+      try {
+        await lstat(ancestor);
+        break;
+      } catch (err) {
+        if (!isEnoent(err)) return refused;
+        const up = dirname(ancestor);
+        if (up === ancestor) return refused;
+        ancestor = up;
+      }
+    }
+    // A dangling symlink as ancestor makes realpath throw → refused below.
+    const realAncestor = await realpath(ancestor).catch(() => null);
+    if (realAncestor == null || !isRootOrInside(realRoot, realAncestor)) return refused;
+
+    try {
+      await mkdir(parent, { recursive: true });
+    } catch (err) {
+      // An ancestor that is a regular file (EEXIST/ENOTDIR) is a bad path, not a server fault.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'EEXIST' || code === 'ENOTDIR') return refused;
+      throw err;
+    }
+    const realParent = await realpath(parent).catch(() => null);
+    if (realParent == null || !isRootOrInside(realRoot, realParent)) return refused;
+
+    try {
+      const existing = await lstat(target);
+      if (existing.isSymbolicLink() || !existing.isFile()) return refused;
+    } catch (err) {
+      if (!isEnoent(err)) return refused;
+    }
+
+    const fh = await open(
+      target,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | O_NOFOLLOW,
+      0o644,
+    );
+    try {
+      await fh.writeFile(content, 'utf8');
+    } finally {
+      await fh.close();
+    }
     return { ok: true };
   }
 }

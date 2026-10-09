@@ -215,5 +215,31 @@
     "diffTitle": "Diff — v{version} vs. current",
     "diffOld": "v{version}",
     "diffCurrent": "Current (v{version})"
+  },
+  "evals": {
+    "trend": {
+      "title": "Trend · last {count, plural, one {# run} other {# runs}}",
+      "open": "Open this skill's full eval dashboard",
+      "empty": "No finished runs yet — run the evals to start a trend."
+    },
+    "draft": {
+      "title": "Draft results",
+      "badge": "draft",
+      "hint": "Unsaved text — these results don't change the metrics above.",
+      "running": "Running {done}/{total}…",
+      "noResults": "No results yet.",
+      "pass": "Pass",
+      "fail": "Fail",
+      "errored": "Errored",
+      "failedRun": "The draft run failed: {reason}"
+    },
+    "reason": {
+      "scanPending": "Content scan hasn't finished — evals can't run until it passes.",
+      "scanError": "Content scan failed — re-scan this skill before running evals.",
+      "scanFlagged": "Content scan flagged blocking issues — resolve them before running evals.",
+      "running": "A run is already in progress.",
+      "noCases": "Add an eval case first."
+    },
+    "startFailed": "Couldn't start the run: {message}"
   }
 }

@@ -17,6 +17,20 @@ Settings catalog field, the per-project suggestion surface):
 
 ## Changelog
 
+- 2026-10-07 — robustness and validation amendment (user decisions R4, R5 and
+  B7 in `docs/plans/2026-10-07-unfinished-features-and-critical-bugs.md`).
+  AC-5 reworded in place: entry bodies are fetched from
+  `raw.githubusercontent.com` during population (not from the REST API), and
+  only the tree read counts against the 60/hr REST budget. Added AC-49
+  (create-time `repo_id` ownership on `POST /skills`, previously only checked
+  at import/update/list), AC-50/AC-51 (`repo_id` must be a UUID — or the
+  `none` literal on the listing — else 422), AC-52/AC-53 (a failed entry body
+  keeps the entry with AC-12-style fallback metadata; the catalog is
+  unavailable only when the tree read fails — refines AC-31), AC-54 (in-flight
+  population dedup). The "Inputs and provenance" body line and the
+  request-budget NFR were corrected to match. Also fixed the stale "client
+  companion not yet specified" note: the amendment's client behavior is now
+  specified in the client spec (C-AC-53 – C-AC-58).
 - 2026-10-02 — **amendment: reversed this spec's own "not a change to `GET
   /skills`' listing scope" non-goal**, which was explicitly confirmed during the
   original dialog. The Skills list can now be narrowed to one project (global
@@ -183,12 +197,14 @@ skill lands in one undifferentiated workspace-wide pile.
 ### Listing and caching
 
 - AC-5: WHEN a catalog's cache is populated or refreshed, the system shall
-  retrieve the repository's file tree in exactly one GitHub tree request, and
-  MAY fetch each candidate entry's body once during that same population
-  (needed for AC-8/AC-11–14's real name/description/tags/type) — but shall
-  not issue any further tree or body request for that catalog until the next
-  population (see AC-6: a cache hit issues zero outbound requests). (verify
-  via: integration test)
+  retrieve the repository's file tree in exactly one GitHub REST tree request,
+  and MAY fetch each candidate entry's body once during that same population
+  (needed for AC-8/AC-11–14's real name/description/tags/type) from the raw
+  content host `https://raw.githubusercontent.com/{owner}/{name}/HEAD/{path}`
+  rather than the GitHub REST API — but shall not issue any further tree or
+  body request for that catalog until the next population (see AC-6: a cache
+  hit issues zero outbound requests). *(2026-10-07: body host pinned to the raw
+  host.)* (verify via: integration test)
 - AC-6: WHILE a cached catalog listing is younger than the catalog cache TTL,
   the system shall serve listings from that cache and issue no outbound
   request. (verify via: unit test)
@@ -199,6 +215,11 @@ skill lands in one undifferentiated workspace-wide pile.
   repo-relative path, folder, name, description, tag slugs, and type, and
   shall not return a star count or a single-language field. (verify via:
   integration test)
+
+- AC-54: WHILE a population of a catalog's cache is in flight, the system
+  shall serve every further listing request for that same catalog from that
+  in-flight population rather than starting another, so concurrent cache-miss
+  requests cause exactly one tree request. (verify via: unit test)
 
 ### Catalog layout contract
 
@@ -246,6 +267,16 @@ skill lands in one undifferentiated workspace-wide pile.
 - AC-22: IF the requested path is absent from the current catalog listing,
   THEN the system shall reject the import as not found. (verify via:
   integration test)
+- AC-49: IF a `POST /skills` request carries a `repo_id` that does not belong
+  to the caller's workspace, THEN the system shall reject it with a validation
+  error and persist nothing. (verify via: integration test)
+- AC-50: IF a `repo_id` in the body of `POST /skills`, `PUT /skills/:id`, or
+  `POST /skills/import-community` is present and not a UUID (null remains
+  allowed on `PUT /skills/:id`), THEN the system shall reject the request with
+  422 and persist nothing. (verify via: integration test)
+- AC-51: IF the `repo_id` query parameter of `GET /skills` is neither a UUID
+  nor the literal `none`, THEN the system shall reject the request with 422.
+  (verify via: integration test)
 
 ### Project scoping
 
@@ -350,6 +381,15 @@ listing scope" non-goal. AC-24 above still holds — as the *default* behavior
   THEN the system shall return an empty suggestion list together with an
   unavailable indicator, and shall not return an error status. (verify via:
   integration test)
+- AC-52: IF an individual entry's body fetch fails or times out during
+  population, THEN the system shall keep that entry in the listing with
+  AC-12-style fallback metadata — name from the filename without extension,
+  empty description, tags = the folder name alone, type `custom`. (verify via:
+  unit test)
+- AC-53: WHEN the tree read succeeds, the system shall report the catalog as
+  available even if some or all entry body fetches failed; the system shall
+  return AC-31's unavailable outcome only when the tree read itself fails.
+  (verify via: unit test)
 
 ### Security gate
 
@@ -403,6 +443,15 @@ listing scope" non-goal. AC-24 above still holds — as the *default* behavior
 - **Rate limit exhausted upstream** is an unavailable outcome (AC-31), not a
   silent empty catalog — the message must distinguish it from a bad URL so a
   user does not "fix" a working configuration.
+- *(2026-10-07)* **Some entry bodies fail during population** (raw host
+  hiccup, timeout, a file deleted between tree read and body read): the
+  listing stays available and the affected entries appear with fallback
+  metadata (AC-52, AC-53). One bad body must not blank out the catalog. Such
+  an entry is still importable; the import fetches its body again (AC-18) and
+  fails on that row if the body is still unreachable.
+- *(2026-10-07)* **Concurrent first visits** (two drawers opened at once on a
+  cold cache) share one population (AC-54) instead of each spending a tree
+  request.
 
 *(2026-10-02 amendment)*
 
@@ -433,11 +482,14 @@ listing scope" non-goal. AC-24 above still holds — as the *default* behavior
 ## Non-functional requirements
 
 - **Upstream request budget.** Normal browsing must cost at most one upstream
-  tree request per cache TTL window, independent of how many folders, users,
-  or searches are involved; importing costs exactly one additional request per
-  imported entry. This is what keeps the feature inside GitHub's
-  unauthenticated 60-requests-per-hour floor, which is the budget this feature
-  must assume (the catalog is public and must work with no token configured).
+  REST tree request per cache TTL window, independent of how many folders,
+  users, or searches are involved (concurrent cold-cache requests included,
+  AC-54); importing costs exactly one additional raw-host request per imported
+  entry. Entry bodies are read from `raw.githubusercontent.com`, which does not
+  count against the REST rate limit (*2026-10-07*). This is what keeps the
+  feature inside GitHub's unauthenticated 60-requests-per-hour REST floor,
+  which is the budget this feature must assume (the catalog is public and must
+  work with no token configured).
 - **Bounded external reads.** Every outbound catalog request is time-bounded
   and size-capped, reusing the same discipline as `importFromUrl`'s
   `IMPORT_URL_TIMEOUT_MS` / `IMPORT_URL_MAX_BYTES` guards, so a slow or huge
@@ -475,7 +527,9 @@ listing scope" non-goal. AC-24 above still holds — as the *default* behavior
 - **Project scope is ownership-checked on both the read and the write path.**
   The listing filter (AC-38) and the reassignment (AC-42) each validate that the
   named repo belongs to the caller's workspace — the same check AC-21 already
-  applies at import, now required in two more places.
+  applies at import, now required in two more places. *(2026-10-07)* Manual
+  creation (AC-49) is the fourth place, and every `repo_id` is shape-checked as
+  a UUID before any lookup (AC-50, AC-51).
 
 ## Inputs and provenance
 
@@ -485,8 +539,11 @@ listing scope" non-goal. AC-24 above still holds — as the *default* behavior
 - [deterministic: GitHub tree API] Catalog file tree — one recursive tree read
   of the catalog repository's default branch; the sole source of folders and
   entry paths.
-- [deterministic: GitHub raw content] A single entry's markdown body — fetched
-  only at import time, never during listing.
+- [deterministic: GitHub raw content host] An entry's markdown body — fetched
+  from `raw.githubusercontent.com/{owner}/{name}/HEAD/{path}` once per cache
+  population (for metadata, AC-5) and once more at import time (AC-18); never
+  on a cache hit. *(2026-10-07: the earlier "only at import time" wording
+  predated AC-5's 2026-10-02 relaxation and was stale.)*
 - [deterministic: parsed from the above] Entry name, description, tags, and
   type — derived from the folder name, the YAML frontmatter, and the body's
   first heading per AC-11 through AC-14.
@@ -571,7 +628,9 @@ GitHub repository and can be changed by anyone with merge access to it.
   non-imported catalog entries plus the availability indicator (AC-26–AC-32).
 - A catalog test action for Settings, returning the same
   `{ ok, message }`-shaped outcome as `POST /settings/test-connection` (AC-4).
-- `POST /skills` — gains an optional `repo_id` (absent ⇒ global, AC-23).
+- `POST /skills` — gains an optional `repo_id` (absent ⇒ global, AC-23);
+  *(2026-10-07)* when present it must be a UUID (AC-50) naming a repo in the
+  caller's workspace (AC-49).
 
 *(2026-10-02 amendment)*
 
@@ -636,14 +695,12 @@ the Settings catalog field with its test action, and the per-project
 suggestion surface are all client behavior, specified in
 [`../../client/specs/community-catalog.md`](../../client/specs/community-catalog.md).
 
-*(2026-10-02 amendment)* The amendment's own client-side behavior — the
-Skills page's visible project switcher, the repo-picker field in the Skill
-editor's Config tab, the loading-vs-confirmed-zero-repos distinction behind
-the global-only fallback, and widening the client's skill-update patch type
-to carry a project scope — is **not yet specified anywhere**. The client spec
-above predates this amendment and does not cover it. A client-side companion
-spec for this amendment still needs to be written before it can be planned or
-implemented.
+*(2026-10-02 amendment; corrected 2026-10-07)* The amendment's own client-side
+behavior — the Skills page's visible project-scope switcher, the repo-picker
+field in the Skill editor's Config tab, the loading-vs-confirmed-zero-repos
+distinction behind the global-only fallback, and widening the client's
+skill-update patch type to carry a project scope — shipped in 075b562 and is
+specified in the same client spec as C-AC-53 – C-AC-58.
 
 ## Open questions
 

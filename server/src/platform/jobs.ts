@@ -1,5 +1,5 @@
 import PQueue from 'p-queue';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import * as t from '../db/schema.js';
 import { withTimeout, withRetry } from './resilience.js';
@@ -98,6 +98,23 @@ export class JobRunner {
     }) as Promise<void>;
 
     return { id: jobId, done };
+  }
+
+  /**
+   * Boot reaper: jobs still `queued`/`running` belong to a dead process (the
+   * queue is in-memory), so fail them with error `interrupted`. Without this
+   * an orphan row looks "in flight" forever and dedupe-by-in-flight callers
+   * (e.g. onboarding generation, S-AC-3) keep returning its stale id.
+   * Call once at boot, BEFORE serving requests (nothing of this process's own
+   * is in flight yet). Assumes a single API instance per DB.
+   */
+  async reapOrphaned(): Promise<number> {
+    const rows = await this.db
+      .update(t.jobs)
+      .set({ status: 'failed', error: 'interrupted', finishedAt: new Date() })
+      .where(inArray(t.jobs.status, ['queued', 'running']))
+      .returning({ id: t.jobs.id });
+    return rows.length;
   }
 
   /** Wait for the queue to drain (useful in tests). */

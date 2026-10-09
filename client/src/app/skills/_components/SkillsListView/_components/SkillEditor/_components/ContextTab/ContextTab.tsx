@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Badge, ErrorState, Icon, Skeleton } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
@@ -8,6 +9,7 @@ import { ContextDocumentRow } from "@/components/context-document-row";
 import { useActiveRepo } from "@/lib/repo-context";
 import {
   useProjectContextDocuments,
+  skillContextKey,
   useSetSkillContextDocuments,
   useSkillContextDocuments,
 } from "@/lib/hooks/project-context";
@@ -24,7 +26,8 @@ export function ContextTab({ skill }: { skill: Skill }) {
     skillId: skill.id,
   });
   const { data: attached } = useSkillContextDocuments(skill.id);
-  const setDocuments = useSetSkillContextDocuments();
+  const setDocuments = useSetSkillContextDocuments(skill.id);
+  const qc = useQueryClient();
 
   const documents = React.useMemo(() => list?.documents ?? [], [list]);
 
@@ -45,14 +48,25 @@ export function ContextTab({ skill }: { skill: Skill }) {
   const attachedPaths = React.useMemo(() => new Set((attached ?? []).map((a) => a.path)), [attached]);
   const byPath = React.useMemo(() => new Map(documents.map((d) => [d.path, d])), [documents]);
 
+  /** Persist `nextOrder` ∩ `nextAttached`. Optimistic + serialized in the hook;
+   *  on failure the cache is rolled back there, and the local order is reset
+   *  so it re-derives from the restored server-confirmed set (C-AC-33). */
   const save = (nextOrder: string[], nextAttached: Set<string>) => {
     const paths = nextOrder.filter((p) => nextAttached.has(p));
-    setDocuments.mutate({ skillId: skill.id, paths });
+    setDocuments.replace(paths, { onError: () => setOrder(null) });
   };
+
+  /** The latest attached set straight from the cache (C-AC-32): the render
+   *  closure can lag a just-applied optimistic update, which is what used to
+   *  drop the first of two quick toggles. */
+  const latestAttached = () =>
+    new Set(
+      (qc.getQueryData<{ path: string }[]>(skillContextKey(skill.id)) ?? attached ?? []).map((a) => a.path),
+    );
 
   const toggle = (path: string, checked: boolean) => {
     if (!order) return;
-    const next = new Set(attachedPaths);
+    const next = latestAttached();
     if (checked) next.add(path);
     else next.delete(path);
     save(order, next);
@@ -67,7 +81,7 @@ export function ContextTab({ skill }: { skill: Skill }) {
     const nextOrder = reorder(order, dragId, targetPath);
     setOrder(nextOrder);
     setDragId(null);
-    save(nextOrder, attachedPaths);
+    save(nextOrder, latestAttached());
   };
 
   const move = (path: string, dir: -1 | 1) => {
@@ -80,7 +94,7 @@ export function ContextTab({ skill }: { skill: Skill }) {
     next[idx] = next[targetIdx]!;
     next[targetIdx] = tmp;
     setOrder(next);
-    save(next, attachedPaths);
+    save(next, latestAttached());
   };
 
   if (isError) {

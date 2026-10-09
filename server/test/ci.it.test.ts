@@ -171,4 +171,18 @@ d('ci (Testcontainers pg)', () => {
     expect(res.json()).toEqual([]);
     await app.close();
   });
+
+  it('B12: GET /ci-runs?since=foo is a 422 validation error; an ISO datetime with offset is accepted', async () => {
+    const github = new MockGitHubClient();
+    const app = await appWith(github);
+
+    const bad = await app.inject({ method: 'GET', url: '/ci-runs?since=foo' });
+    expect(bad.statusCode).toBe(422);
+    expect(bad.json().error.code).toBe('validation_error');
+
+    const since = encodeURIComponent(new Date(Date.now() - 86_400_000).toISOString());
+    const ok = await app.inject({ method: 'GET', url: `/ci-runs?since=${since}` });
+    expect(ok.statusCode).toBe(200);
+    await app.close();
+  });
 });

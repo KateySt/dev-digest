@@ -7,8 +7,9 @@ import type { Skill } from "@devdigest/shared";
 import type { SkillListItem } from "@/lib/hooks/skills";
 import { useTheme } from "@/lib/theme";
 import { tagColor } from "@/lib/tag-colors";
-import { SKILL_TYPE_COLOR, MAX_VISIBLE_TAGS } from "../../constants";
-import { hasBlockingFindings } from "../../scan";
+import { MAX_VISIBLE_TAGS } from "../../constants";
+import { SKILL_TYPE_COLOR } from "@/lib/skill-constants";
+import { hasBlockingFindings } from "@/lib/skill-scan";
 import { s } from "./styles";
 
 export function SkillCard({

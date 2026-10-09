@@ -19,8 +19,10 @@ import {
 } from "@devdigest/ui";
 import type { FindingRecord, FindingActionKind } from "@devdigest/shared";
 import { SEV_COLOR, SEV_COLOR_FALLBACK } from "./constants";
-import { lineLabel } from "./helpers";
-import { githubBlobUrl } from "../../../../../../../lib/github-urls";
+import { lineLabel, type LinkedSkill } from "./helpers";
+import { githubBlobUrl } from "@/lib/github-urls";
+import { EvalCaseAction } from "./EvalCaseAction";
+import { ReplyAction } from "./ReplyAction";
 import { s } from "./styles";
 
 export function FindingCard({
@@ -31,6 +33,9 @@ export function FindingCard({
   pending,
   repoFullName,
   headSha,
+  prId,
+  agentId,
+  linkedSkills,
 }: {
   f: FindingRecord;
   focused?: boolean;
@@ -39,6 +44,12 @@ export function FindingCard({
   pending?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** PR id — used to refresh the PR's reviews after eval-case / reply actions. */
+  prId?: string | null;
+  /** The review's agent; null/undefined disables "Turn into eval case". */
+  agentId?: string | null;
+  /** Skills linked to the agent (extra "Turn into eval case" targets); `null` while loading. */
+  linkedSkills?: readonly LinkedSkill[] | null;
 }) {
   const t = useTranslations("prReview");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
@@ -100,7 +111,7 @@ export function FindingCard({
               {t("finding.accept")}
             </Button>
             <Button
-              kind="ghost"
+              kind="secondary"
               size="sm"
               icon="X"
               disabled={pending}
@@ -109,6 +120,16 @@ export function FindingCard({
             >
               {t("finding.dismiss")}
             </Button>
+            <span title={t("finding.learnSoon")} style={s.hintWrap}>
+              <Button kind="secondary" size="sm" icon="Brain" disabled aria-describedby={`${f.id}-learn-hint`}>
+                {t("finding.learn")}
+              </Button>
+              <span id={`${f.id}-learn-hint`} style={s.srOnly}>
+                {t("finding.learnSoon")}
+              </span>
+            </span>
+            <EvalCaseAction f={f} agentId={agentId} linkedSkills={linkedSkills} />
+            <ReplyAction f={f} prId={prId} />
           </div>
         </div>
       )}

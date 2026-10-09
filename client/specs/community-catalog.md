@@ -16,6 +16,15 @@ behavior are unchanged by this feature and are not re-specified here either.
 
 ## Changelog
 
+- 2026-10-07 — Recorded the already-shipped (075b562) client side of the
+  server's 2026-10-02 filtering/reassignment amendment (S-AC-35 – S-AC-48),
+  which this spec had not covered: the Skills page's project-scope switcher
+  and the Skill editor Config tab's project picker, as C-AC-53 – C-AC-58.
+  Narrowed the contradicting non-goal "No filtering of the Skills page by tag
+  or project" to tag filtering only (project filtering now exists). Noted the
+  server's 2026-10-07 robustness changes (S-AC-52/S-AC-53 fallback entries,
+  S-AC-50 422 on a malformed `repo_id`) under Edge cases; no new client
+  behavior is required for them.
 - 2026-10-02 — initial version
 
 ## Problem and user
@@ -64,15 +73,17 @@ DevDigest at their repository and confirm it resolves).
 
 **Non-goals**
 
-- **No filtering of the Skills page by tag or project.** Tags and the scope
-  badge are display-only here; the server spec explicitly defers list filtering
-  to a later feature.
+- **No filtering of the Skills page by tag.** Tags and the scope badge are
+  display-only. *(2026-10-07: narrowed from "by tag or project" — project
+  filtering shipped with the server's 2026-10-02 amendment and is specified in
+  C-AC-53 – C-AC-56; tag filtering stays deferred, matching the server spec.)*
 - **No dismiss/hide/snooze for a suggestion.** A suggestion leaves the list
   only by being imported (S-AC-28) or by the repo's language breakdown
   changing. Nothing new is persisted client- or server-side for this.
 - **No project picker on the From file / From URL tabs.** Those paths stay
-  global (`repo_id` absent, S-AC-23); the server spec's non-goal "no UI for
-  choosing global-vs-project scope" is respected.
+  global at creation (`repo_id` absent, S-AC-23). *(2026-10-07)* Scope can
+  be changed afterwards from the Skill editor's Config tab (C-AC-57,
+  C-AC-58).
 - **No client-side catalog caching, mirroring, or pagination.** The listing is
   one server-cached payload (S-AC-5/S-AC-6); the client holds no copy beyond
   its query cache.
@@ -265,6 +276,29 @@ DevDigest at their repository and confirm it resolves).
 - AC-52: WHERE a tag chip or a scope badge is rendered on a skill card, the
   system shall not make it an interactive control. (verify via: unit test)
 
+### Skills page — project scope filtering and reassignment (2026-10-07, shipped 075b562)
+
+Client side of the server's 2026-10-02 amendment (S-AC-35 – S-AC-48).
+
+- AC-53: WHEN the Skills page is rendered, the system shall render a
+  project-scope switcher offering "All projects", "Global only", and one
+  option per workspace repo. (verify via: unit test)
+- AC-54: WHILE the repo list has not finished loading, the system shall not
+  request the skills listing. (verify via: unit test)
+- AC-55: WHEN the repo list has loaded and the user has not picked a scope,
+  the system shall default the switcher to the active repo, or to "Global
+  only" when there is no resolvable active repo. (verify via: unit test)
+- AC-56: WHEN a scope is selected, the system shall request `GET /skills`
+  with `repo_id=<repo id>` for a repo, `repo_id=none` for "Global only", and no
+  `repo_id` for "All projects". (verify via: unit test)
+- AC-57: WHEN the Skill editor's Config tab is rendered, the system shall show
+  a project-scope picker offering "Global" and one option per workspace repo,
+  pre-selected to the skill's current scope. (verify via: unit test)
+- AC-58: WHEN a different scope is picked in the Config tab, the system shall
+  send `PUT /skills/:id` with `repo_id` set to the picked repo id, or `null`
+  for "Global"; picking the current scope shall send no request. (verify via:
+  unit test)
+
 ## Edge cases
 
 - **Two entries with the same name in different folders.** `python/naming.md`
@@ -311,6 +345,18 @@ DevDigest at their repository and confirm it resolves).
 - **A repo with no stored language breakdown** yields an empty suggestion list,
   not an error (S-AC-30), so it takes AC-38's omitted card and AC-44's omitted
   group — not AC-41's unavailable treatment.
+- *(2026-10-07)* **Catalog entries with fallback metadata.** When an entry's
+  body could not be read during population, the server still lists it with a
+  filename-derived name, empty description, folder-only tags and type
+  `custom` (S-AC-52, S-AC-53). The browser renders it like any other entry —
+  no special state — and the catalog is not shown as unavailable.
+- *(2026-10-07)* **Malformed `repo_id`** — the server now answers 422 for a
+  non-UUID `repo_id` (S-AC-50, S-AC-51). The client only ever sends ids from
+  `GET /repos` or the `none` literal, so this is a defensive server check, not
+  a new client error state.
+- *(2026-10-07)* **"All projects" vs "Global only".** They are different
+  scopes (S-AC-36 vs S-AC-37) and must never share a value in the switcher;
+  "All projects" omits the parameter entirely rather than sending a sentinel.
 - **Import into a project other than the one being viewed.** The drawer's
   picker is changeable (AC-18), so a skill can be imported into a repo that is
   not the active one; AC-21's confirmation names the project precisely so that
@@ -354,7 +400,10 @@ DevDigest at their repository and confirm it resolves).
 - [reused: `GET /repos` via `repo-context`] Project list, active repo, and the
   picker's pre-selected value.
 - [reused: `GET /skills`] Skill list items, now carrying `tags` and `repo_id`
-  for AC-47 – AC-51.
+  for AC-47 – AC-51; *(2026-10-07)* with the optional `repo_id` scope
+  parameter for AC-56.
+- [reused: `PUT /skills/:id`] Project-scope reassignment (AC-58), with the
+  client's skill-update patch type widened to carry `repo_id`.
 - [deterministic: client-side stable hash of the tag slug → index into a fixed
   palette] Tag chip color. The server emits no color (its explicit non-goal);
   the mapping is pure, has no stored state, and is shared by every surface that

@@ -141,6 +141,20 @@
       "when": 1790953604223,
       "tag": "0019_slow_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791287679278,
+      "tag": "0020_abandoned_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791297008110,
+      "tag": "0021_fine_jack_murdock",
+      "breakpoints": true
     }
   ]
 }

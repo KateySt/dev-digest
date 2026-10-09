@@ -12,6 +12,11 @@ spec does not restate them.
 
 ## Changelog
 
+- 2026-10-07 — Added AC-31/AC-32: a client-side poll ceiling (about 150 s,
+  just above the server's 120 s job budget) after which a generation that has
+  not completed is shown as failed and Regenerate is re-enabled — previously a
+  job orphaned by a server restart left the page polling and Regenerate
+  disabled forever (bug B8). Server side: S-AC-28 – S-AC-32.
 - 2026-09-30 — initial version
 
 ## Problem and user
@@ -166,6 +171,13 @@ currently leads to the wrong screen, and the tour has no route at all.
   failure and leave the previously displayed tour intact. (verify via: unit
   test)
 
+- AC-31: IF a requested generation has not produced a new tour within the
+  poll ceiling (about 150 seconds after the request), THEN the page shall stop
+  polling and surface a generation-failed message. (verify via: unit test)
+- AC-32: WHEN the poll ceiling is reached, the page shall re-enable the
+  regenerate control and keep the previously displayed tour (or the empty
+  state) intact. (verify via: unit test)
+
 **Degraded states**
 
 - AC-25: WHERE a repo has no clone, the page shall render an empty state
@@ -240,6 +252,10 @@ currently leads to the wrong screen, and the tour has no route at all.
   during regeneration, including when that existing tour is a degraded
   skeleton — so a degraded banner stays on screen while the retry runs, which
   must not read as the retry having already failed.
+- *(2026-10-07)* **Poll ceiling reached, then the job finishes late.** The
+  page has already stopped polling (AC-31); the late tour appears on the next
+  page load or the next Regenerate, not by itself. The ceiling sits above the
+  server's 120 s budget, so a healthy job never trips it.
 - **A very long tour.** The anchor nav (AC-7) is the mitigation for a page
   whose five sections can be long; anchors must resolve to sections that are
   collapsed as well as expanded, since AC-8's collapse control lets a user

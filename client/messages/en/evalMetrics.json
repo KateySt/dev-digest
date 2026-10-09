@@ -1,0 +1,64 @@
+{
+  "status": {
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "noValue": "—",
+  "trend": {
+    "ariaLabel": "Metric trend chart",
+    "title": "Metric trend",
+    "recall": "Recall",
+    "precision": "Precision",
+    "citation": "Citation"
+  },
+  "metrics": {
+    "recall": "Recall",
+    "precision": "Precision",
+    "citation_accuracy": "Citation accuracy",
+    "cost": "Cost"
+  },
+  "cards": {
+    "recall": "RECALL",
+    "precision": "PRECISION",
+    "citation_accuracy": "CITATION ACCURACY"
+  },
+  "banner": {
+    "dipped": "{metric} dipped {points}pts",
+    "context": "on v{version} (vs v{previous}).",
+    "up": "{metric} up",
+    "down": "{metric} down",
+    "flat": "{metric} unchanged",
+    "modelChanged": "model changed between runs"
+  },
+  "runs": {
+    "selected": "{count} selected",
+    "compare": "Compare",
+    "compareHint": "Select exactly two runs to compare",
+    "emptyRange": "No runs in this range.",
+    "columns": {
+      "select": "Select",
+      "ranAt": "Ran at",
+      "version": "Version",
+      "model": "Model",
+      "recall": "Recall",
+      "precision": "Precision",
+      "citation": "Citation",
+      "pass": "Pass",
+      "cost": "Cost",
+      "status": "Status"
+    },
+    "selectRun": "Select run v{version} from {ranAt}",
+    "errored": "{count} errored"
+  },
+  "compare": {
+    "cost": "COST",
+    "legendOld": "v{version} (old)",
+    "legendNew": "v{version} (new)",
+    "removedMark": "−",
+    "addedMark": "+",
+    "caseSetsDiffer": "case sets differ ({old} vs {new})",
+    "editedCases": "{count, plural, one {# case} other {# cases}} edited between runs",
+    "unchangedLines": "… {count, plural, one {# unchanged line} other {# unchanged lines}}"
+  }
+}

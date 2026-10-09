@@ -3,6 +3,7 @@ import { startPg, dockerAvailable, type PgFixture } from './helpers/pg.js';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
+import { ne } from 'drizzle-orm';
 import { MockLLMProvider, MockEmbedder, MockGitClient } from '../src/adapters/mocks.js';
 import * as t from '../src/db/schema.js';
 import type { Review } from '@devdigest/shared';
@@ -55,7 +56,8 @@ const REVIEW_FIXTURE: Review = {
   ],
 };
 
-const EXPECTED_OUTPUT = [{ severity: 'CRITICAL', file: 'src/config.ts', start_line: 11, category: 'security' }];
+/** Matching is file + line overlap only; severity/category are descriptive and ignored (S-29). */
+const EXPECTED_OUTPUT = [{ severity: 'INFO', file: 'src/config.ts', start_line: 11, category: 'style' }];
 
 d('eval (Testcontainers pg)', () => {
   let pg: PgFixture;
@@ -129,6 +131,39 @@ d('eval (Testcontainers pg)', () => {
     await app.close();
   });
 
+  it('B2 / S-AC-52 (eval): create and update reject a non-array expected_output with 422 and persist nothing', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const agent = await makeAgent(app, 'Eval AC52 Agent');
+    const base = { owner_kind: 'agent', owner_id: agent.id, input_diff: DIFF };
+
+    for (const [i, bad] of [{}, null, 'x', 5].entries()) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/eval-cases',
+        payload: { ...base, name: `bad-${i}`, expected_output: bad },
+      });
+      expect(res.statusCode).toBe(422);
+    }
+    const listed = (await app.inject({ method: 'GET', url: `/eval-cases?owner_kind=agent&owner_id=${agent.id}` })).json();
+    expect(listed).toHaveLength(0);
+
+    const ok = (
+      await app.inject({
+        method: 'POST',
+        url: '/eval-cases',
+        payload: { ...base, name: 'ok', expected_output: [] },
+      })
+    ).json();
+    for (const bad of [{}, null]) {
+      const res = await app.inject({ method: 'PUT', url: `/eval-cases/${ok.id}`, payload: { expected_output: bad } });
+      expect(res.statusCode).toBe(422);
+    }
+    const stored = (await app.inject({ method: 'GET', url: `/eval-cases/${ok.id}` })).json();
+    expect(stored.expected_output).toEqual([]);
+
+    await app.close();
+  });
+
   it('POST /eval-cases/:id/run matches hand-computed recall/precision/citation_accuracy', async () => {
     const app = await appWith(REVIEW_FIXTURE);
     const agent = await makeAgent(app, 'Eval Run Agent');
@@ -165,15 +200,19 @@ d('eval (Testcontainers pg)', () => {
     ).json();
     expect(list[0].last_run.id).toBe(run.id);
 
-    // The agent's eval-stats rollup reflects the one run.
+    // eval-stats (S-45): the case shows its latest result from ANY run, but the
+    // headline metrics only come from a completed SUITE run - a single-case run is not one.
     const stats = (await app.inject({ method: 'GET', url: `/agents/${agent.id}/eval-stats` })).json();
     expect(stats.cases_evaluated).toBe(1);
-    expect(stats.recall).toBe(1);
+    expect(stats.case_results[0].id).toBe(run.id);
+    expect(stats.latest_run).toBeNull();
+    expect(stats.recall).toBeNull();
+    expect(run.suite_run_id).toBeNull(); // S-26
 
     await app.close();
   });
 
-  it('a case with no expected findings and a clean diff passes (recall/precision both 1)', async () => {
+  it('a must_find case with no expectations and a clean review passes, with null recall/precision (zero denominators, S-36)', async () => {
     const app = await appWith({ verdict: 'approve', summary: 'clean', score: 100, findings: [] });
     const agent = await makeAgent(app, 'Eval Clean Agent');
     const evalCase = (
@@ -185,60 +224,103 @@ d('eval (Testcontainers pg)', () => {
     ).json();
 
     const run = (await app.inject({ method: 'POST', url: `/eval-cases/${evalCase.id}/run` })).json();
-    expect(run.recall).toBe(1);
-    expect(run.precision).toBe(1);
+    expect(run.recall).toBeNull();
+    expect(run.precision).toBeNull();
     expect(run.pass).toBe(true);
 
     await app.close();
   });
 
-  it('GET /eval-dashboard rolls up cases_total/runs_total and the recent-runs table', async () => {
-    const app = await appWith(REVIEW_FIXTURE);
-    const agent = await makeAgent(app, 'Eval Dashboard Agent');
-    const evalCase = (
-      await app.inject({
-        method: 'POST',
-        url: '/eval-cases',
-        payload: {
-          owner_kind: 'agent',
-          owner_id: agent.id,
-          name: 'dashboard-case',
-          input_diff: DIFF,
-          expected_output: EXPECTED_OUTPUT,
-        },
-      })
-    ).json();
-    await app.inject({ method: 'POST', url: `/eval-cases/${evalCase.id}/run` });
+  it('a must_not_flag case passes when the review avoids the forbidden location and fails when it overlaps', async () => {
+    const app = await appWith(REVIEW_FIXTURE); // grounded finding on line 11
+    const agent = await makeAgent(app, 'Eval Forbidden Agent');
+    const mk = (name: string, locations: unknown[]) =>
+      app
+        .inject({
+          method: 'POST',
+          url: '/eval-cases',
+          payload: {
+            owner_kind: 'agent',
+            owner_id: agent.id,
+            name,
+            kind: 'must_not_flag',
+            input_diff: DIFF,
+            expected_output: locations,
+          },
+        })
+        .then((r) => r.json());
+    const elsewhere = await mk('forbid-elsewhere', [{ file: 'src/config.ts', start_line: 40, end_line: 45 }]);
+    const overlapping = await mk('forbid-line-11', [{ file: 'src/config.ts', start_line: 10, end_line: 12 }]);
 
-    const dashboard = (await app.inject({ method: 'GET', url: '/eval-dashboard' })).json();
-    expect(dashboard.cases_total).toBeGreaterThanOrEqual(1);
-    expect(dashboard.runs_total).toBeGreaterThanOrEqual(1);
-    expect(dashboard.recent_runs.some((r: { case_name: string }) => r.case_name === 'dashboard-case')).toBe(true);
+    const ok = (await app.inject({ method: 'POST', url: `/eval-cases/${elsewhere.id}/run` })).json();
+    const bad = (await app.inject({ method: 'POST', url: `/eval-cases/${overlapping.id}/run` })).json();
+    expect(ok.pass).toBe(true);
+    expect(bad.pass).toBe(false);
+    expect(bad.precision).toBe(0); // the single grounded finding is noise
 
     await app.close();
   });
 
-  it('POST /eval-dashboard/run-all runs every workspace case and aggregates into an EvalRun batch', async () => {
+  it('deleting an agent also deletes its agent-owned eval cases', async () => {
     const app = await appWith(REVIEW_FIXTURE);
-    const agent = await makeAgent(app, 'Eval RunAll Agent');
+    const agent = await makeAgent(app, 'Eval Doomed Agent');
+    const evalCase = (
+      await app.inject({
+        method: 'POST',
+        url: '/eval-cases',
+        payload: { owner_kind: 'agent', owner_id: agent.id, name: 'doomed', input_diff: DIFF, expected_output: [] },
+      })
+    ).json();
+
+    expect((await app.inject({ method: 'DELETE', url: `/agents/${agent.id}` })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/eval-cases/${evalCase.id}` })).statusCode).toBe(404);
+
+    await app.close();
+  });
+
+  it('GET /eval-dashboard returns the cross-agent shape: per-agent rows (never-run agents included) and recent suite runs', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const agent = await makeAgent(app, 'Eval Dashboard Agent');
     await app.inject({
       method: 'POST',
       url: '/eval-cases',
-      payload: {
-        owner_kind: 'agent',
-        owner_id: agent.id,
-        name: 'run-all-case',
-        input_diff: DIFF,
-        expected_output: EXPECTED_OUTPUT,
-      },
+      payload: { owner_kind: 'agent', owner_id: agent.id, name: 'dashboard-case', input_diff: DIFF, expected_output: EXPECTED_OUTPUT },
+    });
+
+    const dashboard = (await app.inject({ method: 'GET', url: '/eval-dashboard' })).json();
+    expect(Array.isArray(dashboard.recent_runs)).toBe(true);
+    const row = dashboard.agents.find((a: { agent_id: string }) => a.agent_id === agent.id);
+    expect(row).toMatchObject({ cases_total: 1, latest_run: null, running_run: null, history: [] });
+    // The old workspace-batch fields are gone.
+    expect(dashboard).not.toHaveProperty('cases_total');
+    expect(dashboard).not.toHaveProperty('runs_total');
+
+    await app.close();
+  });
+
+  it('the old synchronous workspace batch is replaced: POST /eval-dashboard/run-all answers 202 {started, skipped}', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const agent = await makeAgent(app, 'Eval RunAll Agent');
+    // Only this agent should be eligible, so the background batch stays small.
+    await pg.handle.db.delete(t.evalCases).where(ne(t.evalCases.ownerId, agent.id));
+    await app.inject({
+      method: 'POST',
+      url: '/eval-cases',
+      payload: { owner_kind: 'agent', owner_id: agent.id, name: 'run-all-case', input_diff: DIFF, expected_output: EXPECTED_OUTPUT },
     });
 
     const res = await app.inject({ method: 'POST', url: '/eval-dashboard/run-all' });
-    expect(res.statusCode).toBe(200);
-    const batch = res.json();
-    expect(batch.traces_total).toBeGreaterThanOrEqual(1);
-    expect(batch.per_trace.some((tr: { name: string }) => tr.name === 'run-all-case')).toBe(true);
+    expect(res.statusCode).toBe(202);
+    const body = res.json();
+    expect(body.started).toContain(agent.id);
+    expect(body).not.toHaveProperty('per_trace');
 
+    // let the background suite finish before the DB goes away
+    for (let i = 0; i < 200; i++) {
+      const stats = (await app.inject({ method: 'GET', url: `/agents/${agent.id}/eval-stats` })).json();
+      if (stats.latest_run) break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
     await app.close();
   });
 });

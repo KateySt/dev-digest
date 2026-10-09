@@ -45,3 +45,6 @@ high-confidence unless the current code contradicts them.
 
 - Adding a new route or page → read `docs/README.md`
 - Building a new UI feature end-to-end → read `specs/README.md`
+- Writing or reviewing anything that touches API data — `src/lib/hooks/*`,
+  `useQuery`/`useMutation`/`useQueryClient`, invalidation, polling, or a test
+  needing a `QueryClient` → load the `tanstack-query` skill first

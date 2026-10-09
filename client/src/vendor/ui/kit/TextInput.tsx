@@ -38,6 +38,8 @@ export function TextInput({
         onChange={(e) => onChange?.(e.target.value)}
         style={{
           flex: 1,
+          // A flex-item <input> defaults to a ~20ch intrinsic min-width and overflows narrow containers.
+          minWidth: 0,
           fontSize: 14,
           color: "var(--text-primary)",
           background: "transparent",

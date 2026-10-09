@@ -1,5 +1,5 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
-import type { Db } from '../../../db/client.js';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import type { Db, DbExecutor } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { RunSummary, RunTrace } from '@devdigest/shared';
 
@@ -40,7 +40,7 @@ export async function activeRunsForPull(
  *  batch form of `activeRunsForPull`'s in-flight check, for the bulk review
  *  trigger's skip logic (SPEC-05 S-AC-4) and its cost estimate's skip count. */
 export async function prIdsWithActiveRun(
-  db: Db,
+  db: DbExecutor,
   workspaceId: string,
   prIds: string[],
 ): Promise<Set<string>> {
@@ -56,6 +56,56 @@ export async function prIdsWithActiveRun(
       ),
     );
   return new Set(rows.map((r) => r.prId).filter((id): id is string => id != null));
+}
+
+/**
+ * Atomic per-PR "check in-flight + create runs" (SPEC-05 S-AC-21..24). One
+ * transaction takes a transaction-scoped advisory lock keyed on the PR, so
+ * concurrent starters for the same PR queue up; the loser re-reads under the
+ * lock, sees the winner's committed `running` rows, and gets `null` (nothing
+ * created). Locks are per PR and never nested - a caller handling several PRs
+ * should walk them in a fixed (id) order. Returns the new run ids, in
+ * `agents` order, or null when any run for the PR is already in flight.
+ */
+export async function createRunsIfIdle(
+  db: Db,
+  workspaceId: string,
+  prId: string,
+  agents: { id: string; provider: string | null; model: string | null }[],
+): Promise<string[] | null> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`review-pr:${prId}`}, 0))`);
+    const inFlight = await prIdsWithActiveRun(tx, workspaceId, [prId]);
+    if (inFlight.has(prId)) return null;
+    if (agents.length === 0) return [];
+    const rows = await tx
+      .insert(t.agentRuns)
+      .values(
+        agents.map((a) => ({
+          workspaceId,
+          agentId: a.id,
+          prId,
+          provider: a.provider,
+          model: a.model,
+          status: 'running' as const,
+          source: 'local' as const,
+        })),
+      )
+      .returning({ id: t.agentRuns.id, agentId: t.agentRuns.agentId });
+    // RETURNING order is not contractually the VALUES order; re-align by agent.
+    const byAgent = new Map(rows.map((r) => [r.agentId, r.id]));
+    return agents.map((a) => byAgent.get(a.id)!);
+  });
+}
+
+/** Mark still-running runs failed with a reason (a PR whose start failed
+ *  after its rows were created - S-AC-22). No-op for runs already finished. */
+export async function failRunningRuns(db: Db, runIds: string[], reason: string): Promise<void> {
+  if (runIds.length === 0) return;
+  await db
+    .update(t.agentRuns)
+    .set({ status: 'failed', error: reason })
+    .where(and(inArray(t.agentRuns.id, runIds), eq(t.agentRuns.status, 'running')));
 }
 
 /** Mean recorded cost of that repo's completed ('done') review runs — the

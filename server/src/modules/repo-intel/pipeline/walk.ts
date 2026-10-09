@@ -52,7 +52,10 @@ export interface WalkResult {
  * Recursively walk `root`, returning the file set to parse + a small stats
  * object the pipeline persists into `repo_index_state.stats`.
  */
-export async function walkClone(root: string): Promise<WalkResult> {
+export async function walkClone(
+  root: string,
+  maxFiles: number = MAX_INDEXED_FILES,
+): Promise<WalkResult> {
   const out: string[] = [];
   const stats: WalkStats = { totalCandidates: 0, skippedTooLarge: 0, bounded: 0 };
 
@@ -62,9 +65,9 @@ export async function walkClone(root: string): Promise<WalkResult> {
   // across runs (until T3 replaces it with rank-driven selection).
   out.sort();
 
-  if (out.length > MAX_INDEXED_FILES) {
-    stats.bounded = out.length - MAX_INDEXED_FILES;
-    out.length = MAX_INDEXED_FILES;
+  if (out.length > maxFiles) {
+    stats.bounded = out.length - maxFiles;
+    out.length = maxFiles;
   }
 
   return { files: out, stats };

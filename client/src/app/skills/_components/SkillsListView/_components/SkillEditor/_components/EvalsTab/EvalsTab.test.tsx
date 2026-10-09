@@ -1,51 +1,95 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
+import type { SkillEvalActivity } from "@/lib/hooks/eval-runs";
+import evalMessages from "../../../../../../../../../messages/en/eval.json";
+import skillsMessages from "../../../../../../../../../messages/en/skills.json";
 
-// The shared owner-agnostic EvalsTab (also used by the Agent Editor) has its
-// own test coverage — here we only verify this wrapper passes ownerKind
-// "skill" + the skill id, and wires "Run all" to the skill's batch mutation.
-vi.mock("@/app/agents/[id]/_components/AgentEditor/_components/EvalsTab", () => ({
-  EvalsTab: ({
+// The shared case list / tiles have their own coverage — here we only verify
+// this tab wires the skill owner and the run controller into them.
+vi.mock("@/components/eval-cases", () => ({
+  MetricTiles: () => null,
+  EvalCaseList: ({
     ownerKind,
     ownerId,
-    onRunAll,
-    runAllPending,
+    runAll,
+    rowRunDisabledReason,
   }: {
     ownerKind: string;
     ownerId: string;
-    onRunAll?: () => void;
-    runAllPending?: boolean;
+    runAll: { label: string; disabled: boolean; disabledReason?: string; onClick: () => void };
+    rowRunDisabledReason?: string;
   }) => (
     <div>
       <span>{`${ownerKind}:${ownerId}`}</span>
-      <button onClick={onRunAll} disabled={runAllPending}>
-        trigger-run-all
+      <button onClick={runAll.onClick} disabled={runAll.disabled} title={runAll.disabledReason}>
+        {runAll.label}
       </button>
+      <span>{`row-reason:${rowRunDisabledReason ?? "none"}`}</span>
     </div>
   ),
 }));
-
-const runAllMutate = vi.fn();
 vi.mock("@/lib/hooks/eval-cases", () => ({
-  useRunAllSkillEvalCases: () => ({ mutate: runAllMutate, isPending: false }),
+  useEvalStats: () => ({ data: undefined }),
+  useEvalCases: () => ({ data: [] }),
+}));
+vi.mock("@/lib/hooks/eval-runs", () => ({
+  useSkillEvalRuns: () => ({ data: { runs: [], history: [], alert: null, cases_total: 0, latest_draft: null } }),
 }));
 
 import { EvalsTab } from "./EvalsTab";
 
 afterEach(cleanup);
 
-const SKILL = { id: "sk1" } as Skill;
+const SKILL = { id: "sk1", name: "pr-quality-rubric" } as Skill;
 
-describe("Skill Editor's EvalsTab wrapper", () => {
-  it("passes ownerKind=skill and the skill id to the shared EvalsTab", () => {
-    render(<EvalsTab skill={SKILL} />);
+function activity(over: Partial<SkillEvalActivity> = {}): SkillEvalActivity {
+  return {
+    running: false,
+    progress: null,
+    disabledReason: null,
+    startError: null,
+    start: vi.fn(),
+    draft: null,
+    caseCount: 3,
+    ...over,
+  };
+}
+
+function renderTab(a: SkillEvalActivity, runBlockText?: string) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ eval: evalMessages, skills: skillsMessages }}>
+      <EvalsTab skill={SKILL} activity={a} runBlockText={runBlockText} />
+    </NextIntlClientProvider>,
+  );
+}
+
+describe("Skill Editor's EvalsTab", () => {
+  it("passes the skill owner to the shared case list and links to the per-skill dashboard", () => {
+    renderTab(activity());
     expect(screen.getByText("skill:sk1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View full dashboard →" })).toHaveAttribute("href", "/eval/skills/sk1");
   });
 
-  it("runs all of this skill's eval cases when Run all is triggered", () => {
-    render(<EvalsTab skill={SKILL} />);
-    fireEvent.click(screen.getByText("trigger-run-all"));
-    expect(runAllMutate).toHaveBeenCalledWith("sk1");
+  it("'Run all evals (N)' starts a normal (non-draft) run through the run controller", () => {
+    const a = activity();
+    renderTab(a);
+    fireEvent.click(screen.getByRole("button", { name: "Run all evals (3)" }));
+    expect(a.start).toHaveBeenCalledWith();
+  });
+
+  it("shows 'Running X/Y…' and disables run controls with the reason while a run is in progress", () => {
+    renderTab(
+      activity({ running: true, progress: { done: 1, total: 3 }, disabledReason: { kind: "running" } }),
+      "A run is already in progress.",
+    );
+    expect(screen.getByRole("button", { name: "Running 1/3…" })).toBeDisabled();
+    expect(screen.getByText("row-reason:A run is already in progress.")).toBeInTheDocument();
+  });
+
+  it("shows the server's message when a start was refused", () => {
+    renderTab(activity({ startError: "Skill scan has not passed" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Skill scan has not passed");
   });
 });

@@ -3,8 +3,28 @@ import type { CSSProperties } from "react";
 /** Co-located styles for the SkillEditor shell. */
 export const s = {
   wrap: { display: "flex", flexDirection: "column", gap: 0 } satisfies CSSProperties,
-  header: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 } satisfies CSSProperties,
-  h2: { fontSize: 17, fontWeight: 700, flex: 1, minWidth: 0 } satisfies CSSProperties,
+  header: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" } satisfies CSSProperties,
+  iconTile: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    background: "var(--bg-hover)",
+    color: "var(--accent)",
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+  } satisfies CSSProperties,
+  // Long skill names wrap instead of pushing the actions off-screen (client/INSIGHTS.md 2026-09-24).
+  h2: { fontSize: 20, fontWeight: 700, minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word" } satisfies CSSProperties,
+  headerActions: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 } satisfies CSSProperties,
+  srOnly: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    overflow: "hidden",
+    clip: "rect(0 0 0 0)",
+    whiteSpace: "nowrap",
+  } satisfies CSSProperties,
   untrustedNotice: {
     fontSize: 12.5,
     color: "var(--warn)",

@@ -8,8 +8,9 @@ import type {
   Provider,
   ReviewStrategy,
 } from '@devdigest/shared';
-import { AgentsRepository } from './repository.js';
-import { toAgentDto, toAgentVersionDto } from './helpers.js';
+import { AgentsRepository, type AgentRow } from './repository.js';
+import { snapshotSkillId, toAgentDto, toAgentVersionDto } from './helpers.js';
+import { ConflictError } from '../../platform/errors.js';
 
 /**
  * A2 — agents service. Business logic for the Agents tab + Agent Editor.
@@ -169,6 +170,60 @@ export class AgentsService {
     const resolvedOrder = order ?? existing.length;
     await this.repo.linkSkill(agentId, skillId, resolvedOrder);
     return this.skillLinks(agentId);
+  }
+
+  /**
+   * Make sure the agent's CURRENT version has an `agent_versions` row.
+   * Seeded / pre-versioning agents have none, and a suite run must reference
+   * a snapshot, so eval runs call this before starting.
+   */
+  async ensureSnapshot(agent: AgentRow): Promise<void> {
+    const existing = await this.repo.getVersion(agent.id, agent.version);
+    if (!existing) await this.repo.snapshotVersion(agent, agent.version);
+  }
+
+  /**
+   * "Promote vN": make snapshot N the agent's current config as a new version.
+   * Returns undefined when the agent (in this workspace) or that version doesn't
+   * exist (route -> 404). Refuses with 409 - changing nothing - when a skill the
+   * snapshot references no longer exists; skills that do exist are re-linked
+   * with their CURRENT text (skill text is not rolled back).
+   */
+  async promote(workspaceId: string, agentId: string, version: number): Promise<Agent | undefined> {
+    const agent = await this.repo.getById(workspaceId, agentId);
+    if (!agent) return undefined;
+    const snapshot = await this.repo.getVersion(agentId, version);
+    if (!snapshot) return undefined;
+    const config = toAgentVersionDto(snapshot).config;
+
+    const skillIds = config.skills.map(snapshotSkillId);
+    const existing = await this.repo.existingSkillIds(workspaceId, skillIds);
+    const missing = config.skills
+      .filter((entry) => !existing.has(snapshotSkillId(entry)))
+      .map((entry) =>
+        typeof entry === 'string'
+          ? { id: entry, name: null }
+          : { id: entry.id, name: entry.name ?? null },
+      );
+    if (missing.length > 0) {
+      throw new ConflictError(
+        `Cannot promote v${version}: ${missing.length} linked skill(s) no longer exist.`,
+        { missing_skills: missing },
+        'skills_missing',
+      );
+    }
+
+    const row = await this.repo.applyAsNewVersion(
+      agentId,
+      {
+        provider: config.provider,
+        model: config.model,
+        systemPrompt: config.system_prompt,
+        strategy: config.strategy,
+      },
+      skillIds,
+    );
+    return row ? toAgentDto(row) : undefined;
   }
 
   /**

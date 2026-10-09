@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -40,11 +41,17 @@ const SKILL: Skill = {
   scanned_at: "2026-01-01T00:00:00Z",
 };
 
+/** ConfigTab's `body` is controlled by the Skill Editor — host it the same way. */
+function Host({ onDeleted }: { onDeleted: () => void }) {
+  const [body, setBody] = React.useState(SKILL.body);
+  return <ConfigTab skill={SKILL} body={body} onBodyChange={setBody} onDeleted={onDeleted} />;
+}
+
 function renderWithIntl(onDeleted: () => void = () => {}) {
   return render(
     <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
       <ToastProvider>
-        <ConfigTab skill={SKILL} onDeleted={onDeleted} />
+        <Host onDeleted={onDeleted} />
       </ToastProvider>
     </NextIntlClientProvider>,
   );
@@ -98,7 +105,7 @@ describe("ConfigTab", () => {
     render(
       <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
         <ToastProvider>
-          <ConfigTab skill={flagged} onDeleted={() => {}} />
+          <ConfigTab skill={flagged} body={flagged.body} onBodyChange={() => {}} onDeleted={() => {}} />
         </ToastProvider>
       </NextIntlClientProvider>,
     );
@@ -125,7 +132,7 @@ describe("ConfigTab", () => {
     render(
       <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
         <ToastProvider>
-          <ConfigTab skill={flagged} onDeleted={() => {}} />
+          <ConfigTab skill={flagged} body={flagged.body} onBodyChange={() => {}} onDeleted={() => {}} />
         </ToastProvider>
       </NextIntlClientProvider>,
     );

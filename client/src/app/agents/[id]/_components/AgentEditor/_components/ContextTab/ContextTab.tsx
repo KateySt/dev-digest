@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Badge, ErrorState, Icon, Skeleton } from "@devdigest/ui";
 import type { Agent } from "@devdigest/shared";
 import { ContextDocumentRow } from "@/components/context-document-row";
 import { useActiveRepo } from "@/lib/repo-context";
 import {
+  agentContextKey,
   useAgentContextDocuments,
   useProjectContextDocuments,
   useSetAgentContextDocuments,
@@ -26,7 +28,8 @@ export function ContextTab({ agent }: { agent: Agent }) {
     agentId: agent.id,
   });
   const { data: attached } = useAgentContextDocuments(agent.id);
-  const setDocuments = useSetAgentContextDocuments();
+  const setDocuments = useSetAgentContextDocuments(agent.id);
+  const qc = useQueryClient();
 
   const documents = React.useMemo(() => list?.documents ?? [], [list]);
 
@@ -47,14 +50,25 @@ export function ContextTab({ agent }: { agent: Agent }) {
   const attachedPaths = React.useMemo(() => new Set((attached ?? []).map((a) => a.path)), [attached]);
   const byPath = React.useMemo(() => new Map(documents.map((d) => [d.path, d])), [documents]);
 
+  /** Persist `nextOrder` ∩ `nextAttached`. Optimistic + serialized in the hook;
+   *  on failure the cache is rolled back there, and the local order is reset
+   *  so it re-derives from the restored server-confirmed set (C-AC-33). */
   const save = (nextOrder: string[], nextAttached: Set<string>) => {
     const paths = nextOrder.filter((p) => nextAttached.has(p));
-    setDocuments.mutate({ agentId: agent.id, paths });
+    setDocuments.replace(paths, { onError: () => setOrder(null) });
   };
+
+  /** The latest attached set straight from the cache (C-AC-32): the render
+   *  closure can lag a just-applied optimistic update, which is what used to
+   *  drop the first of two quick toggles. */
+  const latestAttached = () =>
+    new Set(
+      (qc.getQueryData<{ path: string }[]>(agentContextKey(agent.id)) ?? attached ?? []).map((a) => a.path),
+    );
 
   const toggle = (path: string, checked: boolean) => {
     if (!order) return;
-    const next = new Set(attachedPaths);
+    const next = latestAttached();
     if (checked) next.add(path);
     else next.delete(path);
     save(order, next);
@@ -69,7 +83,7 @@ export function ContextTab({ agent }: { agent: Agent }) {
     const nextOrder = reorder(order, dragId, targetPath);
     setOrder(nextOrder);
     setDragId(null);
-    save(nextOrder, attachedPaths);
+    save(nextOrder, latestAttached());
   };
 
   const move = (path: string, dir: -1 | 1) => {
@@ -82,7 +96,7 @@ export function ContextTab({ agent }: { agent: Agent }) {
     next[idx] = next[targetIdx]!;
     next[targetIdx] = tmp;
     setOrder(next);
-    save(next, attachedPaths);
+    save(next, latestAttached());
   };
 
   if (isError) {

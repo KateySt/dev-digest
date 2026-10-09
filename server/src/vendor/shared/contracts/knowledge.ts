@@ -52,6 +52,15 @@ export type EvalRun = z.infer<typeof EvalRun>;
 export const EvalOwnerKind = z.enum(['skill', 'agent']);
 export type EvalOwnerKind = z.infer<typeof EvalOwnerKind>;
 
+/** What an eval case asserts: `must_find` expects findings, `must_not_flag`
+ *  forbids them (at listed locations, or anywhere when the list is empty). */
+export const EvalCaseKind = z.enum(['must_find', 'must_not_flag']);
+export type EvalCaseKind = z.infer<typeof EvalCaseKind>;
+
+/** Where a case came from: hand-written, or seeded from a decided finding. */
+export const EvalCaseSource = z.enum(['manual', 'finding_accepted', 'finding_dismissed']);
+export type EvalCaseSource = z.infer<typeof EvalCaseSource>;
+
 export const EvalCase = z.object({
   id: z.string(),
   owner_kind: EvalOwnerKind,
@@ -62,6 +71,10 @@ export const EvalCase = z.object({
   input_meta: z.unknown(),
   expected_output: z.unknown(),
   notes: z.string().nullish(),
+  kind: EvalCaseKind.default('must_find'),
+  source: EvalCaseSource.default('manual'),
+  /** Finding this case was seeded from; null once that finding is deleted. */
+  source_finding_id: z.string().nullish(),
 });
 export type EvalCase = z.infer<typeof EvalCase>;
 
@@ -80,6 +93,11 @@ export const EvalCaseRun = z.object({
   citation_accuracy: z.number().min(0).max(1).nullable(),
   duration_ms: z.number().int().nullable(),
   cost_usd: z.number().nullable(),
+  /** Suite run this result belongs to; null for single-case runs. */
+  suite_run_id: z.string().nullish(),
+  /** `errored` = the case failed to execute (excluded from metrics). */
+  status: z.enum(['ok', 'errored']).default('ok'),
+  error: z.string().nullish(),
 });
 export type EvalCaseRun = z.infer<typeof EvalCaseRun>;
 
@@ -301,7 +319,15 @@ export const AgentVersionConfig = z.object({
   strategy: ReviewStrategy,
   ci_fail_on: CiFailOn,
   repo_intel: z.boolean(),
-  skills: z.array(z.string()),
+  // New snapshots store `{id, version}` (the skill's own version at snapshot
+  // time); snapshots written before that hold plain ids — accept both.
+  skills: z.array(
+    z.union([
+      z.string(),
+      // `name` lets Promote name a skill that was deleted since the snapshot.
+      z.object({ id: z.string(), version: z.number().int(), name: z.string().optional() }),
+    ]),
+  ),
 });
 export type AgentVersionConfig = z.infer<typeof AgentVersionConfig>;
 

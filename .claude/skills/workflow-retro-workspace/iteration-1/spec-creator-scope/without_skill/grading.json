@@ -1,0 +1,34 @@
+{
+  "expectations": [
+    {"text": "States the narrowed scope (spec-creator dialog only) at the top of the report", "passed": true, "evidence": "chat_report.md line 3: 'Scope: only the spec-creator dialog (agent a1). Other agents in the session are not covered.'"},
+    {"text": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total", "passed": true, "evidence": "Table total '71,600' (41,200+18,300+12,100 matches fixture). 429,600 does not appear."},
+    {"text": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "passed": true, "evidence": "Token table and round-trip timeline list only spec-creator invocations. plan-verifier is mentioned once in a Friction bullet as evidence AC-7 was MET, with no tokens or timeline entry."},
+    {"text": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "passed": true, "evidence": "Summary: '1 launch + 2 resumes'. Round-trips section: resume 1 supplied 'Postgres table, 8 KB, any user' and led to the draft AC-1..6 plus the write-back question. Resume 2 supplied 'DB only, but export ... via a button' and led to the spec being written with AC-7."},
+    {"text": "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1). 1 answer was free-text \"Other\".' The Friction section also discusses the Other answer."},
+    {"text": "Ledger entry Scope field names the spec-creator dialog, not the whole session", "passed": true, "evidence": "ledger.md Scope column: 'spec-creator dialog only (Project Context)'."},
+    {"text": "Recommendation says to fold the write-back scope question into spec-creator's initial dialog", "passed": true, "evidence": "Recommendation 1: 'spec-creator: front-load a scope/boundary check (storage, write-back, who edits, ...) in the first question batch, before drafting any AC.'"}
+  ],
+  "summary": {"passed": 7, "failed": 0, "total": 7, "pass_rate": 1.0},
+  "execution_metrics": {},
+  "timing": {
+    "total_tokens": 33331,
+    "duration_ms": 31122,
+    "total_duration_seconds": 31.1
+  },
+  "claims": [
+    {"claim": "58% of tokens went into the first invocation", "type": "factual", "verified": true, "evidence": "41,200 / 71,600 = 57.5%"},
+    {"claim": "Total tool uses 24 and duration 167 s", "type": "factual", "verified": true, "evidence": "14+6+4 = 24; 96+41+30 = 167"},
+    {"claim": "The late write-back question cost about 30k tokens and 71 s", "type": "factual", "verified": true, "evidence": "Resume 1 plus resume 2 = 30.4k tokens and 71 s. This is loosely worded, because resume 1 also drafted ACs, so it is not purely the cost of the extra question."},
+    {"claim": "Draft ACs were partly invalidated by the late answer", "type": "quality", "verified": false, "evidence": "The fixture only says AC-7 was added. It does not say AC-1..6 were invalidated, so this is inference."},
+    {"claim": "Options were presented as mutually exclusive when the real need was a hybrid", "type": "quality", "verified": true, "evidence": "Fixture options were [repo files | DB only | ask per edit], and the user chose Other with a hybrid answer."}
+  ],
+  "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []},
+  "eval_feedback": {
+    "suggestions": [
+      {"assertion": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "reason": "The check is ambiguous about passing mentions. This output cited plan-verifier in prose and still passed, which is reasonable. Say explicitly whether prose mentions are allowed, and check that no other agent's token figures (52,800, 188,400, etc.) appear."},
+      {"assertion": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "reason": "'What new info each supplied' is loose. Name the expected content: resume 1 supplied the 3 answers, and resume 2 supplied the DB-only-plus-export answer that added AC-7."},
+      {"reason": "No assertion covers the per-invocation token breakdown (41,200 / 18,300 / 12,100) or whether the report correctly attributes the late question as the cause of the extra round. These are the substantive findings of this scope."}
+    ],
+    "overall": "Assertions are mostly presence checks, and this baseline run without the skill passes all 7. They do not discriminate much between with-skill and without-skill runs. Add checks on format (ledger file written, required sections) or other skill-specific behaviour."
+  }
+}

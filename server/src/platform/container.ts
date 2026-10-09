@@ -28,7 +28,9 @@ import { ConfigError } from './errors.js';
 import { AgentsRepository } from '../modules/agents/repository.js';
 import { ReviewRepository } from '../modules/reviews/repository.js';
 import { SkillsRepository } from '../modules/skills/repository.js';
+import { EvalRepository } from '../modules/eval/repository.js';
 import { SkillsService } from '../modules/skills/service.js';
+import { AgentsService } from '../modules/agents/service.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
@@ -83,7 +85,9 @@ export class Container {
   private _agentsRepo?: AgentsRepository;
   private _reviewRepo?: ReviewRepository;
   private _skillsRepo?: SkillsRepository;
+  private _evalRepo?: EvalRepository;
   private _skillsService?: SkillsService;
+  private _agentsService?: AgentsService;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
@@ -118,6 +122,10 @@ export class Container {
     return (this._skillsRepo ??= new SkillsRepository(this.db));
   }
 
+  get evalRepo(): EvalRepository {
+    return (this._evalRepo ??= new EvalRepository(this.db));
+  }
+
   /**
    * Shared `SkillsService` instance (SPEC-07). Memoized here, the same
    * construct-once/reuse pattern as `skillsRepo` above, so its in-memory
@@ -129,6 +137,11 @@ export class Container {
    */
   get skillsService(): SkillsService {
     return (this._skillsService ??= new SkillsService(this));
+  }
+
+  /** Shared `AgentsService` instance, memoized like `skillsService`. */
+  get agentsService(): AgentsService {
+    return (this._agentsService ??= new AgentsService(this));
   }
 
   get codeIndex(): CodeIndex {

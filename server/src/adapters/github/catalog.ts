@@ -48,24 +48,24 @@ export class GitHubCatalogSource implements CatalogSource {
   }
 
   /**
-   * One entry's raw body, via the Contents API (defaults to the repo's
-   * default branch when no `ref` is given — same one-request default-branch
-   * resolution as `listTree`). Lazy — only ever called per-import (S-AC-18),
-   * never during listing (S-AC-5). Time-bounded and byte-capped.
+   * One entry's raw body from the raw content host (SPEC-07 S-AC-5, 2026-10-07):
+   * `HEAD` resolves the default branch, and the raw host is not counted
+   * against the 60/hr REST limit. Called once per cache population and once
+   * per import. Time-bounded and byte-capped (S-AC-19).
    */
   async fetchBody(repo: CatalogRepoRef, path: string): Promise<string> {
-    const url = `https://api.github.com/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(
+    const url = `https://raw.githubusercontent.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(
       repo.name,
-    )}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+    )}/HEAD/${path.split('/').map(encodeURIComponent).join('/')}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), BODY_TIMEOUT_MS);
     try {
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { Accept: 'application/vnd.github.raw', 'User-Agent': 'devdigest' },
+        headers: { 'User-Agent': 'devdigest' },
       });
       if (!res.ok) {
-        throw new Error(`GitHub content request failed: HTTP ${res.status}`);
+        throw new Error(`GitHub raw content request failed: HTTP ${res.status}`);
       }
       const text = await res.text();
       return text.length > BODY_MAX_BYTES ? text.slice(0, BODY_MAX_BYTES) : text;

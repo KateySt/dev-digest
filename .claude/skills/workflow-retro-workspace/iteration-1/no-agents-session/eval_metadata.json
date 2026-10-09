@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "no-agents-session",
+  "prompt": "/workflow-retro — session transcript is at evals/files/session-single-agent.md (treat it as this conversation).",
+  "assertions": [
+    "States plainly that no subagents ran in this session",
+    "Does not fabricate token counts, durations, or round-trips",
+    "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar",
+    "Notes that session-level token total is not knowable",
+    "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format"
+  ]
+}

@@ -3,21 +3,29 @@ import type { CSSProperties } from "react";
 /** Co-located styles for EvalsTab. */
 export const s = {
   wrap: { display: "flex", flexDirection: "column", gap: 24, maxWidth: 900 } satisfies CSSProperties,
-  tileRow: { display: "flex", gap: 14 } satisfies CSSProperties,
-  header: { display: "flex", alignItems: "center", marginBottom: 4 } satisfies CSSProperties,
-  sectionTitle: { fontSize: 14, fontWeight: 700 } satisfies CSSProperties,
-  subtitle: { fontSize: 13, color: "var(--text-secondary)", marginTop: 2 } satisfies CSSProperties,
-  list: { display: "flex", flexDirection: "column", gap: 8 } satisfies CSSProperties,
-  row: {
+  metricsHeader: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 } satisfies CSSProperties,
+  metricsLabel: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    padding: "10px 12px",
-    borderRadius: 8,
-    border: "1px solid var(--border)",
-    background: "var(--bg-surface)",
+    gap: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
   } satisfies CSSProperties,
-  rowName: { flex: 1, fontSize: 14, fontWeight: 600, cursor: "pointer" } satisfies CSSProperties,
-  rowMeta: { fontSize: 12.5, color: "var(--text-muted)" } satisfies CSSProperties,
-  rowActions: { display: "flex", gap: 6 } satisfies CSSProperties,
+  dashLink: {
+    marginLeft: "auto",
+    fontSize: 12.5,
+    color: "var(--text-secondary)",
+    textDecoration: "none",
+  } satisfies CSSProperties,
+  note: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 12,
+    fontSize: 12,
+    color: "var(--text-muted)",
+  } satisfies CSSProperties,
 } as const;

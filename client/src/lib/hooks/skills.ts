@@ -213,6 +213,12 @@ export function useRestoreSkillVersion() {
       qc.invalidateQueries({ queryKey: ["skills"] });
       qc.invalidateQueries({ queryKey: ["skill-versions", data.id] });
       qc.setQueryData(["skill", data.id], data);
+      // A restore creates a new current version — the skill's eval history and
+      // dashboards (version chips, Promote visibility) must follow.
+      qc.invalidateQueries({ queryKey: ["skill-eval-runs", data.id] });
+      qc.invalidateQueries({ queryKey: ["skill-eval-compare", data.id] });
+      qc.invalidateQueries({ queryKey: ["eval-stats", "skill", data.id] });
+      qc.invalidateQueries({ queryKey: ["eval-dashboard-skills"] });
     },
   });
 }

@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api";
 import type { SpecFile } from "@/lib/types";
 
 /** Compact "N ago" duration — deliberately simple (unit letters, not a full
@@ -64,4 +65,15 @@ export function parseBlockedPaths(reason: string | null | undefined): string[] {
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean);
+}
+
+/** Error code the server's synchronous resync refusal carries (S-AC-35). */
+export const BLOCKED_ERROR_CODE = "project_context_blocked";
+
+/** C-AC-29: blocking paths from a 409 `project_context_blocked` ApiError's
+ *  `details.paths`; `null` when the error is anything else. */
+export function blockedPathsFromError(err: unknown): string[] | null {
+  if (!(err instanceof ApiError) || err.status !== 409 || err.code !== BLOCKED_ERROR_CODE) return null;
+  const paths = (err.details as { paths?: unknown } | undefined)?.paths;
+  return Array.isArray(paths) ? paths.filter((p): p is string => typeof p === "string") : [];
 }

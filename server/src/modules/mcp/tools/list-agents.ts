@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Container } from '../../../platform/container.js';
-import { AgentsService } from '../../agents/service.js';
+import type { AgentsService } from '../../agents/service.js';
 import { TOOL_NAMES } from '../constants.js';
 import { jsonResult, safeToolCall, trimAgent } from '../dto.js';
 
@@ -20,7 +20,7 @@ export function buildListAgentsHandler(deps: ListAgentsDeps, workspaceId: string
 }
 
 export function registerListAgents(server: McpServer, container: Container, workspaceId: string): void {
-  const handler = buildListAgentsHandler({ agentsService: new AgentsService(container) }, workspaceId);
+  const handler = buildListAgentsHandler({ agentsService: container.agentsService }, workspaceId);
   server.registerTool(
     TOOL_NAMES.LIST_AGENTS,
     {

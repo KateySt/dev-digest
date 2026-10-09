@@ -84,3 +84,13 @@ export function isConfigChange(
     patch.outputSchema !== undefined
   );
 }
+
+/** Skill id of a snapshot entry - old snapshots hold plain ids, new ones `{id, version}`. */
+export function snapshotSkillId(entry: AgentVersionConfig['skills'][number]): string {
+  return typeof entry === 'string' ? entry : entry.id;
+}
+
+/** True when two ordered skill-id lists are identical (same ids, same order). */
+export function sameOrderedIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
+}

@@ -39,7 +39,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         }),
         mutationCache: new MutationCache({
-          onError: (err) => notify.error(errorMessage(err)),
+          onError: (err, _vars, _ctx, mutation) => {
+            // A mutation can opt specific API error codes out of the generic
+            // toast when its caller shows a purpose-written message instead.
+            const silent = mutation.meta?.silentCodes as string[] | undefined;
+            if (err instanceof ApiError && err.code && silent?.includes(err.code)) return;
+            notify.error(errorMessage(err));
+          },
         }),
       })
   );

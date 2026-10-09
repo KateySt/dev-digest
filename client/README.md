@@ -29,12 +29,20 @@ flowchart TD
 
   AGENTS["/agents"] --> AGENT["/agents/:id<br/>editor (config)"]
   SETTINGS["/settings/:section<br/>API keys · models"]
+  EVAL["/eval<br/>dashboard"] --> EVALA["/eval/:agentId<br/>history · Compare · Promote"]
 
   PULLS -->|"GET /repos/:id/pulls · /repos/:id/index-state"| API
   PR -->|"GET /pulls/:id · /reviews · /pulls/:id/comments<br/>POST /pulls/:id/review · /findings/:id/(accept|dismiss)"| API
   AGENTS -->|"/agents · /agents/:id"| API
   SETTINGS -->|"/settings · /providers"| API
+  EVAL -->|"GET /eval-dashboard · POST /eval-dashboard/run-all"| API
+  EVALA -->|"/agents/:id/eval-runs (+ /compare) · /eval-suite-runs/:id<br/>POST /agents/:id/versions/:v/promote"| API
 ```
+
+Finding cards on the PR page also call `POST /findings/:id/eval-case` ("Turn
+into eval case") and `POST /findings/:id/reply` ("Reply to author"); "Learn" is
+a disabled "Coming soon" placeholder. The agent editor's Evals tab manages cases
+and starts runs. Specs: [`specs/agent-evals.md`](specs/agent-evals.md).
 
 Cross-cutting chrome lives in `src/components/app-shell` (nav, breadcrumbs,
 `g`-then-key shortcuts). Pages are thin; feature logic sits in colocated

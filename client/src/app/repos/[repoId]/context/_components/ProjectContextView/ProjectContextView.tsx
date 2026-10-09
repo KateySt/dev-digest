@@ -17,7 +17,7 @@ import {
 import { useRepoIntelStatus, useResyncRepoIntel } from "@/lib/hooks/repo-intel";
 import { AddFolderDialog } from "./_components/AddFolderDialog";
 import { DocumentTree } from "./_components/DocumentTree";
-import { footerTokenTotal, formatAge, parseBlockedPaths, uploadTargetPath } from "./helpers";
+import { blockedPathsFromError, footerTokenTotal, formatAge, parseBlockedPaths, uploadTargetPath } from "./helpers";
 import { s } from "./styles";
 
 type Mode = "preview" | "edit";
@@ -44,7 +44,10 @@ export function ProjectContextView() {
   const [polling, setPolling] = React.useState(false);
   const { data: resyncState } = useRepoIntelStatus(repoId, polling);
   const resync = useResyncRepoIntel(repoId);
-  const blockingPaths = parseBlockedPaths(resyncState?.reason);
+  // C-AC-29: paths from a synchronous 409 refusal; C-AC-30: persisted reason
+  // (an in-job race) — the synchronous refusal wins while it is fresh.
+  const [refusedPaths, setRefusedPaths] = React.useState<string[]>([]);
+  const blockingPaths = refusedPaths.length > 0 ? refusedPaths : parseBlockedPaths(resyncState?.reason);
 
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const [mode, setMode] = React.useState<Mode>("preview");
@@ -134,8 +137,17 @@ export function ProjectContextView() {
   };
 
   const triggerResync = () => {
+    setRefusedPaths([]);
     setPolling(true);
-    resync.mutate(undefined, { onSettled: () => setTimeout(() => setPolling(false), 4000) });
+    resync.mutate(undefined, {
+      onSuccess: () => setTimeout(() => setPolling(false), 4000),
+      onError: (err) => {
+        // A refused request enqueued nothing: render the refusal, stop polling.
+        const paths = blockedPathsFromError(err);
+        if (paths) setRefusedPaths(paths);
+        setPolling(false);
+      },
+    });
   };
 
   const tokens = footerTokenTotal(documents);

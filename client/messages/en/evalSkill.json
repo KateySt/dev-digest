@@ -1,0 +1,55 @@
+{
+  "page": {
+    "crumbSkillsLab": "Skills Lab",
+    "crumbEvalDashboard": "Eval Dashboard",
+    "skillFallback": "Skill"
+  },
+  "header": {
+    "back": "All skills",
+    "subtitle": "Regression harness · {runs, plural, one {# run} other {# runs}} on the {cases}-case set",
+    "skillPicker": "Switch skill",
+    "rangeLabel": "Date range",
+    "runEval": "Run eval",
+    "runningProgress": "Running {done}/{total}…",
+    "currentVersion": "Current version",
+    "promotedToast": "Promoted — {name} is now v{version}"
+  },
+  "ranges": {
+    "7d": "7 days",
+    "30d": "30 days",
+    "90d": "90 days",
+    "all": "All time"
+  },
+  "runs": {
+    "title": "Recent runs"
+  },
+  "empty": {
+    "title": "No eval runs yet",
+    "body": "Run this skill's eval cases to see recall, precision and citation accuracy over time.",
+    "noCases": "This skill has no eval cases yet. Add some in its Evals tab first."
+  },
+  "notFound": {
+    "title": "Skill not found",
+    "body": "This skill no longer exists. It may have been deleted."
+  },
+  "loadFailed": "Couldn't load the eval dashboard.",
+  "compare": {
+    "title": "Compare runs · v{old} → v{new}",
+    "subtitle": "Old skill text vs new — metric deltas and text diff on the {cases}-case set",
+    "skillTextDiff": "Skill text diff",
+    "modelTitle": "Provider & model",
+    "modelLabel": "Model",
+    "modelChanged": "model changed between runs",
+    "snapshotMissing": "Skill text unavailable for v{version}.",
+    "close": "Close",
+    "promote": "Promote v{version}",
+    "promoting": "Promoting…",
+    "alreadyCurrent": "v{version} is already the current version.",
+    "confirmTitle": "Promote v{version}?",
+    "confirmBody": "This restores v{version}'s skill text as a new version of the skill.",
+    "confirm": "Promote",
+    "cancel": "Cancel",
+    "failed": "Promote failed: {message}",
+    "loadFailed": "Couldn't load the comparison."
+  }
+}

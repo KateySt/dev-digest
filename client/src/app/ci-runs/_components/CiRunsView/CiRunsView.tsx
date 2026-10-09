@@ -3,10 +3,10 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, EmptyState, ErrorState, Select, Skeleton, TextInput, Toggle } from "@devdigest/ui";
-import { AppShell } from "../../../../components/app-shell";
-import { useCiRuns } from "../../../../lib/hooks/ci";
-import { useAgents } from "../../../../lib/hooks/agents";
-import { formatRunCost } from "../../../../components/run-cost-badge";
+import { AppShell } from "@/components/app-shell";
+import { useCiRuns } from "@/lib/hooks/ci";
+import { useAgents } from "@/lib/hooks/agents";
+import { formatRunCost } from "@/components/run-cost-badge";
 import { AUTO_REFRESH_INTERVAL_MS, STATUS_VALUES } from "./constants";
 import { s } from "./styles";
 
@@ -18,10 +18,15 @@ export function CiRunsView() {
   const [agentId, setAgentId] = React.useState("");
   const [repo, setRepo] = React.useState("");
   const [status, setStatus] = React.useState("");
-  const [last7Days, setLast7Days] = React.useState(false);
+  // `since` is captured ONCE when the toggle flips on. Computing it during
+  // render put a fresh `Date.now()` into the query key every render, so every
+  // re-render (e.g. the 1 s tick of any parent) refetched in a loop.
+  const [since, setSince] = React.useState<string | undefined>(undefined);
+  const last7Days = since !== undefined;
+  const toggleLast7Days = (on: boolean) =>
+    setSince(on ? new Date(Date.now() - SEVEN_DAYS_MS).toISOString() : undefined);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
 
-  const since = last7Days ? new Date(Date.now() - SEVEN_DAYS_MS).toISOString() : undefined;
   const { data: runs, isLoading, isError, refetch } = useCiRuns({
     ...(agentId ? { agentId } : {}),
     ...(repo ? { repo } : {}),
@@ -69,7 +74,7 @@ export function CiRunsView() {
             <Select value={status} onChange={setStatus} options={statusOptions} />
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-            <Toggle on={last7Days} onChange={setLast7Days} size={14} />
+            <Toggle on={last7Days} onChange={toggleLast7Days} size={14} />
             {t("runs.filters.last7Days")}
           </label>
         </div>

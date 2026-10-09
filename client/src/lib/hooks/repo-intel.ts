@@ -41,6 +41,8 @@ export function useRepoIntelStatus(repoId: string | null | undefined, poll = fal
 export function useResyncRepoIntel(repoId: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
+    // The page renders the 409 refusal inline (C-AC-29) instead of a toast.
+    meta: { silentCodes: ["project_context_blocked"] },
     mutationFn: () => api.post<{ status: string }>(`/repos/${repoId}/resync`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["repo-intel-state", repoId] });

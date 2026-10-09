@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "workflow-retro", "runs": [{"id": "full-session-retro-with_skill", "prompt": "/workflow-retro \u0432\u0402\u201d the session transcript to retro is saved at evals/files/session-multi-agent.md (treat it as this conversation). Scope: whole session, no --deep. Save your chat report as chat_report.md and write the ledger entry to docs/retro/ledger.md (treat your outputs directory as the repo root).", "eval_id": 1, "outputs": [{"name": "chat_report.md", "type": "text", "content": "# Workflow retro: Project Context feature (session 2026-10-04)\n\n**Scope:** whole session (no --deep; in-context data only). Subagent transcripts were not read.\n\n## Token ledger\n\nPer agent instance (`subagent_tokens`):\n\n| Instance | Type | Calls | Tokens |\n|---|---|---|---|\n| a1 | spec-creator | spawn 41,200 + resume 18,300 + resume 12,100 | 71,600 |\n| a2 | implementation-planner | 52,800 | 52,800 |\n| a3 | implementer | spawn 188,400 + resume 27,600 | 216,000 |\n| b1 | architecture-reviewer | 33,500 | 33,500 |\n| b2 | architecture-reviewer (accidental duplicate, stopped) | 4,100 | 4,100 |\n| a5 | plan-verifier | 29,900 | 29,900 |\n| a6 | doc-writer | 21,700 | 21,700 |\n\nPer agent type: implementer 216,000 (50%); spec-creator 71,600; implementation-planner 52,800; architecture-reviewer 37,600 (4,100 wasted); plan-verifier 29,900; doc-writer 21,700.\n\n**Total subagent tokens: 429,600** across 7 instances and 11 calls. Tool uses were 24 + 22 + 72 + 14 + 2 + 15 + 9 = 158.\n\nThe total session token count (the orchestrator's own context and spend) is not readable from inside a skill, so I'm not giving a figure. 429,600 covers subagents only.\n\n## Agent timeline\n\n| # | Call | Type | Mode | tool_uses | duration |\n|---|---|---|---|---|---|\n| 1 | spawn a1 | spec-creator | foreground | 14 | 96 s |\n| 2 | resume a1 (round 1) | spec-creator | resume via SendMessage | 6 | 41 s |\n| 3 | resume a1 (round 2) | spec-creator | resume via SendMessage | 4 | 30 s |\n| 4 | spawn a2 | implementation-planner | foreground | 22 | 140 s |\n| 5 | spawn a3 | implementer | background | 61 | 612 s |\n| 6 | spawn b1 | architecture-reviewer | background | 12 | 71 s |\n| 7 | spawn b2 (mistake) | architecture-reviewer | background, stopped with TaskStop | 2 | 9 s |\n| 8 | resume a3 (round 1) | implementer | resume via SendMessage | 11 | 98 s |\n| 9 | spawn a5 | plan-verifier | foreground | 15 | 84 s |\n| 10 | spawn a6 | doc-writer | foreground | 9 | 55 s |\n\nThe order was spec-creator, planner, implementer, reviewer, implementer fix, verifier, doc-writer. It is strictly serial apart from the b1/b2 overlap. About 1,340 s of agent time in total, about 45% of it the first implementer run.\n\n## Round-trips\n\n- **spec-creator a1: 2 resumes.** Round 1 supplied storage, note size and editors. Round 2 supplied write-back scope: \"DB only, export on demand via a button\". This is the one high-round finding (see friction).\n- **implementer a3: 1 resume.** It carried the architecture-reviewer's CRITICAL and WARNING. This is a normal fix loop.\n- All other agents ran once with no resumes.\n\n## Per-agent friction\n\n- **spec-creator (a1).** It asked 3 questions up front, then in round 1 raised a fourth topic, write-back scope, that was knowable at the start. That cost one extra SendMessage, one extra user round and 12,100 tokens for the final spec write. The dialog's initial question set did not cover \"does an accepted edit leave the DB\". The user's answer was free text, so the topic also needed an option the agent did not offer. Everything else, including AC-1..AC-7, was drafted without help.\n- **implementation-planner (a2).** It re-read `server/INSIGHTS.md` and the onion-architecture skill from scratch, although both had been quoted earlier in the spec-creator output. That is duplicated work: 22 tool uses and the second-largest pre-implementation spend (52,800). The orchestrator's prompt did not pass those excerpts along. The plan itself was good: 9 steps, each traced to an AC.\n- **implementer (a3).** It got all 9 steps done and reported tests and typecheck green. It missed a dependency-rule violation: `service.ts:41` imports the concrete Drizzle repository instead of the port. The reviewer caught this, and it cost a 27,600-token fix round. The implementer's \"all 9 steps done\" was true to the plan but said nothing about layering. That is by design (the implementer does no architecture review), but the onion-architecture skill was available, and the planner was meant to surface it.\n- **architecture-reviewer (b1).** It did well. It found a real CRITICAL with file:line evidence, plus a WARNING, in 71 s. The reviewer itself is not at fault for the duplicate (see self-critique).\n- **plan-verifier (a5).** It reported 9/9 MET and AC-7 MET with test evidence, and nothing was missed. It ran after the fix, so it covered the fixed code.\n- **doc-writer (a6).** It updated `server/README.md` and added a mermaid sequence diagram. No friction visible.\n\n## User question load\n\n- 2 `AskUserQuestion` rounds, 4 questions total (3 + 1).\n- 3 of 4 answers were listed options. 1 of 4 was free text (\"Other\"): \"DB only, but export to server/specs on demand via a button\". The offered options (repo files / DB only / ask per edit) did not fit the real decision, a hybrid with on-demand export, so the option set was too coarse. The free-text answer also added a new requirement, AC-7.\n- The load would have been 1 round instead of 2 if write-back scope had been asked first.\n\n## Orchestration self-critique\n\n1. **Duplicate spawn.** The orchestrator spawned architecture-reviewer twice (b1, b2) because the first call looked like it had returned no id. It had not failed. b2 was then stopped after about 9 s, wasting 4,100 tokens plus the TaskStop call. The check that was missing: look for a task-notification or the first call's id before retrying a background spawn.\n2. **No re-review after the fix.** After a3's fix round, the orchestrator went straight to plan-verifier. plan-verifier does not judge architecture, so nothing confirms the CRITICAL at `service.ts:41` is actually resolved beyond the implementer's \"fixed both; re-ran tests\". This is a gap, not a proven miss.\n3. **Context not forwarded to the planner.** The orchestrator already held the INSIGHTS and skill excerpts and did not pass them into a2's prompt (see friction).\n4. **test-writer never ran.** The pipeline description lists test-writer alongside architecture-reviewer. The implementer wrote tests itself and the transcript doesn't show a deliberate decision to skip test-writer. I can't tell from this scope whether that was intended, so I'm flagging it rather than calling it a miss.\n\n## Recommendations\n\n**Prompt wording**\n- `.claude/agents/spec-creator.md`: add \"does an accepted edit get written back outside the DB or exported?\" to the initial dialog categories (module interactions or input provenance), so it's asked in round 1. Also have it offer a \"hybrid / other\" option when proposing storage or output choices.\n- Orchestrator prompt to `implementation-planner`: include the INSIGHTS.md and skill excerpts already in context, with \"don't re-read these\", or add that line to `.claude/agents/implementation-planner.md`.\n- `.claude/agents/implementer.md`: add a self-check that imports in service/application layers reference ports, not concrete adapters, with the onion-architecture skill named.\n\n**Orchestration process**\n- Before re-spawning a background agent, check for the first call's id or task-notification. Never spawn a second identical agent on the strength of \"looks like it failed\".\n- After an implementer fix round that addresses a CRITICAL, re-run architecture-reviewer (or at least the affected file) before plan-verifier.\n\n**Tooling/automation gap**\n- No clear gap this run. A guard against duplicate identical background spawns could be a hook, but one occurrence doesn't justify it.\n\n## Top recommendations to act on\n\n1. Fold write-back/export scope into spec-creator's initial dialog (saves 1 round-trip, 1 user round, avoids a free-text miss).\n2. Add a re-review step after a CRITICAL fix, before plan-verifier.\n3. Pass already-gathered INSIGHTS/skill context to implementation-planner instead of letting it re-read (an unknown share of its 52,800 tokens). Also never retry a background spawn without confirming the first one failed.\n"}], "grading": {"expectations": [{"text": "Report has all seven sections: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations", "passed": true, "evidence": "chat_report.md has headings: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations (plus a closing Top recommendations section)."}, {"text": "Spec-creator tokens summed correctly to 71600 (41200+18300+12100)", "passed": true, "evidence": "Ledger row: 'spawn 41,200 + resume 18,300 + resume 12,100 | 71,600'."}, {"text": "Implementer tokens summed correctly to 216000 (188400+27600)", "passed": true, "evidence": "Ledger row: 'spawn 188,400 + resume 27,600 | 216,000'."}, {"text": "Total subagent tokens reported as 429600", "passed": true, "evidence": "'Total subagent tokens: 429,600 across 7 instances and 11 calls.' Matches the sum of the fixture's usage lines. (The report says 11 calls but its own timeline table lists 10; this is a minor inconsistency.)"}, {"text": "States plainly that the total session token count is not knowable from inside the session, instead of inventing a number", "passed": true, "evidence": "'The total session token count (the orchestrator's own context and spend) is not readable from inside a skill, so I'm not giving a figure. 429,600 covers subagents only.'"}, {"text": "Reports spec-creator was resumed twice and traces the extra rounds to the missing write-back scope question", "passed": true, "evidence": "Round-trips: 'spec-creator a1: 2 resumes.' Friction: write-back scope was 'knowable at the start' and not in the initial question set, so it cost an extra SendMessage and user round."}, {"text": "Orchestration self-critique names the duplicate architecture-reviewer spawn (b2) that was stopped via TaskStop", "passed": true, "evidence": "Self-critique item 1: 'Duplicate spawn. The orchestrator spawned architecture-reviewer twice (b1, b2)... b2 was then stopped after about 9 s, wasting 4,100 tokens plus the TaskStop call.'"}, {"text": "User question load reports 2 AskUserQuestion rounds (3 + 1 questions) and flags the free-text 'Other' answer as a signal options did not fit", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1).' and 'The offered options... did not fit the real decision... the option set was too coarse.'"}, {"text": "Flags implementation-planner re-reading INSIGHTS.md / onion skill as duplicated work", "passed": true, "evidence": "Friction: 'It re-read server/INSIGHTS.md and the onion-architecture skill from scratch... That is duplicated work.'"}, {"text": "Recommendations are split into prompt wording / orchestration process / tooling-automation buckets and name specific files", "passed": true, "evidence": "Three buckets: 'Prompt wording', 'Orchestration process', 'Tooling/automation gap'. Files named: .claude/agents/spec-creator.md, implementation-planner.md, implementer.md. The tooling bucket says 'No clear gap', which is acceptable."}, {"text": "Report ends with the top 1-3 recommendations, not a long list", "passed": true, "evidence": "Final section 'Top recommendations to act on' has 3 numbered items. Item 3 bundles two ideas, but it is still 3 entries."}, {"text": "Ledger file created at docs/retro/ledger.md with a header and an entry containing Scope, Agents, Tokens, Friction, Recommendations fields", "passed": true, "evidence": "outputs/docs/retro/ledger.md has the header '# Workflow retro ledger' and a 2026-10-04 entry with **Scope:**, **Agents:**, **Tokens:**, **Friction:**, **Recommendations:**."}, {"text": "Did not run in --deep mode (no attempt to read subagent output files)", "passed": true, "evidence": "Report states 'no --deep; in-context data only. Subagent transcripts were not read.' Nothing in the report suggests subagent output files were read."}], "summary": {"passed": 13, "failed": 0, "total": 13, "pass_rate": 1.0}, "timing": {"total_tokens": 39403, "duration_ms": 63603, "total_duration_seconds": 63.6}, "claims": [{"claim": "Tool uses totalled 158 (24+22+72+14+2+15+9)", "type": "factual", "verified": true, "evidence": "The fixture gives a1 14+6+4=24, a2 22, a3 61+11=72, b1 12 + b2 2 = 14, a5 15, a6 9. Sum is 158."}, {"claim": "About 1,340 s of agent time, about 45% of it the first implementer run", "type": "factual", "verified": true, "evidence": "96+41+30+140+612+71+9+98+84+55 = 1236 s, not 1340. Implementer first run is 612 s, which is 49.5% of 1236. Both figures are slightly off."}, {"claim": "11 calls across 7 instances", "type": "factual", "verified": false, "evidence": "The fixture and the report's own timeline table show 10 calls."}, {"claim": "Implementer is 50% of subagent tokens", "type": "factual", "verified": true, "evidence": "216,000 / 429,600 = 50.3%."}, {"claim": "test-writer never ran; unclear whether that was deliberate", "type": "process", "verified": true, "evidence": "No test-writer call in the fixture. The report hedges appropriately."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "Total subagent tokens reported as 429600", "reason": "Passes, but nothing checks the secondary numbers. The report miscounted calls (11 vs 10) and total duration (1,340 s vs 1,236 s). Consider an assertion on call count (10) and total duration."}, {"assertion": "Report ends with the top 1-3 recommendations, not a long list", "reason": "Item 3 packs two separate recommendations into one entry. Tighten the assertion to 'at most 3 distinct recommendations'."}, {"reason": "No assertion covers the missing re-review after the CRITICAL fix, or the test-writer skip. Both are real orchestration gaps the report found. Add an assertion for 'no architecture re-review before plan-verifier'."}, {"reason": "The 'did not run --deep' assertion cannot be verified directly without a transcript. It can only be inferred from the report's own statement."}], "overall": "Assertions check presence and the key numbers well. They are weak on derived figures such as duration and call counts, and they don't cover several valuable findings."}}}, {"id": "full-session-retro-without_skill", "prompt": "/workflow-retro \u0432\u0402\u201d the session transcript to retro is saved at evals/files/session-multi-agent.md (treat it as this conversation). Scope: whole session, no --deep. Save your chat report as chat_report.md and write the ledger entry to docs/retro/ledger.md (treat your outputs directory as the repo root).", "eval_id": 1, "outputs": [{"name": "chat_report.md", "type": "text", "content": "# Workflow retro: Project Context feature (session 2026-10-04, whole session)\n\nPipeline: spec-creator -> implementation-planner -> implementer -> architecture-reviewer (fix loop) -> plan-verifier -> doc-writer. Outcome: delivered, 9/9 plan items and AC-7 MET.\n\n## Token spend\n\n| Agent | Id | Invocations | Tokens | Share | Tool uses | Agent time |\n|---|---|---|---|---|---|---|\n| implementer | a3 | 2 (run + 1 fix round) | 216,000 (188,400 + 27,600) | 50.3% | 72 | 710 s |\n| spec-creator | a1 | 3 (start + 2 resumes) | 71,600 (41,200 + 18,300 + 12,100) | 16.7% | 24 | 167 s |\n| implementation-planner | a2 | 1 | 52,800 | 12.3% | 22 | 140 s |\n| architecture-reviewer | b1 | 1 | 33,500 | 7.8% | 12 | 71 s |\n| plan-verifier | a5 | 1 | 29,900 | 7.0% | 15 | 84 s |\n| doc-writer | a6 | 1 | 21,700 | 5.1% | 9 | 55 s |\n| architecture-reviewer (duplicate, stopped) | b2 | 1 | 4,100 | 1.0% | 2 | 9 s |\n| **Total** | 7 agents | 10 runs | **429,600** | 100% | 156 | about 1,236 s summed (about 20.6 min; less wall-clock because b1/b2 overlapped) |\n\nNote: the orchestrator's own tokens and the user's wait time on question rounds are not in the transcript, so they are not counted.\n\n## Agent timeline\n\n1. spec-creator a1: opened dialog, asked 3 questions (96 s).\n2. User answered round 1; a1 resumed, drafted AC-1..6, asked a new scope question (41 s).\n3. User answered round 2 (free-text \"Other\"); a1 resumed, wrote server/specs/project-context.md with AC-1..7 (30 s).\n4. implementation-planner a2: 9-step plan (140 s).\n5. implementer a3 (background): steps 1-9, tests and typecheck green (612 s, the long pole).\n6. architecture-reviewer b1 and b2 launched together; b2 stopped after 9 s; b1 returned 1 CRITICAL (service.ts:41 imports the concrete Drizzle repo instead of the port) and 1 WARNING.\n7. implementer a3 resumed: fixed both (98 s).\n8. plan-verifier a5: 9/9 MET, AC-7 MET (84 s).\n9. doc-writer a6: server/README.md plus mermaid sequence diagram (55 s).\n\n## Round-trips per agent\n\n- spec-creator: 2 resumes (3 invocations). Highest, and avoidable (see friction).\n- implementer: 1 resume (the fix loop, a legitimate use).\n- planner, reviewer b1, verifier, doc-writer: 0 (single shot).\n- b2: spawned and killed, 0 useful.\n\n## Per-agent friction\n\n- **spec-creator:** Asked its questions in two batches. The write-back scope question (repo files vs DB only) was foreseeable and should have been in round 1. The cost was one extra resume (18.3k tokens) plus a second user interruption. The user's \"Other\" answer (\"DB only, plus on-demand export button\") shows the offered options did not fit, and it added AC-7, so scope was genuinely discovered late.\n- **implementation-planner:** Re-read server/INSIGHTS.md and the onion-architecture skill from scratch even though they had already been quoted in the spec-creator output. Duplicated reading, probably a large part of its 22 tool uses and 52.8k tokens. The orchestrator did not pass that context in the prompt. The transcript also does not show the planner's expected up-front question (full multi-agent pipeline vs single-agent pass), so it is unclear whether that was asked or skipped.\n- **implementer:** Biggest spend (half of all tokens) and longest runtime. It shipped a dependency-rule violation (concrete Drizzle repo imported in service.ts) that the plan and onion-architecture skill should have prevented. Its \"all 9 steps done\" claim was accurate, but it is a self-report. Cost of the fix round was 27.6k tokens, small relative to the first run.\n- **architecture-reviewer b1:** Worked well; it caught a real CRITICAL with file:line evidence. Not re-run after the fix, so the CRITICAL's resolution was only confirmed indirectly (implementer re-ran tests; plan-verifier checks plan compliance, not layering).\n- **architecture-reviewer b2:** Pure waste (4.1k tokens), see orchestration mistakes.\n- **plan-verifier:** Clean, single shot, with test evidence.\n- **doc-writer:** Clean. It ran after verification, as intended.\n- **test-writer:** Never ran. The implementer wrote tests itself. The pipeline definition lists test-writer alongside the reviewer, so this is a deviation. It is not necessarily wrong, but it was not stated or decided explicitly in the transcript.\n\n## User question load\n\n- 2 AskUserQuestion rounds, 4 questions total (3 + 1). All from spec-creator.\n- 1 of 4 answers was a free-text \"Other\", so the option set missed the real intent.\n- Plus 1 opening request and 1 closing approval. Load is low overall, but the second round was avoidable if the scope question had been batched into the first.\n\n## Orchestration mistakes\n\n1. **Duplicate reviewer spawn (b2):** The first call looked like it had failed to return an id, but it hadn't. The orchestrator launched a second identical reviewer and then stopped it. Cost: 4.1k tokens and a TaskStop call. Fix: check the task list or wait for the notification before retrying a spawn.\n2. **No context hand-off to the planner:** The INSIGHTS.md and skill content already in the session was not passed to a2, causing duplicate reading.\n3. **Background mode with no parallel work:** The implementer ran in the background but nothing else could proceed until it finished. Harmless, but no benefit. Reviewer b1 was correctly parallelized in intent, then spoiled by the duplicate.\n4. **Fix loop not closed:** After the implementer fixed the CRITICAL, the reviewer was not re-run.\n5. **test-writer skipped** without a recorded decision.\n\n## Recommendations\n\n1. spec-creator: ask all scope questions up front, especially write-back and persistence scope, or ask the user for an open \"anything else in scope?\" in round 1. Offer an \"export\" style option where common. Target: one question round.\n2. Orchestrator: pass the already-gathered INSIGHTS.md/skill excerpts (or paths plus a \"do not re-read\" note) into the planner prompt. Expected saving: a few thousand to about 10-15k tokens.\n3. Orchestrator: never re-spawn on an ambiguous spawn result. Check state first. If a duplicate happens, stop it immediately, as was done here.\n4. implementer prompt/plan: put the layering rule explicitly into the relevant plan step (\"depend on the port, not the Drizzle repo\"). It would avoid the CRITICAL and the fix round (about 27.6k tokens plus the reviewer-found cost).\n5. After any CRITICAL fix, re-run a cheap, scoped architecture-reviewer pass on only the changed file.\n6. Decide and state explicitly whether test-writer is part of the run. If the implementer owns tests, say so in the pipeline definition.\n7. Budget watch: the implementer is 50% of spend. Consider splitting server and client steps or capping scope per run if this grows.\n\n## Caveats\n\nToken numbers come from the `<usage>` blocks only. Orchestrator tokens, the cost of the retro itself, and wall-clock gaps (user think time) are not measured.\n"}], "grading": {"expectations": [{"text": "Report has all seven sections: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations", "passed": false, "evidence": "Headings are 'Token spend', 'Agent timeline', 'Round-trips per agent', 'Per-agent friction', 'User question load', 'Orchestration mistakes', 'Recommendations', plus an extra 'Caveats'. Content is equivalent, but two required sections ('Token ledger', 'Orchestration self-critique') are named differently, so the expected structure is not matched."}, {"text": "Spec-creator tokens summed correctly to 71600 (41200+18300+12100)", "passed": true, "evidence": "Table row: '71,600 (41,200 + 18,300 + 12,100)'."}, {"text": "Implementer tokens summed correctly to 216000 (188400+27600)", "passed": true, "evidence": "Table row: '216,000 (188,400 + 27,600)'."}, {"text": "Total subagent tokens reported as 429600", "passed": true, "evidence": "Total row: '**429,600**'. Sums correctly against the fixture."}, {"text": "States plainly that the total session token count is not knowable from inside the session, instead of inventing a number", "passed": false, "evidence": "It does not invent a number. It says only 'the orchestrator's own tokens and the user's wait time ... are not in the transcript, so they are not counted' and, in Caveats, that orchestrator tokens are not measured. It never states that the total session token count cannot be known from inside the session. That is implied, not plain."}, {"text": "Reports spec-creator was resumed twice and traces the extra rounds to the missing write-back scope question", "passed": true, "evidence": "'spec-creator: 2 resumes (3 invocations)'. Friction: 'The write-back scope question (repo files vs DB only) was foreseeable and should have been in round 1.'"}, {"text": "Orchestration self-critique names the duplicate architecture-reviewer spawn (b2) that was stopped via TaskStop", "passed": true, "evidence": "Orchestration mistakes #1: 'Duplicate reviewer spawn (b2) ... launched a second identical reviewer and then stopped it. Cost: 4.1k tokens and a TaskStop call.'"}, {"text": "User question load reports 2 AskUserQuestion rounds (3 + 1 questions) and flags the free-text 'Other' answer as a signal options did not fit", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1)' and 'the option set missed the real intent'."}, {"text": "Flags implementation-planner re-reading INSIGHTS.md / onion skill as duplicated work", "passed": true, "evidence": "Planner friction: 're-read server/INSIGHTS.md and the onion-architecture skill from scratch ... Duplicated reading'."}, {"text": "Recommendations are split into prompt wording / orchestration process / tooling-automation buckets and name specific files", "passed": false, "evidence": "Recommendations are one flat numbered list of 7. Items are only loosely prefixed by actor (spec-creator, Orchestrator, implementer prompt/plan). There are no prompt/process/tooling buckets, and almost no specific files are named beyond INSIGHTS.md."}, {"text": "Report ends with the top 1-3 recommendations, not a long list", "passed": false, "evidence": "Ends with 7 recommendations followed by a Caveats paragraph. There is no top-1-to-3 prioritisation."}, {"text": "Ledger file created at docs/retro/ledger.md with a header and an entry containing Scope, Agents, Tokens, Friction, Recommendations fields", "passed": false, "evidence": "The file exists with a header and a dated entry. Its fields are Agents, Biggest spend, Round-trips, User questions, Mistakes, Outcome, Actions. There is no explicit Scope, Tokens, Friction or Recommendations field. Scope is only in the entry title and tokens are folded into Agents."}, {"text": "Did not run in --deep mode (no attempt to read subagent output files)", "passed": true, "evidence": "The report relies only on the <usage> blocks and the transcript text. Caveats: 'Token numbers come from the <usage> blocks only.' There is no sign of subagent output files being read."}], "summary": {"passed": 8, "failed": 5, "total": 13, "pass_rate": 0.62}, "execution_metrics": {}, "timing": {"total_tokens": 36390, "duration_ms": 61618, "total_duration_seconds": 61.6}, "claims": [{"claim": "Summed agent time is about 1,236 s (about 20.6 min)", "type": "factual", "verified": true, "evidence": "Fixture durations 96+41+30+140+612+9+71+98+84+55 s = 1236 s."}, {"claim": "Total tool uses are 156", "type": "factual", "verified": true, "evidence": "14+6+4+22+61+2+12+11+15+9 = 156."}, {"claim": "The transcript does not show the planner's up-front pipeline-vs-single-agent question", "type": "factual", "verified": true, "evidence": "The fixture shows no such question. The claim is correctly hedged."}, {"claim": "test-writer never ran and this deviates from the pipeline", "type": "factual", "verified": true, "evidence": "No test-writer call appears in the fixture. This is a good extra observation."}, {"claim": "The reviewer was not re-run after the CRITICAL fix", "type": "factual", "verified": true, "evidence": "The fixture shows plan-verifier after the fix, with no second reviewer call."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "Report has all seven sections", "reason": "Heading names are brittle. Say whether semantic equivalents count, or the baseline will fail on naming alone even when the content is complete."}, {"reason": "No assertion covers the real findings the baseline surfaced: reviewer not re-run after the CRITICAL fix, and test-writer skipped. Consider adding them if the skill is meant to catch them."}, {"assertion": "Ledger file created ... with Scope, Agents, Tokens, Friction, Recommendations fields", "reason": "Field names are very specific to the skill's template. This is discriminating for the skill but will always fail a no-skill baseline."}], "overall": "The numeric assertions are solid and discriminating. The structural assertions (section names, buckets, top 1-3, ledger fields) measure template compliance, which is where the no-skill run differs most. Add an assertion on the 'not knowable' total, since the baseline only implied it."}}}, {"id": "spec-creator-scope-with_skill", "prompt": "retro just the spec-creator dialog from the saved session at evals/files/session-multi-agent.md \u0432\u0402\u201d nothing else.", "eval_id": 2, "outputs": [{"name": "chat_report.md", "type": "text", "content": "# Workflow retro: spec-creator dialog (Project Context)\n\n**Scope used:** only the spec-creator dialog. That is the first Agent call through the second resume (a1), including the two AskUserQuestion rounds between them. implementation-planner, implementer, architecture-reviewer (b1/b2), plan-verifier and doc-writer are out of scope and not analyzed. Mode: in-context (no --deep).\n\n## Token ledger\n\n| Call | Agent | subagent_tokens | tool_uses | duration |\n|---|---|---|---|---|\n| Spawn | spec-creator (a1) | 41,200 | 14 | 96 s |\n| Resume 1 | spec-creator (a1) | 18,300 | 6 | 41 s |\n| Resume 2 | spec-creator (a1) | 12,100 | 4 | 30 s |\n| **Total in scope** | | **71,600** | 24 | 167 s |\n\nThe total session token count (orchestrator plus all agents) isn't readable from inside a skill, so I'm not giving one. 71,600 is subagent tokens for a1 only.\n\n## Agent timeline\n\n1. spec-creator (a1), spawn, foreground. It opened the dialog and asked 3 questions (storage, max note size, editors).\n2. (user) AskUserQuestion round 1, 3 questions.\n3. spec-creator (a1), resume via SendMessage, round 1. It drafted AC-1..AC-6, then asked a new question about write-back scope.\n4. (user) AskUserQuestion round 2, 1 question.\n5. spec-creator (a1), resume via SendMessage, round 2. It wrote server/specs/project-context.md (AC-1..AC-7).\n\n## Round-trips\n\n- a1 was resumed 2 times, so it ran 3 turns.\n- Resume 1 supplied: Postgres table, 8 KB, any user.\n- Resume 2 supplied: DB only, plus on-demand export to server/specs via a button.\n- The second resume was avoidable. The write-back question was knowable at the start, and it changed the spec: AC-7 (the export button) exists only because of that answer. One of the 2 resumes was therefore a late scoping question, not new information the user hadn't already been able to give.\n\n## Per-agent friction (spec-creator a1)\n\n- **Got right without help:** it picked sensible first-round questions (storage, size, editors) and, once it had answers, drafted AC-1..AC-6 in one pass.\n- **Missed up front:** write-back scope (DB only vs. repo files) was only raised after the draft existed, in resume 1 (\"this scope was not asked in round 1\"). It is a data-ownership and side-effect decision, so it belongs in the first dialog batch. It was not in the first batch even though spec-creator's definition says it runs a 6-category dialog. The first round covered only 3 questions, so categories appear to be asked piecemeal across turns, not batched.\n- **Cost of the miss:** one extra user round and about 30k tokens across resumes 1 and 2. Part of resume 1's 18.3k was the draft itself, so I'm not attributing all of it to the miss. Resume 2 (12.1k) was mostly spec finalization with AC-7 added.\n- **Duplicated work:** none visible in this scope.\n- **Not visible:** whether a1 read server/INSIGHTS.md, and what the 14 tool uses in the spawn were. Answering that needs --deep.\n\n## User question load\n\n- 2 AskUserQuestion rounds, 4 questions total (3 + 1).\n- 3 of 4 answers were listed options.\n- 1 of 4 was free text (\"Other\"): the write-back question. The user typed \"DB only, but export to server/specs on demand via a button\". The offered options [repo files | DB only | ask per edit] didn't fit the real decision, which was a hybrid. That is a signal the option set was too binary, and the user's answer added a new requirement (AC-7).\n- The user never saw the write-back question until after a draft existed.\n\n## Orchestration self-critique\n\n- Within this scope the orchestrator made no visible mistake: no misrouted message, no duplicate spawn, and both answers went to the right agent (a1).\n- Missed opportunity: the initial prompt was one line (\"Create a feature spec for Project Context (per-repo notes injected into review prompts)\"). It gave a1 no hint about integration boundaries such as whether the feature touches repo files. The orchestrator also relayed a1's questions verbatim with no attempt to add an \"Other/hybrid\" option for write-back. That is a minor point, and the real fix belongs in spec-creator's prompt.\n- Each answer was sent as its own SendMessage, which was correct given the agent asked sequentially.\n\n## Recommendations\n\n**Prompt wording**\n- `.claude/agents/spec-creator.md`: require the first dialog batch to cover side effects and write-back (does this feature write to repo files, DB, or external systems?) alongside storage, size, and editors. Ask all questions that decide the AC set in one round, before drafting any AC. Ask them before drafting, not after, so a late answer doesn't reopen the draft.\n- Same file: when offering options for scope or write-back questions, include a \"hybrid / on-demand\" choice, or say that free text is welcome.\n\n**Orchestration process**\n- When spawning spec-creator, add a one-line \"known boundaries\" hint to the prompt: any side effects, files or modules touched. This lets a1 skip questions it would otherwise ask late.\n- If an agent asks a question mid-dialog that looks like it belonged in an earlier batch, note it for the retro. Don't act on it in the moment.\n\n**Tooling/automation gap**\n- None identified in this scope.\n\n## Top recommendations\n\n1. Make spec-creator ask write-back/side-effect scope in its first question batch, before drafting ACs. This removes the one avoidable round (about 30k tokens and one user round) seen here.\n2. Give that question an option that fits hybrid answers. The user had to use \"Other\" to say what they actually wanted.\n3. Pass known boundaries into the spec-creator spawn prompt so it doesn't have to discover them through questions.\n"}], "grading": {"expectations": [{"text": "States the narrowed scope (spec-creator dialog only) at the top of the report", "passed": true, "evidence": "chat_report.md title is 'Workflow retro: spec-creator dialog (Project Context)'. The first line of the body is 'Scope used: only the spec-creator dialog...'."}, {"text": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total", "passed": true, "evidence": "The ledger shows 'Total in scope 71,600' (41,200 + 18,300 + 12,100, which matches the fixture). 429,600 does not appear. The report says it gives no session-wide total."}, {"text": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "passed": true, "evidence": "The ledger has only the a1 spawn and two resumes. The timeline has 5 steps, all spec-creator or user. The other agents are named only in the scope sentence, as explicitly out of scope."}, {"text": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "passed": true, "evidence": "Round-trips section: 'a1 was resumed 2 times'. 'Resume 1 supplied: Postgres table, 8 KB, any user.' 'Resume 2 supplied: DB only, plus on-demand export to server/specs via a button.' Both match the fixture."}, {"text": "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer", "passed": true, "evidence": "User question load: '2 AskUserQuestion rounds, 4 questions total (3 + 1)'. It flags that 1 of 4 answers was free text ('Other') and quotes 'DB only, but export to server/specs on demand via a button'."}, {"text": "Ledger entry Scope field names the spec-creator dialog, not the whole session", "passed": true, "evidence": "ledger.md: '**Scope:** only the spec-creator dialog (spawn + 2 resumes, 2 AskUserQuestion rounds). Later pipeline stages were not analyzed.'"}, {"text": "Recommendation says to fold the write-back scope question into spec-creator's initial dialog", "passed": true, "evidence": "Top recommendation 1: 'Make spec-creator ask write-back/side-effect scope in its first question batch, before drafting ACs.' The prompt-wording recommendation says the same."}], "summary": {"passed": 7, "failed": 0, "total": 7, "pass_rate": 1.0}, "execution_metrics": {}, "timing": {"total_tokens": 37935, "duration_ms": 52531, "total_duration_seconds": 52.5}, "claims": [{"claim": "Total in scope is 24 tool uses and 167 s", "type": "factual", "verified": true, "evidence": "14+6+4 = 24 tool uses. 96+41+30 = 167 s."}, {"claim": "The extra round cost about 30k tokens across resumes 1 and 2", "type": "quality", "verified": true, "evidence": "18.3k + 12.1k = 30.4k. The report also notes that part of this is the draft itself, so it is not all attributable to the miss."}, {"claim": "The second resume was avoidable because write-back scope was knowable at the start", "type": "quality", "verified": false, "evidence": "This is an inference. The fixture says only that the scope 'was not asked in round 1'. It does not show whether the user could have answered it earlier. The report's wording is also slightly inconsistent: it says one resume was 'not new information', but the same section lists the hybrid answer as new info that added AC-7."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "reason": "A grader has to judge by hand that naming the other agents in the scope sentence is acceptable. Say explicitly that mentioning them as out of scope is allowed, or check that none of their token figures appear (52,800, 188,400, 33,500, 29,900, 21,700)."}, {"assertion": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total", "reason": "The run also correctly refused to give a session total. No assertion covers that. Consider adding one that checks no session-wide figure is invented."}, {"reason": "No assertion checks the per-call breakdown (41,200 / 18,300 / 12,100) or the tool-use and duration totals. A wrong breakdown that still summed to 71,600 would pass."}], "overall": "The assertions cover scope handling well and are discriminating for the scoping behaviour. They are thinner on the correctness of the per-call numbers and on avoiding hallucinated session totals."}}}, {"id": "spec-creator-scope-without_skill", "prompt": "retro just the spec-creator dialog from the saved session at evals/files/session-multi-agent.md \u0432\u0402\u201d nothing else.", "eval_id": 2, "outputs": [{"name": "chat_report.md", "type": "text", "content": "# Retro: spec-creator dialog (Project Context feature), session 2026-10-04\n\nScope: only the spec-creator dialog (agent a1). Other agents in the session are not covered.\n\n## Summary\n- 1 agent (spec-creator, id a1), 1 launch + 2 resumes = 3 invocations (2 SendMessage round-trips).\n- 2 AskUserQuestion rounds, 4 questions total (3 + 1). 1 answer was free-text \"Other\".\n- Output: server/specs/project-context.md, AC-1..AC-7.\n\n## Tokens and time\n| Invocation | Tokens | Tool uses | Duration |\n|---|---|---|---|\n| Launch (dialog opened, 3 questions) | 41,200 | 14 | 96 s |\n| Resume 1 (draft AC-1..6, new question) | 18,300 | 6 | 41 s |\n| Resume 2 (spec written) | 12,100 | 4 | 30 s |\n| **Total** | **71,600** | **24** | **167 s** |\n\nCost is front-loaded: 58% of tokens went into the first invocation (INSIGHTS.md and context reading plus drafting questions). Later resumes were cheap. Human wait time on the answers is not measured in the transcript.\n\n## Round-trips\n1. Launch -> 3 questions (storage, max note size, editors). Answers: Postgres table, 8 KB, any user.\n2. Resume 1 -> spec drafted with AC-1..6, then a 4th question (write-back scope) that was not in round 1.\n3. Resume 2 -> answer \"DB only, but export to server/specs on demand via a button\" -> spec written, AC-7 added.\n\n## Friction\n- Question split across rounds: the write-back scope (repo files vs DB only) was a foundational scope question, discoverable at the start, but surfaced only after AC-1..6 were drafted. This cost one extra round-trip (about 30k tokens, 71 s) and the draft ACs were partly invalidated: the answer added a new capability (export button, AC-7).\n- The offered options did not fit: the user chose \"Other\" and described a hybrid. The options were presented as mutually exclusive when the real need was DB storage plus on-demand export.\n- The launch prompt was one line (\"Create a feature spec for Project Context ...\") with no constraints, so the agent had to discover everything through questions.\n- Positive: final spec was accepted without further rework, and plan-verifier later found AC-7 MET (evidence the dialog result was usable).\n\n## User question load\n- 4 questions over 2 rounds; 3 were simple option picks, 1 required typing. Light overall, but the second interruption was avoidable.\n\n## Recommendations\n1. spec-creator: front-load a scope/boundary check (storage, write-back, who edits, integration points) in the first question batch, before drafting any AC. Draft ACs only after all scope questions are answered.\n2. spec-creator: when a question's options could combine (store + export), allow multi-select or add a \"DB + export\" style option, to avoid \"Other\" answers.\n3. Orchestrator: give spec-creator a richer launch prompt (known constraints, module hints such as server/, expected integration with the reviewer prompt) to cut the first-round question count and discovery cost.\n4. Orchestrator: consider asking the user one \"anything else in scope?\" question in round 1.\n5. Track wall time of user answers if latency matters; it is not in the usage data.\n"}], "grading": {"expectations": [{"text": "States the narrowed scope (spec-creator dialog only) at the top of the report", "passed": true, "evidence": "chat_report.md line 3: 'Scope: only the spec-creator dialog (agent a1). Other agents in the session are not covered.'"}, {"text": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total", "passed": true, "evidence": "Table total '71,600' (41,200+18,300+12,100 matches fixture). 429,600 does not appear."}, {"text": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "passed": true, "evidence": "Token table and round-trip timeline list only spec-creator invocations. plan-verifier is mentioned once in a Friction bullet as evidence AC-7 was MET, with no tokens or timeline entry."}, {"text": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "passed": true, "evidence": "Summary: '1 launch + 2 resumes'. Round-trips section: resume 1 supplied 'Postgres table, 8 KB, any user' and led to the draft AC-1..6 plus the write-back question. Resume 2 supplied 'DB only, but export ... via a button' and led to the spec being written with AC-7."}, {"text": "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1). 1 answer was free-text \"Other\".' The Friction section also discusses the Other answer."}, {"text": "Ledger entry Scope field names the spec-creator dialog, not the whole session", "passed": true, "evidence": "ledger.md Scope column: 'spec-creator dialog only (Project Context)'."}, {"text": "Recommendation says to fold the write-back scope question into spec-creator's initial dialog", "passed": true, "evidence": "Recommendation 1: 'spec-creator: front-load a scope/boundary check (storage, write-back, who edits, ...) in the first question batch, before drafting any AC.'"}], "summary": {"passed": 7, "failed": 0, "total": 7, "pass_rate": 1.0}, "execution_metrics": {}, "timing": {"total_tokens": 33331, "duration_ms": 31122, "total_duration_seconds": 31.1}, "claims": [{"claim": "58% of tokens went into the first invocation", "type": "factual", "verified": true, "evidence": "41,200 / 71,600 = 57.5%"}, {"claim": "Total tool uses 24 and duration 167 s", "type": "factual", "verified": true, "evidence": "14+6+4 = 24; 96+41+30 = 167"}, {"claim": "The late write-back question cost about 30k tokens and 71 s", "type": "factual", "verified": true, "evidence": "Resume 1 plus resume 2 = 30.4k tokens and 71 s. This is loosely worded, because resume 1 also drafted ACs, so it is not purely the cost of the extra question."}, {"claim": "Draft ACs were partly invalidated by the late answer", "type": "quality", "verified": false, "evidence": "The fixture only says AC-7 was added. It does not say AC-1..6 were invalidated, so this is inference."}, {"claim": "Options were presented as mutually exclusive when the real need was a hybrid", "type": "quality", "verified": true, "evidence": "Fixture options were [repo files | DB only | ask per edit], and the user chose Other with a hybrid answer."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "reason": "The check is ambiguous about passing mentions. This output cited plan-verifier in prose and still passed, which is reasonable. Say explicitly whether prose mentions are allowed, and check that no other agent's token figures (52,800, 188,400, etc.) appear."}, {"assertion": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "reason": "'What new info each supplied' is loose. Name the expected content: resume 1 supplied the 3 answers, and resume 2 supplied the DB-only-plus-export answer that added AC-7."}, {"reason": "No assertion covers the per-invocation token breakdown (41,200 / 18,300 / 12,100) or whether the report correctly attributes the late question as the cause of the extra round. These are the substantive findings of this scope."}], "overall": "Assertions are mostly presence checks, and this baseline run without the skill passes all 7. They do not discriminate much between with-skill and without-skill runs. Add checks on format (ledger file written, required sections) or other skill-specific behaviour."}}}, {"id": "no-agents-session-with_skill", "prompt": "/workflow-retro \u0432\u0402\u201d session transcript is at evals/files/session-single-agent.md (treat it as this conversation).", "eval_id": 3, "outputs": [{"name": "chat_report.md", "type": "text", "content": "# Workflow retro\n\n**Scope:** whole session (single user request: fix the disabled \"Run all\" button on the Eval Dashboard, then `/workflow-retro`).\n\n**Headline: this was not a multi-agent workflow.** No `Agent` or `SendMessage` calls were made. The orchestrating session did the whole task itself with Grep, Read, Edit and Bash. There are no `<usage>` blocks, so there is nothing to ledger per agent. I did not invent numbers or pad the sections below.\n\n## Token ledger\n- Subagent tokens: none. No agent ran, so there is no `subagent_tokens` figure.\n- Total session token count: not readable from inside a skill, so I'm not giving a number.\n\n## Agent timeline\nEmpty. The only calls were direct tool calls, in order: Grep (`run-all` in client/src), Read (`RunAllButton.tsx`), Edit (reset `isRunning` in a `finally` block), Bash (`pnpm test` in client/, 41 passed).\n\n## Round-trips\nNone. No agent was spawned or resumed.\n\n## Per-agent friction\nNot applicable. The direct path was efficient: 4 tool calls, one targeted edit, tests run, and a one-line root-cause explanation (`isRunning` was cleared only on success).\n\n## User question load\n0 `AskUserQuestion` rounds, 0 questions, no free-text \"Other\" answers.\n\n## Orchestration self-critique\nNo mistakes visible: no duplicate work, misrouted message or redundant call. Delegating a one-file fix to an agent would have cost more than it saved, so doing it directly was right.\n\nTwo minor observations, not strong enough to count as findings:\n- Only the existing suite was run (41 passed). No regression test for the failed-run path is mentioned. Whether one was needed is a judgement call that the transcript can't settle.\n- `--deep` mode doesn't apply, since there are no subagent transcripts.\n\n## Recommendations\nNothing in this run clears the quality bar for prompt-wording, orchestration-process or tooling changes. The one practical note: `/workflow-retro` was run on a session with no multi-agent workflow, so it has nothing to analyze. Run it after a run that actually used Agent/SendMessage (spec-creator dialog, `/implement`, `/sdd`).\n\n**Top recommendations worth acting on:** none.\n"}], "grading": {"expectations": [{"text": "States plainly that no subagents ran in this session", "passed": true, "evidence": "chat_report.md: 'this was not a multi-agent workflow. No Agent or SendMessage calls were made.' Matches the fixture, which has only Grep/Read/Edit/Bash."}, {"text": "Does not fabricate token counts, durations, or round-trips", "passed": true, "evidence": "Report gives 'Subagent tokens: none', 'Round-trips: None', and no durations. The only figures are 4 tool calls and 41 tests passed, and both are in the fixture."}, {"text": "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar", "passed": true, "evidence": "Friction is 'Not applicable'. Recommendations: 'Nothing in this run clears the quality bar'. Top recommendations: 'none'. The two minor observations are explicitly labelled 'not strong enough to count as findings'."}, {"text": "Notes that session-level token total is not knowable", "passed": true, "evidence": "chat_report.md: 'Total session token count: not readable from inside a skill, so I'm not giving a number.' ledger.md: 'Total session token count is not knowable from within a skill.'"}, {"text": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "passed": true, "evidence": "outputs/docs/retro/ledger.md has the header and one entry '### 2026-10-05 \u0432\u0402\u201d Run all button fix ...' with the Scope/Agents/Tokens/Friction/Recommendations fields in SKILL.md order. The date matches the fixture's session date."}], "summary": {"passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0}, "timing": {"total_tokens": 33795, "duration_ms": 27502, "total_duration_seconds": 27.5}, "claims": [{"claim": "4 tool calls, tests 41 passed, root cause was isRunning cleared only on success", "type": "factual", "verified": true, "evidence": "Matches session-single-agent.md."}, {"claim": "0 AskUserQuestion rounds", "type": "factual", "verified": true, "evidence": "The fixture has no question tool calls."}], "eval_feedback": {"suggestions": [{"assertion": "Does not fabricate token counts, durations, or round-trips", "reason": "This is a negative check with no positive form, so a vague report would pass too. Consider requiring an explicit statement like 'zero round-trips' or 'no subagent tokens'."}, {"reason": "No assertion covers the chat report's required headings. No assertion checks that the ledger entry is appended at the top, newest first, either. This run created the file fresh, so the case was not exercised."}, {"reason": "The eval did not check for the self-referential note that the retro was run on a session with nothing to analyze. This is a useful behavior and could be asserted."}], "overall": "Assertions are reasonable but mostly check absence of bad behavior, so a minimal or empty-ish report would also pass them. Add a few positive content and format checks."}}}, {"id": "no-agents-session-without_skill", "prompt": "/workflow-retro \u0432\u0402\u201d session transcript is at evals/files/session-single-agent.md (treat it as this conversation).", "eval_id": 3, "outputs": [{"name": "chat_report.md", "type": "text", "content": "# Workflow retro: Eval Dashboard \"Run all\" fix (2026-10-05)\n\n## Summary\nThis was not a multi-agent workflow. The assistant worked alone and spawned no subagents. There were no Agent or SendMessage calls, so there is no per-agent breakdown to give.\n\n## Agents\n- Agents run: 0 (the main assistant only).\n- Order: not applicable.\n- Round-trips per agent: not applicable.\n\n## Token spend\nThe transcript has no token counts. I can't report real numbers, and I haven't estimated any. Qualitatively, spend was very low. It was one Grep, one Read, one Edit and one test run, followed by a short answer.\n\n## Flow\n1. The user reported that \"Run all\" stays disabled after a run finishes.\n2. Grep for \"run-all\" in client/src.\n3. Read `client/src/features/eval-dashboard/RunAllButton.tsx`.\n4. Edit: `isRunning` is now reset in a `finally` block. Before, it was only cleared on success.\n5. `pnpm test` in client/ passed 41 tests.\n6. The assistant explained the root cause. The user said thanks and ran /workflow-retro.\n\n## Friction\n- None observed. The fix took one round-trip, there was no duplicated work, and the assistant asked the user no questions.\n- Gaps, noted for completeness and not as failures:\n  - No regression test was added for the failed-run path. The 41 existing tests passed before and after, so they probably never covered this bug.\n  - Typecheck was not run, only tests.\n  - The assistant did not confirm the fix in a browser. The transcript shows nothing about checking the failure scenario by hand.\n\n## User question load\nThe user asked 0 clarifying questions and received none. They sent 1 request and 1 acknowledgement.\n\n## Recommendations\n- Don't use a multi-agent pipeline (spec-creator, planner, implementer and so on) for a fix like this. The single-agent pass was the right size.\n- Add a small test that makes the run reject and asserts the button re-enables. It is cheap and locks in the fix.\n- Run `pnpm typecheck` alongside tests as the module's standard check.\n- Skim sibling components for the same pattern of resetting state only on success.\n- For workflow-retro itself: when a session has no agents, give a short \"no multi-agent workflow\" report like this one instead of inventing agent metrics.\n"}], "grading": {"expectations": [{"text": "States plainly that no subagents ran in this session", "passed": true, "evidence": "chat_report.md: 'This was not a multi-agent workflow. The assistant worked alone and spawned no subagents.' and 'Agents run: 0'. Matches the fixture (only Grep/Read/Edit/Bash)."}, {"text": "Does not fabricate token counts, durations, or round-trips", "passed": true, "evidence": "Report says 'The transcript has no token counts... I haven't estimated any'; no durations given; '1 user request, 0 clarifying questions' is consistent with the fixture."}, {"text": "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar", "passed": false, "evidence": "Friction opens with 'None observed' but then lists three 'gaps' (no regression test, typecheck not run, no browser check) that the fixture does not support as problems. Recommendations has five items, including filler such as 'skim sibling components' and 'run pnpm typecheck'. It never says Recommendations has nothing meeting the bar. The ledger also lists the gaps as friction."}, {"text": "Notes that session-level token total is not knowable", "passed": false, "evidence": "Report says only 'The transcript has no token counts'; ledger says 'not recorded in transcript'. Neither says that the total session token count cannot be read by the skill/agent. This is a weaker claim than the assertion."}, {"text": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "passed": false, "evidence": "The file exists at outputs/docs/retro/ledger.md, but the format deviates from SKILL.md. The heading is '## 2026-10-05 - ...' instead of '### YYYY-MM-DD \u0432\u0402\u201d label'. There is no **Scope:** field. Fields are plain '- Agents:' bullets, not bold labels. It adds a Round-trips field and uses singular 'Recommendation'. There is no file header."}], "summary": {"passed": 2, "failed": 3, "total": 5, "pass_rate": 0.4}, "timing": {"total_tokens": 31075, "duration_ms": 42214, "total_duration_seconds": 42.2}, "eval_feedback": {"suggestions": [{"assertion": "Notes that session-level token total is not knowable", "reason": "Ambiguous: 'transcript has no token counts' is close but not the same claim. Specify whether the statement must be about the session total or whether any no-token-data statement counts."}, {"assertion": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "reason": "Make the format checkable by naming the required markers: '### date \u0432\u0402\u201d label' heading and bold Scope/Agents/Tokens/Friction/Recommendations fields. A without_skill run cannot see the skill's format, so this assertion mostly measures skill uplift."}, {"reason": "No assertion covers the chat report's required headings (Token ledger / Agent timeline / Round-trips / ...) or the 'top 1-3 recommendations' cap. The run gave 5 recommendations, which is the main observed deviation."}], "overall": "Assertions 1-2 are easy to satisfy by any honest baseline. 3-5 discriminate on skill-specific behaviour. Tightening the wording on 4 and 5 would make verdicts less subjective."}}}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "workflow-retro", "skill_path": ".claude/skills/workflow-retro", "executor_model": "claude-sonnet-5-5", "analyzer_model": "claude-sonnet-5-5", "timestamp": "2026-10-06T00:00:00Z", "evals_run": [1, 2, 3], "runs_per_configuration": 1}, "runs": [{"eval_id": 1, "eval_name": "full-session-retro", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 13, "failed": 0, "total": 13, "time_seconds": 63.6, "tokens": 39403, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Report has all seven sections: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations", "passed": true, "evidence": "chat_report.md has headings: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations (plus a closing Top recommendations section)."}, {"text": "Spec-creator tokens summed correctly to 71600 (41200+18300+12100)", "passed": true, "evidence": "Ledger row: 'spawn 41,200 + resume 18,300 + resume 12,100 | 71,600'."}, {"text": "Implementer tokens summed correctly to 216000 (188400+27600)", "passed": true, "evidence": "Ledger row: 'spawn 188,400 + resume 27,600 | 216,000'."}, {"text": "Total subagent tokens reported as 429600", "passed": true, "evidence": "'Total subagent tokens: 429,600 across 7 instances and 11 calls.' Matches the sum of the fixture's usage lines. (The report says 11 calls but its own timeline table lists 10; this is a minor inconsistency.)"}, {"text": "States plainly that the total session token count is not knowable from inside the session, instead of inventing a number", "passed": true, "evidence": "'The total session token count (the orchestrator's own context and spend) is not readable from inside a skill, so I'm not giving a figure. 429,600 covers subagents only.'"}, {"text": "Reports spec-creator was resumed twice and traces the extra rounds to the missing write-back scope question", "passed": true, "evidence": "Round-trips: 'spec-creator a1: 2 resumes.' Friction: write-back scope was 'knowable at the start' and not in the initial question set, so it cost an extra SendMessage and user round."}, {"text": "Orchestration self-critique names the duplicate architecture-reviewer spawn (b2) that was stopped via TaskStop", "passed": true, "evidence": "Self-critique item 1: 'Duplicate spawn. The orchestrator spawned architecture-reviewer twice (b1, b2)... b2 was then stopped after about 9 s, wasting 4,100 tokens plus the TaskStop call.'"}, {"text": "User question load reports 2 AskUserQuestion rounds (3 + 1 questions) and flags the free-text 'Other' answer as a signal options did not fit", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1).' and 'The offered options... did not fit the real decision... the option set was too coarse.'"}, {"text": "Flags implementation-planner re-reading INSIGHTS.md / onion skill as duplicated work", "passed": true, "evidence": "Friction: 'It re-read server/INSIGHTS.md and the onion-architecture skill from scratch... That is duplicated work.'"}, {"text": "Recommendations are split into prompt wording / orchestration process / tooling-automation buckets and name specific files", "passed": true, "evidence": "Three buckets: 'Prompt wording', 'Orchestration process', 'Tooling/automation gap'. Files named: .claude/agents/spec-creator.md, implementation-planner.md, implementer.md. The tooling bucket says 'No clear gap', which is acceptable."}, {"text": "Report ends with the top 1-3 recommendations, not a long list", "passed": true, "evidence": "Final section 'Top recommendations to act on' has 3 numbered items. Item 3 bundles two ideas, but it is still 3 entries."}, {"text": "Ledger file created at docs/retro/ledger.md with a header and an entry containing Scope, Agents, Tokens, Friction, Recommendations fields", "passed": true, "evidence": "outputs/docs/retro/ledger.md has the header '# Workflow retro ledger' and a 2026-10-04 entry with **Scope:**, **Agents:**, **Tokens:**, **Friction:**, **Recommendations:**."}, {"text": "Did not run in --deep mode (no attempt to read subagent output files)", "passed": true, "evidence": "Report states 'no --deep; in-context data only. Subagent transcripts were not read.' Nothing in the report suggests subagent output files were read."}], "notes": []}, {"eval_id": 1, "eval_name": "full-session-retro", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.62, "passed": 8, "failed": 5, "total": 13, "time_seconds": 61.6, "tokens": 36390, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Report has all seven sections: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations", "passed": false, "evidence": "Headings are 'Token spend', 'Agent timeline', 'Round-trips per agent', 'Per-agent friction', 'User question load', 'Orchestration mistakes', 'Recommendations', plus an extra 'Caveats'. Content is equivalent, but two required sections ('Token ledger', 'Orchestration self-critique') are named differently, so the expected structure is not matched."}, {"text": "Spec-creator tokens summed correctly to 71600 (41200+18300+12100)", "passed": true, "evidence": "Table row: '71,600 (41,200 + 18,300 + 12,100)'."}, {"text": "Implementer tokens summed correctly to 216000 (188400+27600)", "passed": true, "evidence": "Table row: '216,000 (188,400 + 27,600)'."}, {"text": "Total subagent tokens reported as 429600", "passed": true, "evidence": "Total row: '**429,600**'. Sums correctly against the fixture."}, {"text": "States plainly that the total session token count is not knowable from inside the session, instead of inventing a number", "passed": false, "evidence": "It does not invent a number. It says only 'the orchestrator's own tokens and the user's wait time ... are not in the transcript, so they are not counted' and, in Caveats, that orchestrator tokens are not measured. It never states that the total session token count cannot be known from inside the session. That is implied, not plain."}, {"text": "Reports spec-creator was resumed twice and traces the extra rounds to the missing write-back scope question", "passed": true, "evidence": "'spec-creator: 2 resumes (3 invocations)'. Friction: 'The write-back scope question (repo files vs DB only) was foreseeable and should have been in round 1.'"}, {"text": "Orchestration self-critique names the duplicate architecture-reviewer spawn (b2) that was stopped via TaskStop", "passed": true, "evidence": "Orchestration mistakes #1: 'Duplicate reviewer spawn (b2) ... launched a second identical reviewer and then stopped it. Cost: 4.1k tokens and a TaskStop call.'"}, {"text": "User question load reports 2 AskUserQuestion rounds (3 + 1 questions) and flags the free-text 'Other' answer as a signal options did not fit", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1)' and 'the option set missed the real intent'."}, {"text": "Flags implementation-planner re-reading INSIGHTS.md / onion skill as duplicated work", "passed": true, "evidence": "Planner friction: 're-read server/INSIGHTS.md and the onion-architecture skill from scratch ... Duplicated reading'."}, {"text": "Recommendations are split into prompt wording / orchestration process / tooling-automation buckets and name specific files", "passed": false, "evidence": "Recommendations are one flat numbered list of 7. Items are only loosely prefixed by actor (spec-creator, Orchestrator, implementer prompt/plan). There are no prompt/process/tooling buckets, and almost no specific files are named beyond INSIGHTS.md."}, {"text": "Report ends with the top 1-3 recommendations, not a long list", "passed": false, "evidence": "Ends with 7 recommendations followed by a Caveats paragraph. There is no top-1-to-3 prioritisation."}, {"text": "Ledger file created at docs/retro/ledger.md with a header and an entry containing Scope, Agents, Tokens, Friction, Recommendations fields", "passed": false, "evidence": "The file exists with a header and a dated entry. Its fields are Agents, Biggest spend, Round-trips, User questions, Mistakes, Outcome, Actions. There is no explicit Scope, Tokens, Friction or Recommendations field. Scope is only in the entry title and tokens are folded into Agents."}, {"text": "Did not run in --deep mode (no attempt to read subagent output files)", "passed": true, "evidence": "The report relies only on the <usage> blocks and the transcript text. Caveats: 'Token numbers come from the <usage> blocks only.' There is no sign of subagent output files being read."}], "notes": []}, {"eval_id": 2, "eval_name": "spec-creator-scope", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 7, "failed": 0, "total": 7, "time_seconds": 52.5, "tokens": 37935, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "States the narrowed scope (spec-creator dialog only) at the top of the report", "passed": true, "evidence": "chat_report.md title is 'Workflow retro: spec-creator dialog (Project Context)'. The first line of the body is 'Scope used: only the spec-creator dialog...'."}, {"text": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total", "passed": true, "evidence": "The ledger shows 'Total in scope 71,600' (41,200 + 18,300 + 12,100, which matches the fixture). 429,600 does not appear. The report says it gives no session-wide total."}, {"text": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "passed": true, "evidence": "The ledger has only the a1 spawn and two resumes. The timeline has 5 steps, all spec-creator or user. The other agents are named only in the scope sentence, as explicitly out of scope."}, {"text": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "passed": true, "evidence": "Round-trips section: 'a1 was resumed 2 times'. 'Resume 1 supplied: Postgres table, 8 KB, any user.' 'Resume 2 supplied: DB only, plus on-demand export to server/specs via a button.' Both match the fixture."}, {"text": "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer", "passed": true, "evidence": "User question load: '2 AskUserQuestion rounds, 4 questions total (3 + 1)'. It flags that 1 of 4 answers was free text ('Other') and quotes 'DB only, but export to server/specs on demand via a button'."}, {"text": "Ledger entry Scope field names the spec-creator dialog, not the whole session", "passed": true, "evidence": "ledger.md: '**Scope:** only the spec-creator dialog (spawn + 2 resumes, 2 AskUserQuestion rounds). Later pipeline stages were not analyzed.'"}, {"text": "Recommendation says to fold the write-back scope question into spec-creator's initial dialog", "passed": true, "evidence": "Top recommendation 1: 'Make spec-creator ask write-back/side-effect scope in its first question batch, before drafting ACs.' The prompt-wording recommendation says the same."}], "notes": []}, {"eval_id": 2, "eval_name": "spec-creator-scope", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 7, "failed": 0, "total": 7, "time_seconds": 31.1, "tokens": 33331, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "States the narrowed scope (spec-creator dialog only) at the top of the report", "passed": true, "evidence": "chat_report.md line 3: 'Scope: only the spec-creator dialog (agent a1). Other agents in the session are not covered.'"}, {"text": "Reports spec-creator tokens as 71600 and does not present 429600 as the scope total", "passed": true, "evidence": "Table total '71,600' (41,200+18,300+12,100 matches fixture). 429,600 does not appear."}, {"text": "Does not include implementer, planner, reviewer, verifier or doc-writer in the token ledger or timeline", "passed": true, "evidence": "Token table and round-trip timeline list only spec-creator invocations. plan-verifier is mentioned once in a Friction bullet as evidence AC-7 was MET, with no tokens or timeline entry."}, {"text": "Reports 2 resume round-trips for spec-creator and what new info each supplied", "passed": true, "evidence": "Summary: '1 launch + 2 resumes'. Round-trips section: resume 1 supplied 'Postgres table, 8 KB, any user' and led to the draft AC-1..6 plus the write-back question. Resume 2 supplied 'DB only, but export ... via a button' and led to the spec being written with AC-7."}, {"text": "Reports 2 AskUserQuestion rounds and flags the free-text 'Other' answer", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1). 1 answer was free-text \"Other\".' The Friction section also discusses the Other answer."}, {"text": "Ledger entry Scope field names the spec-creator dialog, not the whole session", "passed": true, "evidence": "ledger.md Scope column: 'spec-creator dialog only (Project Context)'."}, {"text": "Recommendation says to fold the write-back scope question into spec-creator's initial dialog", "passed": true, "evidence": "Recommendation 1: 'spec-creator: front-load a scope/boundary check (storage, write-back, who edits, ...) in the first question batch, before drafting any AC.'"}], "notes": []}, {"eval_id": 3, "eval_name": "no-agents-session", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 27.5, "tokens": 33795, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "States plainly that no subagents ran in this session", "passed": true, "evidence": "chat_report.md: 'this was not a multi-agent workflow. No Agent or SendMessage calls were made.' Matches the fixture, which has only Grep/Read/Edit/Bash."}, {"text": "Does not fabricate token counts, durations, or round-trips", "passed": true, "evidence": "Report gives 'Subagent tokens: none', 'Round-trips: None', and no durations. The only figures are 4 tool calls and 41 tests passed, and both are in the fixture."}, {"text": "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar", "passed": true, "evidence": "Friction is 'Not applicable'. Recommendations: 'Nothing in this run clears the quality bar'. Top recommendations: 'none'. The two minor observations are explicitly labelled 'not strong enough to count as findings'."}, {"text": "Notes that session-level token total is not knowable", "passed": true, "evidence": "chat_report.md: 'Total session token count: not readable from inside a skill, so I'm not giving a number.' ledger.md: 'Total session token count is not knowable from within a skill.'"}, {"text": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "passed": true, "evidence": "outputs/docs/retro/ledger.md has the header and one entry '### 2026-10-05 \u0432\u0402\u201d Run all button fix ...' with the Scope/Agents/Tokens/Friction/Recommendations fields in SKILL.md order. The date matches the fixture's session date."}], "notes": []}, {"eval_id": 3, "eval_name": "no-agents-session", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 42.2, "tokens": 31075, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "States plainly that no subagents ran in this session", "passed": true, "evidence": "chat_report.md: 'This was not a multi-agent workflow. The assistant worked alone and spawned no subagents.' and 'Agents run: 0'. Matches the fixture (only Grep/Read/Edit/Bash)."}, {"text": "Does not fabricate token counts, durations, or round-trips", "passed": true, "evidence": "Report says 'The transcript has no token counts... I haven't estimated any'; no durations given; '1 user request, 0 clarifying questions' is consistent with the fixture."}, {"text": "Does not manufacture friction or filler recommendations; says plainly when a category has nothing meeting the bar", "passed": false, "evidence": "Friction opens with 'None observed' but then lists three 'gaps' (no regression test, typecheck not run, no browser check) that the fixture does not support as problems. Recommendations has five items, including filler such as 'skim sibling components' and 'run pnpm typecheck'. It never says Recommendations has nothing meeting the bar. The ledger also lists the gaps as friction."}, {"text": "Notes that session-level token total is not knowable", "passed": false, "evidence": "Report says only 'The transcript has no token counts'; ledger says 'not recorded in transcript'. Neither says that the total session token count cannot be read by the skill/agent. This is a weaker claim than the assertion."}, {"text": "Still writes a ledger entry at docs/retro/ledger.md in the prescribed format", "passed": false, "evidence": "The file exists at outputs/docs/retro/ledger.md, but the format deviates from SKILL.md. The heading is '## 2026-10-05 - ...' instead of '### YYYY-MM-DD \u0432\u0402\u201d label'. There is no **Scope:** field. Fields are plain '- Agents:' bullets, not bold labels. It adds a Round-trips field and uses singular 'Recommendation'. There is no file header."}], "notes": []}], "run_summary": {"with_skill": {"pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0}, "time_seconds": {"mean": 47.867, "stddev": 15.098, "min": 27.5, "max": 63.6}, "tokens": {"mean": 37044.333, "stddev": 2374.501, "min": 33795, "max": 39403}}, "without_skill": {"pass_rate": {"mean": 0.673, "stddev": 0.248, "min": 0.4, "max": 1.0}, "time_seconds": {"mean": 44.967, "stddev": 12.604, "min": 31.1, "max": 61.6}, "tokens": {"mean": 33598.667, "stddev": 2178.079, "min": 31075, "max": 36390}}, "delta": {"pass_rate": "+0.33", "time_seconds": "+2.9", "tokens": "+3446"}}, "notes": ["spec-creator-scope passes 7/7 in BOTH configurations - its assertions are presence checks and do not discriminate skill value; add a per-call token split (41200/18300/12100) and skill-specific format checks.", "Skill's clearest effect is format/discipline: without it, section names, ledger fields (Scope/Tokens/Friction/Recommendations), 3 recommendation buckets and the top-1-3 ending were all missed (full-session-retro 8/13 vs 13/13).", "no-agents-session: baseline invented friction and 5 filler recommendations; with skill it said plainly nothing met the bar (5/5 vs 2/5).", "Content accuracy (token sums 71600 / 216000 / 429600) was correct in both configurations - the skill does not change arithmetic.", "With-skill full run has two unchecked numeric slips: 11 calls reported vs 10 actual, and ~1340 s vs 1236 s summed duration. No assertion covers derived figures.", "Skill costs ~+3.4k tokens and ~+3 s per run on average (single run per configuration, so variance is unmeasured)."]}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

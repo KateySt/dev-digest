@@ -229,7 +229,11 @@ export class RepoIntelRepository {
         degraded: isDegraded ? true : undefined,
         degradedReason: isDegraded
           ? ((stats.degradedReason as DegradedReason | undefined) ?? 'index_failed')
-          : undefined,
+          : // A partial index that stopped at the file cap carries the reason
+            // without being flagged `degraded` (S-AC-30).
+            stats.degradedReason === 'repo_too_large'
+            ? 'repo_too_large'
+            : undefined,
       };
     } catch {
       // Table missing / schema drift / connection blip — degrade silently. The
@@ -331,6 +335,47 @@ export class RepoIntelRepository {
       .update(t.repoIndexState)
       .set(updates)
       .where(eq(t.repoIndexState.repoId, repoId));
+  }
+
+  /**
+   * Merge `patch` into the existing row's `stats` jsonb WITHOUT touching
+   * `status` / files / sha (S-AC-36: an in-job refusal records its reason but
+   * leaves the index status unchanged). No-op when the repo has no row yet.
+   */
+  async mergeIndexStats(repoId: string, patch: Record<string, unknown>): Promise<void> {
+    await this.db
+      .update(t.repoIndexState)
+      .set({
+        stats: sql`coalesce(${t.repoIndexState.stats}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+        updatedAt: new Date(),
+      })
+      .where(eq(t.repoIndexState.repoId, repoId));
+  }
+
+  /**
+   * Drop `stats.reason` iff it starts with `prefix` (S-AC-37: the next
+   * successful clone advance clears a persisted refusal; any other reason is
+   * left alone).
+   */
+  async clearIndexStatsReason(repoId: string, prefix: string): Promise<void> {
+    await this.db
+      .update(t.repoIndexState)
+      .set({ stats: sql`${t.repoIndexState.stats} - 'reason'` })
+      .where(
+        and(
+          eq(t.repoIndexState.repoId, repoId),
+          sql`${t.repoIndexState.stats}->>'reason' like ${prefix + '%'}`,
+        ),
+      );
+  }
+
+  /** True iff `repoId` names a repo owned by `workspaceId` (tenancy check). */
+  async repoInWorkspace(workspaceId: string, repoId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: t.repos.id })
+      .from(t.repos)
+      .where(and(eq(t.repos.id, repoId), eq(t.repos.workspaceId, workspaceId)));
+    return !!row;
   }
 
   /** Update only the `lastIndexedSha` (and bump updated_at) — used by

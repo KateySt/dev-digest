@@ -19,6 +19,7 @@ export type SkillVersionRow = typeof t.skillVersions.$inferSelect;
 export type AgentContextDocumentRow = typeof t.agentContextDocuments.$inferSelect;
 export type SkillContextDocumentRow = typeof t.skillContextDocuments.$inferSelect;
 export type EvalCaseRow = typeof t.evalCases.$inferSelect;
+export type EvalSuiteRunRow = typeof t.evalSuiteRuns.$inferSelect;
 export type EvalRunRow = typeof t.evalRuns.$inferSelect;
 export type CiInstallationRow = typeof t.ciInstallations.$inferSelect;
 export type CiRunRow = typeof t.ciRuns.$inferSelect;

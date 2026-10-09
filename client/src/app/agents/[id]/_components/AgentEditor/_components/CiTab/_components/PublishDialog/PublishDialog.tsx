@@ -4,7 +4,8 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Button, Modal, TextInput } from "@devdigest/ui";
 import type { Agent } from "@devdigest/shared";
-import { useCiPreview, usePublishCi } from "../../../../../../../../../lib/hooks/ci";
+import { useCiPreview, usePublishCi } from "@/lib/hooks/ci";
+import { providerSecretKey } from "./helpers";
 import { s } from "./styles";
 
 /** "Publish to CI" / "Update CI" — the same action; `republish` is just
@@ -73,7 +74,7 @@ export function PublishDialog({
               mono
             />
 
-            <p style={s.secretNote}>{t("publishDialog.secretNote", { key: "OPENAI_API_KEY" })}</p>
+            <p style={s.secretNote}>{t("publishDialog.secretNote", { key: providerSecretKey(agent.provider) })}</p>
           </>
         )}
       </div>

@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {"text": "Report has all seven sections: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations", "passed": true, "evidence": "chat_report.md has headings: Token ledger, Agent timeline, Round-trips, Per-agent friction, User question load, Orchestration self-critique, Recommendations (plus a closing Top recommendations section)."},
+    {"text": "Spec-creator tokens summed correctly to 71600 (41200+18300+12100)", "passed": true, "evidence": "Ledger row: 'spawn 41,200 + resume 18,300 + resume 12,100 | 71,600'."},
+    {"text": "Implementer tokens summed correctly to 216000 (188400+27600)", "passed": true, "evidence": "Ledger row: 'spawn 188,400 + resume 27,600 | 216,000'."},
+    {"text": "Total subagent tokens reported as 429600", "passed": true, "evidence": "'Total subagent tokens: 429,600 across 7 instances and 11 calls.' Matches the sum of the fixture's usage lines. (The report says 11 calls but its own timeline table lists 10; this is a minor inconsistency.)"},
+    {"text": "States plainly that the total session token count is not knowable from inside the session, instead of inventing a number", "passed": true, "evidence": "'The total session token count (the orchestrator's own context and spend) is not readable from inside a skill, so I'm not giving a figure. 429,600 covers subagents only.'"},
+    {"text": "Reports spec-creator was resumed twice and traces the extra rounds to the missing write-back scope question", "passed": true, "evidence": "Round-trips: 'spec-creator a1: 2 resumes.' Friction: write-back scope was 'knowable at the start' and not in the initial question set, so it cost an extra SendMessage and user round."},
+    {"text": "Orchestration self-critique names the duplicate architecture-reviewer spawn (b2) that was stopped via TaskStop", "passed": true, "evidence": "Self-critique item 1: 'Duplicate spawn. The orchestrator spawned architecture-reviewer twice (b1, b2)... b2 was then stopped after about 9 s, wasting 4,100 tokens plus the TaskStop call.'"},
+    {"text": "User question load reports 2 AskUserQuestion rounds (3 + 1 questions) and flags the free-text 'Other' answer as a signal options did not fit", "passed": true, "evidence": "'2 AskUserQuestion rounds, 4 questions total (3 + 1).' and 'The offered options... did not fit the real decision... the option set was too coarse.'"},
+    {"text": "Flags implementation-planner re-reading INSIGHTS.md / onion skill as duplicated work", "passed": true, "evidence": "Friction: 'It re-read server/INSIGHTS.md and the onion-architecture skill from scratch... That is duplicated work.'"},
+    {"text": "Recommendations are split into prompt wording / orchestration process / tooling-automation buckets and name specific files", "passed": true, "evidence": "Three buckets: 'Prompt wording', 'Orchestration process', 'Tooling/automation gap'. Files named: .claude/agents/spec-creator.md, implementation-planner.md, implementer.md. The tooling bucket says 'No clear gap', which is acceptable."},
+    {"text": "Report ends with the top 1-3 recommendations, not a long list", "passed": true, "evidence": "Final section 'Top recommendations to act on' has 3 numbered items. Item 3 bundles two ideas, but it is still 3 entries."},
+    {"text": "Ledger file created at docs/retro/ledger.md with a header and an entry containing Scope, Agents, Tokens, Friction, Recommendations fields", "passed": true, "evidence": "outputs/docs/retro/ledger.md has the header '# Workflow retro ledger' and a 2026-10-04 entry with **Scope:**, **Agents:**, **Tokens:**, **Friction:**, **Recommendations:**."},
+    {"text": "Did not run in --deep mode (no attempt to read subagent output files)", "passed": true, "evidence": "Report states 'no --deep; in-context data only. Subagent transcripts were not read.' Nothing in the report suggests subagent output files were read."}
+  ],
+  "summary": {"passed": 13, "failed": 0, "total": 13, "pass_rate": 1.0},
+  "timing": {
+    "total_tokens": 39403,
+    "duration_ms": 63603,
+    "total_duration_seconds": 63.6
+  },
+  "claims": [
+    {"claim": "Tool uses totalled 158 (24+22+72+14+2+15+9)", "type": "factual", "verified": true, "evidence": "The fixture gives a1 14+6+4=24, a2 22, a3 61+11=72, b1 12 + b2 2 = 14, a5 15, a6 9. Sum is 158."},
+    {"claim": "About 1,340 s of agent time, about 45% of it the first implementer run", "type": "factual", "verified": true, "evidence": "96+41+30+140+612+71+9+98+84+55 = 1236 s, not 1340. Implementer first run is 612 s, which is 49.5% of 1236. Both figures are slightly off."},
+    {"claim": "11 calls across 7 instances", "type": "factual", "verified": false, "evidence": "The fixture and the report's own timeline table show 10 calls."},
+    {"claim": "Implementer is 50% of subagent tokens", "type": "factual", "verified": true, "evidence": "216,000 / 429,600 = 50.3%."},
+    {"claim": "test-writer never ran; unclear whether that was deliberate", "type": "process", "verified": true, "evidence": "No test-writer call in the fixture. The report hedges appropriately."}
+  ],
+  "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []},
+  "eval_feedback": {
+    "suggestions": [
+      {"assertion": "Total subagent tokens reported as 429600", "reason": "Passes, but nothing checks the secondary numbers. The report miscounted calls (11 vs 10) and total duration (1,340 s vs 1,236 s). Consider an assertion on call count (10) and total duration."},
+      {"assertion": "Report ends with the top 1-3 recommendations, not a long list", "reason": "Item 3 packs two separate recommendations into one entry. Tighten the assertion to 'at most 3 distinct recommendations'."},
+      {"reason": "No assertion covers the missing re-review after the CRITICAL fix, or the test-writer skip. Both are real orchestration gaps the report found. Add an assertion for 'no architecture re-review before plan-verifier'."},
+      {"reason": "The 'did not run --deep' assertion cannot be verified directly without a transcript. It can only be inferred from the report's own statement."}
+    ],
+    "overall": "Assertions check presence and the key numbers well. They are weak on derived figures such as duration and call counts, and they don't cover several valuable findings."
+  }
+}

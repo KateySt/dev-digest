@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PrMeta } from "@/lib/types";
 import messages from "../../../../../../../messages/en/prReview.json";
 
@@ -9,8 +10,10 @@ const usePrReviews = vi.fn((_prId: string | null) => ({ data: undefined }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace: vi.fn() }),
 }));
-vi.mock("../../../../../../lib/hooks/reviews", () => ({
+vi.mock("@/lib/hooks/reviews", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/hooks/reviews")>()),
   usePrReviews: (prId: string | null) => usePrReviews(prId),
+  usePrActiveRuns: () => ({ data: undefined }),
 }));
 
 import { PRRow } from "./PRRow";
@@ -23,9 +26,11 @@ afterEach(() => {
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
-      {ui}
-    </NextIntlClientProvider>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+        {ui}
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
   );
 }
 

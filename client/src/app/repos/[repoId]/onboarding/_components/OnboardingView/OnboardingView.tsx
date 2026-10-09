@@ -18,6 +18,7 @@ import { RunLocallySection } from "./_components/RunLocallySection";
 import { ReadingPathSection } from "./_components/ReadingPathSection";
 import { FirstTasksSection } from "./_components/FirstTasksSection";
 import { SkillSuggestionsCard } from "./_components/SkillSuggestionsCard";
+import { POLL_CEILING_MS } from "./constants";
 import { formatRelativeAge, isPartialIndex, SECTION_ORDER } from "./helpers";
 import { s } from "./styles";
 
@@ -40,6 +41,7 @@ export function OnboardingView() {
   const [polling, setPolling] = React.useState(false);
   const [pendingBaseline, setPendingBaseline] = React.useState<string | null | undefined>(undefined);
   const [generateError, setGenerateError] = React.useState<string | null>(null);
+  const [timedOut, setTimedOut] = React.useState(false);
 
   const { data, isLoading, isError, refetch } = useOnboardingTour(repoId, polling);
   const generate = useGenerateOnboardingTour(repoId);
@@ -54,10 +56,29 @@ export function OnboardingView() {
     }
   }, [polling, pendingBaseline, currentGeneratedAt]);
 
+  // C-AC-31/32: a generation that never produces a new tour (e.g. the job
+  // died) must not poll forever — stop at the ceiling, say so, and let the
+  // user regenerate. The existing tour (or empty state) is left untouched.
+  React.useEffect(() => {
+    if (!polling) return;
+    const id = setTimeout(() => {
+      setPolling(false);
+      setPendingBaseline(undefined);
+      setTimedOut(true);
+    }, POLL_CEILING_MS);
+    return () => clearTimeout(id);
+  }, [polling]);
+
   const isGenerating = polling || generate.isPending;
+  const errorText = timedOut
+    ? t("generateTimedOut")
+    : generateError
+      ? t("generateFailed", { message: generateError })
+      : null;
 
   const handleGenerate = () => {
     setGenerateError(null);
+    setTimedOut(false);
     setPendingBaseline(currentGeneratedAt);
     setPolling(true);
     generate.mutate(undefined, {
@@ -146,7 +167,7 @@ export function OnboardingView() {
               ctaLoading={isGenerating}
               onCta={handleGenerate}
             />
-            {generateError && <div style={s.generateError}>{t("generateFailed", { message: generateError })}</div>}
+            {errorText && <div style={s.generateError}>{errorText}</div>}
           </div>
           {/* C-AC-37: see the no_clone branch above for why this is rendered
               here too, not only in the "generated" state. */}
@@ -183,7 +204,7 @@ export function OnboardingView() {
           </div>
         </div>
 
-        {generateError && <div style={s.generateError}>{t("generateFailed", { message: generateError })}</div>}
+        {errorText && <div style={s.generateError}>{errorText}</div>}
 
         <DegradedBanner indexReason={tour.index_degraded_reason} modelReason={tour.model_failure_reason} />
 

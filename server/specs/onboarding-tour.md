@@ -10,6 +10,16 @@ section cards, generation and degraded states):
 
 ## Changelog
 
+- 2026-10-07 — stuck-state and honesty amendment (bugs B8/B9 in
+  `docs/plans/2026-10-07-unfinished-features-and-critical-bugs.md`). Added
+  AC-28/AC-29 (boot reaping of jobs orphaned by a server restart, so AC-3's
+  in-flight detection cannot return a dead job's id forever), AC-30/AC-31 (a
+  repo stopped at the indexer's file cap is reported as `partial` with
+  `repo_too_large`, and its discovered count = indexed + skipped, the skipped
+  figure including files left out by the cap — makes AC-15/AC-27 honest),
+  AC-32 (the model call is bounded so AC-24's `timeout` skeleton is persisted
+  within the job deadline instead of the job runner killing the job first).
+  The "job that outlives its budget" edge case was corrected to match.
 - 2026-09-30 — initial version
 
 ## Problem and user
@@ -198,6 +208,26 @@ index or the model call is unavailable.
   generate a tour over the partial index and mark it degraded, and shall not
   refuse generation on size grounds. (verify via: unit test)
 
+**Restart and deadline safety (2026-10-07)**
+
+- AC-28: WHEN the server starts, the system shall mark every job left in a
+  `queued` or `running` state as `failed` with error `interrupted` and a
+  finished timestamp, before serving requests. (verify via: integration test)
+- AC-29: WHEN generation is requested for a repo whose previous job was
+  reaped per AC-28, the system shall enqueue a new job and return its new id
+  rather than the reaped job's id. (verify via: integration test)
+- AC-30: WHERE indexing stops because the repo exceeds the indexer's file cap,
+  the system shall record the index state as `partial` with the
+  `repo_too_large` degraded reason. (verify via: unit test)
+- AC-31: WHERE indexing stops at the file cap, the discovered-files figure
+  (AC-15) shall equal the indexed files plus the skipped files, where skipped
+  includes every file left unindexed because of the cap. (verify via: unit
+  test)
+- AC-32: WHEN the single LLM call runs, the system shall bound it so that, if
+  it has not returned in time, it is abandoned and AC-24's skeleton is
+  persisted with model-failure reason `timeout` before the job runner's hard
+  timeout expires. (verify via: integration test)
+
 ## Edge cases
 
 - **A repo larger than the indexer's cap.** `MAX_INDEXED_FILES = 5000` and
@@ -219,9 +249,15 @@ index or the model call is unavailable.
   but non-empty; AC-23 marks the tour degraded via the index state, which is
   where that failure is already recorded.
 - **A generation job that outlives its budget.** `JobRunner`'s hard timeout
-  is 120 seconds. A model call that does not return inside it takes AC-7's
-  path — the previous tour survives untouched — rather than leaving a
-  half-written row.
+  is 120 seconds. *(Corrected 2026-10-07.)* A slow model call no longer takes
+  AC-7's path: AC-32 abandons it in time to persist the `timeout` skeleton
+  (AC-24), so the user sees a degraded tour with a model-failure reason.
+  AC-7's "previous tour survives untouched" path remains for a job killed by
+  the hard timeout for any other reason; in neither case is a half-written row
+  left.
+- *(2026-10-07)* **Server restarted mid-generation.** The orphaned job is
+  reaped on boot (AC-28); the previously stored tour is untouched (AC-7), and
+  the next Regenerate starts a fresh job (AC-29).
 - **A tour generated before the repo was re-indexed.** Nothing invalidates a
   stored tour when the index advances; per the no-background-refresh non-goal,
   the stored generated-at timestamp is the only staleness signal, and
@@ -255,6 +291,10 @@ index or the model call is unavailable.
 - **Job budget.** Generation must fit inside `JobRunner`'s 120-second hard
   timeout, and overrunning it must be non-destructive (AC-7). The prompt's
   fact payload is therefore bounded rather than proportional to repo size.
+  *(2026-10-07)* The model call's own timeout is the remaining deadline minus
+  a persistence margin (AC-32), so the degraded outcome is always written.
+- **No permanently stuck jobs (2026-10-07).** No job state survives a restart
+  as `queued`/`running` (AC-28).
 - **Security — no new exposure surface.** With no share link and no public
   route, the tour is reachable only through the same workspace-scoped request
   path as every other repo-scoped resource.

@@ -8,7 +8,7 @@ import type {
   SpecReadOutcome,
 } from '@devdigest/shared';
 import { isScanBlocking } from '../skills/helpers.js';
-import { NotFoundError, ValidationError } from '../../platform/errors.js';
+import { AppError, NotFoundError, ValidationError } from '../../platform/errors.js';
 import { ProjectContextRepository } from './repository.js';
 import {
   computeCoverage,
@@ -22,7 +22,7 @@ import {
   type SkillContribution,
   type SkillUsageInput,
 } from './helpers.js';
-import { PROJECT_CONTEXT_TOKEN_BUDGET } from './constants.js';
+import { MAX_DOCUMENT_BYTES, PROJECT_CONTEXT_TOKEN_BUDGET } from './constants.js';
 
 /** Which agent/skill (if any) a token-count request is scoped to — decides
  *  which model's tokenizer is used (S-AC-5). Both absent ⇒ always estimated
@@ -35,7 +35,7 @@ export interface DocScope {
 
 export interface SaveResult {
   ok: boolean;
-  reason?: 'no_clone' | 'invalid_path' | 'outside_clone';
+  reason?: 'no_clone' | 'invalid_path' | 'outside_clone' | 'too_large';
   document?: SpecFile;
 }
 
@@ -84,7 +84,9 @@ export class ProjectContextService {
 
     const documents: SpecFile[] = [];
     for (const file of files) {
-      const content = (await this.repo.readDocument(repoRow.clonePath, file.path)) ?? '';
+      const read = await this.repo.readDocument(repoRow.clonePath, file.path);
+      // Refused (symlink/escape) or oversized files contribute no tokens (AC-30, AC-32).
+      const content = read.kind === 'ok' ? read.content : '';
       const { tokens, estimated } = this.container.tokenizer.countFor(model, content);
       const { coveragePct, usedByAgents } = computeCoverage(file.path, usage.agents, usage.skills);
       documents.push({
@@ -117,8 +119,18 @@ export class ProjectContextService {
     // inside the clone (.env, .git/config, …), not just project-context docs.
     if (!normalized || !isAllowedDocumentPath(normalized)) return null;
 
-    const content = await this.repo.readDocument(repoRow.clonePath, normalized);
-    if (content == null) return null;
+    const read = await this.repo.readDocument(repoRow.clonePath, normalized);
+    if (read.kind === 'too_large') {
+      // AC-34: never return the content of an oversized document.
+      throw new AppError(
+        'payload_too_large',
+        `Document exceeds the maximum size of ${MAX_DOCUMENT_BYTES} bytes.`,
+        413,
+        { max_bytes: MAX_DOCUMENT_BYTES },
+      );
+    }
+    if (read.kind !== 'ok') return null;
+    const content = read.content;
 
     const model = await this.resolveModel(scope);
     const { tokens, estimated } = this.container.tokenizer.countFor(model, content);
@@ -145,6 +157,9 @@ export class ProjectContextService {
     if (!normalized || !isAllowedDocumentPath(normalized)) {
       return { ok: false, reason: 'invalid_path' };
     }
+
+    // AC-33: byte size, not char count — checked before anything is written.
+    if (Buffer.byteLength(content, 'utf8') > MAX_DOCUMENT_BYTES) return { ok: false, reason: 'too_large' };
 
     const result = await this.repo.writeDocument(repoRow.clonePath, normalized, content);
     if (!result.ok) return { ok: false, reason: 'outside_clone' };
@@ -216,8 +231,11 @@ export class ProjectContextService {
     }
 
     const contents = new Map<string, string | null>();
+    const tooLarge = new Set<string>();
     for (const path of orderedPaths) {
-      contents.set(path, await this.repo.readDocument(clonePath, path));
+      const read = await this.repo.readDocument(clonePath, path);
+      if (read.kind === 'too_large') tooLarge.add(path);
+      contents.set(path, read.kind === 'ok' ? read.content : null);
     }
 
     const tokenizer = this.container.tokenizer;
@@ -227,7 +245,12 @@ export class ProjectContextService {
       (text) => tokenizer.countFor(model, text).tokens,
       PROJECT_CONTEXT_TOKEN_BUDGET,
     );
-    return { texts: result.injectedTexts, specsRead: result.specsRead };
+    // AC-32: an oversized document was never read; it is reported with the
+    // existing `dropped_for_budget` outcome rather than `missing`.
+    const specsRead = result.specsRead.map((entry) =>
+      tooLarge.has(entry.path) ? { path: entry.path, outcome: 'dropped_for_budget' as const } : entry,
+    );
+    return { texts: result.injectedTexts, specsRead };
   }
 
   // ---- internals ------------------------------------------------------------

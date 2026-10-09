@@ -20,7 +20,9 @@ const RunsQuery = z.object({
   agent_id: z.string().uuid().optional(),
   repo: z.string().optional(),
   status: z.string().optional(),
-  since: z.string().optional(),
+  // ISO-8601 with an offset (what the client's toISOString() sends); anything
+  // else is a 422 instead of an `Invalid Date` reaching the query.
+  since: z.string().datetime({ offset: true }).optional(),
 });
 
 export default async function ciRoutes(appBase: FastifyInstance) {

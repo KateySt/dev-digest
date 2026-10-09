@@ -12,6 +12,7 @@ import {
   API_CONTRACT_REVIEWER_PROMPT,
 } from './seed-prompts.js';
 import { SEED_SKILLS } from './seed-skills.js';
+import { seedEvalData } from './seed-eval.js';
 
 /** Default provider/model for the built-in reviewer agents. */
 const DEFAULT_PROVIDER = 'openrouter' as const;
@@ -441,6 +442,9 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
         .onConflictDoNothing();
     }
   }
+
+  // ---- deterministic eval demo data (Security Reviewer) ----
+  await seedEvalData(db, { workspaceId, agentId: agentIds.get('Security Reviewer')!, prId: pr!.id });
 
   return { workspaceId, userId };
 }

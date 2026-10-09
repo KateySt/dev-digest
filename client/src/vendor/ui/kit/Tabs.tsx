@@ -19,9 +19,11 @@ export function Tabs({
         display: "flex",
         gap: 2,
         padding: pad,
-        borderBottom: "1px solid var(--border)",
-        overflowY: "scroll",
-        overflowX: "hidden",
+        // Inset shadow instead of border-bottom: the active underline paints over it
+        // without a negative margin, so nothing overflows vertically.
+        boxShadow: "inset 0 -1px 0 var(--border)",
+        overflowX: "auto",
+        overflowY: "hidden",
       }}
     >
       {tabs.map((t) => {
@@ -42,7 +44,6 @@ export function Tabs({
               border: "none",
               background: "transparent",
               borderBottom: "2px solid " + (on ? "var(--accent)" : "transparent"),
-              marginBottom: -1,
               cursor: "pointer",
               fontSize: 14,
               fontWeight: on ? 600 : 500,

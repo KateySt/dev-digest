@@ -32,6 +32,7 @@ import {
 import {
   GENERATE_JOB_KIND,
   GENERATION_DEADLINE_MS,
+  PERSIST_MARGIN_MS,
   MAX_ENV_KEYS_IN_PROMPT,
   MAX_LOCAL_RUN_FILE_BYTES,
   MAX_RUN_COMMANDS,
@@ -238,7 +239,8 @@ export class OnboardingService {
             },
           ],
         }),
-        GENERATION_DEADLINE_MS,
+        // Leave PERSIST_MARGIN_MS for the skeleton write (S-AC-32); never <1 ms.
+        Math.max(1, GENERATION_DEADLINE_MS - (Date.now() - startedAt) - PERSIST_MARGIN_MS),
       );
     } catch (err) {
       // safeParse-equivalent defensive handling (step 7a) — any failure

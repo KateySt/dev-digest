@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
-import type { Db } from '../../db/client.js';
+import type { Db, DbExecutor } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import { INITIAL_SKILL_VERSION } from './constants.js';
 import { isBodyChange } from './helpers.js';
@@ -119,10 +119,12 @@ export class SkillsRepository {
     return row;
   }
 
-  /** Delete a skill (scoped to workspace). skill_versions and agent_skills
-   *  links cascade. Returns false if no such skill existed in the workspace. */
-  async deleteById(workspaceId: string, id: string): Promise<boolean> {
-    const rows = await this.db
+  /** Delete a skill (scoped to workspace). skill_versions, agent_skills links and
+   *  eval_suite_runs (+ their per-case results) cascade via FK. `eval_cases` (owned
+   *  by the eval module, no FK on `owner_id`) is cleaned up by the caller in the same
+   *  transaction - pass its `tx` as `executor`. Returns false if no such skill existed. */
+  async deleteById(workspaceId: string, id: string, executor: DbExecutor = this.db): Promise<boolean> {
+    const rows = await executor
       .delete(t.skills)
       .where(and(eq(t.skills.workspaceId, workspaceId), eq(t.skills.id, id)))
       .returning({ id: t.skills.id });

@@ -47,6 +47,7 @@ import {
   DEFAULT_REPO_MAP_TOKEN_BUDGET,
   INDEX_JOB_KIND,
   INDEXER_VERSION,
+  PROJECT_CONTEXT_BLOCKED_PREFIX,
   MAX_CALLERS_PER_SYMBOL,
   REFRESH_JOB_KIND,
   RESYNC_JOB_KIND,
@@ -157,15 +158,24 @@ export class RepoIntelService implements RepoIntel {
       return { status: 'degraded', filesIndexed: 0, filesSkipped: 0, durationMs: Date.now() - startedAt, reason: 'no_clone' };
     }
 
-    const modified = await this.container.gitStatus.modifiedPaths(repo.clonePath);
-    const blocking = filterAllowedPaths(modified);
+    // In-job race check (S-AC-36): documents may have become modified after
+    // the route's synchronous pre-check accepted the job. The refusal reason
+    // is merged into the persisted index stats (status unchanged) so the
+    // caller — who already got a 202 — can still find out.
+    const blocking = await this.blockingPaths(repo.clonePath);
     if (blocking.length > 0) {
+      const reason = `${PROJECT_CONTEXT_BLOCKED_PREFIX}${blocking.join(',')}`;
+      try {
+        await this.repo.mergeIndexStats(repoId, { reason });
+      } catch {
+        // persistence is best-effort; the refusal result below is still returned
+      }
       return {
         status: 'degraded',
         filesIndexed: 0,
         filesSkipped: 0,
         durationMs: Date.now() - startedAt,
-        reason: `project_context_blocked:${blocking.join(',')}`,
+        reason,
       };
     }
 
@@ -181,7 +191,27 @@ export class RepoIntelService implements RepoIntel {
         reason: `sync_failed:${err instanceof Error ? err.message : String(err)}`,
       };
     }
+    // S-AC-37: a successful advance clears any persisted refusal reason.
+    await this.repo.clearIndexStatsReason(repoId, PROJECT_CONTEXT_BLOCKED_PREFIX);
     return runIncremental(this.container, this.repo, { repoId });
+  }
+
+  /**
+   * Synchronous pre-check for `POST /repos/:id/resync` (S-AC-35). Returns
+   * `null` when the repo isn't in `workspaceId`, otherwise the repo-relative
+   * project-context paths that would block a clone advance (`[]` = clear, also
+   * when there is no clone yet).
+   */
+  async findResyncBlockers(workspaceId: string, repoId: string): Promise<string[] | null> {
+    if (!(await this.repo.repoInWorkspace(workspaceId, repoId))) return null;
+    const repo = await this.repo.getRepoBasics(repoId);
+    if (!repo?.clonePath) return [];
+    return this.blockingPaths(repo.clonePath);
+  }
+
+  private async blockingPaths(clonePath: string): Promise<string[]> {
+    const modified = await this.container.gitStatus.modifiedPaths(clonePath);
+    return filterAllowedPaths(modified);
   }
 
   /**

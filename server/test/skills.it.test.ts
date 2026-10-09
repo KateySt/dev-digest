@@ -5,6 +5,7 @@ import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
 import { MockLLMProvider, MockEmbedder, MockGitClient, MockCatalogSource } from '../src/adapters/mocks.js';
+import { eq } from 'drizzle-orm';
 import * as t from '../src/db/schema.js';
 import type { Review } from '@devdigest/shared';
 
@@ -114,6 +115,47 @@ d('A1 skills (Testcontainers pg)', () => {
     expect(del.statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: `/skills/${skill.id}` })).statusCode).toBe(404);
 
+    await app.close();
+  });
+
+  it('SPEC-08 AC-35: deleting a skill also removes its eval cases, their results and its suite/draft runs (other skills untouched)', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const db = pg.handle.db;
+    const [ws] = await db.select().from(t.workspaces);
+    const mk = async (name: string) =>
+      (await app.inject({ method: 'POST', url: '/skills', payload: { name, type: 'convention', body: `body of ${name}` } })).json();
+    const doomed = await mk('doomed-skill');
+    const keeper = await mk('keeper-skill');
+
+    const seedEval = async (skillId: string) => {
+      const [c] = await db
+        .insert(t.evalCases)
+        .values({ workspaceId: ws!.id, ownerKind: 'skill', ownerId: skillId, name: `case-${skillId}`, kind: 'must_find', source: 'manual' })
+        .returning();
+      const [suite] = await db
+        .insert(t.evalSuiteRuns)
+        .values({ workspaceId: ws!.id, ownerKind: 'skill', skillId, skillVersion: 1, status: 'completed', casesTotal: 1 })
+        .returning();
+      const [draft] = await db
+        .insert(t.evalSuiteRuns)
+        .values({ workspaceId: ws!.id, ownerKind: 'skill', skillId, skillVersion: null, isDraft: true, status: 'completed', casesTotal: 1 })
+        .returning();
+      await db.insert(t.evalRuns).values({ caseId: c!.id, suiteRunId: suite!.id, status: 'ok', pass: true });
+      await db.insert(t.evalRuns).values({ caseId: c!.id, suiteRunId: null, status: 'ok', pass: true });
+      return { caseId: c!.id, runIds: [suite!.id, draft!.id] };
+    };
+    const gone = await seedEval(doomed.id);
+    const kept = await seedEval(keeper.id);
+
+    expect((await app.inject({ method: 'DELETE', url: `/skills/${doomed.id}` })).statusCode).toBe(200);
+
+    expect(await db.select().from(t.evalCases).where(eq(t.evalCases.id, gone.caseId))).toHaveLength(0);
+    expect(await db.select().from(t.evalRuns).where(eq(t.evalRuns.caseId, gone.caseId))).toHaveLength(0);
+    expect(await db.select().from(t.evalSuiteRuns).where(eq(t.evalSuiteRuns.skillId, doomed.id))).toHaveLength(0);
+
+    expect(await db.select().from(t.evalCases).where(eq(t.evalCases.id, kept.caseId))).toHaveLength(1);
+    expect(await db.select().from(t.evalRuns).where(eq(t.evalRuns.caseId, kept.caseId))).toHaveLength(2);
+    expect(await db.select().from(t.evalSuiteRuns).where(eq(t.evalSuiteRuns.skillId, keeper.id))).toHaveLength(2);
     await app.close();
   });
 
@@ -277,6 +319,64 @@ d('A1 skills (Testcontainers pg)', () => {
     expect(imported.source).toBe('community');
     expect(imported.enabled).toBe(false);
 
+    await app.close();
+  });
+
+  it('B7 / AC-50, AC-51: a non-uuid repo_id is 422 on create, update, import-community and list', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const skill = (
+      await app.inject({ method: 'POST', url: '/skills', payload: { name: 'B7 target', type: 'convention', body: 'b' } })
+    ).json();
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/skills',
+      payload: { name: 'B7 bad', type: 'convention', body: 'b', repo_id: 'not-a-uuid' },
+    });
+    const update = await app.inject({ method: 'PUT', url: `/skills/${skill.id}`, payload: { repo_id: 'not-a-uuid' } });
+    const imp = await app.inject({
+      method: 'POST',
+      url: '/skills/import-community',
+      payload: { path: 'x/y.md', repo_id: 'not-a-uuid' },
+    });
+    const list = await app.inject({ method: 'GET', url: '/skills?repo_id=not-a-uuid' });
+    expect([create.statusCode, update.statusCode, imp.statusCode, list.statusCode]).toEqual([422, 422, 422, 422]);
+
+    // null stays valid on update (clears to global); 'none' stays valid on list.
+    expect((await app.inject({ method: 'PUT', url: `/skills/${skill.id}`, payload: { repo_id: null } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/skills?repo_id=none' })).statusCode).toBe(200);
+
+    const all = (await app.inject({ method: 'GET', url: '/skills' })).json() as { name: string }[];
+    expect(all.some((s) => s.name === 'B7 bad')).toBe(false);
+    await app.close();
+  });
+
+  it('B7 / AC-49: POST /skills with a foreign-workspace repo_id is rejected and persists nothing', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const [otherWs] = await pg.handle.db.insert(t.workspaces).values({ name: 'foreign-ws' }).returning();
+    const [foreignRepo] = await pg.handle.db
+      .insert(t.repos)
+      .values({ workspaceId: otherWs!.id, owner: 'evil', name: 'foreign', fullName: 'evil/foreign' })
+      .returning();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/skills',
+      payload: { name: 'B7 foreign-scoped', type: 'convention', body: 'b', repo_id: foreignRepo!.id },
+    });
+    expect(res.statusCode).toBe(422);
+
+    const rows = await pg.handle.db.select().from(t.skills).where(eq(t.skills.name, 'B7 foreign-scoped'));
+    expect(rows).toHaveLength(0);
+
+    // Own-workspace repo is still accepted.
+    const { repo } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const ok = await app.inject({
+      method: 'POST',
+      url: '/skills',
+      payload: { name: 'B7 own-scoped', type: 'convention', body: 'b', repo_id: repo.id },
+    });
+    expect(ok.statusCode).toBe(201);
     await app.close();
   });
 

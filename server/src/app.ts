@@ -17,6 +17,7 @@ import { Container, type ContainerOverrides } from './platform/container.js';
 import { AppError } from './platform/errors.js';
 import { modules } from './modules/index.js';
 import { ReviewService } from './modules/reviews/service.js';
+import { EvalService } from './modules/eval/service.js';
 
 // Attach the DI container to every request/instance.
 declare module 'fastify' {
@@ -67,6 +68,16 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const container = new Container(config, db, opts.overrides);
   app.decorate('container', container);
 
+  // Reap jobs left queued/running by a dead process (the queue is in-memory),
+  // so e.g. onboarding generation isn't deduped onto an orphan forever
+  // (S-AC-28). Awaited before serving, for the same reason as the reapers below.
+  try {
+    const reaped = await container.jobs.reapOrphaned();
+    if (reaped > 0) app.log.info({ reaped }, 'reaped orphaned queued/running jobs on boot');
+  } catch (err) {
+    app.log.warn({ err: (err as Error).message }, 'orphaned-job reaping failed (non-fatal)');
+  }
+
   // Reap runs left 'running' by a previous (now-dead) process — otherwise they
   // show as perpetually "running" in the UI and can't be cancelled (no runner).
   //
@@ -82,6 +93,15 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     if (reaped > 0) app.log.info({ reaped }, 'reaped stale running agent_runs on boot');
   } catch (err) {
     app.log.warn({ err: (err as Error).message }, 'stale-run reaping failed (non-fatal)');
+  }
+
+  // Same for eval suite runs: a run still 'running' at boot belonged to a dead
+  // process. Fail it ("interrupted") so the per-agent run lock is released.
+  try {
+    const reaped = await new EvalService(container).reapStaleSuiteRuns();
+    if (reaped > 0) app.log.info({ reaped }, 'reaped stale running eval suite runs on boot');
+  } catch (err) {
+    app.log.warn({ err: (err as Error).message }, 'stale eval-run reaping failed (non-fatal)');
   }
 
   // Security headers (X-Content-Type-Options, X-Frame-Options, …). The API

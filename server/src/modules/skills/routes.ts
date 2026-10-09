@@ -40,7 +40,8 @@ const CreateSkillBody = z.object({
   source: z.enum(['manual', 'imported_url', 'extracted', 'community']).optional(),
   enabled: z.boolean().optional(),
   // SPEC-07 — optional project scope; absent ⇒ global (AC-23).
-  repo_id: z.string().optional(),
+  // AC-50: must be a UUID before any lookup.
+  repo_id: z.string().uuid().optional(),
 });
 
 const UpdateSkillBody = z.object({
@@ -52,19 +53,22 @@ const UpdateSkillBody = z.object({
   override: z.boolean().optional(),
   // 2026-10-02 amendment — project scope reassignment (AC-41/AC-43).
   // Omitted ⇒ not touched; null ⇒ cleared to global; a string ⇒ reassigned.
-  repo_id: z.string().nullable().optional(),
+  repo_id: z.string().uuid().nullable().optional(),
 });
 
 // 2026-10-02 amendment — AC-35/AC-36/AC-37: omitted ⇒ workspace-wide
 // (unchanged default); the reserved literal 'none' ⇒ global-only; any other
 // value ⇒ that project's skills plus every global skill.
-const ListSkillsQuery = z.object({ repo_id: z.string().optional() });
+// 2026-10-07 AC-51: 'none' or a UUID — anything else is 422.
+const ListSkillsQuery = z.object({
+  repo_id: z.union([z.literal('none'), z.string().uuid()]).optional(),
+});
 
 const ImportUrlBody = z.object({ url: z.string().min(1) });
 
 const CommunityQuery = z.object({ q: z.string().optional(), tag: z.string().optional() });
 
-const ImportCommunityBody = z.object({ path: z.string().min(1), repo_id: z.string().min(1) });
+const ImportCommunityBody = z.object({ path: z.string().min(1), repo_id: z.string().uuid() });
 
 const VersionParams = z.object({ id: z.string(), version: z.coerce.number().int() });
 

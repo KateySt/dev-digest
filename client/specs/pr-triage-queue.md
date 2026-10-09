@@ -13,6 +13,11 @@ the data source; this spec does not restate them.
 
 ## Changelog
 
+- 2026-10-07 — AC-28/AC-29 verification method changed in place from
+  integration test to unit test (component test with a mocked `EventSource`,
+  user decision Q5). Added AC-34: a review start answered with 409
+  `review_in_progress` (server S-AC-23/S-AC-24) shows a "review already
+  running" message instead of a generic failure.
 - 2026-09-30 — resolved the two remaining open clarifications: a manual
   filter/sort change while Triage queue is active deactivates the toggle
   rather than fighting the user or letting the view drift (AC-32); the risk
@@ -147,6 +152,11 @@ that states what it will spend.
   in place without a manual page reload — updated score, findings, status and
   cost on success, or a failure state on failure. (verify via: unit test)
 
+- AC-34: IF starting a review from a row's or the PR detail page's Run Review
+  dropdown is answered with 409 `review_in_progress`, THEN the page shall show
+  a "review already running" message for that PR rather than a generic
+  failure. (verify via: unit test)
+
 **"Review all" — confirmation**
 
 - AC-16: WHEN the list header renders "Review all", its label shall state the
@@ -190,10 +200,10 @@ that states what it will spend.
 - AC-28: WHILE any number of runs started by "Review all" are in flight, the
   page shall hold no more than a small fixed number of concurrent live
   connections to the server, and shall never open one per run. (verify via:
-  integration test)
+  unit test, with a mocked `EventSource` — changed 2026-10-07)
 - AC-29: WHILE runs started by "Review all" are in flight, the list's own data
   requests — the PR list, refresh, navigation — shall continue to complete.
-  (verify via: integration test)
+  (verify via: unit test, with a mocked `EventSource` — changed 2026-10-07)
 
 **Cross-cutting UI rules**
 

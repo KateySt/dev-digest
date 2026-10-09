@@ -14,6 +14,16 @@ export const GENERATE_JOB_KIND = 'onboarding-generate';
  */
 export const GENERATION_DEADLINE_MS = 110_000;
 
+/**
+ * Reserved at the end of the generation window for building + persisting the
+ * AC-24 skeleton. The model call's own timeout is
+ * `GENERATION_DEADLINE_MS − elapsed − PERSIST_MARGIN_MS`, so a hung call is
+ * abandoned (→ `model_failure_reason: 'timeout'`) early enough that the
+ * skeleton is persisted BEFORE the deadline guard would skip the write
+ * (S-AC-32).
+ */
+export const PERSIST_MARGIN_MS = 5_000;
+
 /** `completeStructured` schemaName for the single generation call. */
 export const ONBOARDING_SCHEMA_NAME = 'OnboardingGeneration';
 
