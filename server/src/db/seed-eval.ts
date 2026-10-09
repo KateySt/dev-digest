@@ -6,9 +6,9 @@ import { inputFingerprint } from '../modules/eval/helpers.js';
 
 /**
  * Deterministic eval demo data for ONE agent (Security Reviewer): agent
- * versions v1 + v2, four eval cases (must_find, must_not_flag with a location,
- * must_not_flag empty), three completed suite runs with per-case results (the
- * newest shows a precision drop, so the regression banner appears), plus one
+ * versions v1 + v2, eight eval cases (4 must_find, 4 must_not_flag - SPEC-09
+ * AC-15/16), three completed suite runs with per-case results (the newest
+ * shows a precision drop, so the regression banner appears), plus one
  * accepted finding from that agent on PR #482 so "Turn into eval case" is
  * demonstrable without a model call. All fixed inputs; idempotent - skipped
  * once the agent already has suite runs or eval cases.
@@ -24,7 +24,7 @@ import { inputFingerprint } from '../modules/eval/helpers.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface SeedCase {
-  key: 'stripe' | 'ssrf' | 'clean' | 'retry';
+  key: 'stripe' | 'ssrf' | 'trifecta' | 'serviceRole' | 'clean' | 'retry' | 'unusedImport' | 'rawBody';
   name: string;
   kind: 'must_find' | 'must_not_flag';
   source: 'manual' | 'finding_accepted' | 'finding_dismissed';
@@ -47,8 +47,29 @@ const CLEAN_DIFF =
 const RETRY_DIFF =
   'diff --git a/src/middleware/ratelimit.ts b/src/middleware/ratelimit.ts\n--- a/src/middleware/ratelimit.ts\n+++ b/src/middleware/ratelimit.ts\n' +
   '@@ -50,6 +50,7 @@\n   if (!bucket.take()) {\n+    res.status(429);\n     return res.end();\n   }\n';
+const TRIFECTA_DIFF =
+  'diff --git a/src/api/public/callbacks.ts b/src/api/public/callbacks.ts\n--- a/src/api/public/callbacks.ts\n+++ b/src/api/public/callbacks.ts\n' +
+  '@@ -30,3 +30,7 @@\n export async function notify(req: Request) {\n   const note = req.body.note;\n' +
+  '+  const customers = await db.customers.findMany({ select: { email: true, cardLast4: true } });\n' +
+  '+  const summary = await llm.complete(`Summarize for the user: ${note}\\n${JSON.stringify(customers)}`);\n' +
+  '+  await fetch(req.body.callbackUrl, { method: "POST", body: summary });\n+  return { ok: true };\n }\n';
+const SERVICE_ROLE_DIFF =
+  'diff --git a/src/lib/supabase-client.ts b/src/lib/supabase-client.ts\n--- a/src/lib/supabase-client.ts\n+++ b/src/lib/supabase-client.ts\n' +
+  '@@ -1,2 +1,5 @@\n "use client";\n import { createClient } from "@supabase/supabase-js";\n+\n' +
+  '+const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;\n' +
+  '+export const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key);\n';
+const UNUSED_IMPORT_DIFF =
+  'diff --git a/src/api/public/index.ts b/src/api/public/index.ts\n--- a/src/api/public/index.ts\n+++ b/src/api/public/index.ts\n' +
+  '@@ -1,4 +1,3 @@\n import { Router } from "express";\n-import { createHash } from "node:crypto";\n' +
+  ' import { rateLimit } from "../../middleware/ratelimit";\n import { items } from "./items";\n';
+const RAW_BODY_DIFF =
+  'diff --git a/src/server.ts b/src/server.ts\n--- a/src/server.ts\n+++ b/src/server.ts\n' +
+  '@@ -86,3 +86,4 @@\n app.use("/api/public", rateLimit);\n' +
+  '+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhook);\n' +
+  ' app.use(express.json());\n app.use("/api", api);\n';
 
-const CASES: SeedCase[] = [
+/** The seeded Security Reviewer case set - exported for the SPEC-09 AC-15 balance test. */
+export const CASES: SeedCase[] = [
   {
     key: 'stripe',
     name: 'stripe-key-leak',
@@ -72,6 +93,35 @@ const CASES: SeedCase[] = [
     ],
   },
   {
+    key: 'trifecta',
+    name: 'lethal-trifecta-callback',
+    kind: 'must_find',
+    source: 'manual',
+    file: 'src/api/public/callbacks.ts',
+    diff: TRIFECTA_DIFF,
+    expected: [
+      {
+        file: 'src/api/public/callbacks.ts',
+        start_line: 32,
+        end_line: 34,
+        severity: 'CRITICAL',
+        category: 'security',
+        title: 'Private customer data and untrusted input sent to a caller-supplied callback URL',
+      },
+    ],
+  },
+  {
+    key: 'serviceRole',
+    name: 'service-role-in-client',
+    kind: 'must_find',
+    source: 'finding_accepted',
+    file: 'src/lib/supabase-client.ts',
+    diff: SERVICE_ROLE_DIFF,
+    expected: [
+      { file: 'src/lib/supabase-client.ts', start_line: 4, end_line: 5, severity: 'CRITICAL', category: 'security', title: 'Supabase service_role key shipped to the browser' },
+    ],
+  },
+  {
     key: 'clean',
     name: 'clean-refactor-no-flags',
     kind: 'must_not_flag',
@@ -89,6 +139,24 @@ const CASES: SeedCase[] = [
     diff: RETRY_DIFF,
     expected: [{ file: 'src/middleware/ratelimit.ts', start_line: 51, end_line: 51 }],
   },
+  {
+    key: 'unusedImport',
+    name: 'no-unused-import-warning',
+    kind: 'must_not_flag',
+    source: 'manual',
+    file: 'src/api/public/index.ts',
+    diff: UNUSED_IMPORT_DIFF,
+    expected: [{ file: 'src/api/public/index.ts', start_line: 2, end_line: 2 }],
+  },
+  {
+    key: 'rawBody',
+    name: 'no-raw-body-parser-flag',
+    kind: 'must_not_flag',
+    source: 'finding_dismissed',
+    file: 'src/server.ts',
+    diff: RAW_BODY_DIFF,
+    expected: [{ file: 'src/server.ts', start_line: 87, end_line: 87 }],
+  },
 ];
 
 interface Counts {
@@ -101,39 +169,55 @@ interface Counts {
   pass: boolean;
 }
 
-/** Per-case raw counts for each suite run (v1 x2, then v2 with extra noise). */
-const RUNS: { version: 1 | 2; daysAgo: number; cost: number; counts: Record<SeedCase['key'], Counts> }[] = [
+/**
+ * Per-case raw counts for each suite run: v1 misses the trifecta on its first
+ * run, then v2 adds noise (an extra Stripe finding and a false positive on the
+ * raw-body route), so the newest run shows the precision drop.
+ */
+export const RUNS: { version: 1 | 2; daysAgo: number; cost: number; counts: Record<SeedCase['key'], Counts> }[] = [
   {
     version: 1,
     daysAgo: 5,
-    cost: 0.21,
+    cost: 0.42,
     counts: {
       stripe: { m: 1, e: 1, g: 2, n: 1, k: 2, d: 0, pass: true },
       ssrf: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 1, pass: true },
+      trifecta: { m: 0, e: 1, g: 0, n: 0, k: 0, d: 0, pass: false },
+      serviceRole: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
       clean: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
       retry: { m: 0, e: 0, g: 1, n: 0, k: 1, d: 0, pass: true },
+      unusedImport: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
+      rawBody: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
     },
   },
   {
     version: 1,
     daysAgo: 3,
-    cost: 0.21,
+    cost: 0.42,
     counts: {
       stripe: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
       ssrf: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
+      trifecta: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
+      serviceRole: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
       clean: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
       retry: { m: 0, e: 0, g: 1, n: 0, k: 1, d: 0, pass: true },
+      unusedImport: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
+      rawBody: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
     },
   },
   {
     version: 2,
     daysAgo: 1,
-    cost: 0.23,
+    cost: 0.46,
     counts: {
       stripe: { m: 1, e: 1, g: 2, n: 1, k: 2, d: 0, pass: true },
       ssrf: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
+      trifecta: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
+      serviceRole: { m: 1, e: 1, g: 1, n: 0, k: 1, d: 0, pass: true },
       clean: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
       retry: { m: 0, e: 0, g: 1, n: 0, k: 1, d: 0, pass: true },
+      unusedImport: { m: 0, e: 0, g: 0, n: 0, k: 0, d: 0, pass: true },
+      rawBody: { m: 0, e: 0, g: 1, n: 1, k: 1, d: 0, pass: false },
     },
   },
 ];
@@ -156,7 +240,7 @@ Flag hardcoded credentials and secrets committed to config files.
 Flag outbound requests built from caller-supplied URLs (SSRF).
 Do not flag pure formatting refactors.`;
 
-/** Skill cases reuse the agent fixtures' diffs/expectations (3 of the 4). */
+/** Skill cases reuse 3 of the agent fixtures' diffs/expectations. */
 const SKILL_CASE_KEYS: SeedCase['key'][] = ['stripe', 'ssrf', 'clean'];
 
 /** v1 misses the SSRF and the Stripe key (fails 2/3); v2 catches both. */

@@ -189,7 +189,10 @@ Migrations are **not** applied on boot — run `pnpm db:migrate` (pgvector is
 enabled by migration `0000`; `0020` adds `eval_suite_runs` and the eval-case /
 finding-reply columns, `0021` generalises it for skill runs — Evals routes fail without them). `pnpm db:seed` also
 seeds eval demo data (`src/db/seed-eval.ts`). `pnpm db:seed` is idempotent demo data
-(`acme/payments-api`, PR #482, the two built-in agents).
+(`acme/payments-api`, PR #482, the two built-in agents). The eval seed skips an
+agent that already has cases or suite runs, so a DB seeded before the 8-case
+Security Reviewer set (SPEC-09) keeps its old 4 cases — reset the DB and re-seed
+to get the new set.
 
 ## Review context (non-obvious)
 
