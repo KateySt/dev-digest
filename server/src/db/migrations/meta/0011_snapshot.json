@@ -1142,6 +1142,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "attached_doc_paths": {
+          "name": "attached_doc_paths",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "threat_level": {
+          "name": "threat_level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1373,6 +1387,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "attached_doc_paths": {
+          "name": "attached_doc_paths",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "enabled": {
           "name": "enabled",

@@ -3,7 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Agent } from "@devdigest/shared";
 import messages from "../../../../../../messages/en/agents.json";
-import { ToastProvider } from "../../../../../lib/toast";
+import { ToastProvider } from "../../../../../lib/contexts/toast";
 
 // Mock the data hooks so the editor renders without a network/query client.
 vi.mock("../../../../../lib/hooks/agents", () => ({
@@ -39,6 +39,7 @@ const AGENT: Agent = {
   repo_intel: true,
   enabled: true,
   version: 1,
+  attached_doc_paths: [],
 };
 
 function renderWithIntl(ui: React.ReactElement) {

@@ -1,0 +1,130 @@
+# Client Insights
+
+Non-obvious discoveries from real sessions. Specific and actionable — pass the cold-read test.
+See also: `insights/gotchas.md` for known quirks at project start.
+
+---
+
+## What Works
+
+2026-06-22 — `var(--ok)` is the correct CSS token for green/success icon color (used for check marks, approved verdict, "reviewed" status). Do NOT use `var(--success)` or `var(--green)` — those don't exist. Confirmed across settings, verdict banner, and PR list constants. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/VerdictBanner/constants.ts:1
+
+2026-06-22 — `Button` from `@devdigest/ui` auto-replaces the `icon` prop with a spinning `RefreshCw` when `loading=true`. Adding `icon="RefreshCw"` explicitly on a loading button is redundant — the component handles it. The spin animation runs via `ddspin 1s linear infinite` on the icon element. ref: client/src/vendor/ui/primitives/Button.tsx:24
+
+2026-06-17 — `SEV[sev].c` from `@devdigest/ui` returns a hex string (e.g. `#ef4444`), NOT a CSS variable. Appending `"22"` / `"55"` gives valid 8-digit hex with ~13%/33% alpha — safe for `background` and `border` derivation. Do NOT use this trick with `var(--crit)` / `var(--warn)` style tokens (those are CSS vars and will produce invalid values). ref: client/src/app/repos/[repoId]/pulls/styles.ts:50
+
+2026-06-17 — Shared display components for PR list cells live in `client/src/components/`. Pure display, no fetching. Accept `value | null | undefined`, render `–` for absent data. Pattern: `({ cost }: { cost?: number | null }) => cost && cost > 0 ? "$X.XXX" : "–"`. ref: client/src/components/RunCostBadge/RunCostBadge.tsx:1
+
+2026-06-17 — Lazy-enable TanStack Query by passing `undefined` instead of a boolean flag: `usePrReviews(anchorRect && totalFindings > 0 ? pr.id : undefined)`. When `prId` is `undefined`, `enabled: !!prId` is false — no fetch fires. Query enables automatically when the condition becomes truthy. No conditional hook call needed. ref: client/src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx:28
+
+2026-06-17 — Store `DOMRect | null` as hover state instead of `boolean` for popovers — gives both the trigger signal AND the position for `position: fixed` placement in one state value. Pattern: `onMouseEnter={(e) => setAnchorRect(e.currentTarget.getBoundingClientRect())}`. ref: client/src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx:34
+
+2026-06-17 — `createPortal(content, document.body)` escapes `overflow: hidden` containers. Use for any overlay/popover rendered inside a clipped container. ref: client/src/app/repos/[repoId]/pulls/_components/FindingsPopover/FindingsPopover.tsx:96
+
+2026-06-29 — `createPortal(content, document.body)` in a `"use client"` component is safe without a `mounted` guard because Next.js App Router never SSR-renders Client Components — they hydrate in the browser only. The `mounted` guard pattern (`const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), [])`) is needed only for Server Components or pages with `ssr` enabled. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/BlastRadiusCard/BlastGraphLightbox.tsx:1
+
+## What Doesn't Work
+
+2026-06-29 — `{count && <Component />}` renders the literal number `0` in the DOM when `count === 0` — React renders falsy numbers (0, -0, NaN) as text nodes. Always use `{count > 0 && <Component />}` for numeric guards. `{!!count && ...}` also works but is less readable. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/BlastRadiusCard/SummaryBar.tsx:1
+
+2026-06-29 — A d3 force-simulation graph must be mounted/unmounted (not toggled via CSS `display:none`). When the container is hidden via CSS, `getBoundingClientRect()` returns 0 for width/height and the simulation places all nodes at the origin. Correct pattern: conditionally render the graph (`{graphOpen && <BlastGraph />}`) so it mounts with real dimensions. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/BlastRadiusCard/BlastGraph.tsx:1
+
+2026-06-18 — Fixing `.js` extensions in `client/src/vendor/shared/index.ts` alone is NOT enough. The individual contract files also import each other with `.js` extensions (`eval-ci.ts`, `observability.ts`, `platform.ts`, `productionize.ts`, `review-api.ts`, `adapters.ts`). All 6 must be fixed in addition to the barrel. Grep: `from '\./.*\.js'` in `client/src/vendor/shared/` to find them all. ref: client/src/vendor/shared/contracts/eval-ci.ts:2
+
+2026-06-18 — `client/src/vendor/shared/index.ts` used `.js` extensions on all re-exports (`export * from './contracts/findings.js'`). This is the TypeScript ESM convention for Node.js but Next.js/webpack cannot resolve it — "Module not found: Can't resolve './contracts/findings.js'". The bug was latent: `import type` is erased at compile time so webpack never resolved the module. It surfaced only when `Severity` was imported as a value. Fix: remove all `.js` extensions from the client barrel. ref: client/src/vendor/shared/index.ts:17
+
+2026-06-18 — `SeverityChip` with "N dots total" (render exactly N circles) is visually wrong — it gives no sense of scale. The correct model is always 12 slots: first `min(count, 12)` render as a single merged solid segment (height=2px), the remaining (12-N) render as faded separate dots. Width of merged segment = `N * SLOT_W + (N-1) * GAP`. ref: client/src/components/SeverityChip/SeverityChip.tsx:1
+
+2026-06-17 — `Icon.AlertCircle` does not exist in `@devdigest/ui` — runtime error "Element type is invalid: expected a string... but got undefined". Never guess icon names; check existing usages (`grep -oh "Icon\.[A-Za-z]*"`) to find what's available. ref: client/src/app/repos/[repoId]/pulls/_components/FindingsPopover/FindingsPopover.tsx:56
+
+2026-06-30 — `BookOpen` is NOT in the `@devdigest/ui` icon registry (`client/src/vendor/ui/icons.tsx`). Attempting to use `icon: "BookOpen" as const` for a tab causes a TypeScript error on `IconName`. For a "context/documents" tab the correct substitute is `"FileText"` which IS registered. Always cross-check `icons.tsx` exports before choosing a tab icon. ref: client/src/vendor/ui/icons.tsx:167
+
+## Codebase Patterns
+
+2026-06-29 — Business logic (data derivation) in JSX is a code smell in this codebase. Non-trivial derivations live in `helpers.ts` at module level (not in the component body): `buildCronSet()`, `buildSymbolRows()`, `endpointPillClass()`. Inlining them in JSX creates untestable logic and a harder-to-read template. Rule: if a derivation needs more than a single expression, move it to `helpers.ts` (then it is unit-testable — see `helpers.test.ts`). ref: client/src/app/repos/[repoId]/pulls/[number]/_components/BlastRadiusCard/helpers.ts:1
+
+2026-06-29 — Known bug in `buildSymbolRows()`: it attributes endpoints/crons per symbol only inside `if (data.factsByFile)`, falling back to `impactedEndpoints` only in the `else`. When `factsByFile` is a non-empty object whose caller files don't match a symbol's callers (or is `{}`), that symbol's endpoints column is empty even though `impactedEndpoints` has data. Carried over as-is from the PR #50 homework (not yet fixed). Candidate fix: after the loop, `if (endpoints.length === 0) endpoints.push(...data.impactedEndpoints)`. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/BlastRadiusCard/helpers.ts:32
+
+2026-06-22 — `OverviewTab.tsx` originally had a hardcoded English string `"Description"` as a `SectionLabel` child — violating the no-hardcoded-strings rule. This was fixed (migrated to `t("overview.descriptionLabel")`) when the `prId` prop was added in T8. Future implementers touching this file: the fix is already in place, don't revert it. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/OverviewTab.tsx:1
+
+2026-06-17 — `tableCard` in `styles.ts` has `overflow: hidden` — any `position: absolute` child inside the PR list table is clipped. Popovers/tooltips inside the table must use `position: fixed` + `getBoundingClientRect()` for correct placement. ref: client/src/app/repos/[repoId]/pulls/styles.ts:103
+
+2026-06-17 — `@devdigest/shared` in the client resolves to `./src/vendor/shared/` (client's OWN local copy), NOT to `../server/src/vendor/shared/`. `client/tsconfig.json` has `"@devdigest/shared": ["./src/vendor/shared/index.ts"]`. The `gotchas.md` says "resolves to ../server/src/vendor/shared" — that is wrong. When adding fields to any shared contract (e.g. `PrMeta`), BOTH `server/src/vendor/shared/contracts/platform.ts` AND `client/src/vendor/shared/contracts/platform.ts` must be updated independently. ref: client/tsconfig.json:1
+
+2026-06-30 — When a BRAND-NEW contract file is added server-side (e.g. `server/src/vendor/shared/contracts/project-context.ts`), it does NOT automatically appear in the client. Two manual steps are required: (1) create the identical file at `client/src/vendor/shared/contracts/<name>.ts`; (2) add `export * from './contracts/<name>'` to `client/src/vendor/shared/index.ts`. Forgetting either step means client code importing the new types from `@devdigest/shared` gets a "module has no exported member" error. ref: client/src/vendor/shared/index.ts:1
+
+2026-06-30 — The `RunTrace` contract in `client/src/vendor/shared/contracts/trace.ts` can lag behind the server's copy (`server/src/vendor/shared/contracts/trace.ts`). When a new optional field (e.g. `specs_missing`) is added server-side, TypeScript in the client will reject any reference to it until the client's copy is updated too. Pattern: before adding access to a new trace field in UI code, check both copies are in sync. ref: client/src/vendor/shared/contracts/trace.ts:85
+
+2026-06-30 — Renaming a `PromptBlock` label in `TraceBody` requires only a `runs.json` edit — no component code change. `TraceBody` passes `t("trace.prompt.specs")` (and other keys) directly as the `label` prop to `PromptBlock`, which renders it verbatim. The translation key is the single source of truth for the displayed string. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/TraceBody/TraceBody.tsx:84
+
+2026-06-18 — `Severity` from `@devdigest/shared` is a Zod `z.enum()` exported as both a value and a type. Its `.enum` property (`Severity.enum.CRITICAL`) equals the string `'CRITICAL'` at runtime. Import it as a value (drop `import type`) to eliminate hardcoded severity strings in `FINDINGS_FIELDS`, `SEVERITY_FILTERS`, and comparison expressions — TypeScript resolves both the type and the runtime accessor from the same import. ref: client/src/vendor/shared/contracts/findings.ts:11
+
+2026-06-17 — PR list column layout is controlled by two constants that MUST change in sync: `GRID` (CSS `grid-template-columns` string) and `COLUMN_KEYS` (string array of column identifiers) in `constants.ts`. Missing one causes misaligned headers/rows with no TypeScript error. ref: client/src/app/repos/[repoId]/pulls/constants.ts:1
+
+2026-06-20 — `src/lib/` is structured into three groups: `hooks/` (React Query hooks by domain: settings, repos, pulls, context-files, agents, reviews, trace, repo-intel), `contexts/` (React providers: RepoProvider/useActiveRepo, ThemeProvider/useTheme, ToastProvider/useToast/notify, Providers composite), and `utils/` (pure functions with no React deps: githubUrls, modelLabel, featureModels). Each group has an `index.ts` barrel. `api.ts` and `types.ts` stay at `lib/` root as core infrastructure. ref: client/src/lib/contexts/index.ts:1
+
+2026-06-20 — Team convention: use `@/` path alias for any import going 3+ levels up (`../../../`). Short relative paths (1–2 levels, same feature) are fine. The `@/` alias maps to `src/` via `client/tsconfig.json`. Deep relative paths like `../../../../../lib/hooks/reviews` are explicitly rejected — write `@/lib/hooks/reviews` instead. This is a preference, not a TS enforcement — the compiler accepts both. ref: client/tsconfig.json:1
+
+2026-06-30 — R-7 pattern (workspace-scoped resource needs a repoId for discovery): components that are workspace-scoped (agents, skills — no URL repoId) get their discovery repoId from `useActiveRepo()` (`client/src/lib/contexts/repoContext.tsx:58`). That hook returns the last-used repo (URL path > localStorage `dd-repo` > first repo from API). No prop drilling or repo selector needed for the common case. ref: client/src/app/skills/[id]/_components/SkillEditor/_components/ContextTab/ContextTab.tsx:43
+
+2026-06-30 — In multi-agent parallel implementation, each task owns a distinct messages namespace file. T12 owns `projectContext.json`; T13/T14 must NOT write to it. T14's new strings belong in `skills.json` (the skill editor namespace). Always check task `Owned paths` before adding i18n keys to avoid merge conflicts. ref: client/messages/en/skills.json:1
+
+## Tool & Library Notes
+
+2026-06-20 — `pr-self-review` skill has two authoritative files that can drift: `SKILL.md` (step descriptions) and `rules/severity-levels.md` (severity definitions). They duplicate the test-coverage-gate rule — SKILL.md Step 6.5 is the source of truth; severity-levels.md must mirror it exactly. Gaps found: missing `< 20 lines changed` skip condition and `not-found.tsx` in the skip list. Always compare both files when editing either. ref: .claude/skills/pr-self-review/rules/severity-levels.md:58
+
+2026-06-20 — `pr-self-review` Step 6.6 (`npm audit`) runs without a `cd` — in this monorepo (`client/`, `server/`, `reviewer-core/` each have their own `package.json`) the command must be scoped: if `client/package.json` in diff → `cd client && npm audit`; if `server/package.json` → `cd server && npm audit`. Running from repo root misses package-specific vulnerabilities. ref: .claude/skills/pr-self-review/SKILL.md:211
+
+2026-06-20 — Sub-agent template in `pr-self-review` SKILL.md says `Use the \`<skill-name>\` skill` but does NOT say to use the Skill tool. Sub-agents reading this template may not know they need to call the Skill tool explicitly — they could skip loading skill rules and hallucinate the review criteria instead. Template must say `Call the Skill tool with skill: "<skill-name>"`. ref: .claude/skills/pr-self-review/SKILL.md:127
+
+2026-06-18 — In RTL tests, `[style*="flex-direction: column"]` is too broad to assert "no SeverityChip rendered" — RunHistory's content wrapper also uses `flexDirection: column`, producing false positives. The reliable proxy for SeverityChip absence is `[style*="opacity: 0.2"]` (the faded dot elements), which is unique to that component. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/RunHistory/RunHistory.test.tsx:110
+
+2026-06-30 — `@testing-library/user-event` is NOT installed in the client package (only `@testing-library/react` and `@testing-library/jest-dom` are in devDependencies). Importing it in a test produces "Failed to resolve import" at Vite's import-analysis stage. Use `fireEvent` from `@testing-library/react` for all client tests. ref: client/package.json:1
+
+## Recurring Errors & Fixes
+
+2026-06-17 — `git add` on paths with square brackets (Next.js dynamic routes like `[repoId]`, `[number]`) fails in zsh with "no matches found: client/src/app/repos/[repoId]/..." — zsh glob-expands brackets before git sees them. Fix: always quote such paths: `git add "client/src/app/repos/[repoId]/pulls/..."`. ref: client/src/app/repos/[repoId]/pulls/constants.ts:1
+
+2026-06-20 — `src/lib/hooks/reviews.ts` imports `notify` directly via `from "../toast"` (sibling relative path), NOT through any barrel. When moving `toast.tsx` into `lib/contexts/`, updating only `app/` consumers is not enough — files inside `lib/hooks/` have their own direct imports. Always grep inside `lib/hooks/*.ts` when relocating lib files. Fix: change to `from "../contexts/toast"`. ref: client/src/lib/hooks/reviews.ts:8
+
+2026-06-20 — `src/components/showcase/Showcase.tsx` exports `Gallery`, not `Showcase` — despite the filename. Writing `export { Showcase } from "./showcase/Showcase"` in a barrel produces `TS2305: Module has no exported member 'Showcase'`. Fix: `export { Gallery } from "./showcase/Showcase"`. ref: client/src/components/showcase/Showcase.tsx:58
+
+2026-06-30 — `@testing-library/react`'s `getAllByRole` returns `HTMLElement[]`, but TypeScript strict `noUncheckedIndexedAccess` widens `array[0]` to `HTMLElement | undefined`. Pattern that avoids TS2345 on `fireEvent.click(arr[0])`: destructure then assert — `const [first] = arr; fireEvent.click(first!)`. ref: client/src/app/repos/[repoId]/project-context/_components/ProjectContextView.test.tsx:281
+
+## Session Notes
+
+2026-06-29 — Blast Radius full stack (client, ported from PR #50 lesson-04): `useBlastRadius` hook (staleTime 5min, no-retry on 404); `BlastRadiusCard` with `SummaryBar` / `SymbolList` / `PriorPrsAccordion` sub-components; `helpers.ts` module-level pure functions; `BlastGraph` d3 force simulation; `BlastGraphLightbox` via `createPortal`. Mounted into our own `OverviewTab` (kept our self-contained `IntentCard`) as a two-column grid (`gridTemplateColumns: 1fr 1fr`, Intent left / Blast right) wrapped in `react-error-boundary`. Added deps d3 + @types/d3 + react-error-boundary, and the `blastRadius` i18n block. Hermetic test: `helpers.test.ts` (5 tests). Files: client/src/lib/hooks/pulls.ts, client/src/app/repos/[repoId]/pulls/[number]/_components/BlastRadiusCard/, client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/OverviewTab.tsx, client/messages/en/prReview.json.
+
+2026-06-22 — T8 Intent card + OverviewTab wiring → created IntentCard.tsx (Card + SectionLabel + Button loading pattern, useIntent/useRecomputeIntent hooks, loading/error/empty states, i18n via prReview namespace); added `prId: string | null` to OverviewTab; passed prId from page.tsx; added intent + overview i18n keys to prReview.json; exported intent hooks from lib/hooks/index.ts barrel. Typecheck and all 32 tests green. Files: client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/IntentCard.tsx, client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/OverviewTab.tsx, client/src/app/repos/[repoId]/pulls/[number]/page.tsx, client/messages/en/prReview.json, client/src/lib/hooks/index.ts.
+
+2026-06-17 — Run Cost Badge: added COST column to PR list → surfaced `@devdigest/shared` dual-copy trap (client has its own vendor copy, gotchas.md was wrong). Fixed by updating client's local platform.ts. Files: client/src/vendor/shared/contracts/platform.ts, client/src/app/repos/[repoId]/pulls/constants.ts, client/src/components/RunCostBadge/RunCostBadge.tsx.
+
+2026-06-18 — Tests: SeverityChip.test.tsx (7 tests — null guard, counts, dot counts, cap at 12); RunHistory.test.tsx updated — removed obsolete `/5 blockers/` assertion (text replaced by chips), added 3 per-severity chip tests. All 32 client tests green. Commit 1a64a18. Files: client/src/components/SeverityChip/SeverityChip.test.tsx, client/src/app/repos/[repoId]/pulls/[number]/_components/RunHistory/RunHistory.test.tsx.
+
+2026-06-18 — SeverityChip visual redesign + RunHistory chips: fixed dot model to 12-slot filled/faded pattern, added `findings_critical/warning/suggestion` to `RunSummary` via server JOIN, replaced "5 finding(s) · 4 blockers" text in RunHistory with SeverityChip components. Files: client/src/components/SeverityChip/SeverityChip.tsx, client/src/app/repos/[repoId]/pulls/[number]/_components/RunHistory/RunHistory.tsx, server/src/modules/reviews/repository/run.repo.ts, both vendor/shared/contracts/trace.ts.
+
+2026-06-17 — Severity filter pills + findings hover popover: added severity pills to FindingsPanel (PR detail) and lazy-fetch popover to PR list rows. Zero server changes — all data already existed (`findings_critical/warning/suggestion` counts in PrMeta, full findings via `usePrReviews`). Files: client/src/app/repos/[repoId]/pulls/[number]/_components/FindingsPanel/FindingsPanel.tsx, client/src/app/repos/[repoId]/pulls/_components/FindingsPopover/FindingsPopover.tsx, client/src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx.
+
+2026-06-20 — Frontend architecture refactor: split `hooks/core.ts` god-file into 4 domain files (settings/repos/pulls/context-files), reorganized `src/lib/` flat layout into `contexts/` + `utils/` subdirectories, added `src/components/index.ts` barrel. All 32 tests stayed green. Hidden issue: `reviews.ts` had a direct sibling import (`../toast`) that broke on move — caught by typecheck. Files: client/src/lib/hooks/, client/src/lib/contexts/, client/src/lib/utils/, client/src/components/index.ts.
+
+2026-06-20 — pr-self-review skill audit: found 4 gaps — (1) severity-levels.md missing `< 20 lines changed` skip + `not-found.tsx` in HIGH test gate; (2) npm audit needs per-package `cd`; (3) sub-agent template unclear about Skill tool call. All 4 gaps fixed. Files: .claude/skills/pr-self-review/SKILL.md, .claude/skills/pr-self-review/rules/severity-levels.md.
+
+2026-06-20 — `pr-self-review` uses `git diff $(git merge-base origin/main HEAD)...HEAD` — this only reviews **committed** changes in a feature branch. When run on `main` with HEAD = origin/main (e.g. after a merge, with unstaged changes), the diff is empty and the skill silently reports nothing. To test the skill, changes must be committed to a branch first. ref: .claude/skills/pr-self-review/SKILL.md:49
+
+2026-06-20 — To invoke `pr-self-review`, just call the Skill tool (or say "review my changes") — do NOT manually run `git diff` bash commands to collect the diff first. The skill's execution algorithm runs those commands itself internally. Manually pre-collecting diff before calling the skill is redundant and was explicitly corrected by the user. ref: .claude/skills/pr-self-review/SKILL.md:1
+
+2026-06-30 — T11 projectContext hooks: created `client/src/lib/hooks/projectContext.ts` with 5 hooks (`useProjectContext`, `useDocument`, `useSaveDocument`, `useSetAgentDocs`, `useSetSkillDocs`). Also created `client/src/vendor/shared/contracts/project-context.ts` (mirror of the server copy) and added its barrel export. Exported from `lib/hooks/index.ts`. Typecheck clean, all 37 tests green. Files: client/src/lib/hooks/projectContext.ts, client/src/vendor/shared/contracts/project-context.ts, client/src/vendor/shared/index.ts, client/src/lib/hooks/index.ts.
+
+2026-06-30 — T15 TraceBody specs-missing row + prompt label: synced `specs_missing?: string[]` into client's RunTrace contract; added `specsMissing` i18n key to `runs.json`; added conditional `specsMissing` row in TraceBody (hidden when field absent or empty); updated `trace.prompt.specs` label to "Project context — attached specs (untrusted)". All 37 tests green, typecheck clean. Files: client/src/vendor/shared/contracts/trace.ts, client/messages/en/runs.json, client/src/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer/_components/TraceBody/TraceBody.tsx.
+
+2026-06-30 — T12 Project Context page: RSC shell (page.tsx, async params) + three "use client" components (ProjectContextView, DocumentRow, DocumentDrawer). Key finds: (1) `"FolderX"` is not a valid IconName — use `"Folder"`; (2) i18n auto-loads via readdirSync in src/i18n/request.ts, no registration; (3) Next.js 15 App Router RSC pages receive `params` as `Promise<{...}>` requiring `await params`; (4) `@testing-library/user-event` not installed — use fireEvent. 8 new tests, all 45 pass, typecheck clean (no errors in owned paths). Files: client/src/app/repos/[repoId]/project-context/, client/messages/en/projectContext.json.
+
+## Open Questions
+
+2026-06-30 — T13 ContextTab: `useSetAgentDocs(agentId)` takes `agentId` at hook call time (not at mutate time), unlike `useSetAgentSkills` which takes `agentId` at mutate time. The hook signatures differ between skills and docs. Investigated in: client/src/lib/hooks/projectContext.ts:84.
+
+## Session Notes
+
+2026-06-30 — T14 ContextTab for SkillEditor: created `ContextTab/ContextTab.tsx` (`"use client"`) with drag + keyboard (↑↓) reorder, search filter, "N attached" aria-live count, inheritance note (AC-15), attach/detach toggle, bucket badge (colour + text for WCAG), and "serializes as" preview (AC-17) via module-level `buildContribution()`. R-7 decision: `useActiveRepo()` from `client/src/lib/contexts/repoContext.tsx` — returns last-used repo (URL > localStorage > first repo). New `skills.context.*` i18n keys added to `skills.json` (NOT `projectContext.json`, which is T12-owned). Persist via `useSetSkillDocs(skill.id)` to `attached_doc_paths` — never `evidence_files` (distinct convention-evidence field). Icon `"FileText"` used (not `"BookOpen"` — absent from registry). Typecheck clean, 37/37 tests green. Files: client/src/app/skills/[id]/_components/SkillEditor/_components/ContextTab/ContextTab.tsx, client/src/app/skills/[id]/_components/SkillEditor/SkillEditor.tsx, client/src/app/skills/[id]/_components/SkillEditor/constants.ts, client/messages/en/skills.json.
+
+2026-06-30 — T13 ContextTab for AgentEditor: created `ContextTab/ContextTab.tsx` (`"use client"`) with drag + keyboard reorder, search filter, token estimate, preview drawer (Markdown + metadata), attach/detach toggle, "N of M attached" aria-live count. R-7 decision: `useRepos()` + first repo (agents are workspace-scoped). Added `context` entry to TABS constants and `editor.tabs.context` + `agents.context.*` i18n keys to `agents.json`. TypeScript fix required: destructuring array swaps (`[a,b]=[b,a]`) fail with `noUncheckedIndexedAccess`-style errors — must use explicit `tmp` variable pattern. Typecheck clean, 37/37 tests green. Files: client/src/app/agents/[id]/_components/AgentEditor/_components/ContextTab/ContextTab.tsx, client/src/app/agents/[id]/_components/AgentEditor/AgentEditor.tsx, client/src/app/agents/[id]/_components/AgentEditor/constants.ts, client/src/app/agents/[id]/page.tsx, client/messages/en/agents.json.

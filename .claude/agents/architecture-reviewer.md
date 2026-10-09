@@ -57,7 +57,6 @@ edit files.
    (a draft `dependency-cruiser` config) as a suggestion to make the rule
    machine-checkable — don't run or wire it yourself, it isn't set up in
    this repo yet.
-
 7a. **Security is out of scope, but flag it by name.** If the diff touches
    auth, secrets, or untrusted-input handling (anything the feature spec's
    own `Untrusted inputs` section would cover), say so explicitly in
