@@ -15,7 +15,7 @@ import {
   useFindingAction,
 } from "@/lib/hooks/reviews";
 import { notify } from "@/lib/contexts";
-import { FindingCard } from "../FindingCard";
+import { FindingCard } from "@/app/repos/[repoId]/pulls/[number]/_components/FindingCard";
 import type { PrFile, FindingActionKind } from "@devdigest/shared";
 
 interface DiffTabProps {

@@ -88,6 +88,24 @@ export const RunStats = z.object({
 });
 export type RunStats = z.infer<typeof RunStats>;
 
+/** One finding the grounding gate dropped, with the reason. */
+export const DroppedFinding = z.object({
+  title: z.string(),
+  file: z.string(),
+  start_line: z.number().int(),
+  end_line: z.number().int(),
+  reason: z.string(),
+});
+export type DroppedFinding = z.infer<typeof DroppedFinding>;
+
+/** Grounding gate result recorded in the trace (SPEC-10 S-AC-40). */
+export const TraceGrounding = z.object({
+  kept: z.number().int(),
+  total: z.number().int(),
+  dropped: z.array(DroppedFinding),
+});
+export type TraceGrounding = z.infer<typeof TraceGrounding>;
+
 /** The single-document trace stored in `run_traces.trace`. */
 export const RunTrace = z.object({
   config: z.object({
@@ -109,6 +127,9 @@ export const RunTrace = z.object({
   raw_output: z.string(),
   memory_pulled: z.array(MemoryPulled),
   specs_read: z.array(SpecReadEntry),
+  /** SPEC-10 S-AC-40: structured grounding-gate result. `.nullish()` — traces
+   *  written before this field omit it (S-AC-41); never default to an empty list. */
+  grounding: TraceGrounding.nullish(),
   log: z.array(RunLogLine),
 });
 export type RunTrace = z.infer<typeof RunTrace>;
@@ -124,7 +145,7 @@ export const RunSummary = z.object({
   pr_number: z.number().int().nullable(),
   provider: z.string().nullable(),
   model: z.string().nullable(),
-  status: z.string().nullable(), // running | done | failed | cancelled
+  status: z.string().nullable(), // queued | running | done | failed | cancelled
   error: z.string().nullable(),
   duration_ms: z.number().int().nullable(),
   tokens_in: z.number().int().nullable(),

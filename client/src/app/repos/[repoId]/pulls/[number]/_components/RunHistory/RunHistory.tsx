@@ -26,6 +26,8 @@ function outcomeOf(run: RunSummary): Outcome {
   const status = run.status ?? "";
   if (status === "running")
     return { key: "running", color: "var(--accent)", bg: "var(--accent-bg)", icon: "RefreshCw" };
+  if (status === "queued")
+    return { key: "queued", color: "var(--text-muted)", bg: "var(--bg-hover)", icon: "Clock" };
   if (status === "failed")
     return { key: "error", color: "var(--crit)", bg: "var(--crit-bg)", icon: "XCircle" };
   if (status === "cancelled")
@@ -98,6 +100,7 @@ export function RunHistory({
   onOpenTrace,
   onGoToReview,
   onDelete,
+  queuePositions,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
@@ -111,8 +114,11 @@ export function RunHistory({
   /** Jump to this run's inline review accordion below (clicking the agent name). */
   onGoToReview?: (runId: string) => void;
   onDelete?: (runId: string) => void;
+  /** run_id -> 1-based queue position for `queued` rows (from usePrActiveRuns). */
+  queuePositions?: Record<string, number | null | undefined>;
 }) {
   const t = useTranslations("prReview");
+  const tRuns = useTranslations("runs.multiAgent");
   if (runs.length === 0 && commits.length === 0) return null;
 
   const items: TimelineItem[] = [
@@ -166,7 +172,11 @@ export function RunHistory({
         return (
           <div key={`run:${r.run_id}`} style={rowStyle}>
             <Badge color={o.color} bg={o.bg} icon={o.icon}>
-              {t(`runStatus.${o.key}`)}
+              {o.key === "queued"
+                ? queuePositions?.[r.run_id] != null
+                  ? tRuns("columns.queued", { position: queuePositions[r.run_id] as number })
+                  : tRuns("configure.recent.status.queued")
+                : t(`runStatus.${o.key}`)}
             </Badge>
             {settled && r.score != null && <CircularScore score={r.score} size={30} stroke={3} />}
             <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>

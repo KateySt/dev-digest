@@ -15,6 +15,9 @@ import {
   Settings,
   Repo,
   PrDetail,
+  RunRequest,
+  ReviewRunResponse,
+  ConflictTake,
 } from '@devdigest/shared';
 
 /**
@@ -238,5 +241,48 @@ describe('platform DTOs', () => {
         commits: [],
       }),
     ).not.toThrow();
+  });
+});
+
+describe('SPEC-10 multi-agent contracts', () => {
+  const baseTrace = {
+    config: { agent: 'A', model: 'm', source: 'local' },
+    stats: { duration_ms: 1, tokens_in: 1, tokens_out: 1, cost_usd: null, findings: 0, grounding: '0/0 passed' },
+    prompt_assembly: { system: 's', user: 'u' },
+    tool_calls: [],
+    raw_output: '{}',
+    memory_pulled: [],
+    specs_read: [],
+    log: [],
+  };
+
+  it('legacy trace parses with grounding absent (S-AC-41)', () => {
+    const t = RunTrace.parse(baseTrace);
+    expect(t.grounding).toBeUndefined();
+  });
+
+  it('trace with structured grounding keeps dropped entries (S-AC-40)', () => {
+    const dropped = { title: 't', file: 'a.ts', start_line: 1, end_line: 2, reason: 'no overlap' };
+    const t = RunTrace.parse({ ...baseTrace, grounding: { kept: 1, total: 2, dropped: [dropped] } });
+    expect(t.grounding?.dropped).toEqual([dropped]);
+  });
+
+  it('RunRequest agentIds: min 1, nullish, back-compat', () => {
+    expect(RunRequest.safeParse({ agentIds: [] }).success).toBe(false);
+    expect(RunRequest.safeParse({ agentIds: ['a'] }).success).toBe(true);
+    expect(RunRequest.safeParse({ agentIds: null }).success).toBe(true);
+    expect(RunRequest.safeParse({ all: true }).success).toBe(true);
+  });
+
+  it('ReviewRunResponse multi_agent_run_id is optional', () => {
+    expect(ReviewRunResponse.safeParse({ pr_id: 'p', runs: [], reviews: [] }).success).toBe(true);
+    expect(ReviewRunResponse.safeParse({ pr_id: 'p', runs: [], reviews: [], multi_agent_run_id: 'm' }).success).toBe(true);
+  });
+
+  it('ConflictTake verdict accepts new states, rejects ignored', () => {
+    for (const verdict of ['WARNING', 'not_flagged', 'failed', 'cancelled', 'pending']) {
+      expect(ConflictTake.safeParse({ agent_id: 'a', agent_name: 'A', verdict }).success).toBe(true);
+    }
+    expect(ConflictTake.safeParse({ agent_id: 'a', agent_name: 'A', verdict: 'ignored' }).success).toBe(false);
   });
 });

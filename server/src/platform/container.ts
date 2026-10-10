@@ -12,6 +12,7 @@ import type { AppConfig } from './config.js';
 import type { Db } from '../db/client.js';
 import { JobRunner } from './jobs.js';
 import { runBus, type RunBus } from './sse.js';
+import { ReviewQueue } from './review-queue.js';
 import { LocalSecretsProvider } from '../adapters/secrets/local.js';
 import { LocalNoAuthProvider } from '../adapters/auth/local.js';
 import { OctokitGitHubClient } from '../adapters/github/octokit.js';
@@ -75,6 +76,8 @@ export class Container {
   readonly auth: AuthProvider;
   readonly jobs: JobRunner;
   readonly runBus: RunBus;
+  /** Shared agent-run FIFO limiter (REVIEW_CONCURRENCY); one per container. */
+  readonly reviewQueue: ReviewQueue;
 
   private _git?: GitClient;
   private _github?: GitHubClient;
@@ -106,6 +109,10 @@ export class Container {
     this.auth = overrides.auth ?? new LocalNoAuthProvider(db);
     this.runBus = runBus;
     this.jobs = new JobRunner(db);
+    this.reviewQueue = new ReviewQueue(config.reviewConcurrency, {
+      invalidConfig: config.reviewConcurrencyInvalid,
+      rawConfig: config.reviewConcurrencyRaw,
+    });
   }
 
   get git(): GitClient {

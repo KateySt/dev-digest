@@ -64,7 +64,9 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
         title={t("trace.stats")}
         right={
           <Badge color="var(--ok)" bg="var(--ok-bg)" icon="Check">
-            {stats.grounding}
+            {trace.grounding
+              ? t("trace.grounding.keptOfTotal", { kept: trace.grounding.kept, total: trace.grounding.total })
+              : stats.grounding}
           </Badge>
         }
       >
@@ -75,6 +77,32 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
           <Stat label={t("trace.stat.findings")} val={stats.findings} />
         </div>
       </TraceSection>
+
+      {trace.grounding && (
+        <TraceSection icon="Check" title={t("trace.grounding.title")}>
+          <div style={s.groundingSummary}>
+            {t("trace.grounding.keptOfTotal", { kept: trace.grounding.kept, total: trace.grounding.total })}
+          </div>
+          {trace.grounding.dropped.length === 0 ? (
+            <span style={s.noToolCalls}>{t("trace.grounding.noneDropped")}</span>
+          ) : (
+            <>
+              <div style={s.groundingDroppedTitle}>
+                {t("trace.grounding.droppedTitle", { count: trace.grounding.dropped.length })}
+              </div>
+              {trace.grounding.dropped.map((d, i) => (
+                <div key={i} style={s.droppedItem}>
+                  <div style={s.droppedTitle}>{d.title}</div>
+                  <div className="mono" style={s.droppedLoc}>
+                    {d.file}:{d.start_line}-{d.end_line}
+                  </div>
+                  <div style={s.droppedReason}>{t("trace.grounding.dropReason", { reason: d.reason })}</div>
+                </div>
+              ))}
+            </>
+          )}
+        </TraceSection>
+      )}
 
       <FindingsSection findings={findings} />
 
