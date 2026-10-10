@@ -487,9 +487,13 @@ describe('OnboardingService.doGenerate — model timeout leaves room to persist 
   it('B9 / S-AC-32: a never-resolving LLM call yields a persisted skeleton with model_failure_reason "timeout" before the deadline guard', async () => {
     // Fake only timers + Date: the clone reads before the model call are real async I/O.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    let modelCalled = false;
     const hung = {
       id: 'openai',
-      completeStructured: () => new Promise(() => {}),
+      completeStructured: () => {
+        modelCalled = true;
+        return new Promise(() => {});
+      },
     } as unknown as LLMProvider;
     const { doGenerate, upserts } = makeService({
       basics: basics(),
@@ -501,6 +505,12 @@ describe('OnboardingService.doGenerate — model timeout leaves room to persist 
     const done = doGenerate('r1', 'ws1', 'job-hung').then(() => {
       finished = true;
     });
+    // Let the real I/O before the model call finish first (bounded), so a slow
+    // CI runner can't burn fake time before the hung call has even started.
+    for (let i = 0; !modelCalled && i < 10_000; i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    expect(modelCalled).toBe(true);
     // Step the fake clock in small increments, yielding to real I/O between
     // steps, but never past GENERATION_DEADLINE_MS: the skeleton must land
     // BEFORE the deadline guard (which would otherwise skip the write).

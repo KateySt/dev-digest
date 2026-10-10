@@ -85,7 +85,12 @@ d('A1 skills (Testcontainers pg)', () => {
       overrides: {
         embedder: new MockEmbedder(),
         git: new MockGitClient({ diff: DIFF }),
-        llm: { openai: new MockLLMProvider('openai', { structured }) },
+        // openrouter too: the skill_scan feature defaults to it, and an unmocked
+        // provider would hit the network (or fail closed without a key in CI).
+        llm: {
+          openai: new MockLLMProvider('openai', { structured }),
+          openrouter: new MockLLMProvider('openrouter', { structured }),
+        },
         ...(catalogSource ? { catalogSource } : {}),
       },
     });
