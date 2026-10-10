@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button, TagChip } from "@devdigest/ui";
 import type { CommunitySkill } from "@/lib/types";
-import { useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/contexts";
 import { tagColor } from "@/lib/tag-colors";
 import { s } from "./styles";
 

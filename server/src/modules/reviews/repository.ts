@@ -80,12 +80,9 @@ export class ReviewRepository {
     return reviewRepo.getReviewScoped(this.db, workspaceId, reviewId);
   }
 
-  /** In-flight runs for a PR (status='running') — the server-side source of
-   *  truth for "which agents are running now". Joined with the agent name. */
-  activeRunsForPull(
-    workspaceId: string,
-    prId: string,
-  ): Promise<{ run_id: string; agent_id: string | null; agent_name: string | null; ran_at: string | null }[]> {
+  /** In-flight runs for a PR (queued|running) — the server-side source of
+   *  truth for "which agents are active now". Joined with the agent name. */
+  activeRunsForPull(workspaceId: string, prId: string): Promise<runRepo.ActiveRunRow[]> {
     return runRepo.activeRunsForPull(this.db, workspaceId, prId);
   }
 
@@ -105,7 +102,35 @@ export class ReviewRepository {
     return runRepo.createRunsIfIdle(this.db, workspaceId, prId, agents);
   }
 
-  /** Mark still-running runs failed with a reason (bulk start failure, S-AC-22). */
+  /** SPEC-10 S-AC-1: parent `multi_agent_runs` row + queued children (in
+   *  `agents` order) in one atomic step; null when the PR has a run in flight. */
+  createMultiRunIfIdle(
+    workspaceId: string,
+    prId: string,
+    agents: { id: string; provider: string | null; model: string | null }[],
+  ): Promise<{ multiAgentRunId: string; runIds: string[] } | null> {
+    return runRepo.createMultiRunIfIdle(this.db, workspaceId, prId, agents);
+  }
+
+  /** In-flight run ids (+ parent multi-run id) of a PR — 409 details (S-AC-7). */
+  inFlightRunsForPull(
+    workspaceId: string,
+    prId: string,
+  ): Promise<{ runIds: string[]; multiAgentRunId: string | null }> {
+    return runRepo.inFlightRunsForPull(this.db, workspaceId, prId);
+  }
+
+  /** True when the run row has been cancelled (DB source of truth). */
+  isRunCancelled(runId: string): Promise<boolean> {
+    return runRepo.isRunCancelled(this.db, runId);
+  }
+
+  /** `queued` → `running` + `started_at`; false when the row was cancelled meanwhile. */
+  markRunStarted(runId: string): Promise<boolean> {
+    return runRepo.markRunStarted(this.db, runId);
+  }
+
+  /** Mark still-queued/running runs failed with a reason (bulk start failure, S-AC-22). */
   failRunningRuns(runIds: string[], reason: string): Promise<void> {
     return runRepo.failRunningRuns(this.db, runIds, reason);
   }
@@ -126,13 +151,13 @@ export class ReviewRepository {
     return runRepo.deleteAgentRun(this.db, workspaceId, runId);
   }
 
-  /** Mark a still-running run as cancelled (no-op if it already finished). */
+  /** Mark a still-queued or running run as cancelled (no-op if it already finished). */
   cancelRunIfRunning(runId: string): Promise<boolean> {
     return runRepo.cancelRunIfRunning(this.db, runId);
   }
 
-  /** On boot: any run still 'running' is orphaned (its process died / restarted),
-   *  so mark it failed. Prevents permanently stuck "running" runs in the UI. */
+  /** On boot: any run still 'queued'/'running' is orphaned (its process died /
+   *  restarted), so mark it failed. Prevents permanently stuck runs in the UI. */
   reapStaleRunningRuns(): Promise<number> {
     return runRepo.reapStaleRunningRuns(this.db);
   }
@@ -175,13 +200,14 @@ export class ReviewRepository {
 
   // ---- observability: agent_runs + run_traces ----------------------------
 
-  /** Create an agent_runs row in `running` state; returns its id (= the runId). */
+  /** Create an agent_runs row (default `queued`); returns its id (= the runId). */
   createAgentRun(values: {
     workspaceId: string;
     agentId: string | null;
     prId: string;
     provider: string | null;
     model: string | null;
+    status?: 'queued' | 'running';
   }): Promise<string> {
     return runRepo.createAgentRun(this.db, values);
   }
@@ -203,7 +229,7 @@ export class ReviewRepository {
       /** Failure reason (status='failed') / cancellation note. Null clears it. */
       error?: string | null;
     },
-  ): Promise<void> {
+  ): Promise<boolean> {
     return runRepo.completeAgentRun(this.db, runId, values);
   }
 

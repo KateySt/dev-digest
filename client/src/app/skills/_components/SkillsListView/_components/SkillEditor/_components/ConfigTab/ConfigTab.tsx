@@ -6,7 +6,7 @@ import { Button, CodeField, FormField, Select, TextInput, Toggle } from "@devdig
 import type { Skill, SkillType } from "@devdigest/shared";
 import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { useRepos } from "@/lib/hooks";
-import { useToast } from "@/lib/toast";
+import { useToast } from "@/lib/contexts";
 import { slugify } from "@/lib/slug";
 import { SKILL_TYPES } from "@/lib/skill-constants";
 import { isScanBlocking } from "@/lib/skill-scan";

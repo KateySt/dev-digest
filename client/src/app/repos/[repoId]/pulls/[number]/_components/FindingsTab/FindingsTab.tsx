@@ -2,6 +2,7 @@
 
 import React, { useCallback } from "react";
 import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
+import type { ActiveRun } from "@/lib/hooks/reviews";
 import { RunStatus } from "../RunStatus";
 import { RunHistory } from "../RunHistory/RunHistory";
 import { ReviewRunAccordion } from "../ReviewRunAccordion";
@@ -12,6 +13,8 @@ import type { UseMutationResult } from "@tanstack/react-query";
 interface FindingsTabProps {
   prId: string | null;
   liveRunIds: string[];
+  /** In-flight runs (queued/running) incl. queue positions. */
+  activeRuns?: ActiveRun[];
   reviewRunning: boolean;
   lethalTrifecta: FindingRecord[];
   runs: ReviewRecord[];
@@ -32,6 +35,7 @@ interface FindingsTabProps {
 export function FindingsTab({
   prId,
   liveRunIds,
+  activeRuns = [],
   reviewRunning,
   lethalTrifecta,
   runs,
@@ -92,6 +96,11 @@ export function FindingsTab({
     return m;
   }, [runs]);
 
+  const queuePositions = React.useMemo(
+    () => Object.fromEntries(activeRuns.map((r) => [r.run_id, r.queue_position ?? null])),
+    [activeRuns],
+  );
+
   return (
     <section>
       {liveRunIds.length > 0 && (
@@ -117,7 +126,7 @@ export function FindingsTab({
           >
             Live review
           </SectionLabel>
-          <RunStatus runIds={liveRunIds} onDone={onRunDone} />
+          <RunStatus runIds={liveRunIds} activeRuns={activeRuns} onDone={onRunDone} />
         </div>
       )}
 
@@ -152,6 +161,7 @@ export function FindingsTab({
           <RunHistory
             runs={prRuns ?? []}
             commits={prCommits}
+            queuePositions={queuePositions}
             findingsByRunId={findingsByRunId}
             repoId={repoId}
             prNumber={prNumber}

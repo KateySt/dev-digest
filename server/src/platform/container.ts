@@ -12,6 +12,7 @@ import type { AppConfig } from './config.js';
 import type { Db } from '../db/client.js';
 import { JobRunner } from './jobs.js';
 import { runBus, type RunBus } from './sse.js';
+import { ReviewQueue } from './review-queue.js';
 import { LocalSecretsProvider } from '../adapters/secrets/local.js';
 import { LocalNoAuthProvider } from '../adapters/auth/local.js';
 import { OctokitGitHubClient } from '../adapters/github/octokit.js';
@@ -36,6 +37,7 @@ import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
 import { type WorkingTreeStatus, SimpleGitWorkingTreeStatus } from '../adapters/git/status.js';
+import { type RunnerBundleProvider, FsRunnerBundleProvider } from '../adapters/runner-bundle/index.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,
@@ -63,6 +65,8 @@ export interface ContainerOverrides {
   gitStatus?: WorkingTreeStatus;
   /** SPEC-07 — unauthenticated community catalog reads. */
   catalogSource?: CatalogSource;
+  /** CI export — the committed agent-runner bundle (tests inject a stub). */
+  runnerBundle?: RunnerBundleProvider;
 }
 
 export class Container {
@@ -72,6 +76,8 @@ export class Container {
   readonly auth: AuthProvider;
   readonly jobs: JobRunner;
   readonly runBus: RunBus;
+  /** Shared agent-run FIFO limiter (REVIEW_CONCURRENCY); one per container. */
+  readonly reviewQueue: ReviewQueue;
 
   private _git?: GitClient;
   private _github?: GitHubClient;
@@ -94,6 +100,7 @@ export class Container {
   private _gitStatus?: WorkingTreeStatus;
   private _priceBook?: PriceBook;
   private _catalogSource?: CatalogSource;
+  private _runnerBundle?: RunnerBundleProvider;
 
   constructor(config: AppConfig, db: Db, private overrides: ContainerOverrides = {}) {
     this.config = config;
@@ -102,6 +109,10 @@ export class Container {
     this.auth = overrides.auth ?? new LocalNoAuthProvider(db);
     this.runBus = runBus;
     this.jobs = new JobRunner(db);
+    this.reviewQueue = new ReviewQueue(config.reviewConcurrency, {
+      invalidConfig: config.reviewConcurrencyInvalid,
+      rawConfig: config.reviewConcurrencyRaw,
+    });
   }
 
   get git(): GitClient {
@@ -181,6 +192,13 @@ export class Container {
     if (this.overrides.gitStatus) return this.overrides.gitStatus;
     this._gitStatus ??= new SimpleGitWorkingTreeStatus();
     return this._gitStatus;
+  }
+
+  /** The bundled CI runner (`.devdigest/runner.mjs`) read from disk for Export to CI. */
+  get runnerBundle(): RunnerBundleProvider {
+    if (this.overrides.runnerBundle) return this.overrides.runnerBundle;
+    this._runnerBundle ??= new FsRunnerBundleProvider();
+    return this._runnerBundle;
   }
 
   /** Unauthenticated community catalog reads (SPEC-07) — deliberately NOT

@@ -10,7 +10,7 @@ import { AppShell } from "@/components/app-shell";
 import type { TrendPoint } from "@/components/eval-metrics";
 import { MetricCards, RegressionBanner, RunsTable, TrendPanel } from "@/components/eval-dashboard";
 import { ApiError } from "@/lib/api";
-import { notify } from "@/lib/toast";
+import { notify } from "@/lib/contexts";
 import { useSkill, useSkills } from "@/lib/hooks/skills";
 import { useSkillEvalActivity, useSkillEvalRuns } from "@/lib/hooks/eval-runs";
 import { RANGE_OPTIONS, parseRange } from "@/lib/eval";

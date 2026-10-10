@@ -4,10 +4,10 @@ import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, Icon, TagChip } from "@devdigest/ui";
-import { useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/contexts";
 import { tagColor } from "@/lib/tag-colors";
 import { useImportCommunitySkill, useSkillSuggestions } from "@/lib/hooks/skills";
-import { useToast } from "@/lib/toast";
+import { useToast } from "@/lib/contexts";
 import { ApiError } from "@/lib/api";
 import { s } from "./styles";
 

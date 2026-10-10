@@ -41,25 +41,54 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     );
   }
 
-  if (!res.ok) {
-    let code: string | undefined;
-    let message = `${res.status} ${res.statusText}`;
-    let details: unknown;
-    try {
-      const body = await res.json();
-      if (body?.error) {
-        code = body.error.code;
-        message = body.error.message ?? message;
-        details = body.error.details;
-      }
-    } catch {
-      /* non-JSON error body */
-    }
-    throw new ApiError(message, res.status, code, details);
-  }
+  if (!res.ok) throw await toApiError(res);
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Normalize a non-2xx response (structured `{ error }` body when present) into an ApiError. */
+async function toApiError(res: Response): Promise<ApiError> {
+  let code: string | undefined;
+  let message = `${res.status} ${res.statusText}`;
+  let details: unknown;
+  try {
+    const body = await res.json();
+    if (body?.error) {
+      code = body.error.code;
+      message = body.error.message ?? message;
+      details = body.error.details;
+    }
+  } catch {
+    /* non-JSON error body */
+  }
+  return new ApiError(message, res.status, code, details);
+}
+
+/** POST a JSON body and read the response as a binary Blob (e.g. a zip download). */
+export async function apiPostBlob(
+  path: string,
+  body?: unknown,
+): Promise<{ blob: Blob; filename: string | null }> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: body != null ? { "content-type": "application/json" } : {},
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    throw new ApiError(
+      `Cannot reach the DevDigest engine at ${API_BASE}. Is the API running?`,
+      0,
+      "network_error",
+      e
+    );
+  }
+  if (!res.ok) throw await toApiError(res);
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  return { blob: await res.blob(), filename: match?.[1] ?? null };
 }
 
 export const api = {
@@ -71,4 +100,5 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     apiFetch<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   del: <T>(path: string) => apiFetch<T>(path, { method: "DELETE" }),
+  postBlob: apiPostBlob,
 };

@@ -31,6 +31,10 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 ## Codebase Patterns
 
+2026-10-10 — `NotFoundError` hard-codes the `not_found` code, so custom error codes (`pat_workflow_scope`, `github_repo_not_found`, `github_forbidden`) must be thrown as `AppError` with an explicit status and code, otherwise the client sees `not_found` regardless of the message. ref: server/src/modules/ci/service.ts
+
+2026-10-10 — The `devdigest/ci` export PR cannot run its own review: a `pull_request` workflow runs against the base checkout, which does not contain `.devdigest/runner.mjs` yet. Each generated job therefore has a `hashFiles('.devdigest/runner.mjs')` bootstrap guard that skips the runner; the sync records such runs as `artifact_missing`. Don't "fix" this by checking out the PR head (it would run PR-author code with secrets). ref: server/src/modules/ci/helpers.ts
+
 2026-06-30 — `assertInsideCloneForWrite` (path-guard.ts) uses `realpath` on the **parent directory** when the target file does not yet exist — this allows creating a brand-new file inside the clone while still blocking a symlinked parent. The key: `fs.realpath(resolved)` throws ENOENT → catch → `realpath(path.dirname(resolved))` instead. `assertInsideClone` (for reads) requires the file to already exist; it will throw ValidationError with the ENOENT code if the file is absent. ref: server/src/modules/project-context/path-guard.ts:52
 
 2026-06-30 — The `assertContained` guard uses `realTarget.startsWith(realRoot + path.sep)` (NOT a bare prefix like `realRoot`). The `path.sep` suffix is mandatory: without it `/clone-root-extra/file` would pass when `realRoot` is `/clone-root`. Both `realRoot` and `realTarget` must be realpath-expanded before comparison or a symlink at any segment can still escape. ref: server/src/modules/project-context/path-guard.ts:115
@@ -64,6 +68,8 @@ See also: `insights/gotchas.md` for known quirks at project start.
 2026-06-17 — Drizzle `selectDistinctOn([col])` requires the first `orderBy()` column to match the DISTINCT ON column. For "latest row per group": `.selectDistinctOn([t.agentRuns.prId], {...}).orderBy(t.agentRuns.prId, desc(t.agentRuns.ranAt))`. Without the matching prId in orderBy, Postgres throws "SELECT DISTINCT ON expressions must match initial ORDER BY expressions". ref: server/src/modules/pulls/routes.ts:1
 
 ## Recurring Errors & Fixes
+
+2026-10-10 — Migration `0022` (ci_installations/ci_runs) swept in unrelated drift: the drizzle snapshot was missing `agents.attached_doc_paths`, so `db:generate` added it to the new migration's snapshot. When generating a migration, diff the new `meta/*_snapshot.json` against the previous one and expect pre-existing drift to appear; check it is idempotent against databases that already have the column. ref: server/src/db/migrations/0022_productive_daimon_hellstrom.sql
 
 2026-06-22 — `RunLogger.info(msg, data?)` takes message as the FIRST argument (not pino-style `(obj, msg)`). Calling it as `runLog.info({ prId }, "msg")` produces TS2345 "Argument of type '{}' is not assignable to parameter of type 'string'". Fix: swap to `runLog.info("msg", { prId })`. ref: server/src/platform/run-logger.ts:55
 

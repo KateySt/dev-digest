@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Badge, Button, ErrorState, Icon, Skeleton, Tabs } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
 import { useScanSkill, useSkill } from "@/lib/hooks/skills";
-import { useToast } from "@/lib/toast";
+import { useToast } from "@/lib/contexts";
 import { ApiError } from "@/lib/api";
 import { useSkillEvalActivity } from "@/lib/hooks/eval-runs";
 import { SCAN_SEVERITY_COLOR, SKILL_TYPE_COLOR } from "@/lib/skill-constants";

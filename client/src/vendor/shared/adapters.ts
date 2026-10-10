@@ -4,7 +4,7 @@ import type {
   PrDetail,
   IssueMeta,
   PrReviewComment,
-} from './contracts/platform';
+} from './contracts/platform.js';
 
 /**
  * Adapter interfaces. ALL external calls go behind these interfaces.
@@ -61,6 +61,12 @@ export interface StructuredRequest<T> {
   maxTokens?: number;
   timeoutMs?: number;
   maxRetries?: number;
+  /**
+   * OpenRouter session id — groups related generations (e.g. all map-reduce
+   * chunks of one review) into a session in the OpenRouter dashboard. Sent as
+   * the `session_id` body field; ignored by providers that don't support it.
+   */
+  sessionId?: string;
 }
 
 export interface StructuredResult<T> {
@@ -74,7 +80,7 @@ export interface StructuredResult<T> {
 }
 
 export interface LLMProvider {
-  readonly id: 'openai' | 'anthropic';
+  readonly id: 'openai' | 'anthropic' | 'openrouter';
   listModels(): Promise<ModelInfo[]>;
   complete(req: CompletionRequest): Promise<CompletionResult>;
   completeStructured<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>>;
@@ -119,6 +125,57 @@ export interface OpenPrPayload {
   body: string;
 }
 
+/** A single file to write in a commit (path relative to repo root + UTF-8 text). */
+export interface CommitFile {
+  path: string;
+  contents: string;
+}
+
+export interface CommitFilesPayload {
+  /** Branch to create-or-update with the commit (e.g. "devdigest/ci"). */
+  branch: string;
+  /** Base branch to fork from when `branch` does not yet exist (e.g. "main"). */
+  base: string;
+  message: string;
+  files: CommitFile[];
+}
+
+/** Repo identity + default branch, as reported by GitHub. */
+export interface GitHubRepoInfo {
+  id: number;
+  defaultBranch: string;
+}
+
+/** One GitHub Actions workflow run (trusted GitHub metadata, never artifact claims). */
+export interface WorkflowRunInfo {
+  id: number;
+  runAttempt: number;
+  status: string | null;
+  conclusion: string | null;
+  headSha: string;
+  repositoryId: number;
+  path: string;
+  htmlUrl: string;
+  pullRequests: { number: number }[];
+  createdAt: string;
+}
+
+/** One artifact uploaded by a workflow run. */
+export interface RunArtifactInfo {
+  id: number;
+  name: string;
+  sizeInBytes: number;
+  expired: boolean;
+}
+
+/** One job of a workflow run (its `name` is set by the generated workflow). */
+export interface WorkflowJobInfo {
+  id: number;
+  name: string;
+  status: string | null;
+  conclusion: string | null;
+}
+
 export interface GitHubClient {
   listPullRequests(repo: RepoRef): Promise<PrMeta[]>;
   getPullRequest(repo: RepoRef, n: number): Promise<PrDetail>;
@@ -136,9 +193,73 @@ export interface GitHubClient {
   /** Delete an inline review comment. */
   deleteReviewComment(repo: RepoRef, commentId: number): Promise<void>;
   openPullRequest(repo: RepoRef, payload: OpenPrPayload): Promise<{ url: string }>;
+  /**
+   * Commit `files` onto `branch` as ONE atomic commit (Git Data API: blobs →
+   * tree → commit → ref). Creates the branch from `base` if missing, else
+   * fast-forwards it. Idempotent: re-publishing just adds a new commit.
+   */
+  commitFiles(repo: RepoRef, payload: CommitFilesPayload): Promise<{ branch: string }>;
+  /** The open PR whose head is `branch`, if any (so re-publish reuses it). */
+  findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string } | null>;
   getIssue(repo: RepoRef, n: number): Promise<IssueMeta>;
+  /** Repo id + default branch (GET /repos/{owner}/{repo}). */
+  getRepo(repo: RepoRef): Promise<GitHubRepoInfo>;
+  /** Recent runs of one workflow file, filtered by triggering event. */
+  listWorkflowRuns(
+    repo: RepoRef,
+    workflowFile: string,
+    opts: { event: 'pull_request'; perPage?: number },
+  ): Promise<WorkflowRunInfo[]>;
+  /** Artifacts of one workflow run. */
+  listRunArtifacts(repo: RepoRef, runId: number): Promise<RunArtifactInfo[]>;
+  /** Jobs of one workflow run (per-agent conclusion). */
+  listRunJobs(repo: RepoRef, runId: number): Promise<WorkflowJobInfo[]>;
+  /**
+   * Download an artifact zip. Throws an AppError coded `artifact_too_large` when the size
+   * exceeds `maxBytes` (checked up-front from metadata, then on the stream).
+   */
+  downloadArtifact(repo: RepoRef, artifactId: number, maxBytes: number): Promise<Uint8Array>;
+  /**
+   * File paths changed by one commit. A commit's file set is immutable (a
+   * sha never changes what it touched), so callers may cache this result
+   * forever — no head-sha/staleness key needed, unlike the rest of this
+   * interface.
+   */
+  listCommitFiles(repo: RepoRef, sha: string): Promise<string[]>;
   /** GET /user — for "posting as @user". */
   currentLogin(): Promise<string>;
+  /**
+   * Bytes-per-language for the whole repo (GitHub `GET /repos/{owner}/{repo}/languages`).
+   * Repo-wide only — GitHub exposes no per-PR language breakdown.
+   */
+  getLanguages(repo: RepoRef): Promise<Record<string, number>>;
+}
+
+// ---------- Catalog source (SPEC-07) — unauthenticated public-repo reads ----------
+/** A minimal GitHub repo coordinate for the catalog source port. */
+export interface CatalogRepoRef {
+  owner: string;
+  name: string;
+}
+
+/** One file-tree entry from the catalog repo's recursive tree listing. */
+export interface CatalogTreeEntry {
+  path: string;
+  type: 'blob' | 'tree';
+}
+
+/**
+ * Unauthenticated catalog reads (SPEC-07 community skill catalog) —
+ * deliberately NOT part of `GitHubClient`: that port is resolved through
+ * `container.github()`, which throws a `ConfigError` when no `GITHUB_TOKEN`
+ * is configured, and the community catalog must work in the tokenless
+ * local-first setup this app targets (the catalog repo is public). `listTree`
+ * is the one-request tree read the listing is built from; `fetchBody` is
+ * separate, lazy, and only ever called per-import — never during listing.
+ */
+export interface CatalogSource {
+  listTree(repo: CatalogRepoRef): Promise<CatalogTreeEntry[]>;
+  fetchBody(repo: CatalogRepoRef, path: string): Promise<string>;
 }
 
 // ---------- Git (simple-git, heavy) ----------
@@ -180,8 +301,22 @@ export interface GitCommit {
 export interface GitClient {
   clone(repo: RepoRef, url: string, opts?: CloneOptions): Promise<{ path: string }>;
   fetchPullHead(repo: RepoRef, n: number): Promise<void>;
+  /**
+   * Resync an already-cloned repo to the tip of `branch`: fetch from origin and
+   * advance the local working tree to `origin/<branch>`. Unlike `clone`'s bare
+   * `fetch` (which only moves remote-tracking refs), this moves local HEAD so a
+   * subsequent index reflects the latest code. Returns the new HEAD sha.
+   */
+  sync(repo: RepoRef, branch: string): Promise<{ head: string }>;
   currentHead(repo: RepoRef): Promise<string>;
   diff(repo: RepoRef, base: string, head: string): Promise<UnifiedDiff>;
+  /**
+   * Names of files changed between two commits (`git diff --name-only base..head`).
+   * Two-dot form is intentional — we want files reachable from `head` but not `base`,
+   * matching the incremental indexer's "what moved since last_indexed_sha?" semantics.
+   * Returns an empty array when the two refs resolve to the same commit.
+   */
+  diffNameOnly(repo: RepoRef, base: string, head: string): Promise<string[]>;
   blame(repo: RepoRef, path: string): Promise<BlameLine[]>;
   log(repo: RepoRef, path?: string): Promise<GitCommit[]>;
   readFile(repo: RepoRef, path: string): Promise<string>;
@@ -212,6 +347,17 @@ export interface CodeIndex {
   grep(repo: RepoRef, pattern: string): Promise<CodeMatch[]>;
   symbols(repo: RepoRef): Promise<CodeSymbol[]>;
   references(repo: RepoRef, symbol: string): Promise<CodeReference[]>;
+}
+
+// ---------- WebFetch (outbound HTTP, SSRF-guarded) ----------
+export interface WebFetchClient {
+  /**
+   * Fetch the content of a remote URL and return it as text.
+   * Implementations MUST enforce: HTTPS-only, no private/loopback/link-local
+   * hosts, a request timeout, a response body size cap, and text/* Content-Type.
+   * Throws a ValidationError on any SSRF-guard violation or HTTP error.
+   */
+  fetch(url: string): Promise<string>;
 }
 
 // ---------- Auth (pluggable; MVP = LocalNoAuthProvider) ----------

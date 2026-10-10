@@ -7,7 +7,7 @@ import { Button, Dropdown, EmptyState, ErrorState, Icon, Select, Skeleton } from
 import { AppShell } from "../../../../components/app-shell";
 import { useSkills, useUpdateSkill } from "../../../../lib/hooks/skills";
 import { useRepos } from "../../../../lib/hooks";
-import { useActiveRepo } from "@/lib/repo-context";
+import { useActiveRepo } from "@/lib/contexts";
 import { SkillCard } from "./_components/SkillCard";
 import { SkillEditor } from "./_components/SkillEditor";
 import { VALID_SKILL_TABS } from "./_components/SkillEditor/constants";

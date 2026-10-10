@@ -6,7 +6,7 @@ import { Badge, ErrorState, MetricCard, BarRow, Skeleton, EmptyState } from "@de
 import type { Agent, Severity } from "@devdigest/shared";
 import { useAgentStats, useAgentRuns } from "../../../../../../../lib/hooks/agent-performance";
 import { RunCostBadge, formatRunCost, formatTokens } from "../../../../../../../components/run-cost-badge";
-import RunTraceDrawer from "../../../../../../repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
+import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
 import { SEVERITY_COLOR, SEVERITY_ORDER, DEFAULT_RUNS_LIMIT } from "./constants";
 import { formatSeconds, formatTimestamp } from "./helpers";
 import { s } from "./styles";

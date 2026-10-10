@@ -1,85 +1,112 @@
-/* hooks/ci.ts — backs the Agent Editor's CI tab, the Publish dialog, and the
-   global CI Runs page. */
+/* hooks/ci.ts — backs the Agent Editor's CI tab, the Export to CI wizard, and
+   the global CI Runs page. Response/request shapes come from
+   `@devdigest/shared`; nothing is redeclared here. */
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type {
+  AgentCiOverview,
+  CiExport,
+  CiExportInputBody,
+  CiPreview,
+  CiRun,
+  CiSyncResult,
+} from "@devdigest/shared";
 import { api } from "../api";
 
-export interface CiInstallation {
-  id: string;
-  repo: string;
-  target_type: string;
-  installed_at: string;
+export type CiRunPeriod = "24h" | "7d" | "30d";
+
+export interface CiRunFilters {
+  period?: CiRunPeriod;
+  agentId?: string;
+  repo?: string;
+  status?: string;
+  source?: string;
 }
 
-export interface CiFile {
-  path: string;
-  content: string;
-}
-
-export interface CiPublishResult {
-  url: string;
-  republished: boolean;
-  installed_at: string;
-}
-
-export interface CiRun {
-  id: string;
-  agent_id: string | null;
-  agent_name: string | null;
-  repo: string | null;
-  pr_number: number | null;
-  ran_at: string | null;
-  status: string | null;
-  findings_count: number | null;
-  cost_usd: number | null;
-  github_url: string | null;
-  source: string | null;
-}
-
-export function useAgentCiInstallations(agentId: string | null | undefined) {
+/** Installations + recent runs for one agent (CI tab). */
+export function useAgentCi(agentId: string | null | undefined) {
   return useQuery({
     queryKey: ["agent-ci", agentId],
-    queryFn: () => api.get<CiInstallation[]>(`/agents/${agentId}/ci`),
+    queryFn: () => api.get<AgentCiOverview>(`/agents/${agentId}/ci`),
     enabled: !!agentId,
   });
 }
 
-export function useCiPreview(agentId: string | null | undefined, enabled: boolean) {
-  return useQuery({
-    queryKey: ["agent-ci-preview", agentId],
-    queryFn: () => api.get<CiFile[]>(`/agents/${agentId}/ci/preview`),
-    enabled: !!agentId && enabled,
+/** Server preview (no side effects). A mutation because it POSTs the repo,
+ *  triggers and — when edited — the workflow text to lint. */
+export function useCiPreview() {
+  return useMutation({
+    mutationFn: ({ agentId, input }: { agentId: string; input: CiExportInputBody }) =>
+      api.post<CiPreview>(`/agents/${agentId}/ci/preview`, input),
+    // The wizard renders lint violations (422 details) inline.
+    meta: { silentCodes: ["validation_error"] },
   });
 }
 
-export function usePublishCi() {
+/** Commit to `devdigest/ci` and open/reuse the PR. Refreshes the CI tab + CI Runs. */
+export function useExportCi() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, repo }: { agentId: string; repo: string }) =>
-      api.post<CiPublishResult>(`/agents/${agentId}/ci/publish`, { repo }),
-    onSuccess: (_data, { agentId }) => {
-      qc.invalidateQueries({ queryKey: ["agent-ci", agentId] });
-    },
+    mutationFn: ({ agentId, input }: { agentId: string; input: CiExportInputBody }) =>
+      api.post<CiExport>(`/agents/${agentId}/ci/export`, input),
+    // The wizard shows the server message (incl. `pat_workflow_scope`) inline.
+    meta: { silentCodes: ["pat_workflow_scope", "github_repo_not_found", "github_forbidden", "external_service_error", "validation_error", "config_error"] },
+    onSuccess: (_data, { agentId }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["agent-ci", agentId] }),
+        qc.invalidateQueries({ queryKey: ["ci-runs"] }),
+      ]),
   });
 }
 
-export interface CiRunFilters {
-  agentId?: string;
-  repo?: string;
-  status?: string;
-  since?: string;
+/** Fetch the zip as a Blob. Creates no installation, so it invalidates nothing. */
+export function useDownloadCiZip() {
+  return useMutation({
+    mutationFn: ({ agentId, input }: { agentId: string; input: CiExportInputBody }) =>
+      api.postBlob(`/agents/${agentId}/ci/zip`, input),
+  });
+}
+
+/** Pull + verify + ingest completed CI runs, then refresh the lists. */
+export function useSyncCiRuns() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<CiSyncResult>("/ci-runs/sync"),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["ci-runs"] }),
+        qc.invalidateQueries({ queryKey: ["agent-ci"] }),
+      ]),
+  });
 }
 
 export function useCiRuns(filters: CiRunFilters = {}) {
   const params = new URLSearchParams();
+  if (filters.period) params.set("period", filters.period);
   if (filters.agentId) params.set("agent_id", filters.agentId);
   if (filters.repo) params.set("repo", filters.repo);
   if (filters.status) params.set("status", filters.status);
-  if (filters.since) params.set("since", filters.since);
+  if (filters.source) params.set("source", filters.source);
   const qs = params.toString();
   return useQuery({
     queryKey: ["ci-runs", filters],
     queryFn: () => api.get<CiRun[]>(`/ci-runs${qs ? `?${qs}` : ""}`),
+    placeholderData: keepPreviousData,
   });
+}
+
+/** Repos with at least one installation (CI Runs repo filter). */
+export function useCiRepos() {
+  return useQuery({
+    queryKey: ["ci-runs", "repos"],
+    queryFn: () => api.get<string[]>("/ci-runs/repos"),
+  });
+}
+
+/** For components that change something affecting an agent's installations
+ *  (e.g. Fail CI on): refetch the CI tab data without hard-coding the key. */
+export function useInvalidateAgentCi() {
+  const qc = useQueryClient();
+  return (agentId: string) => qc.invalidateQueries({ queryKey: ["agent-ci", agentId] });
 }

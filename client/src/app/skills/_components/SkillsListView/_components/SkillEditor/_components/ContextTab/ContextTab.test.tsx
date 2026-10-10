@@ -9,7 +9,10 @@ import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../../../messages/en/skills.json";
 import { get, mockFetch, post } from "@/test/eval-utils";
 
-vi.mock("@/lib/repo-context", () => ({ useActiveRepo: () => ({ repoId: "r1" }) }));
+vi.mock("@/lib/contexts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/contexts")>()),
+  useActiveRepo: () => ({ repoId: "r1" }),
+}));
 
 import { ContextTab } from "./ContextTab";
 

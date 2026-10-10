@@ -17,6 +17,10 @@ import type {
   OpenPrPayload,
   CommitFilesPayload,
   IssueMeta,
+  GitHubRepoInfo,
+  WorkflowRunInfo,
+  RunArtifactInfo,
+  WorkflowJobInfo,
   GitClient,
   CloneOptions,
   UnifiedDiff,
@@ -132,6 +136,16 @@ export interface MockGitHubOptions {
   commitFilesBySha?: Record<string, string[]>;
   /** Fixture for `getLanguages` — bytes per language. */
   languages?: Record<string, number>;
+  /** Fixture for `getRepo`. */
+  repoInfo?: GitHubRepoInfo;
+  /** Fixture for `listWorkflowRuns`. */
+  workflowRuns?: WorkflowRunInfo[];
+  /** Fixture for `listRunJobs`, keyed by run id. */
+  jobsByRun?: Record<number, WorkflowJobInfo[]>;
+  /** Fixture for `listRunArtifacts`, keyed by run id. */
+  artifactsByRun?: Record<number, RunArtifactInfo[]>;
+  /** Fixture for `downloadArtifact`, keyed by artifact id. */
+  artifactBytes?: Record<number, Uint8Array>;
 }
 
 export class MockGitHubClient implements GitHubClient {
@@ -272,6 +286,32 @@ export class MockGitHubClient implements GitHubClient {
 
   async currentLogin(): Promise<string> {
     return this.opts.login ?? 'mock-user';
+  }
+
+  async getRepo(_repo: RepoRef): Promise<GitHubRepoInfo> {
+    return this.opts.repoInfo ?? { id: 1, defaultBranch: 'main' };
+  }
+
+  async listWorkflowRuns(
+    _repo: RepoRef,
+    _workflowFile: string,
+    _opts: { event: 'pull_request'; perPage?: number },
+  ): Promise<WorkflowRunInfo[]> {
+    return this.opts.workflowRuns ?? [];
+  }
+
+  async listRunJobs(_repo: RepoRef, runId: number): Promise<WorkflowJobInfo[]> {
+    return this.opts.jobsByRun?.[runId] ?? [];
+  }
+
+  async listRunArtifacts(_repo: RepoRef, runId: number): Promise<RunArtifactInfo[]> {
+    return this.opts.artifactsByRun?.[runId] ?? [];
+  }
+
+  async downloadArtifact(_repo: RepoRef, artifactId: number, maxBytes: number): Promise<Uint8Array> {
+    const bytes = this.opts.artifactBytes?.[artifactId] ?? new Uint8Array();
+    if (bytes.byteLength > maxBytes) throw new Error('artifact_too_large');
+    return bytes;
   }
 
   async getLanguages(_repo: RepoRef): Promise<Record<string, number>> {

@@ -296,6 +296,8 @@ export const Agent = z.object({
   // Inject repo-intel context (repo skeleton + callers + rank note) into this
   // agent's review prompt. Default on; gated again by the global flag.
   repo_intel: z.boolean().default(true),
+  // Mirrors the `agents.attached_doc_paths` column (ordered repo-relative paths).
+  attached_doc_paths: z.array(z.string()).default([]),
 });
 export type Agent = z.infer<typeof Agent>;
 
