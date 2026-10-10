@@ -37,6 +37,7 @@ const AGENT: Agent = {
   strategy: "single-pass",
   ci_fail_on: "critical",
   repo_intel: true,
+  attached_doc_paths: [],
   enabled: true,
   version: 1,
 };
