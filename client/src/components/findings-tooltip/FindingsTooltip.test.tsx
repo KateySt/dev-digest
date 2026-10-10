@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import type { FindingRecord } from "@devdigest/shared";
 import { FindingsTooltip } from "./FindingsTooltip";
-import { githubBlobUrl } from "@/lib/github-urls";
+import { githubBlobUrl } from "@/lib/utils/githubUrls";
 
 afterEach(cleanup);
 

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, CodeField, FormField, Modal, Select, TextInput, Toggle } from "@devdigest/ui";
 import type { ConventionCandidate, SkillType } from "@devdigest/shared";
 import { useCreateSkill } from "@/lib/hooks/skills";
-import { useToast } from "@/lib/toast";
+import { useToast } from "@/lib/contexts/toast";
 import { slugify } from "@/lib/slug";
 import { SKILL_TYPES } from "@/lib/skill-constants";
 import { buildSkillBody, buildSkillDescription, buildSkillName } from "../../helpers";

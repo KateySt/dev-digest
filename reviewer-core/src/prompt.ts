@@ -60,13 +60,6 @@ export interface PromptParts {
    */
   callers?: string;
   /**
-   * Derived PR intent (untrusted — computed from author-controlled input).
-   * Delimiter-wrapped. When present, rendered after the Callers section and
-   * before the Diff section. Empty / undefined → section omitted (no behavior
-   * change).
-   */
-  intent?: string;
-  /**
    * The PR author's description/body (untrusted — author-controlled, a prime
    * injection vector). Delimiter-wrapped + truncated. Rendered right after the
    * task line so the model knows what the PR claims to do and why. Empty /

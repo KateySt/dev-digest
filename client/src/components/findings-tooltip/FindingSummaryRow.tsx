@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { SeverityBadge, CategoryTag, MonoLink, type Severity, type Category } from "@devdigest/ui";
 import type { FindingRecord } from "@devdigest/shared";
-import { githubBlobUrl } from "@/lib/github-urls";
+import { githubBlobUrl } from "@/lib/utils/githubUrls";
 
 function lineLabel(f: Pick<FindingRecord, "start_line" | "end_line">): string {
   return f.start_line === f.end_line ? `${f.start_line}` : `${f.start_line}-${f.end_line}`;

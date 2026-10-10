@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Badge, Button, CodeField, EmptyState, ErrorState, Markdown, ProgressBar, Skeleton } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
 import { RepoNotFound } from "@/components/repo-not-found";
-import { useActiveRepo, useRepoNotFound } from "@/lib/repo-context";
+import { useActiveRepo, useRepoNotFound } from "@/lib/contexts/repoContext";
 import { ApiError } from "@/lib/api";
 import {
   useProjectContextDocument,

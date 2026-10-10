@@ -15,7 +15,7 @@ vi.mock("@/lib/hooks/reviews", () => ({
 }));
 
 import { ApiError } from "@/lib/api";
-import { ToastProvider } from "@/lib/toast";
+import { ToastProvider } from "@/lib/contexts/toast";
 import { RunReviewDropdown } from "./RunReviewDropdown";
 
 afterEach(() => {

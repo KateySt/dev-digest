@@ -4,7 +4,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Button, EmptyState, ErrorState, Skeleton } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
-import { useActiveRepo } from "@/lib/repo-context";
+import { useActiveRepo } from "@/lib/contexts/repoContext";
 import { useConventions, useExtractConventions, useUpdateConvention } from "@/lib/hooks/conventions";
 import { ConventionCard } from "./_components/ConventionCard";
 import { CreateSkillModal } from "./_components/CreateSkillModal";
