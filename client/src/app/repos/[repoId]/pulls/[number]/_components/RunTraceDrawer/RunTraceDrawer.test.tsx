@@ -19,8 +19,9 @@ const TRACE: RunTrace = {
   ],
 };
 
+const traceState: { data: RunTrace | undefined; isLoading: boolean } = { data: TRACE, isLoading: false };
 vi.mock("../../../../../../../lib/hooks/trace", () => ({
-  useRunTrace: () => ({ data: TRACE, isLoading: false }),
+  useRunTrace: () => traceState,
 }));
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useRunEvents: () => ({ events: [], running: false }),
@@ -28,7 +29,11 @@ vi.mock("../../../../../../../lib/hooks/reviews", () => ({
 
 import RunTraceDrawer from "./RunTraceDrawer";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  traceState.data = TRACE;
+  traceState.isLoading = false;
+});
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
@@ -52,6 +57,51 @@ describe("A5 Run Trace drawer (smoke)", () => {
     renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
     fireEvent.click(screen.getByText("log"));
     // LiveLogStream renders its filter input
+    expect(screen.getByPlaceholderText("Filter log…")).toBeInTheDocument();
+  });
+});
+
+describe("grounding + not-started states", () => {
+  it("shows kept/total and a plain-text dropped list when grounding is present", () => {
+    traceState.data = {
+      ...TRACE,
+      grounding: {
+        kept: 1,
+        total: 2,
+        dropped: [{ title: "<b>Bad</b> cite", file: "src/a.ts", start_line: 3, end_line: 9, reason: "line out of range" }],
+      },
+    };
+    renderWithIntl(<RunTraceDrawer runId="r1" onClose={() => {}} />);
+    expect(screen.getAllByText("1 of 2 findings kept").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 dropped finding")).toBeInTheDocument();
+    expect(screen.getByText("<b>Bad</b> cite")).toBeInTheDocument();
+    expect(screen.getByText("src/a.ts:3-9")).toBeInTheDocument();
+    expect(screen.getByText("Reason: line out of range")).toBeInTheDocument();
+    expect(screen.queryByText("2/2 passed")).not.toBeInTheDocument();
+  });
+
+  it("says none dropped when the dropped list is empty", () => {
+    traceState.data = { ...TRACE, grounding: { kept: 2, total: 2, dropped: [] } };
+    renderWithIntl(<RunTraceDrawer runId="r1" onClose={() => {}} />);
+    expect(screen.getByText("No findings were dropped.")).toBeInTheDocument();
+  });
+
+  it("legacy trace shows only the k/n passed string", () => {
+    renderWithIntl(<RunTraceDrawer runId="r1" onClose={() => {}} />);
+    expect(screen.getByText("2/2 passed")).toBeInTheDocument();
+    expect(screen.queryByText("No findings were dropped.")).not.toBeInTheDocument();
+  });
+
+  it("queued run without a trace shows the not-started note, not an error", () => {
+    traceState.data = undefined;
+    renderWithIntl(<RunTraceDrawer runId="r1" running queued onClose={() => {}} />);
+    fireEvent.click(screen.getByText("trace"));
+    expect(screen.getByText(/has not started yet/)).toBeInTheDocument();
+    expect(screen.queryByText("No trace available yet.")).not.toBeInTheDocument();
+  });
+
+  it("running prop opens on the live log tab", () => {
+    renderWithIntl(<RunTraceDrawer runId="r1" running onClose={() => {}} />);
     expect(screen.getByPlaceholderText("Filter log…")).toBeInTheDocument();
   });
 });

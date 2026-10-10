@@ -62,6 +62,8 @@ export const ReviewRunResponse = z.object({
   pr_id: z.string(),
   runs: z.array(ReviewRunTarget),
   reviews: z.array(ReviewRecord),
+  /** SPEC-10: parent multi-agent run id when `agentIds` was sent. `.nullish()` — absent on single/bulk runs. */
+  multi_agent_run_id: z.string().nullish(),
 });
 export type ReviewRunResponse = z.infer<typeof ReviewRunResponse>;
 

@@ -14,7 +14,7 @@ import { PrDetailHeader } from "./_components/PrDetailHeader";
 import { OverviewTab } from "./_components/OverviewTab";
 import { FindingsTab } from "./_components/FindingsTab";
 import { DiffTab } from "./_components/DiffTab";
-import RunTraceDrawer from "./_components/RunTraceDrawer";
+import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
 import { usePullDetail, usePulls } from "../../../../../lib/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePrReviews, useCancelRun, usePrActiveRuns, usePrRuns, useDeleteRun } from "../../../../../lib/hooks/reviews";
@@ -47,6 +47,7 @@ export default function PRDetailPage() {
   const deleteRun = useDeleteRun(prId);
   const liveRunIds = (activeRuns ?? []).map((r) => r.run_id);
   const reviewRunning = liveRunIds.length > 0;
+  const traceActive = (activeRuns ?? []).find((r) => r.run_id === search.get("trace")) ?? null;
   const cancel = useCancelRun();
   const invalidateActiveRuns = () => {
     if (prId) qc.invalidateQueries({ queryKey: ["pr-active-runs", prId] });
@@ -147,7 +148,6 @@ export default function PRDetailPage() {
           findingsCount={findingsCount}
           githubUrl={repoFullName ? githubPrUrl(repoFullName, pr.number) : null}
           onSetTab={setTab}
-          onRunStart={() => setTab("findings")}
           onRunsStarted={() => invalidateActiveRuns()}
         />
 
@@ -172,6 +172,7 @@ export default function PRDetailPage() {
               <FindingsTab
                 prId={prId}
                 liveRunIds={liveRunIds}
+                activeRuns={activeRuns ?? []}
                 reviewRunning={reviewRunning}
                 lethalTrifecta={lethalTrifecta}
                 runs={runs}
@@ -218,6 +219,8 @@ export default function PRDetailPage() {
           prNumber={pr.number}
           findings={runs.find((r) => r.run_id === traceRunId)?.findings ?? []}
           agentName={runs.find((r) => r.run_id === traceRunId)?.agent_name ?? null}
+          running={traceActive != null}
+          queued={traceActive?.status === "queued"}
           onClose={() => setParam("trace", null)}
         />
       )}

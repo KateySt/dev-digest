@@ -66,6 +66,15 @@
       "args": "args",
       "result": "result",
       "previewTruncated": "(preview truncated)"
+    },
+    "grounding": {
+      "title": "Grounding",
+      "keptOfTotal": "{kept} of {total} findings kept",
+      "droppedTitle": "{count, plural, one {# dropped finding} other {# dropped findings}}",
+      "noneDropped": "No findings were dropped.",
+      "dropReason": "Reason: {reason}",
+      "legacy": "{kept}/{total} passed",
+      "notStarted": "This run has not started yet — the trace is written once it completes."
     }
   },
   "drawer": {
@@ -75,7 +84,7 @@
     "running": "running",
     "completed": "completed",
     "copyRawOutput": "Copy raw output",
-  "copied": "Copied!",
+    "copied": "Copied!",
     "tracePending": "Trace is written when the run completes — see the Live log tab.",
     "loadingTrace": "Loading trace…",
     "noTrace": "No trace available yet."
@@ -124,7 +133,7 @@
     },
     "runAll": "Run all agents",
     "running": "Running…",
-    "meta": "{count} agents · fan-out via p-queue · {duration}s total · {cost}",
+    "meta": "{count} agents · fan-out via shared queue · {duration} total · {cost}",
     "noAgents": {
       "title": "Enable agents to run reviews",
       "body": "Multi-agent review runs the PR through every enabled agent in parallel. You have no agents enabled yet.",
@@ -137,5 +146,148 @@
       "cta": "Run all agents"
     },
     "crumb": "Multi-Agent Review"
+  },
+  "multiAgent": {
+    "crumb": "Multi-Agent Review",
+    "configure": {
+      "crumb": "Configure run",
+      "title": "Run a Multi-Agent Review",
+      "subtitle": "Pick a pull request and choose which agents to fan out — they run in parallel and you compare their findings side by side.",
+      "stepPr": "Pull request",
+      "stepAgents": "Agents to run",
+      "prPlaceholder": "Select a pull request…",
+      "prOption": "#{number} · {title}",
+      "noOpenPrs": "No open pull requests in this repo.",
+      "pickPrFirst": {
+        "title": "Pick a pull request first",
+        "body": "Choose which PR to review above, then select the agents to run on it."
+      },
+      "selectAll": "Select all",
+      "estimate": "{duration} · {cost}",
+      "estimateMissing": "—",
+      "total": "≈ {duration} · {cost} · parallel fan-out",
+      "totalLabel": "Estimate",
+      "totalIncomplete": "incomplete — {count, plural, one {# agent} other {# agents}} without history",
+      "run": "Run multi-agent review ({count})",
+      "starting": "Starting…",
+      "noAgents": {
+        "title": "Enable agents to run reviews",
+        "body": "Multi-agent review runs the PR through every enabled agent in parallel. You have no agents enabled yet.",
+        "cta": "Go to Agents"
+      },
+      "error": {
+        "reviewInProgress": "A review is already running for this PR.",
+        "viewInProgressRun": "View the running multi-agent review",
+        "viewPr": "Open the pull request",
+        "generic": "Could not start the review: {message}"
+      },
+      "recent": {
+        "title": "Recent multi-agent runs",
+        "item": "#{number} · {title}",
+        "agents": "{count, plural, one {# agent} other {# agents}}",
+        "status": {
+          "queued": "Queued",
+          "running": "Running",
+          "completed": "Completed",
+          "failed": "Failed",
+          "cancelled": "Cancelled",
+          "partial": "Partially completed"
+        }
+      }
+    },
+    "picker": {
+      "title": "PICK AGENTS TO RUN",
+      "clear": "Clear",
+      "estimate": "~{duration}s",
+      "estimateMissing": "—",
+      "run": "Run multi-agent review ({count})",
+      "configure": "Configure agents…",
+      "noAgents": "No enabled agents.",
+      "error": {
+        "reviewInProgress": "A review is already running for this PR.",
+        "viewInProgressRun": "View the running multi-agent review",
+        "generic": "Could not start the review: {message}"
+      }
+    },
+    "results": {
+      "crumb": "#{number}",
+      "configureRun": "Configure run",
+      "title": "Multi-Agent Review",
+      "selectedAgents": "{count, plural, one {# selected agent} other {# selected agents}} · parallel",
+      "prLine": "#{number}",
+      "meta": "{count, plural, one {# agent} other {# agents}} · fan-out via shared queue · {duration} total · {cost}",
+      "metaPartial": "{count, plural, one {# agent} other {# agents}} · fan-out via shared queue · {duration} so far (running) · {cost}",
+      "costUnknown": "—",
+      "viewToggle": "Results view",
+      "viewColumns": "Columns",
+      "viewTabs": "Tabs",
+      "cancelAll": "Cancel all",
+      "cancelAllConfirm": {
+        "title": "Cancel all agents?",
+        "body": "Every queued and running agent in this multi-agent review will be cancelled. Finished results are kept.",
+        "confirm": "Cancel all",
+        "dismiss": "Keep running"
+      },
+      "notFound": {
+        "title": "Multi-agent run not found",
+        "body": "This run does not exist or is not available in this workspace.",
+        "cta": "Back to Configure run"
+      },
+      "loading": "Loading results…",
+      "loadError": "Could not load the results: {message}"
+    },
+    "columns": {
+      "meta": "{duration} · {cost}",
+      "score": "Score {score}",
+      "queued": "Queued · #{position} in line",
+      "running": "Running · {elapsed}s",
+      "failed": "Failed",
+      "failedReason": "{message}",
+      "cancelled": "Cancelled",
+      "noFindings": "No findings",
+      "viewTrace": "View trace",
+      "findingsCount": "{count, plural, one {# finding} other {# findings}}",
+      "cancel": "Cancel",
+      "cancelAgent": "Cancel {agent}",
+      "openFinding": "Open {title} in Tabs view"
+    },
+    "tabs": {
+      "label": "{agent} {score}",
+      "statusQueued": "Queued",
+      "statusRunning": "Running",
+      "statusFailed": "Failed",
+      "statusCancelled": "Cancelled",
+      "summaryDuration": "{duration} · {cost}",
+      "confidence": "{pct}% conf",
+      "rationale": "Rationale",
+      "suggestedFix": "Suggested fix",
+      "accept": "Accept",
+      "dismiss": "Dismiss",
+      "learn": "Learn",
+      "learnSoon": "Coming soon",
+      "turnIntoEval": "Turn into eval case",
+      "expand": "Expand finding",
+      "collapse": "Collapse finding"
+    },
+    "alsoFlagged": {
+      "badge": "Also flagged by {agents}",
+      "memberSummary": "{agent} · {severity} · {pct}% conf",
+      "suggestedFix": "Suggested fix",
+      "accept": "Accept",
+      "dismiss": "Dismiss"
+    },
+    "disagree": {
+      "title": "WHERE AGENTS DISAGREE",
+      "onlyConflicts": "Show only conflicts",
+      "rowLabel": "{location}  {title}",
+      "cell": {
+        "notFlagged": "did not flag",
+        "failed": "failed",
+        "cancelled": "cancelled",
+        "pending": "pending"
+      },
+      "emptyNoFindings": "Nothing to compare — this multi-agent run has no findings.",
+      "emptyNoConflicts": "Every completed agent flagged every location with the same severity."
+    }
   }
 }
