@@ -8,6 +8,7 @@ import { MockLLMProvider, MockEmbedder, MockGitClient, MockCatalogSource } from 
 import { eq } from 'drizzle-orm';
 import * as t from '../src/db/schema.js';
 import type { Review } from '@devdigest/shared';
+import { SKILL_SCAN_SCHEMA_NAME } from '../src/modules/skills/constants.js';
 
 const hasDocker = await dockerAvailable();
 const d = hasDocker ? describe : describe.skip;
@@ -79,13 +80,18 @@ d('A1 skills (Testcontainers pg)', () => {
   });
 
   function appWith(structured: unknown, catalogSource?: MockCatalogSource) {
+    // Feature defaults (skill scan, reviews) resolve to openrouter, so mock it
+    // too — otherwise the container builds the real provider (a live API call
+    // with a local key, a scan error in CI). The scan gets a clean result.
+    const mockLlm = (id: 'openai' | 'openrouter') =>
+      new MockLLMProvider(id, { structured, structuredBySchema: { [SKILL_SCAN_SCHEMA_NAME]: { findings: [] } } });
     return buildApp({
       config: config(),
       db: pg.handle.db,
       overrides: {
         embedder: new MockEmbedder(),
         git: new MockGitClient({ diff: DIFF }),
-        llm: { openai: new MockLLMProvider('openai', { structured }) },
+        llm: { openai: mockLlm('openai'), openrouter: mockLlm('openrouter') },
         ...(catalogSource ? { catalogSource } : {}),
       },
     });
@@ -219,7 +225,7 @@ d('A1 skills (Testcontainers pg)', () => {
     const run1 = (
       await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } })
     ).json();
-    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+    await waitForPrRuns(pg.handle.db, pr.id, { runIds: [run1.runs[0].run_id] });
     const trace1 = (
       await app.inject({ method: 'GET', url: `/runs/${run1.runs[0].run_id}/trace` })
     ).json();
@@ -236,7 +242,7 @@ d('A1 skills (Testcontainers pg)', () => {
     const run2 = (
       await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } })
     ).json();
-    await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
+    await waitForPrRuns(pg.handle.db, pr.id, { runIds: [run2.runs[0].run_id] });
     const trace2 = (
       await app.inject({ method: 'GET', url: `/runs/${run2.runs[0].run_id}/trace` })
     ).json();
@@ -393,7 +399,7 @@ d('A1 skills (Testcontainers pg)', () => {
     const run = (
       await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } })
     ).json();
-    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+    await waitForPrRuns(pg.handle.db, pr.id, { runIds: [run.runs[0].run_id] });
     const trace = (await app.inject({ method: 'GET', url: `/runs/${run.runs[0].run_id}/trace` })).json();
     expect(trace.prompt_assembly.skills).toBeNull();
     await app.close();
