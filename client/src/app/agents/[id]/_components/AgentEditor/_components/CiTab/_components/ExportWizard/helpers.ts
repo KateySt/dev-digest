@@ -20,7 +20,6 @@ export type InstallMethod = "pr" | "zip";
 export interface WizardState {
   /** 0 = Target, 1 = Preview, 2 = Configure, 3 = Install. */
   step: number;
-  repo: string;
   triggers: CiTrigger[];
   postAs: CiPostAs;
   preview: CiPreview | null;
@@ -36,7 +35,6 @@ export interface WizardState {
 }
 
 export type WizardAction =
-  | { type: "setRepo"; repo: string }
   | { type: "previewLoaded"; preview: CiPreview; step?: number; fromEdits: boolean }
   | { type: "previewFailed"; error: string; violations?: CiLintViolation[] }
   | { type: "setStep"; step: number }
@@ -44,14 +42,9 @@ export type WizardAction =
   | { type: "setTriggers"; triggers: CiTrigger[] }
   | { type: "setPostAs"; postAs: CiPostAs };
 
-export function initialState(initial?: {
-  repo?: string;
-  triggers?: CiTrigger[];
-  post_as?: CiPostAs;
-}): WizardState {
+export function initialState(initial?: { triggers?: CiTrigger[]; post_as?: CiPostAs }): WizardState {
   return {
     step: 0,
-    repo: initial?.repo ?? "",
     triggers: initial?.triggers?.length ? initial.triggers : [...ALL_TRIGGERS],
     postAs: initial?.post_as ?? "github_review",
     preview: null,
@@ -65,8 +58,6 @@ export function initialState(initial?: {
 
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
-    case "setRepo":
-      return { ...state, repo: action.repo, error: null };
     case "previewLoaded":
       return {
         ...state,
@@ -109,11 +100,12 @@ export function isEdited(state: Pick<WizardState, "generatedWorkflow" | "workflo
 
 /** Request body for preview / export / zip. */
 export function toInput(
-  state: Pick<WizardState, "repo" | "triggers" | "postAs" | "generatedWorkflow" | "workflowDraft">,
+  repo: string,
+  state: Pick<WizardState, "triggers" | "postAs" | "generatedWorkflow" | "workflowDraft">,
   opts: { withEdits: boolean },
 ): CiExportInputBody {
   return {
-    repo: state.repo.trim(),
+    repo: repo.trim(),
     target: "gha",
     action: "open_pr",
     post_as: state.postAs,

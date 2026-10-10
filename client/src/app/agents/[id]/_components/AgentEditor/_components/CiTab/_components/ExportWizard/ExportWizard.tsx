@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, Modal } from "@devdigest/ui";
 import type { Agent, CiExport, CiPostAs, CiTrigger } from "@devdigest/shared";
 import { ApiError } from "@/lib/api";
+import { useActiveRepo } from "@/lib/contexts";
 import { useCiPreview, useDownloadCiZip, useExportCi } from "@/lib/hooks/ci";
 import {
   type InstallMethod,
@@ -37,6 +38,10 @@ export interface ExportWizardProps {
  *  until the Install step's confirm button. */
 export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   const t = useTranslations("ci");
+  const { activeRepo } = useActiveRepo();
+  // "Update CI config" keeps the installation's repo; a fresh export targets the
+  // repo currently open in the sidebar.
+  const repo = (initial?.repo ?? activeRepo?.full_name ?? "").trim();
   const [state, dispatch] = React.useReducer(wizardReducer, initial, initialState);
   const [method, setMethod] = React.useState<InstallMethod>("pr");
   const [result, setResult] = React.useState<CiExport | null>(null);
@@ -50,7 +55,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   /** Ask the server for a preview of `next`; on success optionally advance. */
   const runPreview = (next: WizardState, opts: { withEdits: boolean; nextStep?: number }) => {
     previewReq.mutate(
-      { agentId: agent.id, input: toInput(next, { withEdits: opts.withEdits }) },
+      { agentId: agent.id, input: toInput(repo, next, { withEdits: opts.withEdits }) },
       {
         onSuccess: (preview) =>
           dispatch({
@@ -96,7 +101,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   const install = () => {
     setInstallError(null);
     setZipDone(false);
-    const input = toInput(state, { withEdits: true });
+    const input = toInput(repo, state, { withEdits: true });
     if (method === "zip") {
       zipReq.mutate(
         { agentId: agent.id, input },
@@ -130,7 +135,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   const done = result !== null;
   const canContinue =
     !previewing &&
-    (state.step === 0 ? isRepo(state.repo) : state.step === 2 ? state.triggers.length > 0 : true);
+    (state.step === 0 ? isRepo(repo) : state.step === 2 ? state.triggers.length > 0 : true);
 
   return (
     <Modal width={780} onClose={onClose}>
@@ -144,13 +149,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
       </div>
 
       <div style={s.body}>
-        {state.step === 0 && (
-          <TargetStep
-            repo={state.repo}
-            onRepo={(repo) => dispatch({ type: "setRepo", repo })}
-            error={state.error}
-          />
-        )}
+        {state.step === 0 && <TargetStep hasRepo={isRepo(repo)} error={state.error} />}
         {state.step === 1 && state.preview && (
           <PreviewStep
             preview={state.preview}
@@ -175,7 +174,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
         )}
         {state.step === 3 && (
           <InstallStep
-            repo={state.repo.trim()}
+            repo={repo}
             fileCount={fileCount}
             method={method}
             onMethod={setMethod}

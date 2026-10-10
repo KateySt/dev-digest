@@ -2,20 +2,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, FormField, Icon, TextInput } from "@devdigest/ui";
+import { Badge, Icon } from "@devdigest/ui";
 import { TARGETS } from "../../constants";
 import { s } from "./styles";
 
-/** Step 1 — pick the CI target (only GitHub Actions is live) and the repo. */
-export function TargetStep({
-  repo,
-  onRepo,
-  error,
-}: {
-  repo: string;
-  onRepo: (repo: string) => void;
-  error: string | null;
-}) {
+/** Step 1 — pick the CI target (only GitHub Actions is live). The repo is the
+ *  one open in the sidebar, so there is nothing to type here. */
+export function TargetStep({ hasRepo, error }: { hasRepo: boolean; error: string | null }) {
   const t = useTranslations("ci");
   return (
     <>
@@ -52,15 +45,7 @@ export function TargetStep({
         })}
       </div>
 
-      <FormField label={t("exportWizard.repoLabel")} hint={t("exportWizard.repoHint")} required>
-        <TextInput
-          value={repo}
-          onChange={onRepo}
-          placeholder={t("exportWizard.repoPlaceholder")}
-          mono
-          aria-label={t("exportWizard.repoLabel")}
-        />
-      </FormField>
+      {!hasRepo && <div style={s.error}>{t("exportWizard.noRepo")}</div>}
       {error && <div style={s.error}>{t("exportWizard.previewError", { message: error })}</div>}
     </>
   );
