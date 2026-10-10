@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../../../../../messages/en/skills.json";
-import { ToastProvider } from "@/lib/toast";
+import { ToastProvider } from "@/lib/contexts";
 
 const importMutate = vi.fn();
 let communityResult: {
@@ -18,7 +18,8 @@ vi.mock("@/lib/hooks/skills", () => ({
   useImportCommunitySkill: () => ({ mutate: importMutate, isPending: false }),
 }));
 
-vi.mock("@/lib/repo-context", () => ({
+vi.mock("@/lib/contexts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/contexts")>()),
   useActiveRepo: () => ({
     repos: [{ id: "repo1", full_name: "acme/widgets" }],
     activeRepo: { id: "repo1", full_name: "acme/widgets" },

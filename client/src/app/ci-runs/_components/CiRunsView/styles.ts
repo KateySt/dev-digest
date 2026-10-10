@@ -1,15 +1,24 @@
 import type { CSSProperties } from "react";
 
-/** Co-located styles for CiRunsView. */
+/** Co-located styles for CiRunsView. Repo names and PR titles are long and can
+ *  be unbroken, so their cells wrap (`overflowWrap: "anywhere"`, `minWidth: 0`)
+ *  instead of pushing the table past the page edge (client INSIGHTS 2026-09-24). */
 export const s = {
-  page: { padding: "24px 32px 44px", maxWidth: 1100, margin: "0 auto" } satisfies CSSProperties,
+  page: { padding: "24px 32px 44px", maxWidth: 1360, margin: "0 auto", minWidth: 0 } satisfies CSSProperties,
   header: { display: "flex", alignItems: "center", marginBottom: 20, gap: 14 } satisfies CSSProperties,
-  headerText: { flex: 1 } satisfies CSSProperties,
+  headerText: { flex: 1, minWidth: 0 } satisfies CSSProperties,
   h1: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" } satisfies CSSProperties,
   subtitle: { fontSize: 13, color: "var(--text-secondary)", marginTop: 4 } satisfies CSSProperties,
+  autoRefresh: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--text-muted)" } satisfies CSSProperties,
   filterBar: { display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" } satisfies CSSProperties,
-  filterItem: { width: 160 } satisfies CSSProperties,
-  table: { width: "100%", borderCollapse: "collapse" } satisfies CSSProperties,
+  filterItem: { width: 168 } satisfies CSSProperties,
+  tableWrap: {
+    overflowX: "auto",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    background: "var(--bg-surface)",
+  } satisfies CSSProperties,
+  table: { width: "100%", borderCollapse: "collapse", tableLayout: "auto" } satisfies CSSProperties,
   th: {
     textAlign: "left",
     fontSize: 11,
@@ -17,14 +26,45 @@ export const s = {
     color: "var(--text-muted)",
     letterSpacing: "0.03em",
     textTransform: "uppercase",
-    padding: "0 10px 8px",
+    padding: "12px 10px 10px",
     borderBottom: "1px solid var(--border)",
+    whiteSpace: "nowrap",
   } satisfies CSSProperties,
   td: {
     fontSize: 13,
-    padding: "10px 10px",
+    padding: "11px 10px",
     borderBottom: "1px solid var(--border)",
     color: "var(--text-secondary)",
+    verticalAlign: "top",
   } satisfies CSSProperties,
-  viewLink: { color: "var(--accent)", fontSize: 12.5 } satisfies CSSProperties,
+  tdMono: {
+    fontSize: 12,
+    padding: "11px 10px",
+    borderBottom: "1px solid var(--border)",
+    color: "var(--text-secondary)",
+    verticalAlign: "top",
+    whiteSpace: "nowrap",
+  } satisfies CSSProperties,
+  tdPr: {
+    fontSize: 13,
+    padding: "11px 10px",
+    borderBottom: "1px solid var(--border)",
+    color: "var(--text-primary)",
+    verticalAlign: "top",
+    minWidth: 220,
+    maxWidth: 380,
+    overflowWrap: "anywhere",
+  } satisfies CSSProperties,
+  prRepo: { fontSize: 12, color: "var(--accent-text)", overflowWrap: "anywhere" } satisfies CSSProperties,
+  prTitle: { marginTop: 2, overflowWrap: "anywhere" } satisfies CSSProperties,
+  ingestError: { marginTop: 4, fontSize: 12, color: "var(--crit)", overflowWrap: "anywhere" } satisfies CSSProperties,
+  viewLink: { color: "var(--accent-text)", fontSize: 12.5, whiteSpace: "nowrap" } satisfies CSSProperties,
+  linkBtn: {
+    background: "transparent",
+    border: "none",
+    padding: 0,
+    color: "var(--accent-text)",
+    fontSize: 12.5,
+    cursor: "pointer",
+  } satisfies CSSProperties,
 } as const;

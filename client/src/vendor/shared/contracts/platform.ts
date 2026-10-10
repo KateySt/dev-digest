@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { Provider } from './knowledge.js';
+import {z} from 'zod';
+import {Provider} from './knowledge.js';
 
 /**
  * Platform / scaffolding DTOs owned by F1:
@@ -68,8 +68,8 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     id: 'conformance',
     label: 'Conformance',
     description: 'Checks a PR against the project spec.',
-      defaultProvider: 'openrouter',
-      defaultModel: 'deepseek/deepseek-v4-flash',
+    defaultProvider: 'openrouter',
+    defaultModel: 'deepseek/deepseek-v4-flash',
   },
   {
     id: 'conventions',

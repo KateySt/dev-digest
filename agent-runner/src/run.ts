@@ -3,10 +3,11 @@ import type { LLMProvider, GitHubReviewPayload, CiResultArtifact } from '@devdig
 import { reviewPullRequest, toReviewPayload, gateTriggered, countBlockers } from '@devdigest/reviewer-core';
 import { loadManifest } from './manifest.js';
 import { loadSkillBodies } from './skills.js';
+import { loadMemory } from './memory.js';
 import { resolvePrContext, type CiEnv } from './context.js';
 import { parseUnifiedDiff, stripIgnoredFiles } from './diff.js';
 import { fetchPrDiff, postGithubReview, postPrComment, type FetchLike } from './github.js';
-import { buildResultArtifact } from './artifact.js';
+import { buildResultArtifact, verdictFromEvent } from './artifact.js';
 import { RunnerError } from './errors.js';
 
 /**
@@ -40,8 +41,13 @@ export interface RunCiDeps {
   env: CiEnv;
   /** Injected LLM provider — `OpenRouterProvider` in production, a stub in tests. */
   llm: LLMProvider;
-  /** How to post the result — `'github_review' | 'pr_comment' | 'none'` (AC-24). */
-  postAs: PostAs;
+  /**
+   * Optional override for how to post the result. When omitted, the
+   * manifest's `post_as` applies (`DEVDIGEST_POST_AS` is the only override).
+   */
+  postAs?: PostAs;
+  /** The workflow's `DEVDIGEST_AGENT` slug — selects `agents/<slug>.yaml`. */
+  agentSlug?: string;
   /** Absolute path to write the `CiResultArtifact` JSON to. */
   resultPath: string;
   fetchImpl?: FetchLike;
@@ -90,15 +96,17 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
 
   try {
     // 1. Load + validate the manifest BEFORE it is used for anything (AC-20).
-    const manifest = loadManifest(deps.devdigestDir, { readFile, readDir });
+    const manifest = loadManifest(deps.devdigestDir, { readFile, readDir }, deps.agentSlug);
     const skills = loadSkillBodies(deps.devdigestDir, manifest.skills, readFile);
+    const memory = loadMemory(deps.devdigestDir, readFile);
+    const postAs: PostAs = deps.postAs ?? manifest.post_as;
 
     // 2. Resolve CI context (PR number/title/body/repo) from env + event payload.
     const ctx = resolvePrContext(deps.env, readFile);
 
     const githubToken = deps.env.GITHUB_TOKEN;
-    if (deps.postAs !== 'none' && !githubToken) {
-      throw new RunnerError(`GITHUB_TOKEN is required to post as '${deps.postAs}'`);
+    if (postAs !== 'none' && !githubToken) {
+      throw new RunnerError(`GITHUB_TOKEN is required to post as '${postAs}'`);
     }
 
     // 3. Assemble the diff from the CI context. Strip DevDigest's own exported
@@ -122,6 +130,7 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
       llm: deps.llm,
       strategy: manifest.strategy,
       skills,
+      memory,
       prDescription: ctx.body,
       task: `Review PR #${ctx.prNumber}: ${ctx.title}`,
     });
@@ -144,14 +153,25 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
       costUsd: outcome.costUsd,
       durationMs,
       agent: manifest.name,
+      agentSlug: manifest.slug,
       prNumber: ctx.prNumber,
+      repository: `${ctx.owner}/${ctx.repo}`,
+      repositoryId: ctx.repositoryId,
+      commitSha: ctx.headSha,
+      runId: ctx.runId,
+      runAttempt: ctx.runAttempt,
+      verdict: verdictFromEvent(payload.event),
+      blockers,
+      gateTriggered: triggered,
+      model: manifest.model,
+      manifestVersion: manifest.manifest_version,
     });
     writeFile(deps.resultPath, `${JSON.stringify(artifact, null, 2)}\n`);
 
     // 7. Post per `post_as` (AC-24).
-    if (deps.postAs === 'github_review') {
+    if (postAs === 'github_review') {
       await postGithubReview(ctx, githubToken as string, payload, fetchImpl);
-    } else if (deps.postAs === 'pr_comment') {
+    } else if (postAs === 'pr_comment') {
       await postPrComment(ctx, githubToken as string, payload.body, fetchImpl);
     }
     // 'none' → post nothing (exit-code only).
@@ -160,7 +180,7 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
     return {
       exitCode: triggered ? 1 : 0,
       artifact,
-      posted: { kind: deps.postAs, payload },
+      posted: { kind: postAs, payload },
       blockers,
       gateTriggered: triggered,
     };

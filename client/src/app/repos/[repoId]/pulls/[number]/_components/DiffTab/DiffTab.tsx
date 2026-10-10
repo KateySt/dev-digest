@@ -14,7 +14,7 @@ import {
   useRisks,
   useFindingAction,
 } from "@/lib/hooks/reviews";
-import { notify } from "@/lib/toast";
+import { notify } from "@/lib/contexts";
 import { FindingCard } from "../FindingCard";
 import type { PrFile, FindingActionKind } from "@devdigest/shared";
 

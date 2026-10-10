@@ -1,42 +1,71 @@
 {
   "runs": {
     "emptyTitle": "No CI runs yet",
-    "emptyBody": "Once you export an agent to CI, every automated review shows up here.",
+    "emptyBody": "Export an agent to CI, then press Refresh. Every automated review that runs on a pull request shows up here.",
     "title": "CI Runs",
     "subtitle": "Agent reviews executed inside CI · not local runs",
     "autoRefresh": "auto-refresh on",
+    "autoRefreshOff": "auto-refresh off",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "filters": {
-      "last7Days": "Last 7 days",
+      "period": {
+        "24h": "Last 24 hours",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days"
+      },
       "allAgents": "All agents",
       "allRepos": "All repos",
-      "allStatuses": "All statuses"
+      "allStatuses": "All statuses",
+      "allSources": "All sources"
     },
     "table": {
       "timestamp": "Timestamp",
       "pullRequest": "Pull request",
+      "agent": "Agent",
       "source": "Source",
+      "duration": "Dur.",
       "findings": "Findings",
       "cost": "Cost",
-      "status": "Status"
+      "verdict": "Verdict",
+      "status": "Status",
+      "trace": "Trace",
+      "job": "Job"
     },
-    "view": "View",
+    "trace": "Trace",
+    "jobLink": "View job",
+    "source": {
+      "gha": "GitHub Actions"
+    },
+    "verdict": {
+      "approve": "Approve",
+      "comment": "Comment",
+      "request_changes": "Request changes"
+    },
     "status": {
       "succeeded": "Succeeded",
-      "noFindings": "No findings",
+      "no_findings": "No findings",
       "failed": "Failed",
       "running": "Running"
+    },
+    "ingestError": {
+      "artifact_missing": "Artifact missing",
+      "artifact_expired": "Artifact expired",
+      "artifact_too_large": "Artifact too large",
+      "artifact_invalid": "Artifact is not a valid archive",
+      "secret_detected": "Secret detected in artifact",
+      "verification_failed": "Verification failed ({check})"
     }
   },
   "exportWizard": {
     "title": "Export to CI",
     "subtitle": "Run {agentName} automatically on pull requests",
-    "thisAgent": "this agent",
     "back": "Back",
     "continue": "Continue",
     "install": "Install",
     "installing": "Installing…",
+    "close": "Close",
+    "stepsLabel": "Export steps",
     "steps": {
       "target": "Target",
       "preview": "Preview",
@@ -53,6 +82,7 @@
       "jenkinsDesc": "Pipeline stage",
       "cliDesc": "devdigest review --pr"
     },
+    "comingSoon": "Coming soon",
     "recommended": "recommended",
     "repoLabel": "Target repository",
     "repoHint": "owner/name — the repo to add the workflow to",
@@ -60,45 +90,91 @@
     "filesToCreate": "FILES TO CREATE",
     "generating": "Generating…",
     "editable": "editable",
-    "triggerLabel": "Trigger",
+    "previewError": "Could not generate the preview: {message}",
+    "workflowEditorLabel": "Workflow file contents",
+    "runner": {
+      "summary": "Bundled runner · {size} · version {version}",
+      "hash": "sha256 {hash}",
+      "note": "The runner is shipped unchanged from the DevDigest build. Its source is not shown here."
+    },
+    "modelWarning": "Model mapping",
+    "lint": {
+      "title": "The workflow was rejected. Fix these and continue:",
+      "violation": "{rule} at {location}: {message}"
+    },
+    "configure": {
+      "triggerLabel": "Trigger",
+      "triggerNone": "Select at least one trigger.",
+      "triggerOpened": "pull_request:opened",
+      "triggerSynchronize": "pull_request:synchronize",
+      "triggerReopened": "pull_request:reopened",
+      "editsDiscarded": "Changing triggers regenerates the workflow, so your manual edits were discarded."
+    },
     "postResultsLabel": "Post results as",
     "postAs": {
       "githubReview": "GitHub review",
       "prComment": "PR comment",
       "none": "None (exit code only)"
     },
-    "blockMergeTitle": "Block merge on findings",
-    "blockMergeDesc": "Requires a GitHub App — not available with PAT in local mode",
-    "installCardTitle": "Open a PR with these files",
-    "installCardBody": "DevDigest opens a PR in {repo} titled “Add DevDigest CI review” with the {count} generated files.",
-    "ownerRepo": "owner/repo",
-    "secretNote": "Add {key} to the repo's Actions secrets before the workflow runs."
+    "secrets": {
+      "title": "Secrets expected",
+      "name": "Secret",
+      "status": "Status",
+      "verifyInRepo": "verify in repo settings",
+      "openrouterNote": "Add it to the repo's Actions secrets before the workflow runs.",
+      "githubNote": "provided by Actions"
+    },
+    "infoBox": {
+      "lead": "To block merges: set",
+      "failOnLabel": "Fail CI on",
+      "current": "(currently {failOn}; CI tab)",
+      "middle": "so the run exits non-zero, then add a",
+      "requiredCheck": "required status check",
+      "tail": "in the repo's GitHub branch protection. No GitHub App needed."
+    },
+    "installStep": {
+      "prTitle": "Open a PR with these files",
+      "prBody": "DevDigest opens a PR in {repo} on branch {branch} titled “{title}” with the {count} generated files.",
+      "zipTitle": "Download zip",
+      "zipHint": "add them manually",
+      "zipBusy": "Preparing zip…",
+      "helpLead": "Need help? See the",
+      "helpLink": "GitHub Action setup docs",
+      "doneTitle": "Pull request ready",
+      "doneBody": "DevDigest committed the files to {repo} and opened or updated the pull request.",
+      "viewPr": "View pull request",
+      "patWorkflowScope": "The GitHub token needs the “workflow” scope (classic) or Workflows: write (fine-grained) to add .github/workflows files.",
+      "repoNotFound": "Repository not found or the GitHub token has no access to it.",
+      "githubForbidden": "GitHub denied the request: the token lacks permission for this repository.",
+      "zipDone": "Zip downloaded. Add the files to the repo manually."
+    }
   },
   "ciTab": {
     "heading": "Continuous Integration",
+    "activeIn": "Active in {count, plural, one {# repo} other {# repos}}",
     "subtitle": "Run this agent automatically on pull requests in a target repo.",
-    "exportToCi": "Export to CI",
-    "publish": "Publish to CI",
-    "update": "Update CI",
-    "noRepo": "Connect a repository first",
-    "empty": "Not deployed to CI yet. Use “Publish to CI” to open a PR that adds the workflow + agent config.",
-    "installed": "installed {date}"
-  },
-  "publishDialog": {
-    "title": "Publish to CI",
-    "subtitle": "Run {agentName} on every pull request in {repo}",
-    "intro": "Opens a pull request in {repo} adding a GitHub Actions workflow + this agent's config under .devdigest/. On every PR the agent reviews the diff.",
-    "filesLabel": "FILES",
-    "generating": "Generating…",
-    "secretNote": "Add {key} to the repo's Actions secrets before the workflow runs. GITHUB_TOKEN is provided automatically.",
-    "cancel": "Cancel",
-    "publish": "Publish",
-    "publishing": "Publishing…",
-    "republish": "Re-publish (update)",
-    "doneTitle": "Published",
-    "doneBody": "Opened/updated a pull request in {repo} with the workflow + agent config.",
-    "openPr": "View pull request",
-    "close": "Close"
+    "addToCi": "Add to CI",
+    "updateCiConfig": "Update CI config",
+    "addRepository": "Add repository",
+    "outOfDate": "Out of date",
+    "empty": "Not deployed to CI yet. Use “Add to CI” to open a PR that adds the workflow and the agent config.",
+    "githubActions": "GitHub Actions",
+    "workflowVersion": "workflow v{version}",
+    "viewPr": "PR",
+    "neverRun": "no runs yet",
+    "failCiOn": {
+      "title": "Fail CI on",
+      "helper": "Exit non-zero when a finding at or above this severity lands. Pair with a required status check to block merges.",
+      "critical": "Critical",
+      "warning": "Warning +",
+      "never": "Never",
+      "anyCaption": "Currently set to “any”. Pick a level to change it."
+    },
+    "recentRuns": {
+      "title": "Recent CI runs",
+      "empty": "No CI runs yet.",
+      "trace": "Trace"
+    }
   },
   "page": {
     "crumb": "CI Runs"

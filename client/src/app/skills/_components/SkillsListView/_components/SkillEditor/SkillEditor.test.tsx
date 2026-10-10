@@ -3,7 +3,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../messages/en/skills.json";
-import { ToastProvider } from "@/lib/toast";
+import { ToastProvider } from "@/lib/contexts";
 
 const SKILL: Skill = {
   id: "sk1",

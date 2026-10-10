@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Badge, ErrorState, Icon, Skeleton } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
 import { ContextDocumentRow } from "@/components/context-document-row";
-import { useActiveRepo } from "@/lib/repo-context";
+import { useActiveRepo } from "@/lib/contexts";
 import {
   useProjectContextDocuments,
   skillContextKey,

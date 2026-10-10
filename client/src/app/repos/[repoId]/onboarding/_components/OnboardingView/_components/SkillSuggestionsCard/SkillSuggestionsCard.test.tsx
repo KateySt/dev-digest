@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../../../../../messages/en/skills.json";
-import { ToastProvider } from "@/lib/toast";
+import { ToastProvider } from "@/lib/contexts";
 
 const importMutate = vi.fn();
 let suggestionsData: unknown;

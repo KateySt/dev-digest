@@ -7,7 +7,7 @@ import { RunnerError } from './errors.js';
 /**
  * Loads and VALIDATES the checked-in `.devdigest/agents/<slug>.yaml` manifest
  * (AC-20). The manifest is written by the studio's export flow
- * (`server/src/modules/ci/manifest.ts`) and is otherwise untrusted on-disk
+ * (`buildManifestYaml` in `server/src/modules/ci/helpers.ts`) and is otherwise untrusted on-disk
  * content by the time it reaches CI — it is schema-validated with the same
  * `AgentManifest` Zod contract before any of its fields (system prompt, model,
  * ci_fail_on) are used to build a review. Fail clearly (a descriptive
@@ -21,10 +21,28 @@ export interface FsDeps {
   readDir?: typeof readdirSync;
 }
 
-/** Find the single agent manifest file under `<devdigestDir>/agents/`. */
-export function findManifestPath(devdigestDir: string, deps: FsDeps = {}): string {
+const SLUG_RE = /^[a-z0-9-]+$/;
+
+/**
+ * Find the agent manifest file under `<devdigestDir>/agents/`. When
+ * `agentSlug` (the workflow's `DEVDIGEST_AGENT`) is given, that exact file is
+ * selected — the slug is validated BEFORE it is used to build a path, so a
+ * hostile value can never traverse out of `agents/`. Without it, the legacy
+ * single-file fallback applies.
+ */
+export function findManifestPath(
+  devdigestDir: string,
+  deps: FsDeps = {},
+  agentSlug?: string,
+): string {
   const readDir = deps.readDir ?? readdirSync;
   const agentsDir = path.join(devdigestDir, 'agents');
+  if (agentSlug) {
+    if (!SLUG_RE.test(agentSlug)) {
+      throw new RunnerError('DEVDIGEST_AGENT must match ^[a-z0-9-]+$');
+    }
+    return path.join(agentsDir, `${agentSlug}.yaml`);
+  }
   let entries: string[];
   try {
     entries = readDir(agentsDir) as unknown as string[];
@@ -73,11 +91,21 @@ export function loadAgentManifest(manifestPath: string, deps: FsDeps = {}): Agen
       .join('; ');
     throw new RunnerError(`Agent manifest at ${manifestPath} failed validation: ${issues}`);
   }
+  const fileSlug = path.basename(manifestPath).replace(/\.ya?ml$/, '');
+  if (result.data.slug !== fileSlug) {
+    throw new RunnerError(
+      `Agent manifest slug '${result.data.slug}' does not match its file name '${fileSlug}'`,
+    );
+  }
   return result.data;
 }
 
 /** Convenience: locate + load + validate in one call. */
-export function loadManifest(devdigestDir: string, deps: FsDeps = {}): AgentManifest {
-  const manifestPath = findManifestPath(devdigestDir, deps);
+export function loadManifest(
+  devdigestDir: string,
+  deps: FsDeps = {},
+  agentSlug?: string,
+): AgentManifest {
+  const manifestPath = findManifestPath(devdigestDir, deps, agentSlug);
   return loadAgentManifest(manifestPath, deps);
 }

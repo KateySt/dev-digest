@@ -140,6 +140,42 @@ export interface CommitFilesPayload {
   files: CommitFile[];
 }
 
+/** Repo identity + default branch, as reported by GitHub. */
+export interface GitHubRepoInfo {
+  id: number;
+  defaultBranch: string;
+}
+
+/** One GitHub Actions workflow run (trusted GitHub metadata, never artifact claims). */
+export interface WorkflowRunInfo {
+  id: number;
+  runAttempt: number;
+  status: string | null;
+  conclusion: string | null;
+  headSha: string;
+  repositoryId: number;
+  path: string;
+  htmlUrl: string;
+  pullRequests: { number: number }[];
+  createdAt: string;
+}
+
+/** One artifact uploaded by a workflow run. */
+export interface RunArtifactInfo {
+  id: number;
+  name: string;
+  sizeInBytes: number;
+  expired: boolean;
+}
+
+/** One job of a workflow run (its `name` is set by the generated workflow). */
+export interface WorkflowJobInfo {
+  id: number;
+  name: string;
+  status: string | null;
+  conclusion: string | null;
+}
+
 export interface GitHubClient {
   listPullRequests(repo: RepoRef): Promise<PrMeta[]>;
   getPullRequest(repo: RepoRef, n: number): Promise<PrDetail>;
@@ -166,6 +202,23 @@ export interface GitHubClient {
   /** The open PR whose head is `branch`, if any (so re-publish reuses it). */
   findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string } | null>;
   getIssue(repo: RepoRef, n: number): Promise<IssueMeta>;
+  /** Repo id + default branch (GET /repos/{owner}/{repo}). */
+  getRepo(repo: RepoRef): Promise<GitHubRepoInfo>;
+  /** Recent runs of one workflow file, filtered by triggering event. */
+  listWorkflowRuns(
+    repo: RepoRef,
+    workflowFile: string,
+    opts: { event: 'pull_request'; perPage?: number },
+  ): Promise<WorkflowRunInfo[]>;
+  /** Artifacts of one workflow run. */
+  listRunArtifacts(repo: RepoRef, runId: number): Promise<RunArtifactInfo[]>;
+  /** Jobs of one workflow run (per-agent conclusion). */
+  listRunJobs(repo: RepoRef, runId: number): Promise<WorkflowJobInfo[]>;
+  /**
+   * Download an artifact zip. Throws an AppError coded `artifact_too_large` when the size
+   * exceeds `maxBytes` (checked up-front from metadata, then on the stream).
+   */
+  downloadArtifact(repo: RepoRef, artifactId: number, maxBytes: number): Promise<Uint8Array>;
   /**
    * File paths changed by one commit. A commit's file set is immutable (a
    * sha never changes what it touched), so callers may cache this result

@@ -11,9 +11,17 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 ## What Doesn't Work
 
+2026-10-10 — keep the runner bundle type-checked (no ncc `-t`): `ncc build` type-checks the inlined `reviewer-core` and shared sources, so a type error there (e.g. a duplicate `intent` key left by a bad merge, fixed 2026-10-10) breaks `pnpm build` and the CI drift check in `.github/workflows/agent-runner.yml`. Fix the error and rebuild with `pnpm build`; a `-t` bundle would not match what the drift check regenerates. ref: agent-runner/scripts/copy-bundle.mjs, .github/workflows/agent-runner.yml
+
 2026-07-08 — `pnpm typecheck` in `agent-runner` fails with `Cannot find module 'zod'` / `'openai'` errors pointing at `reviewer-core/src/llm/*.ts` if `reviewer-core/node_modules` was never installed. Because this repo is NOT a monorepo (no `pnpm-workspace.yaml`, no hoisting across packages), TypeScript's `moduleResolution: "Bundler"` walks up the ancestor directories of the *importing file* — `reviewer-core/src/llm/` → `reviewer-core/` → repo root — and never reaches `agent-runner/node_modules` (a sibling, not an ancestor). Fix: `cd reviewer-core && pnpm install` once (creates gitignored `node_modules`, touches no tracked files) — this is also required for `cd server && pnpm typecheck` to pass cleanly, so it is not agent-runner-specific. ref: agent-runner/tsconfig.json:20
 
 ## Codebase Patterns
+
+2026-10-10 — `post_as` is closed: the runner takes it from the manifest, with `DEVDIGEST_POST_AS` as an optional env override, replacing the old `'github_review'`-only fallback (see the 2026-07-08 T8 session note). The generated workflow sets `DEVDIGEST_AGENT` per job and reads `.devdigest/memory.jsonl`. ref: agent-runner/src/index.ts, agent-runner/src/context.ts
+
+2026-10-10 — ncc output must ship as `.mjs`: the bundle is ESM, and in a target repo a `.js` file is parsed as CommonJS unless a `"type": "module"` package.json is present. `scripts/copy-bundle.mjs` converts `dist/index.js` into `bundle/runner.mjs` (adds the `// devdigest-runner <version>` banner, normalizes CRLF to LF so the drift check is stable on Windows). ref: agent-runner/scripts/copy-bundle.mjs
+
+2026-10-10 — GitHub Actions artifact names must be unique within a workflow run, and the generated workflow has one job per agent, so each job uploads `devdigest-result-<slug>`, not a fixed `devdigest-result`. A fixed name makes the second agent's upload fail with a conflict. ref: server/src/modules/ci/helpers.ts
 
 2026-07-08 — `agent-runner/tsconfig.json` intentionally mirrors `server/tsconfig.json`'s compiler options and path-alias block verbatim (aliasing `@devdigest/reviewer-core` → `../reviewer-core/src/index.ts` and `@devdigest/shared` → `../server/src/vendor/shared/index.ts`), so both consumers resolve the exact same source files. `agent-runner/vitest.config.ts` re-declares the same two aliases (vitest/vite doesn't read `tsconfig.json` paths automatically) — matches the pattern already used in `reviewer-core/vitest.config.ts`. ref: agent-runner/tsconfig.json:21
 
@@ -35,4 +43,3 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 ## Open Questions
 
-2026-07-08 — `AgentManifest` has no `post_as` field and the generated GHA workflow (`server/src/modules/ci/workflow.ts`) doesn't set a `POST_AS`-equivalent env var, so in production the runner will always fall back to `index.ts`'s default (`'github_review'`) regardless of what the studio's export dialog captured (`CiExportInput.post_as`). Should `post_as` be folded into `AgentManifest` (persisted per-agent, read by the runner) or threaded through the workflow as an explicit env var? Whoever owns the export/workflow-generation track should close this loop — `runCi()` already accepts `postAs` as a first-class parameter, so wiring either fix through only touches `index.ts` plus the manifest/workflow generator. ref: server/src/vendor/shared/contracts/eval-ci.ts (AgentManifest), agent-runner/src/index.ts:25

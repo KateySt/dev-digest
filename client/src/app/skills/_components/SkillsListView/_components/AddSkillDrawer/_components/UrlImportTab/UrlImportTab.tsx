@@ -4,7 +4,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Button, ErrorState, FormField, TextInput } from "@devdigest/ui";
 import { useImportSkillUrl } from "@/lib/hooks/skills";
-import { useToast } from "@/lib/toast";
+import { useToast } from "@/lib/contexts";
 import { ApiError } from "@/lib/api";
 import { s } from "../../styles";
 

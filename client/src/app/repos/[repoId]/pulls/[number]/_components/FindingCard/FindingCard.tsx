@@ -20,7 +20,7 @@ import {
 import type { FindingRecord, FindingActionKind } from "@devdigest/shared";
 import { SEV_COLOR, SEV_COLOR_FALLBACK } from "./constants";
 import { lineLabel, type LinkedSkill } from "./helpers";
-import { githubBlobUrl } from "@/lib/github-urls";
+import { githubBlobUrl } from "@/lib/utils";
 import { EvalCaseAction } from "./EvalCaseAction";
 import { ReplyAction } from "./ReplyAction";
 import { s } from "./styles";
