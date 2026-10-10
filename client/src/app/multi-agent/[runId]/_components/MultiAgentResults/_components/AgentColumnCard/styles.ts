@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-const wrap: CSSProperties = { overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0 };
+const wrap = { overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0 } as const satisfies CSSProperties;
 
 export const s = {
   card: (accent: string): CSSProperties => ({
