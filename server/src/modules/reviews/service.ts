@@ -1,4 +1,3 @@
-import PQueue from 'p-queue';
 import type { Container } from '../../platform/container.js';
 import type { BulkReviewOutcome, FindingActionKind, PrReviewComment, ReviewEstimate, RunEventKind, RunTrace } from '@devdigest/shared';
 import { AppError, NotFoundError } from '../../platform/errors.js';
@@ -9,7 +8,7 @@ import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl, replyToFinding as replyToFindingImpl } from './findings.js';
 import { reviewToDto } from './helpers.js';
 import { needsReviewPrIds } from '../pulls/status.js';
-import { BULK_REVIEW_CONCURRENCY, BULK_REVIEW_MAX_PRS } from './constants.js';
+import { BULK_REVIEW_MAX_PRS } from './constants.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -59,14 +58,40 @@ export class ReviewService {
     throw new AppError('invalid_run_request', 'Provide agentId or all:true', 400);
   }
 
+  /**
+   * Resolve the agents of a multi-agent run (S-AC-2/3): de-duplicate keeping the
+   * first occurrence's order, then require every id to be an ENABLED agent of
+   * this workspace. Any miss -> 400 with the offending ids, nothing created.
+   */
+  async resolveMultiTargets(workspaceId: string, agentIds: string[]): Promise<AgentRow[]> {
+    const distinct = [...new Set(agentIds)];
+    const enabled = new Map((await this.agents.listEnabled(workspaceId)).map((a) => [a.id, a]));
+    const invalid = distinct.filter((id) => !enabled.has(id));
+    if (invalid.length > 0) {
+      throw new AppError(
+        'invalid_agent_ids',
+        'Every agent must exist in this workspace and be enabled.',
+        400,
+        { agent_ids: invalid },
+      );
+    }
+    return distinct.map((id) => enabled.get(id)!);
+  }
+
   /** Delete a whole review run (one agent's pass) + its findings (cascade). */
   async deleteReview(workspaceId: string, reviewId: string): Promise<boolean> {
     return this.repo.deleteReview(workspaceId, reviewId);
   }
 
-  /** In-flight runs for a PR (server-side source of truth, survives reload). */
+  /** In-flight (queued|running) runs for a PR (server-side source of truth,
+   *  survives reload). A queued run also carries its 1-based queue position
+   *  (1 = starts next); `null` for running runs (S-AC-12). */
   async activeRuns(workspaceId: string, prId: string) {
-    return this.repo.activeRunsForPull(workspaceId, prId);
+    const rows = await this.repo.activeRunsForPull(workspaceId, prId);
+    return rows.map((r) => ({
+      ...r,
+      queue_position: r.status === 'queued' ? this.container.reviewQueue.position(r.run_id) : null,
+    }));
   }
 
   /** All runs for a PR (any status), newest first — the run history (incl. failures). */
@@ -80,14 +105,18 @@ export class ReviewService {
   }
 
   /**
-   * Cancel an in-flight run. Signals a live runner to stop at its next
-   * checkpoint AND marks the DB row cancelled + completes the bus immediately —
-   * so cancel also works for ORPHANED runs (whose background process died on a
-   * server restart) where signalling alone would do nothing.
+   * Cancel an in-flight run. A QUEUED run leaves the queue and becomes
+   * `cancelled` without ever making an LLM call (S-AC-17). A RUNNING run is
+   * signalled to stop at its next checkpoint AND its DB row is marked
+   * cancelled + the bus completed immediately - so cancel also works for
+   * ORPHANED runs (whose background process died on a server restart) where
+   * signalling alone would do nothing.
    */
   async cancelRun(runId: string): Promise<void> {
     this.publish(runId, 'info', 'Cancellation requested — stopping…');
     this.container.runBus.cancel(runId);
+    // Leave the queue first so a slot can't pick the job up while we write.
+    this.container.reviewQueue.remove(runId);
     await this.repo.cancelRunIfRunning(runId);
     this.container.runBus.complete(runId);
   }
@@ -116,13 +145,14 @@ export class ReviewService {
     const agent = await this.agents.getById(workspaceId, review.agentId);
     if (!agent) throw new NotFoundError('Agent not found or disabled');
 
-    // Create a new run with the same agent
+    // Create a new (queued) run with the same agent
     const runId = await this.repo.createAgentRun({
       workspaceId,
       agentId: agent.id,
       prId: review.prId,
       provider: agent.provider,
       model: agent.model,
+      status: 'queued',
     });
 
     // Fire-and-forget: execute the new run in the background
@@ -136,23 +166,32 @@ export class ReviewService {
     return { run_id: runId, agent_id: agent.id, agent_name: agent.name };
   }
 
-  /** Reap runs left 'running' by a previous (now-dead) process. Called on boot. */
+  /** Reap runs left 'queued'/'running' by a previous (now-dead) process. Called on boot. */
   async reapStaleRuns(): Promise<number> {
     return this.repo.reapStaleRunningRuns();
   }
 
   /**
    * Run a review for each target agent. Each agent gets its own runId
-   * (= agent_runs.id) created up-front so the SSE route can be subscribed
-   * before/while the run progresses. A partial failure in one agent does not
-   * abort the others.
+   * (= agent_runs.id) created up-front (status `queued`) so the SSE route can
+   * be subscribed before/while the run progresses. All runs go through the
+   * shared review queue, so they run in parallel up to REVIEW_CONCURRENCY. A
+   * partial failure in one agent does not abort the others.
+   *
+   * `multi: true` (the `agentIds` path) also creates the parent
+   * `multi_agent_runs` row, atomically with its children (S-AC-1/5).
    */
   async runReview(
     workspaceId: string,
     prId: string,
     targets: AgentRow[],
     logger?: Logger,
-  ): Promise<{ runs: { run_id: string; agent_id: string; agent_name: string }[]; reviews: ReviewDto[] }> {
+    opts: { multi?: boolean } = {},
+  ): Promise<{
+    runs: { run_id: string; agent_id: string; agent_name: string }[];
+    reviews: ReviewDto[];
+    multi_agent_run_id?: string;
+  }> {
     const pull = await this.repo.getPull(workspaceId, prId);
     if (!pull) throw new NotFoundError('Pull request not found');
     const repo = await this.repo.getRepo(pull.repoId);
@@ -163,29 +202,41 @@ export class ReviewService {
     // stream. The actual (slow) review runs in the background below. The
     // in-flight check and the inserts are ONE atomic step per PR (S-AC-23/24):
     // a second concurrent trigger for the same PR is refused, not queued.
-    const runIds = await this.repo.createRunsIfIdle(
-      workspaceId,
-      prId,
-      targets.map((a) => ({ id: a.id, provider: a.provider, model: a.model })),
-    );
+    const refs = targets.map((a) => ({ id: a.id, provider: a.provider, model: a.model }));
+    let runIds: string[] | null;
+    let multiAgentRunId: string | undefined;
+    if (opts.multi) {
+      const created = await this.repo.createMultiRunIfIdle(workspaceId, prId, refs);
+      runIds = created ? created.runIds : null;
+      multiAgentRunId = created?.multiAgentRunId;
+    } else {
+      runIds = await this.repo.createRunsIfIdle(workspaceId, prId, refs);
+    }
     if (runIds === null) {
-      throw new AppError('review_in_progress', 'A review is already running for this pull request.', 409);
+      const inFlight = await this.repo.inFlightRunsForPull(workspaceId, prId);
+      throw new AppError('review_in_progress', 'A review is already running for this pull request.', 409, {
+        run_ids: inFlight.runIds,
+        multi_agent_run_id: inFlight.multiAgentRunId,
+      });
     }
     const runs: { run_id: string; agent_id: string; agent_name: string }[] = [];
     const jobs: { agent: AgentRow; runId: string }[] = [];
     targets.forEach((agent, i) => {
-      const runId = runIds[i]!;
+      const runId = runIds![i]!;
       runs.push({ run_id: runId, agent_id: agent.id, agent_name: agent.name });
       jobs.push({ agent, runId });
     });
 
     // Fire-and-forget: the HTTP response returns now with the runIds; reviews
     // are persisted as each agent finishes and the client refetches on SSE done.
-    void this.executor.executeRuns(workspaceId, pull, repo, jobs, logger).catch((err) => {
-      logger?.error({ prId, err: (err as Error).message }, 'review: background execution crashed');
-    });
+    // executeRuns enqueues synchronously, so queue positions exist on return.
+    void this.executor
+      .executeRuns(workspaceId, pull, repo, jobs, logger, { groupKey: multiAgentRunId ?? jobs[0]?.runId ?? prId })
+      .catch((err) => {
+        logger?.error({ prId, err: (err as Error).message }, 'review: background execution crashed');
+      });
 
-    return { runs, reviews: [] };
+    return { runs, reviews: [], ...(multiAgentRunId ? { multi_agent_run_id: multiAgentRunId } : {}) };
   }
 
   private publish(runId: string, kind: RunEventKind, msg: string, data?: unknown) {
@@ -304,20 +355,19 @@ export class ReviewService {
 
     // Fire-and-forget: the HTTP response returns now with every outcome
     // already decided; actual review execution happens in the background.
-    // Bounded to BULK_REVIEW_CONCURRENCY PRs at once — each PR's own jobs
-    // already run sequentially inside executeRuns, so this bound is also the
-    // bound on total concurrent runs (S-AC-7). One PR's executeRuns throwing
-    // never stops the queue from draining the rest (S-AC-8).
-    const queue = new PQueue({ concurrency: BULK_REVIEW_CONCURRENCY });
+    // Every run goes straight onto the shared review queue (no PR-level
+    // limiter: an outer limiter holding a slot while awaiting the queue could
+    // deadlock, and would leave rows `queued` while slots are free), so total
+    // concurrency is REVIEW_CONCURRENCY server-wide (SPEC-05 S-AC-7 holds at
+    // the default of 3). One PR's executeRuns failing never affects the others
+    // (S-AC-8). Enqueue order == PR-id order, FIFO.
     for (const { pull, jobs } of toExecute) {
-      void queue.add(() =>
-        this.executor.executeRuns(workspaceId, pull, repo, jobs, logger).catch((err) => {
-          logger?.error(
-            { prId: pull.id, err: (err as Error).message },
-            'bulk review: background execution crashed for one PR',
-          );
-        }),
-      );
+      void this.executor.executeRuns(workspaceId, pull, repo, jobs, logger).catch((err) => {
+        logger?.error(
+          { prId: pull.id, err: (err as Error).message },
+          'bulk review: background execution crashed for one PR',
+        );
+      });
     }
 
     return results;

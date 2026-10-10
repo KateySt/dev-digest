@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@devdigest/ui";
 import type { FindingRecord } from "@devdigest/shared";
 import { createEvalCaseFromFinding, type EvalCaseFromFinding } from "@/lib/hooks/eval-cases";
-import { notify } from "@/lib/toast";
+import { notify } from "@/lib/contexts/toast";
 import {
   buildEvalTargets,
   evalKindFor,

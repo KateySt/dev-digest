@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 import { Button, Dropdown, type DropdownItemDef } from "@devdigest/ui";
 import { useAgents } from "@/lib/hooks/agents";
 import { ApiError } from "@/lib/api";
-import { notify } from "@/lib/toast";
+import { notify } from "@/lib/contexts/toast";
 import { useRunReview } from "@/lib/hooks/reviews";
 import { DROPDOWN_WIDTH } from "./constants";
 

@@ -155,6 +155,13 @@
       "when": 1791297008110,
       "tag": "0021_fine_jack_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791635362178,
+      "tag": "0022_colossal_bedlam",
+      "breakpoints": true
     }
   ]
 }

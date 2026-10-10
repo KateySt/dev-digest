@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, jsonb, timestamp, doublePrecision } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, jsonb, timestamp, doublePrecision, index } from 'drizzle-orm/pg-core';
 import { workspaces } from './core';
 import { agents } from './agents';
 import { pullRequests } from './pulls';
@@ -29,7 +29,17 @@ export const agentRuns = pgTable('agent_runs', {
   score: integer('score'),
   /** Findings that tripped the agent's gate (severity ≥ ciFailOn). */
   blockers: integer('blockers'),
-});
+  /** Parent multi-agent run when started as part of one; null for single-agent runs. */
+  multiAgentRunId: uuid('multi_agent_run_id').references(() => multiAgentRuns.id, {
+    onDelete: 'set null',
+  }),
+  /** Position of this agent in the user's selection order within a multi-agent run. */
+  multiAgentOrder: integer('multi_agent_order'),
+  /** When the run actually left the queue and started executing. */
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  /** When the run reached a terminal state. */
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+}, (t) => [index('agent_runs_multi_agent_run_id_idx').on(t.multiAgentRunId)]);
 
 /** Whole trace of one run as a SINGLE jsonb document. */
 export const runTraces = pgTable('run_traces', {

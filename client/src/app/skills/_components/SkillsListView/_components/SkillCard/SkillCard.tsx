@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Badge, Icon, TagChip, Toggle } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
 import type { SkillListItem } from "@/lib/hooks/skills";
-import { useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/contexts/theme";
 import { tagColor } from "@/lib/tag-colors";
 import { MAX_VISIBLE_TAGS } from "../../constants";
 import { SKILL_TYPE_COLOR } from "@/lib/skill-constants";
