@@ -4,16 +4,20 @@
 # in e2e-web.yml.
 name: client
 
+# DISABLED for now — only release.yml runs automatically. To re-enable,
+# uncomment the original `on:` block below and delete the `on:` after it.
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'client/**'
+#       - '.github/workflows/client.yml'
+#   pull_request:
+#     paths:
+#       - 'client/**'
+#       - '.github/workflows/client.yml'
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'client/**'
-      - '.github/workflows/client.yml'
-  pull_request:
-    paths:
-      - 'client/**'
-      - '.github/workflows/client.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

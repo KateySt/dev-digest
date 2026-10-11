@@ -7,20 +7,24 @@
 # runner consumes both as raw TypeScript source through tsconfig path aliases.
 name: agent-runner
 
+# DISABLED for now — only release.yml runs automatically. To re-enable,
+# uncomment the original `on:` block below and delete the `on:` after it.
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'agent-runner/**'
+#       - 'reviewer-core/**'
+#       - 'server/src/vendor/shared/**'
+#       - '.github/workflows/agent-runner.yml'
+#   pull_request:
+#     paths:
+#       - 'agent-runner/**'
+#       - 'reviewer-core/**'
+#       - 'server/src/vendor/shared/**'
+#       - '.github/workflows/agent-runner.yml'
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'agent-runner/**'
-      - 'reviewer-core/**'
-      - 'server/src/vendor/shared/**'
-      - '.github/workflows/agent-runner.yml'
-  pull_request:
-    paths:
-      - 'agent-runner/**'
-      - 'reviewer-core/**'
-      - 'server/src/vendor/shared/**'
-      - '.github/workflows/agent-runner.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

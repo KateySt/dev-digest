@@ -17,12 +17,14 @@
 name: evals
 
 on:
-  pull_request:
-    paths:
-      - '.claude/**'
-      - 'CLAUDE.md'
-      - 'evals/**'
-      - '.github/workflows/evals.yml'
+# DISABLED for now — only release.yml runs automatically. To re-enable,
+# uncomment the pull_request trigger below (manual dispatch still works).
+#  pull_request:
+#    paths:
+#      - '.claude/**'
+#      - 'CLAUDE.md'
+#      - 'evals/**'
+#      - '.github/workflows/evals.yml'
   workflow_dispatch:
     inputs:
       skills_model:
