@@ -67,6 +67,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   const container = new Container(config, db, opts.overrides);
   app.decorate('container', container);
+  container.reviewQueue.setLogger(app.log);
 
   // Reap jobs left queued/running by a dead process (the queue is in-memory),
   // so e.g. onboarding generation isn't deduped onto an orphan forever

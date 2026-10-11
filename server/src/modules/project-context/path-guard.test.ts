@@ -14,10 +14,27 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { assertInsideClone, assertInsideCloneForWrite } from './path-guard.js';
 import { ValidationError } from '../../platform/errors.js';
+
+/** Creating symlinks needs admin / Developer Mode on Windows (EPERM otherwise).
+ *  Probe once so the symlink cases skip only where the OS forbids them. */
+function canCreateSymlinks(): boolean {
+  const dir = fsSync.mkdtempSync(path.join(os.tmpdir(), 'pg-probe-'));
+  try {
+    fsSync.writeFileSync(path.join(dir, 'target'), '');
+    fsSync.symlinkSync(path.join(dir, 'target'), path.join(dir, 'link'));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    fsSync.rmSync(dir, { recursive: true, force: true });
+  }
+}
+const itSymlink = it.skipIf(!canCreateSymlinks());
 
 // ---------------------------------------------------------------------------
 // Temp-dir lifecycle
@@ -79,7 +96,7 @@ describe('assertInsideClone (read)', () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it('rejects a symlink that escapes the clone root', async () => {
+  itSymlink('rejects a symlink that escapes the clone root', async () => {
     // Build a two-dir setup: cloneRoot and a separate outsideDir
     // cloneRoot/link -> outsideDir/secret.md
     const root = await makeTmpDir();
@@ -151,7 +168,7 @@ describe('assertInsideCloneForWrite (write)', () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it('rejects a symlink target that escapes the clone root', async () => {
+  itSymlink('rejects a symlink target that escapes the clone root', async () => {
     // Existing file that is a symlink to outside
     const root = await makeTmpDir();
     const outside = await makeTmpDir();
@@ -167,7 +184,7 @@ describe('assertInsideCloneForWrite (write)', () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it('rejects a symlinked parent directory that escapes the clone root', async () => {
+  itSymlink('rejects a symlinked parent directory that escapes the clone root', async () => {
     // Parent dir of the target is a symlink pointing outside
     const root = await makeTmpDir();
     const outside = await makeTmpDir();

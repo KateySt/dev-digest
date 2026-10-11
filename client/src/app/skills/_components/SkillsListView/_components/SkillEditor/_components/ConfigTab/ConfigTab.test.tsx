@@ -4,7 +4,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../../../messages/en/skills.json";
-import { ToastProvider } from "@/lib/toast";
+import { ToastProvider } from "@/lib/contexts/toast";
 
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { homedir } from 'node:os';
 import { join, isAbsolute, resolve } from 'node:path';
+import { parseReviewConcurrency } from './review-queue.js';
 
 /**
  * Central, zod-validated environment config. Loaded once at startup.
@@ -40,6 +41,10 @@ const EnvSchema = z.object({
   // (never routed through SecretsProvider — must be displayable in Settings).
   // Empty-string-safe: falls back to the hardcoded default below.
   COMMUNITY_CATALOG_REPO: z.string().optional(),
+  // Multi-agent review: max agent runs in `running` state server-wide. Kept as a
+  // raw string so an invalid value falls back to 3 (with a warning) instead of
+  // crashing boot; parsed by parseReviewConcurrency.
+  REVIEW_CONCURRENCY: z.string().optional(),
 });
 
 export type AppConfig = {
@@ -70,6 +75,12 @@ export type AppConfig = {
    * unset or empty.
    */
   communityCatalogRepoDefault: string;
+  /** Max concurrent agent runs (REVIEW_CONCURRENCY, default 3). */
+  reviewConcurrency: number;
+  /** True when REVIEW_CONCURRENCY was set but invalid (fell back to 3); warn where a logger exists. */
+  reviewConcurrencyInvalid: boolean;
+  /** Raw REVIEW_CONCURRENCY value, for the warning message. */
+  reviewConcurrencyRaw?: string;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -77,6 +88,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const cloneDirRaw =
     parsed.DEVDIGEST_CLONE_DIR ?? join(homedir(), '.devdigest', 'workspace');
   const cloneDir = isAbsolute(cloneDirRaw) ? cloneDirRaw : resolve(process.cwd(), cloneDirRaw);
+  const rc = parseReviewConcurrency(parsed.REVIEW_CONCURRENCY);
   return {
     databaseUrl: parsed.DATABASE_URL,
     apiPort: parsed.API_PORT,
@@ -89,5 +101,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     embeddingsEnabled: parsed.EMBEDDINGS_ENABLED === 'true',
     repoIntelEnabled: parsed.REPO_INTEL_ENABLED !== 'false',
     communityCatalogRepoDefault: parsed.COMMUNITY_CATALOG_REPO?.trim() || 'KateySt/SKILLS',
+    reviewConcurrency: rc.value,
+    reviewConcurrencyInvalid: rc.invalid,
+    reviewConcurrencyRaw: parsed.REVIEW_CONCURRENCY,
   };
 }

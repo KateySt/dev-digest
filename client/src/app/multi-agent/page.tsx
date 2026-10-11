@@ -1,14 +1,13 @@
-import { FeaturePlaceholder } from "@/components/page-shell";
+import { Suspense } from "react";
+import { ConfigureRun } from "./_components/ConfigureRun";
 
-/* Route: /multi-agent. Nav entry exists per design; screen not built yet —
-   see root AGENTS.md course-template convention (FeaturePlaceholder). */
+/* Route: /multi-agent (Configure run). Thin route entry — the view, its
+   helpers, styles and tests are colocated under _components/ConfigureRun.
+   Suspense is required because the view reads `?pr` via useSearchParams. */
 export default function MultiAgentReviewPage() {
   return (
-    <FeaturePlaceholder
-      crumb={[{ label: "Multi-Agent Review" }]}
-      title="Multi-Agent Review"
-      icon="Users"
-      owner="a future iteration"
-    />
+    <Suspense fallback={null}>
+      <ConfigureRun />
+    </Suspense>
   );
 }

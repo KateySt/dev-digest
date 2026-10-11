@@ -7,7 +7,7 @@ import React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, cleanup, fireEvent, within, act } from "@testing-library/react";
 import type { Skill } from "@devdigest/shared";
-import { ToastProvider } from "@/lib/toast";
+import { ToastProvider } from "@/lib/contexts/toast";
 import {
   apiError,
   caseRun,

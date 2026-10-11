@@ -4,8 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { EmptyState, ErrorState, Icon, Skeleton, TextInput } from "@devdigest/ui";
-import { useActiveRepo } from "@/lib/repo-context";
-import { useToast } from "@/lib/toast";
+import { useActiveRepo } from "@/lib/contexts/repoContext";
+import { useToast } from "@/lib/contexts/toast";
 import { ApiError } from "@/lib/api";
 import {
   useCommunitySkills,

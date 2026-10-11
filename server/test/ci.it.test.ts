@@ -3,7 +3,7 @@ import { startPg, dockerAvailable, type PgFixture } from './helpers/pg.js';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
 import { seed } from '../src/db/seed.js';
-import { MockGitHubClient } from '../src/adapters/mocks.js';
+import { MockGitHubClient, MockLLMProvider } from '../src/adapters/mocks.js';
 import * as t from '../src/db/schema.js';
 
 const hasDocker = await dockerAvailable();
@@ -26,7 +26,10 @@ d('ci (Testcontainers pg)', () => {
   });
 
   function appWith(github: MockGitHubClient) {
-    return buildApp({ config: config(), db: pg.handle.db, overrides: { github } });
+    // Mock the skill_scan provider (default: openrouter) with a clean result,
+    // so creating a skill never hits the network or fails closed without a key.
+    const llm = { openrouter: new MockLLMProvider('openrouter', { structured: { findings: [] } }) };
+    return buildApp({ config: config(), db: pg.handle.db, overrides: { github, llm } });
   }
 
   it('GET /agents/:id/ci/preview generates a workflow + a config with resolved skill bodies', async () => {

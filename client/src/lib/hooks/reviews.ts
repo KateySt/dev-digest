@@ -29,10 +29,14 @@ export interface ActiveRun {
   agent_id: string | null;
   agent_name: string | null;
   ran_at: string | null;
+  /** `queued` rows wait for a review slot; `running` rows are executing. */
+  status?: "queued" | "running" | null;
+  /** 1-based position in the shared review queue; null/absent unless queued. */
+  queue_position?: number | null;
 }
 
-/** In-flight runs for a PR, from the server (agent_runs where status='running').
-   Survives reloads/devices; polls while anything is running so it self-clears. */
+/** In-flight (queued or running) runs for a PR, from the server. Survives
+   reloads/devices; polls while anything is in flight so it self-clears. */
 export function usePrActiveRuns(prId: string | null | undefined) {
   return useQuery({
     queryKey: ["pr-active-runs", prId],
@@ -51,7 +55,9 @@ export function usePrRuns(prId: string | null | undefined) {
     queryFn: () => api.get<RunSummary[]>(`/pulls/${prId}/runs`),
     enabled: !!prId,
     refetchInterval: (query) =>
-      (query.state.data ?? []).some((r) => r.status === "running") ? 4000 : false,
+      (query.state.data ?? []).some((r) => r.status === "running" || r.status === "queued")
+        ? 4000
+        : false,
   });
 }
 
@@ -183,8 +189,11 @@ export function useDeleteRun(prId: string | null | undefined) {
 
 /** Request cancellation of an in-flight run (takes effect at the next step). */
 export function useCancelRun() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (runId: string) => api.post<{ ok: boolean }>(`/runs/${runId}/cancel`),
+    // A run may belong to a multi-agent run; refresh any open results page.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["multi-agent-run"] }),
   });
 }
 
@@ -379,6 +388,7 @@ export function useFindingAction() {
       ),
     onSuccess: (_d, { prId }) => {
       if (prId) qc.invalidateQueries({ queryKey: ["reviews", prId] });
+      return qc.invalidateQueries({ queryKey: ["multi-agent-run"] });
     },
   });
 }

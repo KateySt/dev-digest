@@ -9,7 +9,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { RunSummary, FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
-import { githubBlobUrl } from "@/lib/github-urls";
+import { githubBlobUrl } from "@/lib/utils/githubUrls";
 import { RunHistory } from "./RunHistory";
 
 afterEach(cleanup);

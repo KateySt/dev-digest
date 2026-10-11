@@ -9,7 +9,7 @@ import type { EvalRange } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
 import { type TrendPoint } from "@/components/eval-metrics";
 import { MetricCards, RegressionBanner, RunsTable, TrendPanel } from "@/components/eval-dashboard";
-import { notify } from "@/lib/toast";
+import { notify } from "@/lib/contexts/toast";
 import { useAgent, useAgents } from "@/lib/hooks/agents";
 import { useAgentEvalRuns, useEvalSuiteRun, useStartAgentEvalRun } from "@/lib/hooks/eval-runs";
 import { RANGE_OPTIONS, parseRange } from "@/lib/eval";

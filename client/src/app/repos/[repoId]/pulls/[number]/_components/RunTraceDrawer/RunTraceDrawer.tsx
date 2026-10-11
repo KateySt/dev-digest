@@ -25,6 +25,8 @@ export interface RunTraceDrawerProps {
   findings?: FindingRecord[];
   /** When true, the drawer defaults to the live log and streams SSE. */
   running?: boolean;
+  /** The run is still waiting for a review slot — no trace exists yet. */
+  queued?: boolean;
   onClose: () => void;
 }
 
@@ -39,6 +41,7 @@ export default function RunTraceDrawer({
   prNumber,
   findings = [],
   running = false,
+  queued = false,
   onClose,
 }: RunTraceDrawerProps) {
   const t = useTranslations("runs");
@@ -89,7 +92,9 @@ export default function RunTraceDrawer({
       <Tabs tabs={[...TABS]} value={tab} onChange={setTab} pad="0" />
       <div style={s.tabBody}>
         {tab === "trace" ? (
-          isLoading && !trace ? (
+          !trace && queued ? (
+            <div style={s.emptyNote}>{t("trace.grounding.notStarted")}</div>
+          ) : isLoading && !trace ? (
             <div style={s.emptyNote}>
               {stillRunning ? t("drawer.tracePending") : t("drawer.loadingTrace")}
             </div>

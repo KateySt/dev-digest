@@ -7,7 +7,7 @@
 
 import React from "react";
 import { Icon, Badge } from "@devdigest/ui";
-import { Severity, type ReviewRecord, type Verdict } from "@devdigest/shared";
+import type { ReviewRecord, Verdict } from "@devdigest/shared";
 import { SeverityChip } from "@/components/SeverityChip/SeverityChip";
 import { FindingsPanel } from "../FindingsPanel";
 import { VerdictBanner } from "../VerdictBanner";
@@ -66,10 +66,10 @@ export function ReviewRunAccordion({
   }, [open, pendingScroll, targetFindingId]);
   const del = useDeleteReview(prId);
   const findings = review.findings;
-  const blockers = findings.filter((f) => f.severity === Severity.enum.CRITICAL && !f.dismissed_at).length;
-  const criticalCount = findings.filter((f) => f.severity === Severity.enum.CRITICAL).length;
-  const warningCount = findings.filter((f) => f.severity === Severity.enum.WARNING).length;
-  const suggestionCount = findings.filter((f) => f.severity === Severity.enum.SUGGESTION).length;
+  const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;
+  const criticalCount = findings.filter((f) => f.severity === "CRITICAL").length;
+  const warningCount = findings.filter((f) => f.severity === "WARNING").length;
+  const suggestionCount = findings.filter((f) => f.severity === "SUGGESTION").length;
   const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
 
   return (
@@ -110,9 +110,9 @@ export function ReviewRunAccordion({
           </Badge>
         )}
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
-          {criticalCount > 0 && <SeverityChip sev={Severity.enum.CRITICAL} count={criticalCount} />}
-          {warningCount > 0 && <SeverityChip sev={Severity.enum.WARNING} count={warningCount} />}
-          {suggestionCount > 0 && <SeverityChip sev={Severity.enum.SUGGESTION} count={suggestionCount} />}
+          {criticalCount > 0 && <SeverityChip sev="CRITICAL" count={criticalCount} />}
+          {warningCount > 0 && <SeverityChip sev="WARNING" count={warningCount} />}
+          {suggestionCount > 0 && <SeverityChip sev="SUGGESTION" count={suggestionCount} />}
           {blockers > 0 && (
             <span style={{ fontSize: 12, color: "var(--text-muted)", paddingBottom: 2 }}>
               · {blockers} blocker{blockers !== 1 ? "s" : ""}

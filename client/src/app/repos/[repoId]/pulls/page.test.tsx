@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("@/lib/repo-context", () => ({
+vi.mock("@/lib/contexts/repoContext", () => ({
   useActiveRepo: () => ({ activeRepo: { id: "r1", full_name: "acme/api", languages: null }, repos: [], reposLoaded: true }),
   useRepoNotFound: () => false,
 }));

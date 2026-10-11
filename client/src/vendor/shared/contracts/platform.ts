@@ -381,6 +381,10 @@ export type IndexStatus = z.infer<typeof IndexStatus>;
 export const RunRequest = z.object({
   agentId: z.string().optional(),
   all: z.boolean().optional(),
+  /** SPEC-10: run several agents as one multi-agent run. Min 1; mutually
+   *  exclusive with `agentId`/`all` (enforced by the route → 400). `.nullish()`
+   *  because Fastify may deliver a missing body field as null. */
+  agentIds: z.array(z.string()).min(1).nullish(),
 });
 export type RunRequest = z.infer<typeof RunRequest>;
 

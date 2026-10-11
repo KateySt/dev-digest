@@ -6,7 +6,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Toggle, EmptyState, Chip, SEV } from "@devdigest/ui";
 import type { FindingRecord, Severity } from "@devdigest/shared";
-import { FindingCard } from "../FindingCard";
+import { FindingCard } from "@/app/repos/[repoId]/pulls/[number]/_components/FindingCard";
 import { useLinkedSkills } from "@/lib/hooks/agents";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
 import { countBySeverity } from "../../../../../../../lib/findings";

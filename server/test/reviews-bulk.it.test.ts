@@ -188,7 +188,7 @@ d('B10 bulk review isolation + race safety (Testcontainers pg)', () => {
     ).rejects.toThrow();
     expect(await runsFor(prs[0]!.id)).toHaveLength(0);
 
-    // failRunningRuns (the defensive path for rows that did commit) only touches running rows.
+    // failRunningRuns (the defensive path for rows that did commit) only touches queued/running rows.
     const ids = await repo.createRunsIfIdle(workspaceId, prs[0]!.id, [{ id: agentIds[0]!, provider: 'openai', model: 'gpt-4.1' }]);
     expect(ids).toHaveLength(1);
     await repo.failRunningRuns(ids!, 'boom');
@@ -237,7 +237,8 @@ d('B10 bulk review isolation + race safety (Testcontainers pg)', () => {
       expect([ra.get(pr.id), rb.get(pr.id)].sort()).toEqual(['skipped', 'started']);
       const runs = await runsFor(pr.id);
       expect(runs).toHaveLength(agentIds.length);
-      expect(runs.every((r) => r.status === 'running')).toBe(true);
+      // in flight: running (took a queue slot) or queued (waiting for one)
+      expect(runs.every((r) => r.status === 'running' || r.status === 'queued')).toBe(true);
     }
 
     llm.release();

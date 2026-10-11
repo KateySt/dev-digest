@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, FormField, Select, TextInput, Textarea } from "@devdigest/ui";
 import type { SkillType } from "@devdigest/shared";
 import { useCreateSkill } from "@/lib/hooks/skills";
-import { useToast } from "@/lib/toast";
+import { useToast } from "@/lib/contexts/toast";
 import { SKILL_TYPES } from "@/lib/skill-constants";
 import { nameFromMarkdown } from "../../helpers";
 import { s } from "../../styles";

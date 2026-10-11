@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React from "react";
 import { Icon, Avatar, Badge, Button, Tabs } from "@devdigest/ui";
-import { RunReviewDropdown } from "@/components/run-review-dropdown";
+import { AgentPickerDropdown } from "./_components/AgentPickerDropdown";
 import { formatAbsoluteDateTime, fullRelativeTime } from "@/app/repos/[repoId]/pulls/helpers";
 import { s } from "./styles";
 import type { PrDetail } from "@/lib/types";
@@ -15,8 +15,10 @@ interface PrDetailHeaderProps {
   /** github.com PR URL; null when the repo's full_name isn't known yet. */
   githubUrl?: string | null;
   onSetTab: (tab: string) => void;
-  onRunStart: () => void;
-  onRunsStarted: () => void;
+  /** Kept for the page's call site; the multi-agent picker navigates away instead of using it. */
+  onRunStart?: () => void;
+  /** Fired only when a started run returns no multi-run id to navigate to. */
+  onRunsStarted?: () => void;
 }
 
 export function PrDetailHeader({
@@ -26,16 +28,8 @@ export function PrDetailHeader({
   findingsCount,
   githubUrl,
   onSetTab,
-  onRunStart,
   onRunsStarted,
 }: PrDetailHeaderProps) {
-  const handleRunStart = useCallback(() => {
-    onRunStart();
-  }, [onRunStart]);
-
-  const handleRunsStarted = useCallback(() => {
-    onRunsStarted();
-  }, [onRunsStarted]);
 
   const statusColor =
     pr.status === "merged"
@@ -97,11 +91,10 @@ export function PrDetailHeader({
             View on GitHub
           </Button>
           {prId && (
-            <RunReviewDropdown
+            <AgentPickerDropdown
               prId={prId}
               warnMerged={pr.status === "merged" || pr.status === "closed"}
-              onRunStart={handleRunStart}
-              onRunsStarted={handleRunsStarted}
+              onRunsStarted={onRunsStarted}
             />
           )}
         </div>

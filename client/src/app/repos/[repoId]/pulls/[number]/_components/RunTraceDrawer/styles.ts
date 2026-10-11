@@ -26,6 +26,19 @@ export const s = {
   }),
   sectionBody: { borderTop: "1px solid var(--border)", padding: 16 } satisfies CSSProperties,
 
+  // ---- Grounding (plain text, wraps) ----
+  groundingSummary: { fontSize: 13, fontWeight: 600, marginBottom: 8 } satisfies CSSProperties,
+  groundingDroppedTitle: { fontSize: 12, color: "var(--text-muted)", marginBottom: 6 } satisfies CSSProperties,
+  droppedItem: {
+    padding: "8px 0",
+    borderTop: "1px solid var(--border)",
+    overflowWrap: "anywhere",
+    whiteSpace: "normal",
+  } satisfies CSSProperties,
+  droppedTitle: { fontSize: 13 } satisfies CSSProperties,
+  droppedLoc: { fontSize: 12, color: "var(--text-muted)", overflowWrap: "anywhere" } satisfies CSSProperties,
+  droppedReason: { fontSize: 12, color: "var(--text-secondary)" } satisfies CSSProperties,
+
   // ---- ToolCallRow ----
   toolRow: {
     borderRadius: 6,

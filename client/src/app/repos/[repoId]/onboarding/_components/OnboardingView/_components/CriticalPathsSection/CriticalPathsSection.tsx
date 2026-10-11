@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { MonoLink } from "@devdigest/ui";
-import { githubBlobUrl } from "@/lib/github-urls";
+import { githubBlobUrl } from "@/lib/utils/githubUrls";
 import type { OnboardingCriticalPathEntry } from "@/lib/types";
 
 /**

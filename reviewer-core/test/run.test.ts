@@ -69,6 +69,27 @@ describe('reviewPullRequest (engine)', () => {
     expect(events.some((m) => m.includes('Citation grounding'))).toBe(true);
   });
 
+  it('test_run_returns_dropped_with_reasons (S-AC-40)', async () => {
+    const llm = new MockLLMProvider('openai', { structured: fixture });
+    const diff = await new MockGitClient().diff();
+    const outcome = await reviewPullRequest({
+      systemPrompt: 'security reviewer',
+      model: 'gpt-4.1',
+      diff,
+      llm,
+    });
+
+    expect(outcome.grounding).toBe('1/2 passed');
+    expect(outcome.dropped).toHaveLength(1);
+    const d = outcome.dropped[0]!;
+    expect(d.finding.title).toBe('phantom finding on a line not in the diff');
+    expect(d.finding.file).toBe('src/config.ts');
+    expect(d.finding.start_line).toBe(999);
+    expect(d.finding.end_line).toBe(999);
+    expect(typeof d.reason).toBe('string');
+    expect(d.reason.length).toBeGreaterThan(0);
+  });
+
   it('score is deterministic from findings: a clean approve scores 100', async () => {
     // Model "approves" but reports a nonsense low score (the cheap-model bug).
     // The engine must ignore that and score the zero findings as a perfect 100.

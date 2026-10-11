@@ -11,11 +11,8 @@
  */
 export const REVIEW_STRATEGY = 'single-pass' as const;
 
-/** SPEC-05 — bulk "Review all" guardrails: a hard cap above which the
- *  trigger refuses outright (S-AC-5) rather than truncating, and a bounded
- *  concurrency across the batch's PR executions (S-AC-7). Each PR's own
- *  agents already run sequentially (`ReviewRunExecutor.executeRuns`'s `for`
- *  loop), so bounding at the PR level here keeps total concurrent runs at
- *  or below this limit without a second, nested limiter. */
+/** SPEC-05 — bulk "Review all" guardrail: a hard cap above which the trigger
+ *  refuses outright (S-AC-5) rather than truncating. Concurrency is no longer
+ *  bounded here: every run enters the shared review queue (`REVIEW_CONCURRENCY`,
+ *  default 3, which keeps SPEC-05 S-AC-7's "at most 3 at once"). */
 export const BULK_REVIEW_MAX_PRS = 20;
-export const BULK_REVIEW_CONCURRENCY = 3;

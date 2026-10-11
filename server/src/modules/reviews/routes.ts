@@ -5,12 +5,13 @@ import { RunRequest } from '@devdigest/shared';
 import type { RunEvent } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
-import { NotFoundError } from '../../platform/errors.js';
+import { AppError, NotFoundError } from '../../platform/errors.js';
 import { ReviewService } from './service.js';
 
 /**
  * reviews module.
- *   POST   /pulls/:id/review  {agentId} | {all:true}  → run review(s); returns runs
+ *   POST   /pulls/:id/review  {agentId} | {all:true} | {agentIds:[…]} → run review(s); returns runs
+ *                              (agentIds → also a parent multi_agent_run_id)
  *   GET    /runs/:id/events                            → SSE stream of RunEvent (replay-first)
  *   GET    /runs/:id/trace                             → the single-document RunTrace
  *   GET    /pulls/:id/reviews                          → persisted reviews + findings for a PR
@@ -33,7 +34,34 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     { schema: { params: IdParams }, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
     async (req) => {
     const { workspaceId } = await getContext(container, req);
-    const body = RunRequest.parse(req.body ?? {});
+    const rawBody = req.body ?? {};
+    const parsed = RunRequest.safeParse(rawBody);
+    if (!parsed.success) {
+      // A malformed `agentIds` (e.g. empty) is a 400 per S-AC-3; any other
+      // malformed body keeps the legacy zod error behaviour.
+      if (typeof rawBody === 'object' && 'agentIds' in (rawBody as object)) {
+        throw new AppError('invalid_run_request', 'Invalid run request', 400, parsed.error.issues);
+      }
+      RunRequest.parse(rawBody);
+    }
+    const body = RunRequest.parse(rawBody);
+
+    // SPEC-10 multi-agent path: `agentIds` is exclusive with `agentId`/`all` (S-AC-4).
+    if (body.agentIds != null) {
+      if (body.agentId !== undefined || body.all !== undefined) {
+        throw new AppError('invalid_run_request', 'agentIds cannot be combined with agentId or all', 400);
+      }
+      const targets = await service.resolveMultiTargets(workspaceId, body.agentIds);
+      const { runs, reviews, multi_agent_run_id } = await service.runReview(
+        workspaceId,
+        req.params.id,
+        targets,
+        req.log,
+        { multi: true },
+      );
+      return { pr_id: req.params.id, runs, reviews, multi_agent_run_id };
+    }
+
     const targets = await service.resolveTargets(workspaceId, {
       ...(body.agentId !== undefined ? { agentId: body.agentId } : {}),
       ...(body.all !== undefined ? { all: body.all } : {}),
