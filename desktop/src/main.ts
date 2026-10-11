@@ -38,6 +38,9 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 async function boot(): Promise<void> {
+  // Windows drops toasts from an installed app unless they carry its AppUserModelID
+  // (electron-builder's appId). No-op elsewhere.
+  if (process.platform === 'win32') app.setAppUserModelId('dev.devdigest.app');
   buildMenu();
   registerIpc();
   const splash = new BrowserWindow({ width: 360, height: 200, frame: false, resizable: false, show: false });

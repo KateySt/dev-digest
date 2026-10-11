@@ -20,6 +20,15 @@ const bridge = {
   },
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+    /** OS notification (only shown while the window is unfocused); resolves true if shown. */
+    notify: (n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean> =>
+      ipcRenderer.invoke('app:notify', n),
+    /** A clicked OS notification asks the studio to open a route; returns the unsubscribe function. */
+    onNavigate(cb: (href: string) => void): () => void {
+      const listener = (_e: IpcRendererEvent, href: string) => cb(href);
+      ipcRenderer.on('app:navigate', listener);
+      return () => ipcRenderer.removeListener('app:navigate', listener);
+    },
     checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
     openReleases: () => ipcRenderer.invoke('app:open-releases'),
     openLogsFolder: () => ipcRenderer.invoke('app:open-logs'),

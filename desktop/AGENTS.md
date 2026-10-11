@@ -20,8 +20,9 @@ window loads the Next.js studio served by a child process.
 - `src/updater.ts` — Windows auto-update / macOS "new version" check
 - `src/config.ts` — fixed ports, GitHub repo, data paths
 - `src/preload.ts` + `src/ipc.ts` — `window.devdigestDesktop` bridge: custom
-  title-bar window controls and the former Help-menu actions (channel names
-  are duplicated in both files — a sandboxed preload can't import `ipc.ts`)
+  title-bar window controls, the former Help-menu actions, and OS
+  notifications (`app:notify`, click → `app:navigate`). Channel names are
+  duplicated in both files — a sandboxed preload can't import `ipc.ts`
 - `scripts/stage.mjs` — builds `resources/` (gitignored)
 - `scripts/after-pack.cjs` — copies `node_modules` into the packaged resources
 - `../.github/workflows/release.yml` — tag → draft release → build → publish
