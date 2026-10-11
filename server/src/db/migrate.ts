@@ -3,11 +3,13 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { isCliEntry } from '../platform/cli.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_DIR = join(__dirname, 'migrations');
+/** `src/db/migrations` under tsx; `<bundle dir>/migrations` in the desktop bundle. */
+export const MIGRATIONS_DIR = join(__dirname, 'migrations');
 
 /**
  * Apply all migrations to the given database URL. Ensures the `vector`
@@ -33,7 +35,7 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
   }
 }
 
-if (process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])) {
+if (isCliEntry(import.meta.url)) {
   const url = process.env.DATABASE_URL;
   if (!url) {
     console.error('DATABASE_URL is required');

@@ -28,7 +28,14 @@ const EnvSchema = z.object({
   // unindexed repo degrades gracefully. Per-agent override: agents.repo_intel.
   REPO_INTEL_ENABLED: z.string().optional(),
   API_PORT: z.coerce.number().int().default(3001),
+  // Bind address. The desktop app sets 127.0.0.1 so the API isn't exposed on the LAN.
+  API_HOST: z.string().default('0.0.0.0'),
   WEB_PORT: z.coerce.number().int().default(3000),
+  // CORS origin override (desktop serves the studio from 127.0.0.1:<port>);
+  // defaults to http://localhost:${WEB_PORT}.
+  WEB_ORIGIN: z.string().optional(),
+  // Embedded PGlite data dir — read only by the desktop entry (src/desktop.ts).
+  PGLITE_DATA_DIR: z.string().optional(),
   DEVDIGEST_CLONE_DIR: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   // `.env` (and .env.example) ship `LOG_LEVEL=` empty; an empty string is not a
@@ -50,14 +57,17 @@ const EnvSchema = z.object({
 export type AppConfig = {
   databaseUrl: string;
   apiPort: number;
+  apiHost: string;
   webPort: number;
   /** Absolute path where repos are cloned (~/.devdigest/workspace by default). */
   cloneDir: string;
+  /** Absolute path of the embedded PGlite data dir (desktop only; ~/.devdigest/pgdata by default). */
+  pgliteDataDir: string;
   /** Absolute path to the writable secrets store (BYO keys from the UI). */
   secretsPath: string;
   nodeEnv: 'development' | 'test' | 'production';
   logLevel: string;
-  /** Allowed CORS origin for the Next.js dev server. */
+  /** Allowed CORS origin for the Next.js studio. */
   webOrigin: string;
   /** Whether memory/RAG embeddings (OpenAI) are enabled. Default false. */
   embeddingsEnabled: boolean;
@@ -88,16 +98,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const cloneDirRaw =
     parsed.DEVDIGEST_CLONE_DIR ?? join(homedir(), '.devdigest', 'workspace');
   const cloneDir = isAbsolute(cloneDirRaw) ? cloneDirRaw : resolve(process.cwd(), cloneDirRaw);
+  const pgliteDataDir = resolve(parsed.PGLITE_DATA_DIR ?? join(homedir(), '.devdigest', 'pgdata'));
   const rc = parseReviewConcurrency(parsed.REVIEW_CONCURRENCY);
   return {
     databaseUrl: parsed.DATABASE_URL,
     apiPort: parsed.API_PORT,
+    apiHost: parsed.API_HOST,
     webPort: parsed.WEB_PORT,
     cloneDir,
+    pgliteDataDir,
     secretsPath: join(homedir(), '.devdigest', 'secrets.json'),
     nodeEnv: parsed.NODE_ENV,
     logLevel: parsed.LOG_LEVEL ?? (parsed.NODE_ENV === 'test' ? 'silent' : 'info'),
-    webOrigin: `http://localhost:${parsed.WEB_PORT}`,
+    webOrigin: parsed.WEB_ORIGIN?.trim() || `http://localhost:${parsed.WEB_PORT}`,
     embeddingsEnabled: parsed.EMBEDDINGS_ENABLED === 'true',
     repoIntelEnabled: parsed.REPO_INTEL_ENABLED !== 'false',
     communityCatalogRepoDefault: parsed.COMMUNITY_CATALOG_REPO?.trim() || 'KateySt/SKILLS',

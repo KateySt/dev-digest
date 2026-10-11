@@ -209,6 +209,9 @@ comment and records `reply_url` / `replied_at` on the finding.
 |-----|---------|-------|
 | `DATABASE_URL` | `postgres://devdigest:devdigest@localhost:5432/devdigest` | required to migrate/serve |
 | `API_PORT` / `WEB_PORT` | `3001` / `3000` | API port; `WEB_PORT` also sets the allowed CORS origin |
+| `API_HOST` | `0.0.0.0` | bind address (desktop: `127.0.0.1`) |
+| `WEB_ORIGIN` | `http://localhost:${WEB_PORT}` | CORS origin override (desktop: `http://127.0.0.1:43100`) |
+| `PGLITE_DATA_DIR` | `~/.devdigest/pgdata` | embedded PGlite data dir — read only by `src/desktop.ts` |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` | — | optional, per-provider; also settable via Settings UI |
 | `GITHUB_TOKEN` | — | optional; PAT with repo scope (`GITHUB_PAT` accepted as a fallback); Export to CI additionally needs `workflow` scope (see [Export to CI](#export-to-ci)) |
 | `EMBEDDINGS_ENABLED` | `false` | memory/RAG embeddings (OpenAI); off → **zero** OpenAI calls |
@@ -229,6 +232,21 @@ seeds eval demo data (`src/db/seed-eval.ts`). `pnpm db:seed` is idempotent demo 
 agent that already has cases or suite runs, so a DB seeded before the 8-case
 Security Reviewer set (SPEC-09) keeps its old 4 cases — reset the DB and re-seed
 to get the new set.
+
+### Desktop entry (`src/desktop.ts`)
+
+The Electron app runs `src/desktop.ts` instead of `server.ts`: same `buildApp`,
+but over an embedded **PGlite + pgvector** DB (`src/db/pglite.ts`) instead of
+Postgres, so it **does** migrate on boot (an end user has no `pnpm db:migrate`)
+and seeds only an empty DB. `pnpm dev:desktop` runs it under tsx;
+`pnpm bundle:desktop` (esbuild, `scripts/bundle.mjs`) emits `dist-desktop/`:
+the bundle, migrations, prompts, and a `package.json` listing the externals
+(native / wasm / binary packages) that `desktop/` installs per OS.
+
+- PGlite allows **one process per data dir** — `pnpm mcp` (`src/mcp.ts`) can't
+  share the desktop DB.
+- Migrations run through `runPgliteMigrations`, not drizzle's pglite migrator,
+  which rejects the multi-statement `0013` chunk (see the function's comment).
 
 ## Review context (non-obvious)
 
