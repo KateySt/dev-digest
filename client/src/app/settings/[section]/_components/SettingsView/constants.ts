@@ -5,3 +5,4 @@ export const DEFAULT_SECTION = "api-keys";
 export const SECTION_API_KEYS = "api-keys";
 export const SECTION_MODELS = "models";
 export const SECTION_CATALOG = "catalog";
+export const SECTION_NOTIFICATIONS = "notifications";

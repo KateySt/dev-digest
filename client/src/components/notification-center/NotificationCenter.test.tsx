@@ -4,6 +4,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { get, mockFetch, post, renderApp } from "@/test/eval-utils";
 import type { AppNotification } from "@/lib/hooks";
+import { installFakeBridge, removeFakeBridge } from "@/test/fake-desktop-bridge";
 import { NotificationCenter } from "./NotificationCenter";
 
 const push = vi.fn();
@@ -32,6 +33,7 @@ beforeEach(() => vi.stubGlobal("EventSource", FakeEventSource));
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  removeFakeBridge();
   push.mockReset();
 });
 
@@ -49,16 +51,21 @@ const n = (over: Partial<AppNotification> = {}): AppNotification => ({
 
 const del = (match: string | RegExp, respond: () => unknown) => ({ method: "DELETE", match, respond });
 
-function setup(items: AppNotification[], unread = items.filter((i) => !i.read).length) {
+function setup(
+  items: AppNotification[],
+  unread = items.filter((i) => !i.read).length,
+  settings: Record<string, unknown> = {},
+) {
   const api = mockFetch([
     get("/notifications", () => ({ items, unread })),
+    get("/settings", () => settings),
     post(/\/notifications\/.+\/read$/, () => ({ ok: true })),
     post("/notifications/read-all", () => ({ ok: true })),
     del(/\/notifications(\/.+)?$/, () => ({ ok: true })),
   ]);
   const onNotification = vi.fn();
-  renderApp(<NotificationCenter onNotification={onNotification} />);
-  return { api, onNotification };
+  const { queryClient } = renderApp(<NotificationCenter onNotification={onNotification} />);
+  return { api, onNotification, queryClient };
 }
 
 const openPanel = async () => fireEvent.click(await screen.findByRole("button", { name: /^Notifications/ }));
@@ -118,5 +125,46 @@ describe("NotificationCenter", () => {
     act(() => FakeEventSource.last!.emit("notification", fresh));
     expect(onNotification).toHaveBeenCalledWith(fresh);
     await waitFor(() => expect(api.callsTo("GET", "/notifications")).toHaveLength(2));
+  });
+
+  describe("desktop app", () => {
+    const fresh = n({ id: "n9", title: "Repository ready · acme/api", body: "Cloned", href: "/repos/r9/pulls" });
+    // Emit only once the prefs are in the cache — before that they read as defaults.
+    const stream = async ({ queryClient }: ReturnType<typeof setup>) => {
+      await waitFor(() => expect(queryClient.getQueryState(["settings"])?.status).toBe("success"));
+      act(() => FakeEventSource.last!.emit("notification", fresh));
+    };
+
+    it("turns a streamed notification into an OS notification with sound", async () => {
+      const { bridge } = installFakeBridge();
+      await stream(setup([]));
+      await waitFor(() =>
+        expect(bridge.app.notify).toHaveBeenCalledWith({
+          title: "Repository ready · acme/api",
+          body: "Cloned",
+          href: "/repos/r9/pulls",
+          silent: false,
+        }),
+      );
+    });
+
+    it("is silent when Sound is off, and skipped when system notifications are off", async () => {
+      const { bridge } = installFakeBridge();
+      await stream(setup([], 0, { notification_sound: false }));
+      await waitFor(() => expect(bridge.app.notify).toHaveBeenCalledWith(expect.objectContaining({ silent: true })));
+      cleanup();
+
+      const second = installFakeBridge().bridge;
+      await stream(setup([], 0, { desktop_notifications: false }));
+      expect(second.app.notify).not.toHaveBeenCalled();
+    });
+
+    it("opens the route of a clicked OS notification", async () => {
+      const { emitNavigate } = installFakeBridge();
+      setup([]);
+      await screen.findByRole("button", { name: /^Notifications/ });
+      act(() => emitNavigate("/eval/a1"));
+      expect(push).toHaveBeenCalledWith("/eval/a1");
+    });
   });
 });

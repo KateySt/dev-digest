@@ -23,6 +23,20 @@ export interface NotificationList {
   unread: number;
 }
 
+/** Non-secret prefs (the `settings` table, via PUT /settings) for OS notifications. */
+export const NOTIFICATION_PREF_KEYS = {
+  desktop: "desktop_notifications",
+  sound: "notification_sound",
+} as const;
+
+/** Both default to on — only an explicit `false` turns one off. */
+export function notificationPrefs(settings: Record<string, unknown> | undefined) {
+  return {
+    desktop: settings?.[NOTIFICATION_PREF_KEYS.desktop] !== false,
+    sound: settings?.[NOTIFICATION_PREF_KEYS.sound] !== false,
+  };
+}
+
 /** Safety net if the stream drops (sleep, proxy, API restart). */
 const FALLBACK_POLL_MS = 60_000;
 

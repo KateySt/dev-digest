@@ -2,7 +2,8 @@
    long-running operations (reviews, evals, clone/index, onboarding tours).
    Click a row to open its result (marks it read); hover to toggle read or
    remove; header/footer for "mark all read" and "clear all". Kept fresh by
-   the notifications SSE stream. */
+   the notifications SSE stream; in the desktop app each new one also becomes
+   an OS notification (useDesktopNotifier). */
 "use client";
 
 import React from "react";
@@ -18,6 +19,7 @@ import {
   type AppNotification,
 } from "@/lib/hooks";
 import { NotificationItem } from "./NotificationItem";
+import { useDesktopNotifier } from "./useDesktopNotifier";
 import { s } from "./styles";
 
 export function NotificationCenter({ onNotification }: { onNotification?: (n: AppNotification) => void }) {
@@ -29,7 +31,11 @@ export function NotificationCenter({ onNotification }: { onNotification?: (n: Ap
   const { mutate: markAll, isPending: markingAll } = useMarkAllNotificationsRead();
   const { mutate: remove } = useRemoveNotification();
   const { mutate: clear } = useClearNotifications();
-  useNotificationStream(onNotification);
+  const notifyDesktop = useDesktopNotifier();
+  useNotificationStream((n) => {
+    notifyDesktop(n);
+    onNotification?.(n);
+  });
 
   const items = data?.items ?? [];
   const unread = data?.unread ?? 0;
