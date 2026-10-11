@@ -7,6 +7,7 @@ import { startApi, startWeb, stop, waitForHttp, type Child } from './processes';
 import { buildMenu } from './menu';
 import { forwardMaximizeState, registerIpc } from './ipc';
 import { initUpdates } from './updater';
+import { createSplash, setSplashStatus } from './splash';
 
 // `pnpm start` keeps its DB/logs apart from the installed app's.
 if (!app.isPackaged) {
@@ -19,11 +20,6 @@ let api: Child | undefined;
 let web: Child | undefined;
 let mainWindow: BrowserWindow | undefined;
 let quitting = false;
-
-const SPLASH_HTML = `<!doctype html><html><body style="margin:0;height:100vh;display:flex;align-items:center;
-justify-content:center;font-family:system-ui,sans-serif;background:#0b0d12;color:#e6e8ee">
-<div style="text-align:center"><div style="font-size:22px;font-weight:600">DevDigest</div>
-<div style="margin-top:8px;opacity:.6;font-size:13px">Starting…</div></div></body></html>`;
 
 if (!app.requestSingleInstanceLock()) {
   // A second launch would fight over the ports and PGlite's single-process data dir.
@@ -40,9 +36,8 @@ if (!app.requestSingleInstanceLock()) {
 async function boot(): Promise<void> {
   buildMenu();
   registerIpc();
-  const splash = new BrowserWindow({ width: 360, height: 200, frame: false, resizable: false, show: false });
-  splash.once('ready-to-show', () => splash.show());
-  void splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`);
+  const splash = createSplash();
+  setSplashStatus(splash, 'Checking ports…');
 
   for (const port of [API_PORT, WEB_PORT]) {
     if (!(await isPortFree(port))) {
@@ -52,11 +47,15 @@ async function boot(): Promise<void> {
   if (!(await hasGit())) void warnNoGit();
 
   log.info('data dir:', dataPaths().userData);
+  setSplashStatus(splash, 'Starting services…');
   api = startApi();
   web = startWeb();
   watchCrash(api);
   watchCrash(web);
-  await Promise.all([waitForHttp(`${API_URL}/health/ready`, api), waitForHttp(WEB_URL, web)]);
+  await Promise.all([
+    waitForHttp(`${API_URL}/health/ready`, api).then(() => setSplashStatus(splash, 'Loading the studio…')),
+    waitForHttp(WEB_URL, web),
+  ]);
 
   createWindow();
   splash.destroy();
