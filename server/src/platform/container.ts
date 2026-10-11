@@ -81,6 +81,7 @@ export class Container {
 
   private _git?: GitClient;
   private _github?: GitHubClient;
+  private _githubLogin?: Promise<string>;
   private _codeIndex?: CodeIndex;
   private _embedder?: Embedder;
   private llmCache = new Map<string, LLMProvider>();
@@ -238,6 +239,21 @@ export class Container {
   }
 
   /**
+   * Login of the account behind the configured GitHub token, memoized until the
+   * secrets change (the studio's title bar asks on every page). A failed lookup
+   * isn't cached, so a fixed token or a network blip recovers on the next ask.
+   */
+  githubLogin(): Promise<string> {
+    this._githubLogin ??= this.github()
+      .then((gh) => gh.currentLogin())
+      .catch((err: unknown) => {
+        this._githubLogin = undefined;
+        throw err;
+      });
+    return this._githubLogin;
+  }
+
+  /**
    * A throwaway, uncached client built from a CANDIDATE key — used to verify a
    * key before it is persisted (settings test-connection), so a rejected key
    * never reaches SecretsProvider. Injected test clients still win, as in
@@ -304,6 +320,7 @@ export class Container {
   invalidateSecretCaches(): void {
     this.llmCache.clear();
     this._github = undefined;
+    this._githubLogin = undefined;
     this._embedder = undefined;
   }
 }

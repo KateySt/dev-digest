@@ -131,6 +131,52 @@ describe('routes (no DB)', () => {
     });
   });
 
+  describe('GET /settings/github-account', () => {
+    it('returns the token account with its avatar', async () => {
+      const app = await buildApp({ config, overrides: { github: new MockGitHubClient({ login: 'octocat' }) } });
+      const res = await app.inject({ method: 'GET', url: '/settings/github-account' });
+      expect(res.json()).toEqual({
+        account: {
+          login: 'octocat',
+          avatar_url: 'https://github.com/octocat.png?size=64',
+          html_url: 'https://github.com/octocat',
+        },
+      });
+      await app.close();
+    });
+
+    it('memoizes the login until the secrets change', async () => {
+      let calls = 0;
+      class CountingGitHub extends MockGitHubClient {
+        override async currentLogin() {
+          calls += 1;
+          return 'octocat';
+        }
+      }
+      const app = await buildApp({ config, overrides: { github: new CountingGitHub() } });
+      await app.inject({ method: 'GET', url: '/settings/github-account' });
+      await app.inject({ method: 'GET', url: '/settings/github-account' });
+      expect(calls).toBe(1);
+      app.container.invalidateSecretCaches();
+      await app.inject({ method: 'GET', url: '/settings/github-account' });
+      expect(calls).toBe(2);
+      await app.close();
+    });
+
+    it('returns account: null when GitHub rejects the token', async () => {
+      class RejectingGitHub extends MockGitHubClient {
+        override async currentLogin(): Promise<never> {
+          throw new Error('Bad credentials');
+        }
+      }
+      const app = await buildApp({ config, overrides: { github: new RejectingGitHub() } });
+      const res = await app.inject({ method: 'GET', url: '/settings/github-account' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ account: null });
+      await app.close();
+    });
+  });
+
   it('returns 422 structured error on invalid body', async () => {
     const app = await buildApp({ config });
     const res = await app.inject({

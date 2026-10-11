@@ -12,11 +12,12 @@ import {
 import * as t from '../../db/schema.js';
 import { getContext } from '../_shared/context.js';
 import { GITHUB_PROVIDER, SECRET_KEY_BY_PROVIDER } from './constants.js';
-import { rowsToSettings } from './helpers.js';
+import { githubAccount, rowsToSettings, type GithubAccountResponse } from './helpers.js';
 
 /**
  * F1 — settings module.
  *   GET  /settings                 → current non-secret prefs
+ *   GET  /settings/github-account  → login + avatar of the token's GitHub account
  *   PUT  /settings                 → upsert prefs (key/value rows)
  *   POST /settings/test-connection → test a provider key (OpenAI/Anthropic/GitHub)
  *   POST /settings/catalog-test    → test the community skill catalog (SPEC-07)
@@ -59,6 +60,18 @@ export default async function settingsRoutes(appBase: FastifyInstance) {
       ),
     );
     return Object.fromEntries(entries) as SecretsStatus;
+  });
+
+  // The GitHub account behind the configured token — the studio shows it as the
+  // active user. `account: null` when no token is set or GitHub rejects it.
+  app.get('/settings/github-account', async (req): Promise<GithubAccountResponse> => {
+    await getContext(container, req);
+    try {
+      const login = await container.githubLogin();
+      return { account: githubAccount(login) };
+    } catch {
+      return { account: null };
+    }
   });
 
   app.put('/settings', { schema: { body: SettingsUpdate } }, async (req) => {
