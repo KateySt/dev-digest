@@ -437,13 +437,14 @@ export class EvalRepository {
   }
 
   /** Boot reaper: every suite run still `running` belongs to a dead process. */
-  async failRunningSuiteRuns(reason: string): Promise<number> {
+  /** Returns the workspace id of every failed run (one entry per run). */
+  async failRunningSuiteRuns(reason: string): Promise<string[]> {
     const rows = await this.db
       .update(t.evalSuiteRuns)
       .set({ status: 'failed', failureReason: reason, finishedAt: new Date() })
       .where(eq(t.evalSuiteRuns.status, 'running'))
-      .returning({ id: t.evalSuiteRuns.id });
-    return rows.length;
+      .returning({ workspaceId: t.evalSuiteRuns.workspaceId });
+    return rows.map((r) => r.workspaceId);
   }
 
   /** An agent's suite runs started at/after `since` (all when null), newest first. */

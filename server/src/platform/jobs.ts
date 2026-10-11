@@ -13,7 +13,17 @@ import { withTimeout, withRetry } from './resilience.js';
  * the handler on the queue, and updates status/attempts/error as it runs.
  */
 
-export type JobHandler = (payload: unknown, ctx: { jobId: string }) => Promise<void>;
+/** Resolves with an optional result, handed to the kind's `onDone` hook. */
+export type JobHandler = (payload: unknown, ctx: { jobId: string }) => Promise<unknown>;
+
+/**
+ * Per-kind lifecycle hooks, called once on the job's FINAL outcome (after all
+ * retries) — e.g. to post a notification. Errors thrown here are swallowed.
+ */
+export interface JobHooks {
+  onDone?: (job: { workspaceId: string; payload: unknown; result: unknown }) => unknown;
+  onFailed?: (job: { workspaceId: string; payload: unknown; error: Error }) => unknown;
+}
 
 export interface JobRunnerOptions {
   concurrency?: number;
@@ -30,6 +40,7 @@ export interface EnqueuedJob {
 export class JobRunner {
   private queue: PQueue;
   private handlers = new Map<string, JobHandler>();
+  private hooks = new Map<string, JobHooks>();
   private timeoutMs: number;
   private retries: number;
 
@@ -42,8 +53,10 @@ export class JobRunner {
     this.retries = opts.retries ?? 2;
   }
 
-  register(kind: string, handler: JobHandler): void {
+  register(kind: string, handler: JobHandler, hooks?: JobHooks): void {
     this.handlers.set(kind, handler);
+    if (hooks) this.hooks.set(kind, hooks);
+    else this.hooks.delete(kind);
   }
 
   async enqueue(workspaceId: string, kind: string, payload: unknown): Promise<EnqueuedJob> {
@@ -61,10 +74,13 @@ export class JobRunner {
         .update(t.jobs)
         .set({ status: 'running', startedAt: new Date() })
         .where(eq(t.jobs.id, jobId));
+      const hooks = this.hooks.get(kind);
+      let result: unknown;
       try {
         await withRetry(
           () =>
-            withTimeout(handler(payload, { jobId }), this.timeoutMs).then(async () => {
+            withTimeout(handler(payload, { jobId }), this.timeoutMs).then(async (r) => {
+              result = r;
               await this.db
                 .update(t.jobs)
                 .set({ attempts: 1 })
@@ -84,6 +100,7 @@ export class JobRunner {
           .update(t.jobs)
           .set({ status: 'done', finishedAt: new Date() })
           .where(eq(t.jobs.id, jobId));
+        await Promise.resolve(hooks?.onDone?.({ workspaceId, payload, result })).catch(() => undefined);
       } catch (err) {
         await this.db
           .update(t.jobs)
@@ -93,9 +110,15 @@ export class JobRunner {
             error: (err as Error).message,
           })
           .where(eq(t.jobs.id, jobId));
+        await Promise.resolve(hooks?.onFailed?.({ workspaceId, payload, error: err as Error })).catch(() => undefined);
         throw err;
       }
     }) as Promise<void>;
+    // Callers enqueue fire-and-forget; an unobserved rejection of `done` would
+    // be an unhandledRejection and take the whole API process down (a failed
+    // clone used to kill the desktop app's API). Mark it handled here — anyone
+    // awaiting `done` still gets the rejection.
+    done.catch(() => undefined);
 
     return { id: jobId, done };
   }
@@ -108,13 +131,14 @@ export class JobRunner {
    * Call once at boot, BEFORE serving requests (nothing of this process's own
    * is in flight yet). Assumes a single API instance per DB.
    */
-  async reapOrphaned(): Promise<number> {
+  /** Returns the workspace id of every reaped job (one entry per job). */
+  async reapOrphaned(): Promise<string[]> {
     const rows = await this.db
       .update(t.jobs)
       .set({ status: 'failed', error: 'interrupted', finishedAt: new Date() })
       .where(inArray(t.jobs.status, ['queued', 'running']))
-      .returning({ id: t.jobs.id });
-    return rows.length;
+      .returning({ workspaceId: t.jobs.workspaceId });
+    return rows.map((r) => r.workspaceId);
   }
 
   /** Wait for the queue to drain (useful in tests). */

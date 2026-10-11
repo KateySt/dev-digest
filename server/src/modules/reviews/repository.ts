@@ -156,9 +156,14 @@ export class ReviewRepository {
     return runRepo.cancelRunIfRunning(this.db, runId);
   }
 
+  /** Final state (+ agent name) of the given runs, for the group notification. */
+  runOutcomes(runIds: string[]): Promise<runRepo.RunOutcomeRow[]> {
+    return runRepo.runOutcomes(this.db, runIds);
+  }
+
   /** On boot: any run still 'queued'/'running' is orphaned (its process died /
    *  restarted), so mark it failed. Prevents permanently stuck runs in the UI. */
-  reapStaleRunningRuns(): Promise<number> {
+  reapStaleRunningRuns(): Promise<string[]> {
     return runRepo.reapStaleRunningRuns(this.db);
   }
 

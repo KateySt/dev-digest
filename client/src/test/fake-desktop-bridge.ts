@@ -4,6 +4,7 @@ import type { DesktopBridge } from "@/lib/desktop";
 
 export function installFakeBridge(platform = "win32") {
   let maximizedListener: ((m: boolean) => void) | null = null;
+  let navigateListener: ((href: string) => void) | null = null;
   const bridge: DesktopBridge = {
     platform,
     window: {
@@ -18,6 +19,11 @@ export function installFakeBridge(platform = "win32") {
     },
     app: {
       getVersion: vi.fn(async () => "0.1.1"),
+      notify: vi.fn(async () => true),
+      onNavigate: vi.fn((cb: (href: string) => void) => {
+        navigateListener = cb;
+        return () => (navigateListener = null);
+      }),
       checkForUpdates: vi.fn(async () => {}),
       openReleases: vi.fn(async () => {}),
       openLogsFolder: vi.fn(async () => {}),
@@ -25,7 +31,11 @@ export function installFakeBridge(platform = "win32") {
     },
   };
   window.devdigestDesktop = bridge;
-  return { bridge, emitMaximized: (m: boolean) => maximizedListener?.(m) };
+  return {
+    bridge,
+    emitMaximized: (m: boolean) => maximizedListener?.(m),
+    emitNavigate: (href: string) => navigateListener?.(href),
+  };
 }
 
 export function removeFakeBridge() {

@@ -74,7 +74,7 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
         />
       )}
       {ctx.onRefresh && <IconBtn icon="RefreshCw" label="Refresh" onClick={ctx.onRefresh} />}
-      <IconBtn icon="Bell" label="Notifications" />
+      {ctx.notifications ?? <IconBtn icon="Bell" label="Notifications" />}
       {ctx.account ?? <Avatar name="you" size={26} />}
       {ctx.windowControls}
     </header>

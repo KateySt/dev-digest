@@ -56,6 +56,8 @@ import {
 import { runFullIndex, type IndexPayload } from './pipeline/full.js';
 import { runIncremental } from './pipeline/incremental.js';
 import { filterAllowedPaths } from '../project-context/helpers.js';
+import type { JobHooks } from '../../platform/jobs.js';
+import { indexNotification } from '../notifications/helpers.js';
 
 /**
  * GLOBALS allowlist — common JS/TS builtins + runtime that appear as bare
@@ -219,19 +221,43 @@ export class RepoIntelService implements RepoIntel {
    * Mirrors `RepoService.registerCloneJobHandler` so the registration is an
    * explicit one-shot at app startup (`repoIntel/routes.ts` invokes this).
    *
-   * The handlers swallow the IndexResult on purpose — JobRunner expects
-   * `Promise<void>`. Status/progress is observable via `repo_index_state`.
+   * Handlers return the IndexResult so the full index (after a clone) and a
+   * user-triggered resync can post a notification with the outcome. The
+   * incremental refresh after every repo refresh stays silent (too frequent).
    */
   registerIndexJobHandlers(): void {
-    this.container.jobs.register(INDEX_JOB_KIND, async (payload) => {
-      await this.indexRepo((payload as IndexPayload).repoId);
-    });
+    const hooks: JobHooks = {
+      onDone: ({ workspaceId, payload, result }) =>
+        this.notifyIndexed(workspaceId, (payload as IndexPayload).repoId, result as IndexResult),
+      onFailed: ({ workspaceId, payload, error }) =>
+        this.notifyIndexed(workspaceId, (payload as IndexPayload).repoId, {
+          status: 'failed',
+          filesIndexed: 0,
+          filesSkipped: 0,
+          durationMs: 0,
+          reason: error.message,
+        }),
+    };
+    this.container.jobs.register(INDEX_JOB_KIND, (payload) => this.indexRepo((payload as IndexPayload).repoId), hooks);
     this.container.jobs.register(REFRESH_JOB_KIND, async (payload) => {
       await this.refreshIndex((payload as IndexPayload).repoId);
     });
-    this.container.jobs.register(RESYNC_JOB_KIND, async (payload) => {
-      await this.resyncRepo((payload as IndexPayload).repoId);
-    });
+    this.container.jobs.register(RESYNC_JOB_KIND, (payload) => this.resyncRepo((payload as IndexPayload).repoId), hooks);
+  }
+
+  private async notifyIndexed(workspaceId: string, repoId: string, result: IndexResult): Promise<void> {
+    const repo = await this.repo.getRepoBasics(repoId);
+    if (!repo) return;
+    await this.container.notifications.notify(
+      workspaceId,
+      indexNotification({
+        repoId,
+        repoName: `${repo.owner}/${repo.name}`,
+        status: result.status,
+        filesIndexed: result.filesIndexed,
+        reason: result.reason ?? null,
+      }),
+    );
   }
 
   /**

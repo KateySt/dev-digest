@@ -12,6 +12,7 @@ import type { AppConfig } from './config.js';
 import type { Db } from '../db/client.js';
 import { JobRunner } from './jobs.js';
 import { runBus, type RunBus } from './sse.js';
+import { NotificationBus } from './notification-bus.js';
 import { ReviewQueue } from './review-queue.js';
 import { LocalSecretsProvider } from '../adapters/secrets/local.js';
 import { LocalNoAuthProvider } from '../adapters/auth/local.js';
@@ -32,6 +33,7 @@ import { SkillsRepository } from '../modules/skills/repository.js';
 import { EvalRepository } from '../modules/eval/repository.js';
 import { SkillsService } from '../modules/skills/service.js';
 import { AgentsService } from '../modules/agents/service.js';
+import { NotificationsService } from '../modules/notifications/service.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
@@ -76,6 +78,8 @@ export class Container {
   readonly auth: AuthProvider;
   readonly jobs: JobRunner;
   readonly runBus: RunBus;
+  /** Per-workspace fan-out of new notifications to SSE streams. */
+  readonly notificationBus = new NotificationBus();
   /** Shared agent-run FIFO limiter (REVIEW_CONCURRENCY); one per container. */
   readonly reviewQueue: ReviewQueue;
 
@@ -95,6 +99,7 @@ export class Container {
   private _evalRepo?: EvalRepository;
   private _skillsService?: SkillsService;
   private _agentsService?: AgentsService;
+  private _notifications?: NotificationsService;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
@@ -149,6 +154,11 @@ export class Container {
    */
   get skillsService(): SkillsService {
     return (this._skillsService ??= new SkillsService(this));
+  }
+
+  /** Notification center — producers call `container.notifications.notify()`. */
+  get notifications(): NotificationsService {
+    return (this._notifications ??= new NotificationsService(this));
   }
 
   /** Shared `AgentsService` instance, memoized like `skillsService`. */

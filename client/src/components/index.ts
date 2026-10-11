@@ -6,6 +6,7 @@ export * from "./page-shell";
 export * from "./repo-not-found";
 export * from "./window-chrome";
 export * from "./account-menu";
+export * from "./notification-center";
 export { RunCostBadge } from "./RunCostBadge/RunCostBadge";
 export { SeverityChip } from "./SeverityChip/SeverityChip";
 export { Gallery } from "./showcase/Showcase";

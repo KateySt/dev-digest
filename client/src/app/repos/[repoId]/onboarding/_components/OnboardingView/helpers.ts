@@ -21,22 +21,8 @@ export const SECTION_ORDER: { id: string; key: SectionKey; icon: IconName }[] = 
   { id: SECTION_IDS.firstTasks, key: "firstTasks", icon: "CheckCircle" },
 ];
 
-/** Compact relative-time phrase for the header subtitle (C-AC-4) — same
- *  simple-unit-letters spirit as `context/_components/ProjectContextView`'s
- *  `formatAge`, just spelled out with "ago" since it's embedded directly
- *  into a full sentence here rather than a standalone footer chip. */
-export function formatRelativeAge(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const then = Date.parse(iso);
-  if (Number.isNaN(then)) return null;
-  const minutes = Math.max(0, Math.round((Date.now() - then) / 60_000));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  return `${days}d ago`;
-}
+/** "5m ago"-style age — shared with the notification center (lib/utils). */
+export { formatRelativeAge } from "@/lib/utils";
 
 /** C-AC-5 — a partial-index marker whenever the index covers FEWER files
  *  than were discovered; never presents the indexed count as full coverage. */

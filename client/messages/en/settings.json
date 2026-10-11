@@ -133,5 +133,14 @@
     "exportFailed": "Export failed",
     "importSuccess": "Imported {agents} agents, {skills} skills",
     "importFailed": "Import failed — check the bundle JSON"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "body": "Finished reviews, evals, clones, indexing and onboarding tours always land in the bell. In the desktop app they can also pop up as system notifications while DevDigest is in the background.",
+    "desktopLabel": "System notifications",
+    "desktopHint": "Show a Windows / macOS notification when a long operation finishes and DevDigest isn't the focused window.",
+    "soundLabel": "Sound",
+    "soundHint": "Play the system notification sound with them.",
+    "browserNote": "System notifications are available in the DevDigest desktop app."
   }
 }

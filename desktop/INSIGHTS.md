@@ -14,6 +14,15 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-11 — Windows toasts need the AppUserModelID
+
+`new Notification(...).show()` from an installed (NSIS) app shows nothing on
+Windows unless `app.setAppUserModelId()` matches the shortcut's id —
+electron-builder's `appId` (`dev.devdigest.app`). It's set first thing in
+`boot()`. Under `pnpm start` toasts may show "electron.app.Electron" as the
+sender; that's expected. Also keep a reference to each `Notification` until
+it closes, or it can be garbage-collected before its `click` fires.
+
 ### 2026-10-11 — macOS codesign rejects symlinks copied by `fs.cpSync`
 
 The v0.1.0 mac build failed at `codesign --verify --deep --strict` with

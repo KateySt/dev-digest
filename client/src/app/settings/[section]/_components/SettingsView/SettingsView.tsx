@@ -12,7 +12,8 @@ import { AppShell } from "../../../../../components/app-shell";
 import { SettingsApiKeys } from "./_components/SettingsApiKeys";
 import { SettingsModels } from "./_components/SettingsModels";
 import { SettingsCatalog } from "./_components/SettingsCatalog";
-import { DEFAULT_SECTION, SECTION_API_KEYS, SECTION_MODELS, SECTION_CATALOG } from "./constants";
+import { SettingsNotifications } from "./_components/SettingsNotifications";
+import { DEFAULT_SECTION, SECTION_API_KEYS, SECTION_MODELS, SECTION_CATALOG, SECTION_NOTIFICATIONS } from "./constants";
 import { s } from "./styles";
 
 export function SettingsView() {
@@ -42,6 +43,8 @@ export function SettingsView() {
             <SettingsModels />
           ) : section === SECTION_CATALOG ? (
             <SettingsCatalog />
+          ) : section === SECTION_NOTIFICATIONS ? (
+            <SettingsNotifications />
           ) : (
             <EmptyState
               icon="Settings"

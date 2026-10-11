@@ -17,6 +17,10 @@ export interface DesktopBridge {
   };
   app: {
     getVersion(): Promise<string>;
+    /** OS notification — shown only while the window is unfocused; resolves true if shown. */
+    notify(n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean>;
+    /** A clicked OS notification asks the studio to open a route. Returns the unsubscribe function. */
+    onNavigate(cb: (href: string) => void): () => void;
     checkForUpdates(): Promise<void>;
     openReleases(): Promise<void>;
     openLogsFolder(): Promise<void>;

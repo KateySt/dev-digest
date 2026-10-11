@@ -293,13 +293,46 @@ export async function cancelRunIfRunning(db: Db, runId: string): Promise<boolean
 /** On boot: any run still 'queued' or 'running' is orphaned (the queue is
  *  in-memory; its process died / restarted), so mark it failed with a restart
  *  reason (S-AC-18). Prevents permanently stuck runs that also block the PR. */
-export async function reapStaleRunningRuns(db: Db): Promise<number> {
+/** Returns the workspace id of every reaped run (one entry per run). */
+export async function reapStaleRunningRuns(db: Db): Promise<string[]> {
   const rows = await db
     .update(t.agentRuns)
     .set({ status: 'failed', error: SERVER_RESTART_REASON, finishedAt: new Date() })
     .where(inArray(t.agentRuns.status, [...IN_FLIGHT]))
-    .returning({ id: t.agentRuns.id });
-  return rows.length;
+    .returning({ workspaceId: t.agentRuns.workspaceId });
+  return rows.map((r) => r.workspaceId);
+}
+
+export type RunOutcomeRow = {
+  agentName: string;
+  status: string;
+  findingsCount: number | null;
+  score: number | null;
+  error: string | null;
+};
+
+/** Final state of the given runs (+ agent name) — the group summary a
+ *  notification is built from once every run of a review group has finished. */
+export async function runOutcomes(db: Db, runIds: string[]): Promise<RunOutcomeRow[]> {
+  if (runIds.length === 0) return [];
+  const rows = await db
+    .select({
+      status: t.agentRuns.status,
+      findingsCount: t.agentRuns.findingsCount,
+      score: t.agentRuns.score,
+      error: t.agentRuns.error,
+      agentName: t.agents.name,
+    })
+    .from(t.agentRuns)
+    .leftJoin(t.agents, eq(t.agents.id, t.agentRuns.agentId))
+    .where(inArray(t.agentRuns.id, runIds));
+  return rows.map((r) => ({
+    agentName: r.agentName ?? 'deleted agent',
+    status: r.status ?? 'failed',
+    findingsCount: r.findingsCount,
+    score: r.score,
+    error: r.error,
+  }));
 }
 
 // ---- observability: agent_runs + run_traces -------------------------------

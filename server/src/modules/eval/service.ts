@@ -35,7 +35,8 @@ import { parseUnifiedDiff } from '../../adapters/git/diff-parser.js';
 import { resolveFeatureModel } from '../settings/feature-models.js';
 import { isScanBlocking } from '../skills/helpers.js';
 import { loadDiff } from '../reviews/diff-loader.js';
-import { EvalRepository, type InsertEvalRun, type SkillSuiteRunInput } from './repository.js';
+import { EvalRepository, type FinishSuiteRun, type InsertEvalRun, type SkillSuiteRunInput } from './repository.js';
+import { evalSuiteNotification } from '../notifications/helpers.js';
 import type { AgentRow, EvalCaseRow, EvalSuiteRunRow, SkillRow } from '../../db/rows.js';
 import {
   asCaseKind,
@@ -563,7 +564,7 @@ export class EvalService {
     try {
       plan = await buildPlan();
     } catch (err) {
-      await this.repo.finishSuiteRun(run.id, {
+      await this.finishAndNotify(run, {
         status: 'failed',
         failureReason: errorMessage(err),
         recall: null,
@@ -614,7 +615,35 @@ export class EvalService {
     }
 
     const summary = summarizeSuiteRun(scored, errored);
-    await this.repo.finishSuiteRun(run.id, { ...summary, durationMs: Date.now() - started });
+    await this.finishAndNotify(run, { ...summary, durationMs: Date.now() - started });
+  }
+
+  /** Persist the suite's terminal state, then tell the notification center. */
+  private async finishAndNotify(run: EvalSuiteRunRow, v: FinishSuiteRun): Promise<void> {
+    await this.repo.finishSuiteRun(run.id, v);
+    try {
+      const ownerId = (run.ownerKind === 'skill' ? run.skillId : run.agentId) ?? '';
+      const owner =
+        run.ownerKind === 'skill'
+          ? await this.container.skillsRepo.getById(run.workspaceId, ownerId)
+          : await this.container.agentsRepo.getById(run.workspaceId, ownerId);
+      await this.container.notifications.notify(
+        run.workspaceId,
+        evalSuiteNotification({
+          ownerKind: run.ownerKind,
+          ownerId,
+          ownerName: owner?.name ?? (run.ownerKind === 'skill' ? 'skill' : 'agent'),
+          isDraft: run.isDraft,
+          status: v.status,
+          passed: v.passedCount,
+          evaluated: v.evaluatedCount,
+          recall: v.recall,
+          failureReason: v.failureReason ?? null,
+        }),
+      );
+    } catch {
+      // Notifications are best-effort; the run's result is already stored.
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -741,7 +770,7 @@ export class EvalService {
   }
 
   /** Boot reaper (next to `reapStaleRuns`): suite runs left `running` by a dead process. */
-  async reapStaleSuiteRuns(): Promise<number> {
+  async reapStaleSuiteRuns(): Promise<string[]> {
     return this.repo.failRunningSuiteRuns(INTERRUPTED_REASON);
   }
 
