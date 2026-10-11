@@ -19,6 +19,9 @@ window loads the Next.js studio served by a child process.
 - `src/processes.ts` — `utilityProcess` fork/stop of the API and the studio, logs
 - `src/updater.ts` — Windows auto-update / macOS "new version" check
 - `src/config.ts` — fixed ports, GitHub repo, data paths
+- `src/preload.ts` + `src/ipc.ts` — `window.devdigestDesktop` bridge: custom
+  title-bar window controls and the former Help-menu actions (channel names
+  are duplicated in both files — a sandboxed preload can't import `ipc.ts`)
 - `scripts/stage.mjs` — builds `resources/` (gitignored)
 - `scripts/after-pack.cjs` — copies `node_modules` into the packaged resources
 - `../.github/workflows/release.yml` — tag → draft release → build → publish
@@ -29,6 +32,10 @@ window loads the Next.js studio served by a child process.
   (`NEXT_PUBLIC_API_BASE`) and the release workflow — change all three together.
 - The API child must be stopped with `stop(api, true)` (graceful `shutdown`
   message), never a bare `kill()` — PGlite can lose writes otherwise.
+- The window is frameless (`titleBarStyle: 'hidden'`): the studio's top bar is
+  the title bar (`.app-drag` regions, `WindowControls` in `client/`). Any new
+  full-screen page without the AppShell needs `<TitlebarStrip />`, or the
+  window can't be moved or closed there.
 - Release assets are unsigned on purpose (free tier). Don't add signing
   requirements; macOS uses ad-hoc `identity: "-"`.
 
