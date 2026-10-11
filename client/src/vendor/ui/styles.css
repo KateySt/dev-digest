@@ -397,3 +397,18 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---- Desktop title bar (Electron, frameless window) ----
+   `.app-drag` marks regions that move the window (and maximize on
+   double-click); anything interactive inside stays clickable. Browsers ignore
+   app-region, so the web build is unaffected. */
+.app-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+  user-select: none;
+}
+.app-drag :is(a, button, input, select, textarea, [role="button"], [role="menu"]),
+.app-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}

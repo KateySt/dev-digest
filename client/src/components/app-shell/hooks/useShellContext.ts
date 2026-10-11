@@ -8,6 +8,9 @@ import { type ShellContext } from "@devdigest/ui";
 import { useTheme } from "../../../lib/contexts/theme";
 import { useActiveRepo } from "../../../lib/contexts/repoContext";
 import { usePulls, useDeleteRepo } from "../../../lib/hooks";
+import { AccountMenu } from "@/components/account-menu";
+import { WindowControls } from "@/components/window-chrome";
+import { MAC_TRAFFIC_LIGHTS_INSET, useDesktop } from "@/lib/desktop";
 import { activeKeyFor, toShellRepo } from "../helpers";
 
 interface ShellContextOptions {
@@ -16,8 +19,9 @@ interface ShellContextOptions {
 
 /**
  * Assembles the `ShellContext` consumed by AppFrame: active nav key, the repo
- * list/active repo (mapped to the shell shape), theme, PR count, and the repo
- * selection / add / removal actions.
+ * list/active repo (mapped to the shell shape), theme, PR count, the repo
+ * selection / add / removal actions, the account menu, and — in the desktop
+ * app — the title-bar window controls.
  */
 export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): ShellContext {
   const t = useTranslations("shell");
@@ -27,6 +31,7 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
   const { repoId, repos, activeRepo, setRepoId } = useActiveRepo();
   const { data: pulls } = usePulls(repoId);
   const deleteRepo = useDeleteRepo();
+  const desktop = useDesktop();
 
   const onSelectRepo = React.useCallback(
     (id: string) => {
@@ -73,6 +78,10 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
       // Sidebar badge = PRs that still NEED review, not the total PR count.
       // 0 → undefined so the badge hides entirely when nothing needs review.
       prCount: pulls?.filter((p) => p.status === "needs_review").length || undefined,
+      account: React.createElement(AccountMenu),
+      // Desktop app: the top bar is the window's title bar.
+      windowControls: desktop ? React.createElement(WindowControls) : undefined,
+      titlebarInsetLeft: desktop?.platform === "darwin" ? MAC_TRAFFIC_LIGHTS_INSET : undefined,
     }),
     [
       pathname,
@@ -86,6 +95,7 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
       onAddRepo,
       onRemoveRepo,
       pulls,
+      desktop,
     ],
   );
 }

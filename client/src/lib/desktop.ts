@@ -1,0 +1,48 @@
+/* desktop.ts — the Electron preload bridge (desktop/src/preload.ts), typed.
+   `window.devdigestDesktop` only exists inside the desktop app; in a browser
+   useDesktop() returns null and every desktop-only control renders nothing. */
+"use client";
+
+import { useSyncExternalStore } from "react";
+
+export interface DesktopBridge {
+  platform: string;
+  window: {
+    minimize(): Promise<void>;
+    toggleMaximize(): Promise<void>;
+    close(): Promise<void>;
+    isMaximized(): Promise<boolean>;
+    /** Returns the unsubscribe function. */
+    onMaximizedChange(cb: (maximized: boolean) => void): () => void;
+  };
+  app: {
+    getVersion(): Promise<string>;
+    checkForUpdates(): Promise<void>;
+    openReleases(): Promise<void>;
+    openLogsFolder(): Promise<void>;
+    openDataFolder(): Promise<void>;
+  };
+}
+
+declare global {
+  interface Window {
+    devdigestDesktop?: DesktopBridge;
+  }
+}
+
+/** Left inset the macOS traffic lights need at the sidebar's top-left (px). */
+export const MAC_TRAFFIC_LIGHTS_INSET = 64;
+
+const noopSubscribe = () => () => {};
+
+/**
+ * The desktop bridge, or null in a browser. Null on the server and during
+ * hydration (server snapshot), then the real value — no hydration mismatch.
+ */
+export function useDesktop(): DesktopBridge | null {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => window.devdigestDesktop ?? null,
+    () => null,
+  );
+}

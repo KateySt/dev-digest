@@ -9,6 +9,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, Skeleton } from "@devdigest/ui";
+import { TitlebarStrip } from "@/components/window-chrome";
 import { SETUP_STEPS, useSecretsStatus, useSetupState, type SetupStep } from "@/lib/hooks";
 import { LLM_PROVIDERS } from "./constants";
 import { s } from "./styles";
@@ -40,6 +41,7 @@ export function FirstRunWizard() {
 
   return (
     <div style={s.page}>
+      <TitlebarStrip />
       <div style={s.brand}>
         <div style={s.brandMark}>
           <Icon.Layers size={17} style={{ color: "var(--bg-primary)" }} />

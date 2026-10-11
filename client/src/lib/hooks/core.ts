@@ -49,6 +49,8 @@ export function useTestConnection() {
       if (res.ok) {
         qc.invalidateQueries({ queryKey: ["provider-models"] });
         qc.invalidateQueries({ queryKey: ["secrets-status"] });
+        // A new/verified GitHub token can change who the active user is.
+        if (res.provider === "github") qc.invalidateQueries({ queryKey: ["github-account"] });
       }
     },
   });
@@ -60,6 +62,24 @@ export function useSecretsStatus() {
     queryKey: ["secrets-status"],
     queryFn: () => api.get<SecretsStatus>("/settings/secrets-status"),
     staleTime: 30_000,
+  });
+}
+
+/** The GitHub account behind the configured token (the app's active user). */
+// TODO: move to @devdigest/shared once the vendored contracts are re-synced.
+export interface GithubAccount {
+  login: string;
+  avatar_url: string;
+  html_url: string;
+}
+
+/** `account` is null when no GitHub token is set or GitHub rejects it. */
+export function useGithubAccount() {
+  return useQuery({
+    queryKey: ["github-account"],
+    queryFn: () => api.get<{ account: GithubAccount | null }>("/settings/github-account"),
+    // Changes only when the token does (useTestConnection invalidates it).
+    staleTime: 5 * 60_000,
   });
 }
 

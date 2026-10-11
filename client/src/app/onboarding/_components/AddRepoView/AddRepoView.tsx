@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Button, Icon, IconBtn, Kbd, TextInput, FormField } from "@devdigest/ui";
 import { useAddRepo } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
+import { TitlebarStrip } from "@/components/window-chrome";
 
 export function AddRepoView() {
   const router = useRouter();
@@ -51,6 +52,7 @@ export function AddRepoView() {
         padding: "44px 28px",
       }}
     >
+      <TitlebarStrip />
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
         <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--text-primary)", display: "grid", placeItems: "center" }}>
           <Icon.Layers size={17} style={{ color: "var(--bg-primary)" }} />
