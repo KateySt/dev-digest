@@ -220,6 +220,7 @@ export function agent(over: Partial<Agent> = {}): Agent {
     strategy: "single-pass",
     ci_fail_on: "critical",
     repo_intel: false,
+    attached_doc_paths: [],
     enabled: true,
     version: 3,
     ...over,

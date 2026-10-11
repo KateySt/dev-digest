@@ -6,7 +6,7 @@ import { RunnerError } from './errors.js';
  * GitHub-Actions-injected env vars + the standard `pull_request` event
  * payload — "the CI context" the runner assembles the diff + PR body/title
  * from (T8 action). `GITHUB_REPOSITORY` and `PR_NUMBER` are explicit env vars
- * the generated workflow sets (`server/src/modules/ci/workflow.ts`);
+ * the generated workflow sets (`buildWorkflowYaml` in `server/src/modules/ci/helpers.ts`);
  * `GITHUB_EVENT_PATH` is a default GitHub Actions runtime var (always present)
  * pointing at the JSON payload for the triggering event, which carries the
  * (untrusted, author-controlled) PR title/body and the fork flag.
@@ -16,6 +16,8 @@ export interface CiEnv {
   GITHUB_REPOSITORY?: string;
   PR_NUMBER?: string;
   GITHUB_EVENT_PATH?: string;
+  GITHUB_RUN_ID?: string;
+  GITHUB_RUN_ATTEMPT?: string;
   [key: string]: string | undefined;
 }
 
@@ -30,6 +32,13 @@ export interface PrContext {
   /** True when the PR head is a fork — informational only; the workflow
    *  itself is responsible for never scheduling this job for fork PRs. */
   isFork: boolean;
+  /** PR head commit SHA (from the event payload). */
+  headSha: string;
+  /** GitHub numeric repository id (from the event payload). */
+  repositoryId: number;
+  /** GitHub Actions run id / attempt (from the runner env). */
+  runId: number;
+  runAttempt: number;
 }
 
 interface PullRequestEventPayload {
@@ -37,8 +46,10 @@ interface PullRequestEventPayload {
     number?: number;
     title?: string;
     body?: string | null;
-    head?: { repo?: { fork?: boolean } | null };
+    head?: { sha?: string; repo?: { fork?: boolean } | null };
+    base?: { repo?: { id?: number } | null };
   };
+  repository?: { id?: number };
 }
 
 function readEventPayload(
@@ -83,6 +94,20 @@ export function resolvePrContext(
     );
   }
 
+  const headSha = pr?.head?.sha;
+  if (!headSha || !/^[0-9a-f]{40}$/.test(headSha)) {
+    throw new RunnerError('Event payload is missing a valid pull_request.head.sha');
+  }
+  const repositoryId = pr?.base?.repo?.id ?? event?.repository?.id;
+  if (!Number.isInteger(repositoryId)) {
+    throw new RunnerError('Event payload is missing the numeric repository id');
+  }
+  const runId = Number(env.GITHUB_RUN_ID);
+  const runAttempt = Number(env.GITHUB_RUN_ATTEMPT ?? '1');
+  if (!Number.isInteger(runId) || runId <= 0 || !Number.isInteger(runAttempt) || runAttempt <= 0) {
+    throw new RunnerError('GITHUB_RUN_ID / GITHUB_RUN_ATTEMPT must be positive integers');
+  }
+
   return {
     owner,
     repo,
@@ -90,5 +115,9 @@ export function resolvePrContext(
     title: pr?.title ?? '',
     body: pr?.body ?? '',
     isFork: pr?.head?.repo?.fork ?? false,
+    headSha,
+    repositoryId: repositoryId as number,
+    runId,
+    runAttempt,
   };
 }

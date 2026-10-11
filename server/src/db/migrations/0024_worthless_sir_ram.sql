@@ -1,4 +1,3 @@
-ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "attached_doc_paths" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
 ALTER TABLE "agent_runs" ADD COLUMN "multi_agent_run_id" uuid;--> statement-breakpoint
 ALTER TABLE "agent_runs" ADD COLUMN "multi_agent_order" integer;--> statement-breakpoint
 ALTER TABLE "agent_runs" ADD COLUMN "started_at" timestamp with time zone;--> statement-breakpoint

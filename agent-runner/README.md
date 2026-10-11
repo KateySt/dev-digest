@@ -4,13 +4,16 @@ The **DevDigest CI runner** — a standalone CLI that runs a DevDigest review ag
 inside a *target repository's own CI* (GitHub Actions), entirely outside this
 repo's server, its DI graph, and its Postgres instance.
 
-`src/index.ts` is `ncc`-bundled into a single self-contained `dist/index.js`,
-embedded as `.devdigest/runner/index.js` in the exported `devdigest/ci` PR, and
-executed by the target repo's workflow as `node .devdigest/runner/index.js`.
+`src/index.ts` is `ncc`-bundled into a single self-contained ESM bundle,
+committed as `bundle/runner.mjs` (with a `// devdigest-runner <version>` banner),
+embedded as `.devdigest/runner.mjs` in the exported `devdigest/ci` PR, and
+executed by the target repo's workflow as `node .devdigest/runner.mjs`.
 
 ## What it does
 
-1. **Loads + validates** the checked-in manifest `.devdigest/agents/<slug>.yaml`
+1. **Loads + validates** the manifest `.devdigest/agents/<DEVDIGEST_AGENT>.yaml`
+   (the generated workflow runs one job per agent), memory from
+   `.devdigest/memory.jsonl`,
    and skill bodies `.devdigest/skills/*.md` from the target repo's working tree
    (validated against `AgentManifest` before use).
 2. **Resolves the PR context** (owner / repo / number / title / body / fork flag)
@@ -64,7 +67,7 @@ Path aliases declared in `agent-runner/tsconfig.json`:
 
 If you lift this module onto a fresh branch or repo, bring `reviewer-core/` and
 `server/src/vendor/shared/` along (or re-point the aliases). `pnpm build` (`ncc`)
-inlines both packages plus their transitive deps into `dist/index.js`, so the
+inlines both packages plus their transitive deps into the bundle, so the
 **shipped bundle** has zero runtime imports from `node_modules/@devdigest/*` — the
 sibling requirement is a **build/dev-time** requirement only.
 
@@ -74,11 +77,20 @@ sibling requirement is a **build/dev-time** requirement only.
 pnpm install        # install deps (yaml, zod + dev tooling)
 pnpm typecheck      # tsc --noEmit -p tsconfig.json
 pnpm test           # vitest run (hermetic; LLM stubbed, no network)
-pnpm build          # ncc build src/index.ts -o dist  →  dist/index.js
+pnpm build          # ncc build → dist/index.js, then scripts/copy-bundle.mjs → bundle/runner.mjs
 ```
 
-`dist/` and `node_modules/` are git-ignored — `dist/index.js` is a generated
-artifact, regenerate it with `pnpm build`.
+**Build caveat.** ncc must emit ESM and the file must ship as `.mjs` (a `.js`
+file without a `"type": "module"` package would be parsed as CommonJS in the
+target repo) — `scripts/copy-bundle.mjs` handles the rename. The build is
+type-checked: a type error anywhere in `reviewer-core` or the shared contracts
+fails `pnpm build` (and the CI drift check). Fix the type error rather than
+building with ncc's `-t` (transpile-only) flag, which the drift check would
+not reproduce.
+
+`dist/` and `node_modules/` are git-ignored. `bundle/runner.mjs` is **committed** — the
+studio ships it byte-for-byte; CI (`.github/workflows/agent-runner.yml`) fails when it
+drifts from a fresh `pnpm build`. Regenerate and commit it after changing runner code.
 
 ## Runtime environment (set by the target repo's workflow)
 
@@ -95,9 +107,24 @@ there is no `SecretsProvider` / DI graph to inject from (see `CLAUDE.md`).
 | `GITHUB_EVENT_PATH` | auto (GHA) | `pull_request` event payload (title/body/fork) |
 | `DEVDIGEST_DIR` | no | override the `.devdigest` dir (default: `cwd/.devdigest`) |
 | `DEVDIGEST_RESULT_PATH` | no | override artifact path (default: `cwd/devdigest-result.json`) |
-| `DEVDIGEST_POST_AS` | no | `github_review` (default) \| `pr_comment` \| `none` |
+| `DEVDIGEST_AGENT` | yes (generated workflow) | slug of the agent whose `.devdigest/agents/<slug>.yaml` to run |
+| `GITHUB_RUN_ID` / `GITHUB_RUN_ATTEMPT` | auto (GHA) | recorded in the artifact |
+| `DEVDIGEST_POST_AS` | no | override of the manifest's `post_as` (`github_review` \| `pr_comment` \| `none`) |
 
 ¹ Falls back to `pull_request.number` from the event payload if `PR_NUMBER` is unset.
+
+## Result artifact
+
+`devdigest-result.json` is uploaded as the Actions artifact
+`devdigest-result-<slug>` (artifact names must be unique per workflow run, and
+there is one job per agent). The studio re-validates it with the strict
+`CiResultArtifact` schema. Fields: `schema_version`, `findings_count`,
+`critical`, `warning`, `suggestion`, `blockers`, `gate_triggered`, `verdict`,
+`cost_usd`, `duration_ms`, `model`, `agent`, `agent_slug`, `version` (runner),
+`manifest_version`, `pr_number`, `repository`, `repository_id`, `commit_sha`,
+`run_id`, `run_attempt`, and `dependencies`. Identity fields (`commit_sha`,
+`repository_id`, `run_id`, `agent_slug`) are checked against GitHub by the
+server before anything is stored.
 
 Secrets are never logged and never written to `devdigest-result.json` or any
 posted comment.

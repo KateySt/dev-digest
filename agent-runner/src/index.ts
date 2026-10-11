@@ -2,9 +2,10 @@
  * @devdigest/agent-runner — CI runner CLI (T8).
  *
  * Invoked by the generated GitHub Actions workflow as
- * `node .devdigest/runner/index.js` (`server/src/modules/ci/constants.ts` /
- * `workflow.ts`) — bundled by `ncc` into a single self-contained
- * `dist/index.js` (T7) with no runtime dependency on `node_modules/@devdigest/*`.
+ * `node .devdigest/runner.mjs` (`server/src/modules/ci/constants.ts` /
+ * `helpers.ts`) — bundled by `ncc` into a single self-contained
+ * `bundle/runner.mjs` (see `scripts/copy-bundle.mjs`) with no runtime
+ * dependency on `node_modules/@devdigest/*`.
  *
  * Reads CI-injected env vars directly (OPENROUTER_API_KEY, GITHUB_TOKEN,
  * GITHUB_REPOSITORY, PR_NUMBER). This is intentional, not a `SecretsProvider`
@@ -20,17 +21,20 @@
 import path from 'node:path';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { OpenRouterProvider } from '@devdigest/reviewer-core';
+import { pathToFileURL } from 'node:url';
 import { runCi, type PostAs } from './run.js';
 
-function resolvePostAs(value: string | undefined): PostAs {
+/** `DEVDIGEST_POST_AS` is an OVERRIDE only; unset/invalid defers to the manifest. */
+function resolvePostAsOverride(value: string | undefined): PostAs | undefined {
   if (value === 'github_review' || value === 'pr_comment' || value === 'none') return value;
-  return 'github_review';
+  return undefined;
 }
 
 export async function main(env: NodeJS.ProcessEnv = process.env): Promise<number> {
   const devdigestDir = env.DEVDIGEST_DIR ?? path.join(process.cwd(), '.devdigest');
   const resultPath = env.DEVDIGEST_RESULT_PATH ?? path.join(process.cwd(), 'devdigest-result.json');
-  const postAs = resolvePostAs(env.DEVDIGEST_POST_AS);
+  const postAs = resolvePostAsOverride(env.DEVDIGEST_POST_AS);
+  const agentSlug = env.DEVDIGEST_AGENT || undefined;
 
   // No global LLM client — always injected (reviewer-core invariant). An empty
   // key still constructs the provider; the first `completeStructured` call
@@ -42,7 +46,8 @@ export async function main(env: NodeJS.ProcessEnv = process.env): Promise<number
     devdigestDir,
     env,
     llm,
-    postAs,
+    ...(postAs ? { postAs } : {}),
+    ...(agentSlug ? { agentSlug } : {}),
     resultPath,
     readFile: readFileSync,
     readDir: readdirSync,
@@ -65,7 +70,7 @@ export async function main(env: NodeJS.ProcessEnv = process.env): Promise<number
 const isDirectRun =
   typeof process !== 'undefined' &&
   process.argv[1] != null &&
-  import.meta.url === `file://${process.argv[1]}`;
+  import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isDirectRun) {
   main().then(

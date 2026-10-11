@@ -65,8 +65,8 @@ jobs:
       # The API imports @devdigest/reviewer-core's RAW source at runtime (tsx
       # resolves the tsconfig alias to ../reviewer-core/src), and that source
       # imports `openai`/`zod`. Without reviewer-core's deps the API crashes at
-      # boot with ERR_MODULE_NOT_FOUND and never becomes healthy. The seed script
-      # loads the same graph, so this must run BEFORE `db:seed`. reviewer-core
+      # boot with ERR_MODULE_NOT_FOUND and never becomes healthy. The seed
+      # script imports it too, so this must run BEFORE `db:seed`. reviewer-core
       # uses npm (see reviewer-core.yml).
       - name: Install reviewer-core deps
         working-directory: reviewer-core

@@ -2,7 +2,7 @@
 
 Bundled CI runner. A standalone package (`@devdigest/agent-runner`, not part of any workspace)
 that is ncc-compiled into a single self-contained `dist/index.js`, embedded as
-`.devdigest/runner/index.js` in the exported `devdigest/ci` PR, and executed by the **target
+`.devdigest/runner.mjs` in the exported `devdigest/ci` PR, and executed by the **target
 repo's own GitHub Actions** — entirely outside this repo's server, its DI graph, and its Postgres
 instance.
 
@@ -13,7 +13,7 @@ agent-runner/
 ├── src/
 │   ├── index.ts        # CLI entry: load manifest → assemble prompt → review → post → exit code
 │   └── ...              # helpers (manifest loading, GitHub posting, artifact writing)
-├── dist/index.js        # ncc-bundled output — the file actually shipped to target repos
+├── bundle/runner.mjs    # committed ESM bundle (ncc output + version banner) — the file shipped to target repos
 ├── package.json          # scripts: typecheck, build (ncc), test
 ├── tsconfig.json         # mirrors server/tsconfig.json's path aliases
 └── vitest.config.ts      # hermetic tests, LLM stubbed

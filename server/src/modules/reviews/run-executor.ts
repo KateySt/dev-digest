@@ -429,6 +429,8 @@ export class ReviewRunExecutor {
         log: runLog.logFor(runId),
       };
       runLog.info('Run complete; trace persisted');
+      // Trace BEFORE the terminal status: anything that waits for `done`
+      // (the UI, CI ingest, tests) must be able to read the trace right away.
       await this.repo.saveRunTrace(runId, trace);
       await this.repo.completeAgentRun(runId, {
         status: 'done',

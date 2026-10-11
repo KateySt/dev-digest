@@ -2,67 +2,79 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Skeleton } from "@devdigest/ui";
-import type { Agent } from "@devdigest/shared";
-import { useAgentCiInstallations } from "../../../../../../../lib/hooks/ci";
-import { useRepos } from "../../../../../../../lib/hooks/core";
-import { PublishDialog } from "./_components/PublishDialog";
+import { Badge, Button, Icon, Skeleton } from "@devdigest/ui";
+import type { Agent, CiInstallation } from "@devdigest/shared";
+import { useAgentCi } from "@/lib/hooks/ci";
+import { ExportWizard, type ExportWizardProps } from "./_components/ExportWizard";
+import { FailCiOnCard } from "./_components/FailCiOnCard";
+import { InstallationRow } from "./_components/InstallationRow";
+import { RecentCiRuns } from "./_components/RecentCiRuns";
+import { wizardPrefill } from "./helpers";
 import { s } from "./styles";
 
-/** CI tab — deployed-repos list + "Publish to CI"/"Update CI" (same action,
- *  the label just reflects whether an installation already exists). */
+/** CI tab - where this agent is installed, whether each installation is
+ *  current, the Fail CI on policy, recent CI history, and the Export wizard. */
 export function CiTab({ agent }: { agent: Agent }) {
   const t = useTranslations("ci");
-  const { data: repos } = useRepos();
-  const { data: installations, isLoading } = useAgentCiInstallations(agent.id);
-  const [publishing, setPublishing] = React.useState(false);
+  const { data, isLoading } = useAgentCi(agent.id);
+  const [wizard, setWizard] = React.useState<ExportWizardProps["initial"] | null>(null);
 
-  const hasNoRepo = repos != null && repos.length === 0;
-  const hasInstallations = (installations?.length ?? 0) > 0;
+  const installations = data?.installations ?? [];
+  const hasInstallations = installations.length > 0;
 
   return (
     <div style={s.wrap}>
-      {publishing && (
-        <PublishDialog
-          agent={agent}
-          defaultRepo={installations?.[0]?.repo}
-          onClose={() => setPublishing(false)}
-        />
-      )}
+      {wizard && <ExportWizard agent={agent} initial={wizard} onClose={() => setWizard(null)} />}
 
       <div style={s.header}>
         <div style={s.headerText}>
-          <div style={s.h2}>{t("ciTab.heading")}</div>
-          <div style={s.subtitle}>{t("ciTab.subtitle")}</div>
+          <span style={s.h2}>{t("ciTab.heading")}</span>
+          <Badge color="var(--ok)" bg="var(--ok-bg)" dot>
+            {t("ciTab.activeIn", { count: installations.length })}
+          </Badge>
         </div>
-        {!hasNoRepo && (
-          <Button kind="primary" size="sm" icon="GitPullRequest" onClick={() => setPublishing(true)}>
-            {hasInstallations ? t("ciTab.update") : t("ciTab.publish")}
-          </Button>
+        {hasInstallations && (
+          <>
+            <Button size="sm" icon="RefreshCw" onClick={() => setWizard(wizardPrefill(installations))}>
+              {t("ciTab.updateCiConfig")}
+            </Button>
+            <Button kind="primary" size="sm" icon="Plus" onClick={() => setWizard({})}>
+              {t("ciTab.addToCi")}
+            </Button>
+          </>
         )}
       </div>
 
-      {hasNoRepo && <div style={s.noRepo}>{t("ciTab.noRepo")}</div>}
+      <FailCiOnCard agent={agent} />
 
       {isLoading && <Skeleton height={80} />}
 
-      {!isLoading && !hasNoRepo && !hasInstallations && <div style={s.empty}>{t("ciTab.empty")}</div>}
-
-      {!isLoading && hasInstallations && (
-        <div style={s.list}>
-          {installations!.map((inst) => (
-            <div key={inst.id} style={s.row}>
-              <span style={s.rowRepo}>{inst.repo}</span>
-              <Badge color="var(--text-secondary)" mono>
-                {inst.target_type}
-              </Badge>
-              <span style={s.rowMeta}>
-                {t("ciTab.installed", { date: new Date(inst.installed_at).toLocaleDateString() })}
-              </span>
-            </div>
-          ))}
+      {!isLoading && !hasInstallations && (
+        <div style={s.empty}>
+          <div>{t("ciTab.empty")}</div>
+          <Button kind="primary" size="sm" icon="Plus" onClick={() => setWizard({})}>
+            {t("ciTab.addToCi")}
+          </Button>
         </div>
       )}
+
+      {hasInstallations && (
+        <div style={s.list}>
+          {installations.map((inst) => (
+            <InstallationRow key={inst.id} installation={inst} onUpdate={(i) => setWizard(toPrefill(i))} />
+          ))}
+          <button type="button" style={s.addRepo} onClick={() => setWizard({})}>
+            <Icon.Plus size={14} />
+            {t("ciTab.addRepository")}
+          </button>
+        </div>
+      )}
+
+      {data && <RecentCiRuns runs={data.recent_runs} agentName={agent.name} />}
     </div>
   );
+}
+
+function toPrefill(inst: CiInstallation): NonNullable<ExportWizardProps["initial"]> {
+  return wizardPrefill([inst]);
 }

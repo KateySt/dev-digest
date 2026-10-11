@@ -25,6 +25,11 @@ export interface BuildTraceInput {
     model: string;
     pr?: number | null;
     source?: 'local' | 'ci';
+    /** CI-ingested runs only (S-AC-40). */
+    commit_sha?: string | null;
+    manifest_version?: number | null;
+    repo?: string | null;
+    dependencies?: { runner: string; node: string } | null;
   };
   stats: RunStats;
   promptAssembly: PromptAssembly;
@@ -44,6 +49,10 @@ export function buildRunTrace(input: BuildTraceInput): RunTrace {
       model: input.config.model,
       pr: input.config.pr ?? null,
       source: input.config.source ?? 'local',
+      commit_sha: input.config.commit_sha ?? null,
+      manifest_version: input.config.manifest_version ?? null,
+      repo: input.config.repo ?? null,
+      dependencies: input.config.dependencies ?? null,
     },
     stats: input.stats,
     prompt_assembly: input.promptAssembly,

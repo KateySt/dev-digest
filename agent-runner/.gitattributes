@@ -1,0 +1,2 @@
+# Shipped byte-for-byte to target repos; never rewrite line endings.
+bundle/runner.mjs -text

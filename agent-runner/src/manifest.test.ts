@@ -6,6 +6,7 @@ import { loadManifest, findManifestPath, loadAgentManifest } from './manifest.js
 import { RunnerError } from './errors.js';
 
 const VALID_MANIFEST_YAML = `
+slug: "security-reviewer"
 name: "Security Reviewer"
 provider: "openrouter"
 model: "deepseek/deepseek-v4-flash"

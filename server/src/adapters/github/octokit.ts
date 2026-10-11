@@ -11,10 +11,19 @@ import type {
   OpenPrPayload,
   CommitFilesPayload,
   IssueMeta,
+  GitHubRepoInfo,
+  WorkflowRunInfo,
+  RunArtifactInfo,
+  WorkflowJobInfo,
 } from '@devdigest/shared';
 import { withRetry, withTimeout } from '../../platform/resilience.js';
+import { AppError } from '../../platform/errors.js';
 
 const TIMEOUT = 30_000;
+
+function tooLarge(maxBytes: number): AppError {
+  return new AppError('artifact_too_large', `Artifact exceeds ${maxBytes} bytes`, 413);
+}
 
 function mapStatus(state: string, merged: boolean | undefined): PrStatus {
   if (merged) return 'merged';
@@ -418,6 +427,113 @@ export class OctokitGitHubClient implements GitHubClient {
       withTimeout(this.octokit.rest.users.getAuthenticated(), TIMEOUT),
     );
     return res.data.login;
+  }
+
+  async getRepo(repo: RepoRef): Promise<GitHubRepoInfo> {
+    const res = await withRetry(() =>
+      withTimeout(this.octokit.rest.repos.get({ owner: repo.owner, repo: repo.name }), TIMEOUT),
+    );
+    return { id: res.data.id, defaultBranch: res.data.default_branch };
+  }
+
+  async listWorkflowRuns(
+    repo: RepoRef,
+    workflowFile: string,
+    opts: { event: 'pull_request'; perPage?: number },
+  ): Promise<WorkflowRunInfo[]> {
+    const res = await withRetry(() =>
+      withTimeout(
+        this.octokit.rest.actions.listWorkflowRuns({
+          owner: repo.owner,
+          repo: repo.name,
+          workflow_id: workflowFile,
+          event: opts.event,
+          per_page: opts.perPage ?? 30,
+        }),
+        TIMEOUT,
+      ),
+    );
+    return res.data.workflow_runs.map((r) => ({
+      id: r.id,
+      runAttempt: r.run_attempt ?? 1,
+      status: r.status,
+      conclusion: r.conclusion,
+      headSha: r.head_sha,
+      repositoryId: r.repository.id,
+      path: r.path,
+      htmlUrl: r.html_url,
+      pullRequests: (r.pull_requests ?? []).map((p) => ({ number: p.number })),
+      createdAt: r.created_at,
+    }));
+  }
+
+  async listRunJobs(repo: RepoRef, runId: number): Promise<WorkflowJobInfo[]> {
+    const res = await withRetry(() =>
+      withTimeout(
+        this.octokit.rest.actions.listJobsForWorkflowRun({
+          owner: repo.owner,
+          repo: repo.name,
+          run_id: runId,
+          per_page: 100,
+        }),
+        TIMEOUT,
+      ),
+    );
+    return res.data.jobs.map((j) => ({
+      id: j.id,
+      name: j.name,
+      status: j.status,
+      conclusion: j.conclusion,
+    }));
+  }
+
+  async listRunArtifacts(repo: RepoRef, runId: number): Promise<RunArtifactInfo[]> {
+    const res = await withRetry(() =>
+      withTimeout(
+        this.octokit.rest.actions.listWorkflowRunArtifacts({
+          owner: repo.owner,
+          repo: repo.name,
+          run_id: runId,
+          per_page: 100,
+        }),
+        TIMEOUT,
+      ),
+    );
+    return res.data.artifacts.map((a) => ({
+      id: a.id,
+      name: a.name,
+      sizeInBytes: a.size_in_bytes,
+      expired: a.expired,
+    }));
+  }
+
+  async downloadArtifact(repo: RepoRef, artifactId: number, maxBytes: number): Promise<Uint8Array> {
+    const meta = await withRetry(() =>
+      withTimeout(
+        this.octokit.rest.actions.getArtifact({
+          owner: repo.owner,
+          repo: repo.name,
+          artifact_id: artifactId,
+        }),
+        TIMEOUT,
+      ),
+    );
+    // Compressed size is the cheap up-front guard; the received length is re-checked below.
+    if (meta.data.size_in_bytes > maxBytes) throw tooLarge(maxBytes);
+    const res = await withRetry(() =>
+      withTimeout(
+        this.octokit.rest.actions.downloadArtifact({
+          owner: repo.owner,
+          repo: repo.name,
+          artifact_id: artifactId,
+          archive_format: 'zip',
+        }),
+        TIMEOUT,
+      ),
+    );
+    const data = res.data as unknown as ArrayBuffer;
+    if (data.byteLength > maxBytes) throw tooLarge(maxBytes);
+    return new Uint8Array(data);
   }
 
   async getLanguages(repo: RepoRef): Promise<Record<string, number>> {

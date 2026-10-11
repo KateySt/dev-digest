@@ -127,9 +127,6 @@ export function assemblePrompt(parts: PromptParts): AssembledPrompt {
       `## Callers of changed symbols\n${wrapUntrusted('callers', parts.callers)}`,
     );
   }
-  if (parts.intent && parts.intent.trim().length > 0) {
-    userSections.push(`## Intent\n${wrapUntrusted('intent', parts.intent)}`);
-  }
   userSections.push(`## Diff to review\n${wrapUntrusted('diff', parts.diff)}`);
 
   const user = userSections.join('\n\n');

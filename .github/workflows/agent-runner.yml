@@ -1,0 +1,72 @@
+# agent-runner suite — the bundled CI runner (@devdigest/agent-runner).
+# Typecheck + hermetic tests (LLM stubbed), then a rebuild whose output must
+# match the committed bundle: agent-runner/bundle/runner.mjs is what the studio
+# ships byte-for-byte into target repos, so a stale bundle is a build failure.
+#
+# reviewer-core and server/src/vendor/shared are in the path filter because the
+# runner consumes both as raw TypeScript source through tsconfig path aliases.
+name: agent-runner
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent-runner/**'
+      - 'reviewer-core/**'
+      - 'server/src/vendor/shared/**'
+      - '.github/workflows/agent-runner.yml'
+  pull_request:
+    paths:
+      - 'agent-runner/**'
+      - 'reviewer-core/**'
+      - 'server/src/vendor/shared/**'
+      - '.github/workflows/agent-runner.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-runner-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: typecheck, tests, bundle drift
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - run: corepack enable
+
+      # The runner type-checks and bundles reviewer-core's TypeScript source, so
+      # reviewer-core's own dependencies (zod, openai) must be installed too.
+      - name: Install reviewer-core deps
+        working-directory: reviewer-core
+        run: npm ci
+
+      - name: Install agent-runner deps
+        working-directory: agent-runner
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: agent-runner
+        run: pnpm typecheck
+
+      - name: Test
+        working-directory: agent-runner
+        run: pnpm test
+
+      - name: Build
+        working-directory: agent-runner
+        run: pnpm build
+
+      - name: Bundle drift check
+        run: git diff --exit-code agent-runner/bundle/runner.mjs

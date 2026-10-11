@@ -77,6 +77,9 @@ flowchart TB
   subgraph Evals["Evals"]
     evalMod["eval<br/>/eval-cases · /findings/:id/eval-case<br/>/agents/:id/eval-runs (+ /compare)<br/>/eval-suite-runs/:id · /eval-dashboard (+ /run-all)<br/>/skills/:id/eval-runs (+ /compare) · /eval-dashboard/skills (+ /run-all)"]
   end
+  subgraph CI["Export to CI"]
+    ciMod["ci<br/>GET /agents/:id/ci · POST /agents/:id/ci/(preview|export|zip)<br/>POST /ci-runs/sync · /ci-runs · /ci-runs/repos"]
+  end
   subgraph Intel["Repo intelligence"]
     repoIntel["repo-intel<br/>/repos/:id/index-state · /resync"]
   end
@@ -86,6 +89,39 @@ flowchart TB
   end
   HEALTH["/health (liveness) · /health/ready (DB ping → 200/503)"]
 ```
+
+## Export to CI
+
+`modules/ci` exports an agent to a target repo's GitHub Actions (SPEC-03,
+[`specs/ci.md`](./specs/ci.md); user guide:
+[`../docs/export-agent-to-github-actions.md`](../docs/export-agent-to-github-actions.md)).
+
+| Route | Purpose |
+|-------|---------|
+| `GET /agents/:id/ci` | installations (with out-of-date flag) + recent runs for an agent |
+| `POST /agents/:id/ci/preview` | generate the file set and workflow; a hand-edited workflow is linted (`422` on violations) |
+| `POST /agents/:id/ci/export` | commit to branch `devdigest/ci` and open/update the PR "Add DevDigest CI review" (one PR per repo, one job per agent) |
+| `POST /agents/:id/ci/zip` | same file set as a zip download |
+| `POST /ci-runs/sync` | pull-based ingest of finished runs |
+| `GET /ci-runs` · `GET /ci-runs/repos` | CI Runs page data and repo filter |
+
+The old one-step `publish` and its `preview` routes are removed.
+
+- **PAT scope.** Export and sync use the Settings PAT. Classic: `repo` +
+  `workflow`. Fine-grained: Contents, Pull requests, Workflows (write) and
+  Actions (read). Errors: `pat_workflow_scope`, `github_repo_not_found`,
+  `github_forbidden` (custom codes are thrown as `AppError`, since
+  `NotFoundError` hard-codes `not_found`).
+- **Ingest.** Sync lists workflow runs/jobs/artifacts through the `GitHubClient`
+  port (`getRepo`, `listWorkflowRuns`, `listRunJobs`, `listRunArtifacts`,
+  `downloadArtifact`), verifies head SHA, repo id, PR, workflow path, agent slug
+  and run id, validates the bounded artifact and scans it for secrets, then
+  writes `agent_runs` (`source='ci'`, `pr_id` NULL) + `run_traces` + `ci_runs` in
+  one transaction. Idempotent; per-job conclusion comes from `listRunJobs`.
+- **Runner bundle.** `adapters/runner-bundle` (`container.runnerBundle`) serves
+  the committed `agent-runner/bundle/runner.mjs` and its version.
+- **Migrations.** `0022` (ci_installations/ci_runs columns + unique keys) and
+  `0023` (`ci_installations.agent_slug`). Run `pnpm db:migrate` after pulling.
 
 ## Evals (suite runs)
 
@@ -174,7 +210,7 @@ comment and records `reply_url` / `replied_at` on the finding.
 | `DATABASE_URL` | `postgres://devdigest:devdigest@localhost:5432/devdigest` | required to migrate/serve |
 | `API_PORT` / `WEB_PORT` | `3001` / `3000` | API port; `WEB_PORT` also sets the allowed CORS origin |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` | — | optional, per-provider; also settable via Settings UI |
-| `GITHUB_TOKEN` | — | optional; PAT with repo scope (`GITHUB_PAT` accepted as a fallback) |
+| `GITHUB_TOKEN` | — | optional; PAT with repo scope (`GITHUB_PAT` accepted as a fallback); Export to CI additionally needs `workflow` scope (see [Export to CI](#export-to-ci)) |
 | `EMBEDDINGS_ENABLED` | `false` | memory/RAG embeddings (OpenAI); off → **zero** OpenAI calls |
 | `REPO_INTEL_ENABLED` | `true` | repo skeleton + callers in the prompt; `false` → ripgrep-only |
 | `DEVDIGEST_CLONE_DIR` | `./clones` | imported-repo checkouts (git-ignored) |
