@@ -49,7 +49,6 @@ export const NAV: NavGroup[] = [
     section: "MORE SCREENS",
     items: [
       { key: "conformance", label: "Conformance", icon: "Shield", href: "/conformance", gKey: "n" },
-      { key: "first-run-setup", label: "First-run setup", icon: "Play", href: "/first-run", gKey: "u" },
     ],
   },
 ];
@@ -90,7 +89,6 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: "g f", label: "Go to Agent Performance", group: "Navigation" },
   { keys: "g c", label: "Go to CI Runs", group: "Navigation" },
   { keys: "g n", label: "Go to Conformance", group: "Navigation" },
-  { keys: "g u", label: "Go to First-run setup", group: "Navigation" },
   { keys: "j / k", label: "Next / previous finding", group: "Findings" },
   { keys: "a", label: "Accept finding", group: "Findings" },
   { keys: "d", label: "Dismiss finding", group: "Findings" },
