@@ -2,7 +2,7 @@
 
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useSetupState } from "../../../lib/hooks";
+import { useSetupState } from "@/lib/hooks";
 
 /** Routes reachable while keys are missing: the wizard itself and Settings → API Keys. */
 const UNGATED = ["/first-run", "/settings"];
