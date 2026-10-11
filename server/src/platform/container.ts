@@ -237,6 +237,19 @@ export class Container {
     return this._github;
   }
 
+  /**
+   * A throwaway, uncached client built from a CANDIDATE key — used to verify a
+   * key before it is persisted (settings test-connection), so a rejected key
+   * never reaches SecretsProvider. Injected test clients still win, as in
+   * github()/llm().
+   */
+  probeClient(provider: 'github', key: string): GitHubClient;
+  probeClient(provider: 'openai' | 'anthropic' | 'openrouter', key: string): LLMProvider;
+  probeClient(provider: 'github' | 'openai' | 'anthropic' | 'openrouter', key: string): GitHubClient | LLMProvider {
+    if (provider === 'github') return this.overrides.github ?? new OctokitGitHubClient(key);
+    return this.overrides.llm?.[provider] ?? this.llmFromKey(provider, key);
+  }
+
   /** Resolve an LLM provider by id; constructs from the secret key, cached. */
   async llm(id: 'openai' | 'anthropic' | 'openrouter'): Promise<LLMProvider> {
     const injected = this.overrides.llm?.[id];
@@ -249,24 +262,23 @@ export class Container {
   }
 
   private async buildLlm(id: 'openai' | 'anthropic' | 'openrouter'): Promise<LLMProvider> {
-    if (id === 'openai') {
-      const key = await this.secrets.get('OPENAI_API_KEY');
-      if (!key) throw new ConfigError('OPENAI_API_KEY is not configured');
-      return new OpenAIProvider(key);
-    }
+    const secret = id === 'openai' ? 'OPENAI_API_KEY' : id === 'openrouter' ? 'OPENROUTER_API_KEY' : 'ANTHROPIC_API_KEY';
+    const key = await this.secrets.get(secret);
+    if (!key) throw new ConfigError(`${secret} is not configured`);
+    return this.llmFromKey(id, key);
+  }
+
+  private llmFromKey(id: 'openai' | 'anthropic' | 'openrouter', key: string): LLMProvider {
+    if (id === 'openai') return new OpenAIProvider(key);
     if (id === 'openrouter') {
       // Single OpenRouter provider lives in reviewer-core (shared with the CI
       // runner); inject the PriceBook so cost attribution uses LIVE OpenRouter
       // prices (with the static table as a fallback) rather than a hardcoded one.
-      const key = await this.secrets.get('OPENROUTER_API_KEY');
-      if (!key) throw new ConfigError('OPENROUTER_API_KEY is not configured');
       return new OpenRouterProvider(key, {
         estimateCost: (model, tokensIn, tokensOut) =>
           this.priceBook.estimate(model, tokensIn, tokensOut),
       });
     }
-    const key = await this.secrets.get('ANTHROPIC_API_KEY');
-    if (!key) throw new ConfigError('ANTHROPIC_API_KEY is not configured');
     return new AnthropicProvider(key);
   }
 

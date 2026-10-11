@@ -21,8 +21,10 @@ import { rowsToSettings } from './helpers.js';
  *   POST /settings/test-connection → test a provider key (OpenAI/Anthropic/GitHub)
  *   POST /settings/catalog-test    → test the community skill catalog (SPEC-07)
  *
- * Secrets are NOT stored here — only non-secret prefs. test-connection reads
- * the key via SecretsProvider and does a cheap live call (listModels / GET user).
+ * Secrets are NOT stored here — only non-secret prefs. test-connection does a
+ * cheap live call (listModels / GET user) with the stored key, or — when the UI
+ * sends a new key — with that key on a throwaway client, persisting it through
+ * SecretsProvider only if the call succeeds.
  */
 
 const CatalogTestBody = z.object({
@@ -88,29 +90,32 @@ export default async function settingsRoutes(appBase: FastifyInstance) {
       config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     },
     async (req): Promise<ConnTestResult> => {
-    const { provider, key } = req.body;
-    try {
-      // If the UI supplied a key, persist it (BYO key) before testing so the
-      // test reflects — and the rest of the app can use — the new value.
-      if (key) {
-        if (!container.secrets.set) {
+      const { provider, key } = req.body;
+      try {
+        // A UI-supplied key (BYO key) is verified on a throwaway client FIRST and
+        // persisted only when the live call succeeds — a rejected key must never
+        // overwrite a working one or show up as "configured".
+        if (key && !container.secrets.set) {
           return { provider, ok: false, message: 'Secrets backend is read-only' };
         }
-        await container.secrets.set(SECRET_KEY_BY_PROVIDER[provider], key);
-        container.invalidateSecretCaches();
+        let message: string;
+        if (provider === GITHUB_PROVIDER) {
+          const gh = key ? container.probeClient(provider, key) : await container.github();
+          message = `Connected as @${await gh.currentLogin()}`;
+        } else {
+          const llm = key ? container.probeClient(provider, key) : await container.llm(provider);
+          message = `OK — ${(await llm.listModels()).length} models available`;
+        }
+        if (key) {
+          await container.secrets.set?.(SECRET_KEY_BY_PROVIDER[provider], key);
+          container.invalidateSecretCaches();
+        }
+        return { provider, ok: true, message };
+      } catch (err) {
+        return { provider, ok: false, message: (err as Error).message };
       }
-      if (provider === GITHUB_PROVIDER) {
-        const gh = await container.github();
-        const login = await gh.currentLogin();
-        return { provider, ok: true, message: `Connected as @${login}` };
-      }
-      const llm = await container.llm(provider);
-      const models = await llm.listModels();
-      return { provider, ok: true, message: `OK — ${models.length} models available` };
-    } catch (err) {
-      return { provider, ok: false, message: (err as Error).message };
-    }
-  });
+    },
+  );
 
   // SPEC-07 — resolves + attempts a listing; never modifies the stored
   // setting. `repo` lets the client test an unsaved edit (client AC-34).
