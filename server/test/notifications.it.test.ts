@@ -133,6 +133,16 @@ describe('notifications (PGlite)', () => {
     expect(onFailed.mock.calls[0]![0]).toMatchObject({ workspaceId, error: expect.objectContaining({ message: 'nope' }) });
   });
 
+  it('a failed job nobody awaits does not crash the process (no unhandled rejection)', async () => {
+    const jobs = new JobRunner(handle.db, { retries: 0 });
+    jobs.register('boom', async () => {
+      throw new Error('clone failed');
+    });
+    await jobs.enqueue(workspaceId, 'boom', {}); // fire-and-forget, like every caller
+    await jobs.onIdle();
+    await new Promise((r) => setTimeout(r, 20)); // let a stray rejection surface (vitest fails on it)
+  });
+
   it('boot posts one "interrupted" notification per workspace for work a dead process left running', async () => {
     await app.inject({ method: 'DELETE', url: '/notifications' });
     await handle.db.insert(t.jobs).values([

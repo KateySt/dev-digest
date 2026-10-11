@@ -114,6 +114,11 @@ export class JobRunner {
         throw err;
       }
     }) as Promise<void>;
+    // Callers enqueue fire-and-forget; an unobserved rejection of `done` would
+    // be an unhandledRejection and take the whole API process down (a failed
+    // clone used to kill the desktop app's API). Mark it handled here — anyone
+    // awaiting `done` still gets the rejection.
+    done.catch(() => undefined);
 
     return { id: jobId, done };
   }
