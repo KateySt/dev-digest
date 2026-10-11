@@ -36,13 +36,21 @@ export function jobName(agentSlug: string): string {
 export const FORK_GUARD_IF = 'github.event.pull_request.head.repo.full_name == github.repository';
 /** The only `ref` a checkout step may use: the trusted base commit. */
 export const CHECKOUT_BASE_REF = '${{ github.event.pull_request.base.sha }}';
-/** The base checkout of the export PR has no runner yet; the run step is skipped until it is merged. */
-export const RUNNER_PRESENT_IF = "hashFiles('.devdigest/runner.mjs') != ''";
-export const RUNNER_MISSING_IF = "hashFiles('.devdigest/runner.mjs') == ''";
+/**
+ * The base checkout of an export PR lacks the runner (first export) or this
+ * agent's manifest (an agent added to an already-installed repo); the run step
+ * is skipped until the PR is merged.
+ */
+export function agentInstalledIf(agentSlug: string): string {
+  return `hashFiles('${RUNNER_PATH}') != '' && hashFiles('${manifestPath(agentSlug)}') != ''`;
+}
+export function agentMissingIf(agentSlug: string): string {
+  return `hashFiles('${RUNNER_PATH}') == '' || hashFiles('${manifestPath(agentSlug)}') == ''`;
+}
 
 export const MANIFEST_VERSION = 1;
 /** Bumped whenever the generated workflow's shape changes. */
-export const WORKFLOW_VERSION = 1;
+export const WORKFLOW_VERSION = 2;
 
 export const PR_TITLE = 'Add DevDigest CI review';
 export const COMMIT_MESSAGE = 'Add DevDigest CI review';

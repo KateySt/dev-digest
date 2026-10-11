@@ -14,11 +14,13 @@ import {
   WORKFLOW_VERSION,
   CHECKOUT_BASE_REF,
   FORK_GUARD_IF,
-  RUNNER_MISSING_IF,
-  RUNNER_PRESENT_IF,
+  RUNNER_PATH,
+  agentInstalledIf,
+  agentMissingIf,
   artifactName,
   jobId,
   jobName,
+  manifestPath,
 } from './constants.js';
 
 /**
@@ -172,14 +174,14 @@ export function buildWorkflowYaml(input: { agents: WorkflowAgent[]; triggers: Ci
         },
         { uses: PINNED_ACTIONS.setupNode, with: { 'node-version': 20 } },
         {
-          // The export PR's own base checkout has no runner yet — skip, don't fail.
-          name: 'Runner not installed yet',
-          if: RUNNER_MISSING_IF,
-          run: 'echo "::notice::.devdigest/runner.mjs is not on the base branch yet; merge the DevDigest CI PR to enable reviews."',
+          // The export PR's own base checkout has no runner/manifest yet — skip, don't fail.
+          name: 'Agent not installed yet',
+          if: agentMissingIf(agent.slug),
+          run: `echo "::notice::${RUNNER_PATH} or ${manifestPath(agent.slug)} is not on the base branch yet; merge the DevDigest CI PR to enable reviews."`,
         },
         {
           name: 'Run DevDigest review',
-          if: RUNNER_PRESENT_IF,
+          if: agentInstalledIf(agent.slug),
           run: 'node .devdigest/runner.mjs',
           env: {
             DEVDIGEST_AGENT: agent.slug,
