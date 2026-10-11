@@ -40,6 +40,22 @@ export function toNotificationDto(row: NotificationRow): NotificationDto {
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
+const MAX_ERROR_CHARS = 180;
+
+/**
+ * One readable line out of a raw error: tools like git dump multi-line output
+ * ("Cloning into 'C:\…'…" + "remote: …" + "fatal: …"). Prefer the `fatal:` /
+ * `error:` line (prefix dropped), else the last non-empty line; then cap it.
+ */
+export function summarizeError(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+  const tagged = lines.find((l) => /^(fatal|error):/i.test(l));
+  const line = (tagged ?? lines[lines.length - 1]!).replace(/^(fatal|error):\s*/i, '');
+  return line.length > MAX_ERROR_CHARS ? `${line.slice(0, MAX_ERROR_CHARS - 1)}…` : line;
+}
+
 // ---- builders: one per source, pure, so the wording is unit-tested ----------
 
 export interface ReviewRunOutcome {
@@ -74,7 +90,10 @@ export function reviewGroupNotification(input: {
   const pr = `PR #${input.prNumber}`;
 
   if (done.length === 0) {
-    const reason = runs.length === 1 ? `${runs[0]!.agentName}: ${runs[0]!.error ?? 'failed'}` : `${plural(runs.length, 'agent')} failed`;
+    const reason =
+      runs.length === 1
+        ? `${runs[0]!.agentName}: ${summarizeError(runs[0]!.error) ?? 'failed'}`
+        : `${plural(runs.length, 'agent')} failed`;
     return { kind: multi ? 'multi_agent' : 'review', status: 'error', title: `${label} failed · ${pr}`, body: `${input.repoName} — ${reason}`, href };
   }
   const findings = done.reduce((sum, r) => sum + (r.findingsCount ?? 0), 0);
@@ -102,7 +121,7 @@ export function evalSuiteNotification(input: {
   const href = input.ownerKind === 'agent' ? `/eval/${input.ownerId}` : `/eval/skills/${input.ownerId}`;
   const what = `${input.isDraft ? 'Draft eval' : 'Eval'} · ${input.ownerName}`;
   if (input.status === 'failed') {
-    return { kind: 'eval', status: 'error', title: `${what} failed`, body: input.failureReason, href };
+    return { kind: 'eval', status: 'error', title: `${what} failed`, body: summarizeError(input.failureReason), href };
   }
   const recall = input.recall !== null ? ` · recall ${input.recall.toFixed(2)}` : '';
   return { kind: 'eval', status: 'success', title: `${what} done`, body: `${input.passed}/${input.evaluated} passed${recall}`, href };
@@ -110,7 +129,7 @@ export function evalSuiteNotification(input: {
 
 export function cloneNotification(input: { repoId: string; repoName: string; error?: string | null }): NewNotification {
   return input.error
-    ? { kind: 'clone', status: 'error', title: `Clone failed · ${input.repoName}`, body: input.error, href: '/onboarding' }
+    ? { kind: 'clone', status: 'error', title: `Clone failed · ${input.repoName}`, body: summarizeError(input.error), href: '/onboarding' }
     : { kind: 'clone', status: 'success', title: `Repository ready · ${input.repoName}`, body: 'Cloned — pull requests can be reviewed now', href: `/repos/${input.repoId}/pulls` };
 }
 
@@ -123,7 +142,7 @@ export function indexNotification(input: {
 }): NewNotification {
   const href = `/repos/${input.repoId}/context`;
   if (input.status === 'failed') {
-    return { kind: 'index', status: 'error', title: `Indexing failed · ${input.repoName}`, body: input.reason ?? null, href };
+    return { kind: 'index', status: 'error', title: `Indexing failed · ${input.repoName}`, body: summarizeError(input.reason), href };
   }
   const files = plural(input.filesIndexed, 'file');
   return input.status === 'full'
@@ -134,7 +153,7 @@ export function indexNotification(input: {
 export function onboardingNotification(input: { repoId: string; repoName: string; error?: string | null }): NewNotification {
   const href = `/repos/${input.repoId}/onboarding`;
   return input.error
-    ? { kind: 'onboarding', status: 'error', title: `Onboarding tour failed · ${input.repoName}`, body: input.error, href }
+    ? { kind: 'onboarding', status: 'error', title: `Onboarding tour failed · ${input.repoName}`, body: summarizeError(input.error), href }
     : { kind: 'onboarding', status: 'success', title: `Onboarding tour ready · ${input.repoName}`, body: 'Open it to walk through the codebase', href };
 }
 

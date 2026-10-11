@@ -7,6 +7,7 @@ import {
   interruptedNotification,
   onboardingNotification,
   reviewGroupNotification,
+  summarizeError,
   type ReviewRunOutcome,
 } from './helpers.js';
 
@@ -112,5 +113,23 @@ describe('other sources', () => {
       ['w1', 2],
       ['w2', 1],
     ]);
+  });
+});
+
+describe('summarizeError', () => {
+  it('keeps the fatal line of multi-line git output, without the prefix', () => {
+    const raw = [
+      "Cloning into 'C:\\tmp\\x'...",
+      'remote: Invalid username or token.',
+      "fatal: Authentication failed for 'https://github.com/a/b/'",
+      '',
+    ].join('\n');
+    expect(summarizeError(raw)).toBe("Authentication failed for 'https://github.com/a/b/'");
+  });
+  it('falls back to the last non-empty line, caps length, handles empty', () => {
+    expect(summarizeError('first\r\nlast line\n\n')).toBe('last line');
+    expect(summarizeError('x'.repeat(500))!.length).toBe(180);
+    expect(summarizeError('')).toBeNull();
+    expect(summarizeError(null)).toBeNull();
   });
 });
