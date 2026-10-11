@@ -23,6 +23,7 @@ import evalAgentMessages from "../../messages/en/evalAgent.json";
 import evalDashboardMessages from "../../messages/en/evalDashboard.json";
 import evalMetricsMessages from "../../messages/en/evalMetrics.json";
 import evalSkillMessages from "../../messages/en/evalSkill.json";
+import firstRunMessages from "../../messages/en/firstRun.json";
 import prReviewMessages from "../../messages/en/prReview.json";
 import shellMessages from "../../messages/en/shell.json";
 import skillsMessages from "../../messages/en/skills.json";
@@ -33,6 +34,7 @@ export const ALL_MESSAGES = {
   evalDashboard: evalDashboardMessages,
   evalMetrics: evalMetricsMessages,
   evalSkill: evalSkillMessages,
+  firstRun: firstRunMessages,
   prReview: prReviewMessages,
   shell: shellMessages,
   skills: skillsMessages,

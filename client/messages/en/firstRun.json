@@ -1,0 +1,44 @@
+{
+  "steps": {
+    "llm": "LLM key",
+    "github": "GitHub PAT",
+    "repo": "Add repo"
+  },
+  "footer": "Step {current} of {total} · You can change keys later in Settings",
+  "back": "Back",
+  "continue": "Continue",
+  "verify": "Verify",
+  "verifying": "Verifying…",
+  "whereToGet": "Where to get your key",
+  "apiKey": "API key",
+  "storedLocally": "Stored locally on your machine — never uploaded.",
+  "connected": "Connected",
+  "configuredHint": "A key is already configured. Paste a new one to replace it, or continue.",
+  "verified": "Connection verified · {message} · {ms}ms",
+  "testFailed": "Could not verify the key",
+  "llm": {
+    "title": "Connect your model provider",
+    "body": "DevDigest uses your own key for every model call. Nothing runs through our servers.",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "openrouter": "OpenRouter"
+    }
+  },
+  "github": {
+    "title": "Connect GitHub",
+    "body": "A fine-grained personal access token lets DevDigest read pull requests and post review comments.",
+    "label": "Personal access token",
+    "scopes": "Contents (read), Pull requests (read+write), Metadata (read), Actions (read)."
+  },
+  "repo": {
+    "title": "Add your first repository",
+    "body": "Paste a GitHub repository URL — DevDigest clones it locally and imports open PRs.",
+    "label": "Repository URL",
+    "hint": "e.g. https://github.com/acme/payments-api",
+    "add": "Add repository",
+    "adding": "Cloning…",
+    "skip": "Skip for now",
+    "failed": "Could not add repository"
+  }
+}

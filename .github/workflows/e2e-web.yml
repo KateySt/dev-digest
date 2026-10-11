@@ -38,6 +38,11 @@ env:
   DATABASE_URL: postgres://devdigest:devdigest@localhost:5432/devdigest
   NEXT_PUBLIC_API_BASE: http://localhost:3001
   E2E_BASE_URL: http://localhost:3000
+  # Placeholder keys: the studio sends key-less installs to the /first-run
+  # wizard. The flows never call a model or GitHub, so any non-empty value
+  # works — it only has to make /settings/secrets-status report "configured".
+  OPENAI_API_KEY: e2e-placeholder
+  GITHUB_TOKEN: e2e-placeholder
 
 jobs:
   e2e:

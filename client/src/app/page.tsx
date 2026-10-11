@@ -1,22 +1,28 @@
-/* Root — sends the user to the first repo's PR list, or onboarding if no repos. */
+/* Root — sends the user to the first-run wizard while keys are missing (the
+   AppShell guard does the redirect), else to the first repo's PR list, or
+   onboarding if no repos. */
 "use client";
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useRepos } from "../lib/hooks";
+import { useRepos, useSetupState } from "../lib/hooks";
 import { AppShell } from "../components/app-shell";
 import { PageContainer } from "../components/page-shell";
 import { EmptyState, Button, Skeleton } from "@devdigest/ui";
 
 export default function HomePage() {
   const router = useRouter();
-  const { data: repos, isLoading, isError } = useRepos();
+  const { data: repos, isLoading: reposLoading, isError } = useRepos();
+  const setup = useSetupState();
+  // Hold the skeleton until the setup check settles — otherwise the empty
+  // state flashes before the guard redirects to /first-run.
+  const isLoading = reposLoading || setup.isLoading || setup.state?.needsSetup === true;
 
   React.useEffect(() => {
-    if (repos && repos.length > 0) {
+    if (!isLoading && repos && repos.length > 0) {
       router.replace(`/repos/${repos[0]!.id}/pulls`);
     }
-  }, [repos, router]);
+  }, [isLoading, repos, router]);
 
   return (
     <AppShell crumb={[{ label: "DevDigest" }]}>
