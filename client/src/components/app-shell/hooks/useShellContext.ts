@@ -9,6 +9,7 @@ import { useTheme } from "../../../lib/contexts/theme";
 import { useActiveRepo } from "../../../lib/contexts/repoContext";
 import { usePulls, useDeleteRepo } from "../../../lib/hooks";
 import { AccountMenu } from "@/components/account-menu";
+import { NotificationCenter } from "@/components/notification-center";
 import { WindowControls } from "@/components/window-chrome";
 import { MAC_TRAFFIC_LIGHTS_INSET, useDesktop } from "@/lib/desktop";
 import { activeKeyFor, toShellRepo } from "../helpers";
@@ -78,6 +79,7 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
       // Sidebar badge = PRs that still NEED review, not the total PR count.
       // 0 → undefined so the badge hides entirely when nothing needs review.
       prCount: pulls?.filter((p) => p.status === "needs_review").length || undefined,
+      notifications: React.createElement(NotificationCenter),
       account: React.createElement(AccountMenu),
       // Desktop app: the top bar is the window's title bar.
       windowControls: desktop ? React.createElement(WindowControls) : undefined,

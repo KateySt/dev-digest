@@ -34,6 +34,8 @@ export interface ShellContext {
   onRemoveRepo?: (id: string) => void;
   onRefresh?: () => void;
   prCount?: number;
+  /** Replaces the decorative bell in the top bar (notification center). */
+  notifications?: React.ReactNode;
   /** Replaces the placeholder avatar at the right of the top bar (account menu). */
   account?: React.ReactNode;
   /** Desktop app: window controls rendered flush at the far right of the top bar. */
