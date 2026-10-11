@@ -167,7 +167,7 @@ export class ReviewService {
   }
 
   /** Reap runs left 'queued'/'running' by a previous (now-dead) process. Called on boot. */
-  async reapStaleRuns(): Promise<number> {
+  async reapStaleRuns(): Promise<string[]> {
     return this.repo.reapStaleRunningRuns();
   }
 
@@ -231,7 +231,10 @@ export class ReviewService {
     // are persisted as each agent finishes and the client refetches on SSE done.
     // executeRuns enqueues synchronously, so queue positions exist on return.
     void this.executor
-      .executeRuns(workspaceId, pull, repo, jobs, logger, { groupKey: multiAgentRunId ?? jobs[0]?.runId ?? prId })
+      .executeRuns(workspaceId, pull, repo, jobs, logger, {
+        groupKey: multiAgentRunId ?? jobs[0]?.runId ?? prId,
+        multiAgentRunId,
+      })
       .catch((err) => {
         logger?.error({ prId, err: (err as Error).message }, 'review: background execution crashed');
       });

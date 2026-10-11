@@ -21,6 +21,7 @@ import commits from './commits/routes.js';
 import history from './history/routes.js';
 import onboarding from './onboarding/routes.js';
 import multiAgent from './multi-agent/routes.js';
+import notifications from './notifications/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -58,4 +59,5 @@ export const modules: Record<string, FastifyPluginAsync> = {
   history,
   onboarding,
   multiAgent,
+  notifications,
 };

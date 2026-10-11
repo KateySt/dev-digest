@@ -3,6 +3,7 @@ import { type Repo, type CommunityCatalogListing } from '@devdigest/shared';
 import { NotFoundError } from '../../platform/errors.js';
 import { RepoRepository } from './repository.js';
 import { parseRepoUrl, withGitHubToken, toRepoDto } from './helpers.js';
+import { cloneNotification } from '../notifications/helpers.js';
 import {
   CLONE_JOB_KIND,
   CLONE_DEPTH,
@@ -43,9 +44,23 @@ export class RepoService {
    * then persists the resulting path + last_polled_at.
    */
   registerCloneJobHandler(): void {
-    this.container.jobs.register(CLONE_JOB_KIND, async (payload) => {
-      await this.runCloneJob(payload as CloneJobPayload);
-    });
+    const notifyClone = (workspaceId: string, payload: unknown, error: string | null) => {
+      const { repoId, owner, name } = payload as CloneJobPayload;
+      return this.container.notifications.notify(
+        workspaceId,
+        cloneNotification({ repoId, repoName: `${owner}/${name}`, error }),
+      );
+    };
+    this.container.jobs.register(
+      CLONE_JOB_KIND,
+      async (payload) => {
+        await this.runCloneJob(payload as CloneJobPayload);
+      },
+      {
+        onDone: ({ workspaceId, payload }) => notifyClone(workspaceId, payload, null),
+        onFailed: ({ workspaceId, payload, error }) => notifyClone(workspaceId, payload, error.message),
+      },
+    );
   }
 
   async runCloneJob(payload: CloneJobPayload): Promise<void> {

@@ -18,6 +18,7 @@ import { AppError } from './platform/errors.js';
 import { modules } from './modules/index.js';
 import { ReviewService } from './modules/reviews/service.js';
 import { EvalService } from './modules/eval/service.js';
+import { countBy, interruptedNotification } from './modules/notifications/helpers.js';
 
 // Attach the DI container to every request/instance.
 declare module 'fastify' {
@@ -72,9 +73,13 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // Reap jobs left queued/running by a dead process (the queue is in-memory),
   // so e.g. onboarding generation isn't deduped onto an orphan forever
   // (S-AC-28). Awaited before serving, for the same reason as the reapers below.
+  // Workspace of every operation the reapers fail — one "interrupted"
+  // notification per workspace is posted once all three have run.
+  const interrupted: string[] = [];
   try {
     const reaped = await container.jobs.reapOrphaned();
-    if (reaped > 0) app.log.info({ reaped }, 'reaped orphaned queued/running jobs on boot');
+    interrupted.push(...reaped);
+    if (reaped.length > 0) app.log.info({ reaped: reaped.length }, 'reaped orphaned queued/running jobs on boot');
   } catch (err) {
     app.log.warn({ err: (err as Error).message }, 'orphaned-job reaping failed (non-fatal)');
   }
@@ -91,7 +96,8 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // would need per-instance scoping / heartbeats (not this app's deployment).
   try {
     const reaped = await new ReviewService(container).reapStaleRuns();
-    if (reaped > 0) app.log.info({ reaped }, 'reaped stale running agent_runs on boot');
+    interrupted.push(...reaped);
+    if (reaped.length > 0) app.log.info({ reaped: reaped.length }, 'reaped stale running agent_runs on boot');
   } catch (err) {
     app.log.warn({ err: (err as Error).message }, 'stale-run reaping failed (non-fatal)');
   }
@@ -100,9 +106,13 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // process. Fail it ("interrupted") so the per-agent run lock is released.
   try {
     const reaped = await new EvalService(container).reapStaleSuiteRuns();
-    if (reaped > 0) app.log.info({ reaped }, 'reaped stale running eval suite runs on boot');
+    interrupted.push(...reaped);
+    if (reaped.length > 0) app.log.info({ reaped: reaped.length }, 'reaped stale running eval suite runs on boot');
   } catch (err) {
     app.log.warn({ err: (err as Error).message }, 'stale eval-run reaping failed (non-fatal)');
+  }
+  for (const [workspaceId, count] of countBy(interrupted)) {
+    await container.notifications.notify(workspaceId, interruptedNotification(count));
   }
 
   // Security headers (X-Content-Type-Options, X-Frame-Options, …). The API

@@ -41,6 +41,7 @@ import {
   READING_PATH_SIZE,
 } from './constants.js';
 import { ONBOARDING_SYSTEM_PROMPT } from './prompts.js';
+import { onboardingNotification } from '../notifications/helpers.js';
 
 /**
  * OnboardingService — application layer. EVERY I/O call in this module lives
@@ -149,16 +150,37 @@ export class OnboardingService {
 
   private async generate(repoId: string, workspaceId: string, jobId: string): Promise<void> {
     try {
-      await this.doGenerate(repoId, workspaceId, jobId);
+      const outcome = await this.doGenerate(repoId, workspaceId, jobId);
+      if (outcome === 'written') await this.notifyTour(workspaceId, repoId, null);
+      if (outcome === 'deadline') {
+        await this.notifyTour(workspaceId, repoId, 'Generation took too long — the previous tour was kept. Try again.');
+      }
     } catch (err) {
       // Never throw out of this handler — a throw here would hit
       // `withRetry` (platform/jobs.ts), which could re-invoke the whole
-      // handler including a second model call.
+      // handler including a second model call. The job row still ends `done`,
+      // so the notification is the only place this failure surfaces.
       console.error(`[onboarding] job=${jobId} repo=${repoId} generation failed unexpectedly`, err);
+      await this.notifyTour(workspaceId, repoId, (err as Error).message).catch(() => undefined);
     }
   }
 
-  private async doGenerate(repoId: string, workspaceId: string, jobId: string): Promise<void> {
+  private async notifyTour(workspaceId: string, repoId: string, error: string | null): Promise<void> {
+    const repo = await this.repo.getRepoBasics(repoId);
+    if (!repo) return;
+    await this.container.notifications.notify(
+      workspaceId,
+      onboardingNotification({ repoId, repoName: repo.fullName, error }),
+    );
+  }
+
+  /** `written` — tour persisted; `deadline` — over budget, write skipped;
+   *  `noop` — already done by this job, or nothing to generate from. */
+  private async doGenerate(
+    repoId: string,
+    workspaceId: string,
+    jobId: string,
+  ): Promise<'written' | 'deadline' | 'noop'> {
     const startedAt = Date.now();
 
     // Job-scoped idempotency: if THIS job already completed on a prior
@@ -166,10 +188,10 @@ export class OnboardingService {
     // retry), don't call the model again — just return.
     const existingJson = await this.repo.getTourJson(repoId);
     const existingTour = existingJson ? parseTourJson(existingJson) : null;
-    if (existingTour?.generated_by_job_id === jobId) return;
+    if (existingTour?.generated_by_job_id === jobId) return 'noop';
 
     const repo = await this.repo.getRepoBasics(repoId);
-    if (!repo || !repo.clonePath) return; // nothing to do — enqueue already refuses this case
+    if (!repo || !repo.clonePath) return 'noop'; // nothing to do — enqueue already refuses this case
     const clonePath = repo.clonePath;
 
     // --- Step 5: index-state facts (I/O: repoIntel facade) ---
@@ -346,9 +368,10 @@ export class OnboardingService {
     // tour untouched (S-AC-7). The abandoned model call (if any) still runs
     // to completion server-side and is still billed — a known, accepted
     // residual cost; no cancellation exists in this codebase's LLM port.
-    if (Date.now() - startedAt > GENERATION_DEADLINE_MS) return;
+    if (Date.now() - startedAt > GENERATION_DEADLINE_MS) return 'deadline';
 
     await this.repo.upsertTour(repoId, tour);
+    return 'written';
   }
 
   // -------------------------------------------------------------------------

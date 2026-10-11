@@ -23,6 +23,7 @@ import { isScanBlocking } from '../skills/helpers.js';
 import { IntentService } from '../intent/service.js';
 import { renderIntentDigest } from '../intent/helpers.js';
 import { ProjectContextService } from '../project-context/service.js';
+import { reviewGroupNotification } from '../notifications/helpers.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -95,7 +96,7 @@ export class ReviewRunExecutor {
     repo: typeof schema.repos.$inferSelect,
     jobs: { agent: AgentRow; runId: string }[],
     logger?: Logger,
-    opts: { groupKey?: string } = {},
+    opts: { groupKey?: string; multiAgentRunId?: string | null } = {},
   ): Promise<void> {
     const queue = this.container.reviewQueue;
     const groupKey = opts.groupKey ?? jobs[0]?.runId ?? pull.id;
@@ -185,7 +186,29 @@ export class ReviewRunExecutor {
         },
       });
     });
-    return Promise.all(settled).then(() => undefined);
+    return Promise.all(settled).then(() =>
+      this.notifyGroupDone(workspaceId, pull, repo, jobs.map((j) => j.runId), opts.multiAgentRunId),
+    );
+  }
+
+  /** One notification per finished group (single agent, multi-agent, or one PR
+   *  of "Review all"), built from the runs' final rows. Never throws. */
+  private async notifyGroupDone(
+    workspaceId: string,
+    pull: PullRow,
+    repo: typeof schema.repos.$inferSelect,
+    runIds: string[],
+    multiAgentRunId?: string | null,
+  ): Promise<void> {
+    try {
+      const runs = await this.repo.runOutcomes(runIds);
+      await this.container.notifications.notify(
+        workspaceId,
+        reviewGroupNotification({ repoId: repo.id, repoName: repo.fullName, prNumber: pull.number, multiAgentRunId, runs }),
+      );
+    } catch {
+      // A missing notification must never turn a finished review into a failure.
+    }
   }
 
   /** One agent's job inside a group; failures are logged here, never thrown. */
