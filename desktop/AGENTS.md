@@ -42,4 +42,6 @@ window loads the Next.js studio served by a child process.
 
 ## Gotchas
 
-Read `INSIGHTS.md` before starting work here.
+Read `INSIGHTS.md` before starting work here. Load the
+`electron-best-practices` skill before changing anything in `src/` or
+`electron-builder.yml` — its E1–E5 list is the set of approved deviations.
