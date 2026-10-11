@@ -29,13 +29,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Create draft (no-op if the tag already has a release)
+      # A release published from the GitHub UI creates the tag itself, so it
+      # already exists here as a non-draft. electron-builder (releaseType: draft)
+      # then silently skips every upload — turn it back into a draft first.
+      - name: Create draft (or re-draft a release published by hand)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "DevDigest $TAG" --generate-notes
+          if IS_DRAFT=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>/dev/null); then
+            [[ "$IS_DRAFT" == true ]] || gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=true
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "DevDigest $TAG" --generate-notes
+          fi
 
   build:
     name: build (${{ matrix.os }})
@@ -133,6 +139,18 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
+      # electron-builder logs a skipped upload as a warning and exits 0 — never
+      # publish a release installed apps would 404 on.
+      - name: Check the update manifests were uploaded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ASSETS=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
+          for f in latest.yml latest-mac.yml; do
+            grep -qx "$f" <<<"$ASSETS" || { echo "::error::$f missing from $TAG"; exit 1; }
+          done
+
       - name: Publish the draft (pre-release for tags like v1.2.0-beta.1)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
