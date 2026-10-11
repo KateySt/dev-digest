@@ -41,6 +41,10 @@ export DATABASE_URL="postgres://${PG_USER}:${PG_PASS}@127.0.0.1:${PG_PORT}/${PG_
 export API_PORT WEB_PORT
 export NEXT_PUBLIC_API_BASE="http://localhost:${API_PORT}"
 export E2E_BASE_URL="http://localhost:${WEB_PORT}"
+# Placeholder keys so the studio skips the /first-run wizard (it gates on key
+# presence only); the flows never call a model or GitHub. Real keys win.
+export OPENAI_API_KEY="${OPENAI_API_KEY:-e2e-placeholder}"
+export GITHUB_TOKEN="${GITHUB_TOKEN:-e2e-placeholder}"
 
 log()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }

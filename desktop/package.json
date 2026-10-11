@@ -1,0 +1,29 @@
+{
+  "name": "@devdigest/desktop",
+  "productName": "DevDigest",
+  "version": "0.0.0",
+  "description": "DevDigest desktop app (Electron shell around the API + studio)",
+  "author": "KateySt",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "stage": "node scripts/stage.mjs",
+    "start": "pnpm build && electron .",
+    "dist": "pnpm build && electron-builder --publish never",
+    "release": "pnpm build && electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
+    "semver": "^7.8.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.0",
+    "@types/semver": "^7.7.1",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.9.3"
+  }
+}

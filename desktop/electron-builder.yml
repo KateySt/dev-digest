@@ -1,0 +1,58 @@
+appId: dev.devdigest.app
+productName: DevDigest
+copyright: Copyright © KateySt
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - package.json
+
+# API + studio run as utilityProcess children from real files, outside app.asar.
+# Staged by scripts/stage.mjs. extraResources always drops node_modules, so
+# scripts/after-pack.cjs copies them (this OS's natives/wasm, Next's deps).
+extraResources:
+  - from: resources/server
+    to: server
+  - from: resources/web
+    to: web
+afterPack: scripts/after-pack.cjs
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Unsigned build: no certificate, SmartScreen shows "More info → Run anyway".
+  # Leaving publisherName unset also turns off electron-updater's signature check.
+  signAndEditExecutable: false
+
+nsis:
+  # Per-user install: auto-updates install silently without an admin prompt.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  artifactName: DevDigest-Setup-${version}.${ext}
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64]
+  category: public.app-category.developer-tools
+  # No paid Apple Developer ID. "-" = ad-hoc signature: free, and required —
+  # Apple Silicon refuses to launch an arm64 app with no signature at all
+  # ("is damaged"). Gatekeeper still asks once: right-click → Open.
+  identity: "-"
+  # Hardened runtime only matters for notarization (paid); with an ad-hoc
+  # signature it would reject the npm-signed native addon (@ast-grep/napi).
+  hardenedRuntime: false
+  artifactName: DevDigest-${version}-${arch}.${ext}
+
+publish:
+  provider: github
+  owner: KateySt
+  repo: dev-digest
+  # The workflow creates a draft, uploads both platforms, then publishes it.
+  releaseType: draft

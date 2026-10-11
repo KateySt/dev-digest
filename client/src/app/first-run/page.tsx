@@ -1,14 +1,10 @@
-import { FeaturePlaceholder } from "@/components/page-shell";
+/* First-run setup route — /first-run. Thin wrapper; the wizard lives in
+   _components/FirstRunWizard. The app sends users here while keys are missing
+   (see useSetupGuard in components/app-shell). */
+"use client";
 
-/* Route: /first-run. Nav entry exists per design; screen not built yet —
-   see root AGENTS.md course-template convention (FeaturePlaceholder). */
+import { FirstRunWizard } from "./_components/FirstRunWizard";
+
 export default function FirstRunSetupPage() {
-  return (
-    <FeaturePlaceholder
-      crumb={[{ label: "First-run setup" }]}
-      title="First-run setup"
-      icon="Play"
-      owner="a future iteration"
-    />
-  );
+  return <FirstRunWizard />;
 }

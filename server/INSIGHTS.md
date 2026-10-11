@@ -14,6 +14,23 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-11 — Migrations: unjournaled files and multi-statement chunks
+
+- **A `.sql` file in `src/db/migrations/` that is not in `meta/_journal.json`
+  never runs.** `0009_fantastic_rogue`, `0010_skill_threat_level` and
+  `0011_loud_banshee` are such orphans (they were applied by hand on an old dev
+  DB). Their columns also come from journaled migrations, except for
+  `agents.attached_doc_paths`: fresh DBs missed it and `db:seed` failed until
+  `0022_productive_daimon_hellstrom` re-added it. `test/pglite.it.test.ts` now fails
+  when a schema column is missing after migrating. Always add migrations with
+  `pnpm db:generate` (or `--custom`), never by dropping a file into the folder.
+- **Every statement in a migration needs its own `--> statement-breakpoint`.**
+  postgres-js runs a multi-statement chunk without complaint, but PGlite's
+  prepared statements reject it (`cannot insert multiple commands into a
+  prepared statement`). `0013_fine_jamie_braddock` has three ALTERs in one
+  chunk, which is why the desktop DB uses `runPgliteMigrations` (`pg.exec`)
+  instead of drizzle's pglite migrator.
+
 ### 2026-10-07 — Skill evals (SPEC-08): three gotchas worth knowing
 
 - **Service-level transaction is an accepted exception.** `SkillsService.delete`

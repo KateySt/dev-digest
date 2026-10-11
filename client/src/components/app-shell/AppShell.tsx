@@ -1,11 +1,12 @@
 /* AppShell.tsx — thin orchestrator: wires @devdigest/ui AppFrame to the command
-   palette, shortcuts help, global keyboard shortcuts, and the shell context.
+   palette, shortcuts help, global keyboard shortcuts, the first-run setup
+   guard, and the shell context.
    All concerns live in ./hooks; overlay open/close is local view state. */
 "use client";
 
 import React from "react";
 import { AppFrame, CommandPalette, ShortcutsHelp, type Crumb } from "@devdigest/ui";
-import { useGlobalShortcuts, useShellCommands, useShellContext } from "./hooks";
+import { useGlobalShortcuts, useSetupGuard, useShellCommands, useShellContext } from "./hooks";
 
 export function AppShell({ children, crumb }: { children: React.ReactNode; crumb?: Crumb[] }) {
   const [paletteOpen, setPaletteOpen] = React.useState(false);
@@ -15,6 +16,7 @@ export function AppShell({ children, crumb }: { children: React.ReactNode; crumb
   const openHelp = React.useCallback(() => setHelpOpen(true), []);
   const closeHelp = React.useCallback(() => setHelpOpen(false), []);
 
+  useSetupGuard();
   useGlobalShortcuts({ onOpenPalette: openPalette, onOpenHelp: openHelp });
   const commands = useShellCommands();
   const ctx = useShellContext({ onOpenCommandPalette: openPalette });

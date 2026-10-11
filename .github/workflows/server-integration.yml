@@ -10,16 +10,20 @@
 # don't provide one).
 name: server integration
 
+# DISABLED for now — only release.yml runs automatically. To re-enable,
+# uncomment the original `on:` block below and delete the `on:` after it.
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'server/**'
+#       - '.github/workflows/server-integration.yml'
+#   pull_request:
+#     paths:
+#       - 'server/**'
+#       - '.github/workflows/server-integration.yml'
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'server/**'
-      - '.github/workflows/server-integration.yml'
-  pull_request:
-    paths:
-      - 'server/**'
-      - '.github/workflows/server-integration.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

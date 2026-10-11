@@ -8,20 +8,24 @@
 # serves the seeded read-only data the specs exercise — no LLM is called.
 name: e2e web
 
+# DISABLED for now — only release.yml runs automatically. To re-enable,
+# uncomment the original `on:` block below and delete the `on:` after it.
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'client/**'
+#       - 'server/**'
+#       - 'e2e/**'
+#       - '.github/workflows/e2e-web.yml'
+#   pull_request:
+#     paths:
+#       - 'client/**'
+#       - 'server/**'
+#       - 'e2e/**'
+#       - '.github/workflows/e2e-web.yml'
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'client/**'
-      - 'server/**'
-      - 'e2e/**'
-      - '.github/workflows/e2e-web.yml'
-  pull_request:
-    paths:
-      - 'client/**'
-      - 'server/**'
-      - 'e2e/**'
-      - '.github/workflows/e2e-web.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -34,6 +38,11 @@ env:
   DATABASE_URL: postgres://devdigest:devdigest@localhost:5432/devdigest
   NEXT_PUBLIC_API_BASE: http://localhost:3001
   E2E_BASE_URL: http://localhost:3000
+  # Placeholder keys: the studio sends key-less installs to the /first-run
+  # wizard. The flows never call a model or GitHub, so any non-empty value
+  # works — it only has to make /settings/secrets-status report "configured".
+  OPENAI_API_KEY: e2e-placeholder
+  GITHUB_TOKEN: e2e-placeholder
 
 jobs:
   e2e:

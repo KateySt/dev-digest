@@ -15,6 +15,7 @@ aliases, not published modules):
 | `client/`        | `@devdigest/web`            | Next.js 15 web app (the studio)                       | 3000 |
 | `reviewer-core/` | `@devdigest/reviewer-core`  | Pure review engine: diff → prompt → LLM → findings    | —    |
 | `e2e/`           | `@devdigest/e2e`            | Deterministic browser e2e (agent-browser)             | —    |
+| `desktop/`       | `@devdigest/desktop`        | Electron app (Windows + macOS), embedded PGlite       | 43100/43101 |
 | `server/src/vendor/shared` | `@devdigest/shared` | Zod contracts shared across every package             | —    |
 
 `repo-intel` (the codebase indexer that powers the **Indexed** badge and feeds
@@ -61,7 +62,8 @@ Each package has its own README with deeper diagrams:
 [`client`](client/README.md) (UI route map) ·
 [`server`](server/README.md) (API map) ·
 [`reviewer-core`](reviewer-core/README.md) (review pipeline) ·
-[`e2e`](e2e/README.md).
+[`e2e`](e2e/README.md) ·
+[`desktop`](desktop/README.md) (Electron app + release flow).
 
 ## What works on day 1
 
@@ -87,6 +89,15 @@ These are intentionally **not** in the starter — each lesson adds one back:
 | L06 | Eval pipeline · Secret/Phantom gates · Plan Verifier · Export to CI |
 | L07 | Multi-agent review · Run Trace / Live Log · Persistent memory · per-agent stats |
 | L08 | Plugin export/import · Agent performance dashboard · weekly digest |
+
+## Desktop app
+
+Prefer an installer to the dev setup? Download `DevDigest-Setup-<v>.exe`
+(Windows, auto-updates) or `DevDigest-<v>-arm64.dmg` (macOS) from
+[Releases](https://github.com/KateySt/dev-digest/releases). It needs no Docker,
+because the database is embedded. A release is cut by pushing a tag
+(`git tag v0.2.0 && git push origin v0.2.0`); see
+[`desktop/README.md`](desktop/README.md).
 
 ## Prerequisites
 

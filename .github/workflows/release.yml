@@ -1,0 +1,142 @@
+# Desktop release — builds the Electron app (desktop/) on a version tag and
+# publishes the installers to GitHub Releases:
+#   Windows: DevDigest-Setup-<v>.exe + latest.yml (electron-updater auto-update)
+#   macOS:   DevDigest-<v>-arm64.dmg (unsigned; the app links here for updates)
+#
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# Flow: draft release → both platforms upload into it → publish. The draft keeps
+# latest.yml invisible to installed apps until every asset is there.
+# workflow_dispatch = dry run: builds both platforms, uploads them as workflow
+# artifacts, publishes nothing.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: create draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft (no-op if the tag already has a release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "DevDigest $TAG" --generate-notes
+
+  build:
+    name: build (${{ matrix.os }})
+    needs: draft
+    # Run for dispatch too, where `draft` is skipped.
+    if: always() && (needs.draft.result == 'success' || needs.draft.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            server/pnpm-lock.yaml
+            client/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+
+      # The server bundle inlines reviewer-core's sources (tsconfig alias).
+      - name: reviewer-core deps
+        working-directory: reviewer-core
+        run: npm ci
+
+      - name: server — bundle the desktop API
+        working-directory: server
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm bundle:desktop
+
+      - name: client — standalone build
+        working-directory: client
+        env:
+          NEXT_OUTPUT: standalone
+          NEXT_PUBLIC_API_BASE: http://127.0.0.1:43101
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: desktop — install, version, stage
+        working-directory: desktop
+        run: |
+          pnpm install --frozen-lockfile
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          npm pkg set version="$VERSION"
+          echo "Building DevDigest $VERSION"
+          pnpm stage
+
+      - name: desktop — build + upload to the draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Unsigned on purpose (free tier): stop electron-builder hunting for certs.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm build && pnpm exec electron-builder --publish always
+
+      - name: desktop — build (dry run)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm build && pnpm exec electron-builder --publish never
+
+      - name: upload installers (dry run)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: devdigest-${{ matrix.os }}
+          path: |
+            desktop/release/*.exe
+            desktop/release/*.dmg
+            desktop/release/*.yml
+          if-no-files-found: error
+
+  publish:
+    name: publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the draft (pre-release for tags like v1.2.0-beta.1)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ "$TAG" == *-* ]]; then PRE=--prerelease; else PRE=--latest; fi
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false $PRE

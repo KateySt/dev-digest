@@ -1,0 +1,8 @@
+# nodeLinker/allowBuilds: pnpm 11+ (reads settings here, ignores .npmrc).
+# onlyBuiltDependencies: pnpm 10 (CI) — lets electron's postinstall fetch its binary.
+nodeLinker: hoisted
+allowBuilds:
+  electron: true
+  electron-winstaller: false
+onlyBuiltDependencies:
+  - electron

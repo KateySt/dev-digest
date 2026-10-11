@@ -1,6 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/platform/config.js';
+import type { SecretKey, SecretsProvider } from '@devdigest/shared';
 import { MockGitHubClient, MockLLMProvider } from '../src/adapters/mocks.js';
 
 /**
@@ -51,6 +52,83 @@ describe('routes (no DB)', () => {
     });
     expect(res.json().ok).toBe(true);
     await app.close();
+  });
+
+  describe('POST /settings/test-connection with a new key — verify before persisting', () => {
+    /** Writable in-memory store, so the test can see what got persisted. */
+    class MemorySecrets implements SecretsProvider {
+      constructor(public data: Record<string, string> = {}) {}
+      async get(key: SecretKey) {
+        return this.data[key as string];
+      }
+      async set(key: SecretKey, value: string) {
+        this.data[key as string] = value;
+      }
+    }
+    class RejectingLLM extends MockLLMProvider {
+      override async listModels(): Promise<never> {
+        throw new Error('401 Incorrect API key provided');
+      }
+    }
+    class RejectingGitHub extends MockGitHubClient {
+      override async currentLogin(): Promise<never> {
+        throw new Error('Bad credentials');
+      }
+    }
+
+    it('a rejected LLM key is NOT saved and the previous key survives', async () => {
+      const secrets = new MemorySecrets({ OPENAI_API_KEY: 'sk-old-working' });
+      const app = await buildApp({ config, overrides: { secrets, llm: { openai: new RejectingLLM('openai') } } });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/settings/test-connection',
+        payload: { provider: 'openai', key: 'sk-bad' },
+      });
+      expect(res.json()).toMatchObject({ provider: 'openai', ok: false, message: '401 Incorrect API key provided' });
+      expect(secrets.data).toEqual({ OPENAI_API_KEY: 'sk-old-working' });
+      await app.close();
+    });
+
+    it('a rejected GitHub token is NOT saved', async () => {
+      const secrets = new MemorySecrets();
+      const app = await buildApp({ config, overrides: { secrets, github: new RejectingGitHub() } });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/settings/test-connection',
+        payload: { provider: 'github', key: 'ghp_bad' },
+      });
+      expect(res.json()).toMatchObject({ ok: false, message: 'Bad credentials' });
+      expect(secrets.data).toEqual({});
+      await app.close();
+    });
+
+    it('a verified key is saved and reported as configured', async () => {
+      const secrets = new MemorySecrets();
+      const app = await buildApp({
+        config,
+        overrides: { secrets, llm: { anthropic: new MockLLMProvider('anthropic') } },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/settings/test-connection',
+        payload: { provider: 'anthropic', key: 'sk-ant-good' },
+      });
+      expect(res.json()).toMatchObject({ provider: 'anthropic', ok: true });
+      expect(secrets.data).toEqual({ ANTHROPIC_API_KEY: 'sk-ant-good' });
+      await app.close();
+    });
+
+    it('refuses a new key when the secrets backend is read-only', async () => {
+      const readOnly: SecretsProvider = { get: async () => undefined };
+      const app = await buildApp({ config, overrides: { secrets: readOnly, llm: { openai: new MockLLMProvider('openai') } } });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/settings/test-connection',
+        payload: { provider: 'openai', key: 'sk-x' },
+      });
+      expect(res.json()).toMatchObject({ ok: false, message: 'Secrets backend is read-only' });
+      await app.close();
+    });
   });
 
   it('returns 422 structured error on invalid body', async () => {

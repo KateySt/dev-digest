@@ -1,5 +1,5 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { createDb, type DbHandle } from '../../src/db/client.js';
+import { createDb, type PostgresDbHandle } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 
 /**
@@ -12,7 +12,7 @@ import { runMigrations } from '../../src/db/migrate.js';
  */
 export interface PgFixture {
   container: StartedPostgreSqlContainer;
-  handle: DbHandle;
+  handle: PostgresDbHandle;
   url: string;
   stop: () => Promise<void>;
 }

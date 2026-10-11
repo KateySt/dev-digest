@@ -15,6 +15,10 @@ dashboard screens.)
   `src/lib/api.ts`. Every data hook lives in `src/lib/hooks/*`.
 - **Run:** `pnpm dev` (`:3000`). **Test:** `pnpm test` (vitest + jsdom, fetch
   mocked — no API needed). **Typecheck:** `pnpm typecheck`.
+- **Desktop build:** `NEXT_OUTPUT=standalone NEXT_PUBLIC_API_BASE=http://127.0.0.1:43101 pnpm build`
+  emits `.next/standalone/server.js` (with `messages/` traced in), which the
+  Electron app (`../desktop`) runs. Without `NEXT_OUTPUT` the build is the usual
+  `next start` one.
 
 ## UI route map
 
