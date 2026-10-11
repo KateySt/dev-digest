@@ -8,6 +8,7 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
   const Link = ctx.Link ?? DefaultLink;
   return (
     <header
+      className="app-drag"
       style={{
         height: 52,
         flexShrink: 0,
@@ -16,7 +17,8 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
         display: "flex",
         alignItems: "center",
         gap: 16,
-        padding: "0 24px",
+        // Window controls sit flush against the right edge, full height.
+        padding: ctx.windowControls ? "0 0 0 24px" : "0 24px",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -73,7 +75,8 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
       )}
       {ctx.onRefresh && <IconBtn icon="RefreshCw" label="Refresh" onClick={ctx.onRefresh} />}
       <IconBtn icon="Bell" label="Notifications" />
-      <Avatar name="you" size={26} />
+      {ctx.account ?? <Avatar name="you" size={26} />}
+      {ctx.windowControls}
     </header>
   );
 }

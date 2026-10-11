@@ -14,6 +14,17 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-11 — macOS codesign rejects symlinks copied by `fs.cpSync`
+
+The v0.1.0 mac build failed at `codesign --verify --deep --strict` with
+"invalid destination for symbolic link in bundle", while Windows passed (no
+signature check there). `fs.cpSync` rewrites relative symlinks — npm's
+`node_modules/.bin/*` — into absolute paths that point back into the build
+dir, outside the `.app`. `after-pack.cjs` now skips `.bin` and copies with
+`dereference: true`. A symlink can't be reproduced on Windows without admin
+(`symlinkSync` → EPERM), so verify mac packaging with a `release` dry run
+(*Actions → release → Run workflow* on the branch), not locally.
+
 ### 2026-10-11 — Packaging gotchas from the first Windows build
 
 - **`extraResources` silently drops every `node_modules` folder**, even with

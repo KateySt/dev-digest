@@ -34,6 +34,12 @@ export interface ShellContext {
   onRemoveRepo?: (id: string) => void;
   onRefresh?: () => void;
   prCount?: number;
+  /** Replaces the placeholder avatar at the right of the top bar (account menu). */
+  account?: React.ReactNode;
+  /** Desktop app: window controls rendered flush at the far right of the top bar. */
+  windowControls?: React.ReactNode;
+  /** Desktop app (macOS): px to keep clear at the sidebar's top-left for the traffic lights. */
+  titlebarInsetLeft?: number;
 }
 
 export interface Crumb {

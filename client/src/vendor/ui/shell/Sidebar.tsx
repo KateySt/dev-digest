@@ -17,29 +17,34 @@ export function Sidebar({ ctx }: { ctx: ShellContext }) {
         borderRight: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
-        padding: "24px 14px 16px",
+        // Desktop app: the logo row sits on the title bar's line (centred in
+        // the 52px top bar, next to the macOS traffic lights).
+        padding: ctx.windowControls || ctx.titlebarInsetLeft ? "11px 14px 16px" : "24px 14px 16px",
         gap: 2,
         overflow: "hidden",
       }}
     >
-      <Link href="/">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "2px 5px 14px" }}>
-          <div
-            style={{
-              width: 26,
-              height: 26,
-              borderRadius: 7,
-              background: "var(--text-primary)",
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Icon.Layers size={15} style={{ color: "var(--bg-primary)" }} />
+      {/* The logo row doubles as a window drag handle in the desktop app. */}
+      <div className="app-drag" style={{ paddingLeft: ctx.titlebarInsetLeft ?? 0 }}>
+        <Link href="/">
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "2px 5px 14px" }}>
+            <div
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 7,
+                background: "var(--text-primary)",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon.Layers size={15} style={{ color: "var(--bg-primary)" }} />
+            </div>
+            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em" }}>DevDigest</span>
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em" }}>DevDigest</span>
-        </div>
-      </Link>
+        </Link>
+      </div>
       <RepoSwitcher ctx={ctx} />
       <div style={{ overflowY: "auto", flex: 1, margin: "5px -5px 0", padding: "0 5px" }}>
         {NAV.map((grp, gi) => (

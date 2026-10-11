@@ -5,6 +5,7 @@ import { API_PORT, API_URL, GIT_DOWNLOAD_URL, WEB_PORT, WEB_URL, dataPaths } fro
 import { hasGit, isPortFree } from './preflight';
 import { startApi, startWeb, stop, waitForHttp, type Child } from './processes';
 import { buildMenu } from './menu';
+import { forwardMaximizeState, registerIpc } from './ipc';
 import { initUpdates } from './updater';
 
 // `pnpm start` keeps its DB/logs apart from the installed app's.
@@ -38,6 +39,7 @@ if (!app.requestSingleInstanceLock()) {
 
 async function boot(): Promise<void> {
   buildMenu();
+  registerIpc();
   const splash = new BrowserWindow({ width: 360, height: 200, frame: false, resizable: false, show: false });
   splash.once('ready-to-show', () => splash.show());
   void splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`);
@@ -69,8 +71,23 @@ function createWindow(): void {
     minHeight: 640,
     title: 'DevDigest',
     show: false,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    backgroundColor: '#0a0a0a',
+    // Custom title bar: the studio's top bar is the window's title bar (drag
+    // region + its own window controls, via the preload bridge). macOS keeps
+    // its native traffic lights, centred in the 52px top bar.
+    titleBarStyle: 'hidden',
+    ...(process.platform === 'darwin' && { trafficLightPosition: { x: 18, y: 20 } }),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: join(__dirname, 'preload.js'),
+    },
   });
+  // The native menu bar is replaced by the account menu; keeping the menu
+  // itself (just hidden) keeps its accelerators — copy/paste, reload, devtools.
+  mainWindow.setMenuBarVisibility(false);
+  forwardMaximizeState(mainWindow);
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   // Links to GitHub PRs, docs, etc. open in the default browser, not in the app.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
