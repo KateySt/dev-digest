@@ -6,6 +6,16 @@ import { MIGRATIONS_DIR } from './db/migrate.js';
 import { seed } from './db/seed.js';
 import * as t from './db/schema.js';
 
+// Set by Electron when this runs as a utilityProcess (desktop/src/processes.ts);
+// undefined under plain node/tsx.
+declare global {
+  namespace NodeJS {
+    interface Process {
+      parentPort?: { on(event: 'message', listener: (e: { data: unknown }) => void): void };
+    }
+  }
+}
+
 /**
  * Desktop entrypoint (Electron spawns the bundled `dist-desktop/app/desktop.mjs`).
  * Differs from `server.ts` in one way: the DB is an embedded PGlite instead of
@@ -28,20 +38,26 @@ async function main() {
   app.log.info({ dataDir: config.pgliteDataDir, migrationsApplied: applied }, 'PGlite ready');
 
   let closing = false;
+  const shutdown = async (reason: string) => {
+    if (closing) return;
+    closing = true;
+    app.log.info(`${reason} — shutting down`);
+    try {
+      await app.close(); // onClose → handle.close() flushes PGlite to disk
+      process.exit(0);
+    } catch (err) {
+      app.log.error(err, 'error during shutdown');
+      process.exit(1);
+    }
+  };
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.once(signal, async () => {
-      if (closing) return;
-      closing = true;
-      app.log.info(`${signal} received — shutting down`);
-      try {
-        await app.close();
-        process.exit(0);
-      } catch (err) {
-        app.log.error(err, 'error during shutdown');
-        process.exit(1);
-      }
-    });
+    process.once(signal, () => void shutdown(`${signal} received`));
   }
+  // Under Electron's utilityProcess. Windows has no SIGTERM (kill() terminates
+  // outright), so desktop/ asks for a graceful stop over the parent port.
+  process.parentPort?.on('message', (e) => {
+    if (e.data === 'shutdown') void shutdown('shutdown requested by desktop app');
+  });
 
   await app.listen({ port: config.apiPort, host: config.apiHost });
   app.log.info(`DevDigest API (desktop) listening on http://${config.apiHost}:${config.apiPort}`);

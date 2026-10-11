@@ -37,6 +37,9 @@ const EnvSchema = z.object({
   // Embedded PGlite data dir — read only by the desktop entry (src/desktop.ts).
   PGLITE_DATA_DIR: z.string().optional(),
   DEVDIGEST_CLONE_DIR: z.string().optional(),
+  // Writable secrets store (BYO keys from the UI). The desktop app points this
+  // into Electron's userData so all app data lives in one folder.
+  DEVDIGEST_SECRETS_PATH: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   // `.env` (and .env.example) ship `LOG_LEVEL=` empty; an empty string is not a
   // valid enum member, so coerce '' → undefined to fall through to the default.
@@ -107,7 +110,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webPort: parsed.WEB_PORT,
     cloneDir,
     pgliteDataDir,
-    secretsPath: join(homedir(), '.devdigest', 'secrets.json'),
+    secretsPath: resolve(parsed.DEVDIGEST_SECRETS_PATH ?? join(homedir(), '.devdigest', 'secrets.json')),
     nodeEnv: parsed.NODE_ENV,
     logLevel: parsed.LOG_LEVEL ?? (parsed.NODE_ENV === 'test' ? 'silent' : 'info'),
     webOrigin: parsed.WEB_ORIGIN?.trim() || `http://localhost:${parsed.WEB_PORT}`,

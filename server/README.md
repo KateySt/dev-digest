@@ -212,6 +212,7 @@ comment and records `reply_url` / `replied_at` on the finding.
 | `API_HOST` | `0.0.0.0` | bind address (desktop: `127.0.0.1`) |
 | `WEB_ORIGIN` | `http://localhost:${WEB_PORT}` | CORS origin override (desktop: `http://127.0.0.1:43100`) |
 | `PGLITE_DATA_DIR` | `~/.devdigest/pgdata` | embedded PGlite data dir — read only by `src/desktop.ts` |
+| `DEVDIGEST_SECRETS_PATH` | `~/.devdigest/secrets.json` | secrets store location (desktop: inside the app's data folder) |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` | — | optional, per-provider; also settable via Settings UI |
 | `GITHUB_TOKEN` | — | optional; PAT with repo scope (`GITHUB_PAT` accepted as a fallback); Export to CI additionally needs `workflow` scope (see [Export to CI](#export-to-ci)) |
 | `EMBEDDINGS_ENABLED` | `false` | memory/RAG embeddings (OpenAI); off → **zero** OpenAI calls |

@@ -9,6 +9,8 @@ Local-first AI PR-review tool, course starter template. Full picture: README.md
 - `client/` — Next.js studio (`@devdigest/web`)
 - `reviewer-core/` — pure review engine, diff → LLM → findings (`@devdigest/reviewer-core`)
 - `e2e/` — deterministic browser e2e suite (`@devdigest/e2e`)
+- `desktop/` — Electron app for Windows/macOS (`@devdigest/desktop`); released
+  by `.github/workflows/release.yml` on `v*` tags
 
 Each module has its own `AGENTS.md` that Claude Code loads automatically once
 you touch a file inside it. Don't duplicate module-level conventions here —
