@@ -137,9 +137,20 @@ export function buildSkillFiles(skills: { name: string; body: string }[]): Skill
   });
 }
 
-/** No memory store yet (S-AC-5). */
-export function buildMemoryJsonl(): string {
-  return '';
+/** One exported memory line (SPEC-2026-10-12-memory AC-30). `agent_slugs: null`
+ *  = every agent; the runner filters by its own slug + the PR's changed files. */
+export interface MemoryJsonlItem {
+  kind: string;
+  content: string;
+  path_globs: string[];
+  agent_slugs: string[] | null;
+}
+
+/** `.devdigest/memory.jsonl` — one JSON object per line. The file is shared by
+ *  every agent installed in the repo, so it carries all of their memories. */
+export function buildMemoryJsonl(items: MemoryJsonlItem[]): string {
+  return items.map((i) => `${JSON.stringify(i)}
+`).join('');
 }
 
 // ---------------------------------------------------------------------------

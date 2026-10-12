@@ -7,7 +7,7 @@ import type {
   UnifiedDiff,
 } from '@devdigest/shared';
 import { Review as ReviewSchema } from '@devdigest/shared';
-import { assemblePrompt } from '../prompt.js';
+import { assemblePrompt, type MemoryEntry } from '../prompt.js';
 import { groundFindings, groundingSummary } from '../grounding.js';
 import { reduceReviews, scoreFromFindings, sliceDiff } from './reduce.js';
 
@@ -54,8 +54,8 @@ export interface ReviewInput {
   strategy?: ReviewStrategy;
   /** Resolved skill bodies (NOT slugs). */
   skills?: string[];
-  /** Curated memory items. */
-  memory?: string[];
+  /** Human-confirmed team memory, already filtered + budgeted by the caller. */
+  memory?: MemoryEntry[];
   /** Project-context spec chunks (untrusted; delimiter-wrapped downstream). */
   specs?: string[];
   /**

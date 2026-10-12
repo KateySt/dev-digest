@@ -24,6 +24,8 @@ import {
 } from '../../platform/errors.js';
 import { buildRunTrace, emptyPromptAssembly } from '../../platform/trace-builder.js';
 import { isScanBlocking } from '../skills/helpers.js';
+import { RepoRepository } from '../repos/repository.js';
+import { MemoryRetriever } from '../memory/retrieval.js';
 import {
   CiRepository,
   type CiRunFilters,
@@ -456,6 +458,34 @@ export class CiService {
 
   // ---- planning ----------------------------------------------------------
 
+  /** SPEC-2026-10-12-memory AC-30: memories for every agent installed on the
+   *  repo (the jsonl is shared). An untracked repo exports global memories only. */
+  private async exportMemory(
+    workspaceId: string,
+    repoFullName: string,
+    agentList: { slug: string }[],
+    agentId: string,
+    peers: { installation: { agentId: string; agentSlug: string | null }; agentName: string }[],
+  ) {
+    const repoRow = await new RepoRepository(this.container.db).findByFullName(workspaceId, repoFullName);
+    const idBySlug = new Map<string, string>();
+    peers.forEach((p) => idBySlug.set(p.installation.agentSlug ?? slugify(p.agentName), p.installation.agentId));
+    const agents = [];
+    for (const { slug } of agentList) {
+      const id = idBySlug.get(slug) ?? agentId;
+      const linked = await this.container.agentsRepo.linkedSkills(id);
+      const skillIds = linked
+        .filter(
+          (l) =>
+            l.skill.enabled &&
+            !isScanBlocking(l.skill.scanStatus as SkillScanStatus, l.skill.scanFindings as SkillScanFinding[] | null),
+        )
+        .map((l) => l.skill.id);
+      agents.push({ slug, agentId: id, skillIds });
+    }
+    return new MemoryRetriever(this.container).resolveForExport(workspaceId, repoRow?.id ?? null, agents);
+  }
+
   /** Build the file set shared by preview, export and zip. Writes nothing. */
   private async plan(workspaceId: string, agentId: string, input: CiExportInput): Promise<ExportPlan> {
     if (input.target !== CI_TARGET_TYPE) {
@@ -520,7 +550,7 @@ export class CiService {
     const files: PlannedFile[] = [
       { path: manifestPath(slug), contents: manifestYaml, editable: false },
       ...skillFiles.map((s) => ({ path: s.path, contents: s.contents, editable: false })),
-      { path: MEMORY_PATH, contents: buildMemoryJsonl(), editable: false },
+      { path: MEMORY_PATH, contents: buildMemoryJsonl(await this.exportMemory(workspaceId, input.repo, agentList, agentId, peers)), editable: false },
       { path: RUNNER_PATH, contents: '', editable: false, bytes: runnerBytes, metadata: runnerMeta },
       { path: WORKFLOW_PATH, contents: workflowYaml, editable: true },
     ];

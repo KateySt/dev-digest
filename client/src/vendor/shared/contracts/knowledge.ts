@@ -122,9 +122,16 @@ export const MemoryKind = z.enum([
 ]);
 export type MemoryKind = z.infer<typeof MemoryKind>;
 
+/** Provenance of a memory (SPEC-2026-10-12-memory). Everything but `context`
+ *  is `.nullish()` — older/fixture payloads carry only `{ pr, context }`. */
 export const MemorySource = z.object({
   pr: z.number().int().nullish(),
   context: z.string(),
+  finding_id: z.string().nullish(),
+  review_id: z.string().nullish(),
+  agent_id: z.string().nullish(),
+  created_by: z.string().nullish(),
+  created_at: z.string().nullish(),
 });
 export type MemorySource = z.infer<typeof MemorySource>;
 
@@ -136,6 +143,117 @@ export const MemoryItem = z.object({
   sources: z.array(MemorySource),
 });
 export type MemoryItem = z.infer<typeof MemoryItem>;
+
+/** Scopes a user can pick. `team` stays in the DB enum but is never accepted. */
+export const MemoryInputScope = z.enum(['repo', 'global']);
+export type MemoryInputScope = z.infer<typeof MemoryInputScope>;
+
+export const MEMORY_CONTENT_MAX = 600;
+export const MEMORY_MAX_GLOBS = 10;
+
+export const MemoryLink = z.object({
+  target_kind: z.enum(['agent', 'skill']),
+  target_id: z.string().uuid(),
+});
+export type MemoryLink = z.infer<typeof MemoryLink>;
+
+/** Create/edit payload. Cross-field rules (repo ⇔ repo_id, at least one link
+ *  or all-agents, skill repo match) are enforced server-side, not here. */
+export const MemoryInput = z.object({
+  content: z.string().trim().min(1).max(MEMORY_CONTENT_MAX),
+  kind: MemoryKind,
+  scope: MemoryInputScope,
+  repo_id: z.string().uuid().nullable(),
+  path_globs: z.array(z.string().min(1)).max(MEMORY_MAX_GLOBS).default([]),
+  links: z.array(MemoryLink).default([]),
+  applies_to_all_agents: z.boolean().default(false),
+  confidence: z.number().min(0).max(1).default(0.8),
+});
+export type MemoryInput = z.infer<typeof MemoryInput>;
+
+export const Memory = MemoryItem.extend({
+  id: z.string(),
+  repo_id: z.string().nullable(),
+  path_globs: z.array(z.string()),
+  links: z.array(MemoryLink.extend({ name: z.string() })),
+  applies_to_all_agents: z.boolean(),
+  /** No links and not all-agents (its agent/skill was deleted) — never injected. */
+  unlinked: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  last_used_at: z.string().nullable(),
+  archived_at: z.string().nullable(),
+  stale: z.boolean(),
+});
+export type Memory = z.infer<typeof Memory>;
+
+export const MemorySummary = z.object({
+  id: z.string(),
+  content: z.string(),
+  kind: MemoryKind,
+  scope: MemoryScope,
+  similarity: z.number(),
+});
+export type MemorySummary = z.infer<typeof MemorySummary>;
+
+export const MemoryDraft = MemoryInput.extend({
+  /** True when the LLM draft failed and a deterministic fallback was used. */
+  fallback: z.boolean(),
+});
+export type MemoryDraft = z.infer<typeof MemoryDraft>;
+
+export const LearnDraftResponse = z.object({
+  draft: MemoryDraft,
+  source: MemorySource,
+  similar: z.array(MemorySummary),
+  /** Set when the finding was already learned — the client edits that memory. */
+  existing_memory_id: z.string().nullable(),
+});
+export type LearnDraftResponse = z.infer<typeof LearnDraftResponse>;
+
+export const CreateMemoryBody = MemoryInput.extend({
+  finding_id: z.string().uuid().optional(),
+});
+export type CreateMemoryBody = z.infer<typeof CreateMemoryBody>;
+
+export const UpdateMemoryBody = MemoryInput.partial().extend({
+  archived: z.boolean().optional(),
+});
+export type UpdateMemoryBody = z.infer<typeof UpdateMemoryBody>;
+
+export const MergeMemoryBody = z.object({
+  content: MemoryInput.shape.content,
+  confidence: z.number().min(0).max(1),
+  finding_id: z.string().uuid().optional(),
+});
+export type MergeMemoryBody = z.infer<typeof MergeMemoryBody>;
+
+const QueryBool = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((v) => v === true || v === 'true');
+
+export const MemoryListQuery = z.object({
+  repo_id: z.string().uuid().optional(),
+  scope: MemoryInputScope.optional(),
+  kind: MemoryKind.optional(),
+  stale: QueryBool.default(false),
+  archived: QueryBool.default(false),
+  q: z.string().max(200).optional(),
+});
+export type MemoryListQuery = z.input<typeof MemoryListQuery>;
+
+export const MemorySearchMode = z.enum(['semantic', 'text']);
+export type MemorySearchMode = z.infer<typeof MemorySearchMode>;
+
+export const MemoryListResponse = z.object({
+  items: z.array(Memory),
+  counts: z.object({
+    scope: z.record(z.string(), z.number()),
+    kind: z.record(z.string(), z.number()),
+  }),
+  search_mode: MemorySearchMode,
+});
+export type MemoryListResponse = z.infer<typeof MemoryListResponse>;
 
 // ---- Skills ----
 export const SkillType = z.enum(['rubric', 'convention', 'security', 'custom']);

@@ -2,20 +2,26 @@
   "page": {
     "crumb": "Memory",
     "heading": "Memory",
-    "count": "{count, plural, one {# entry} other {# entries}} · pgvector · semantic",
+    "count": "{count, plural, one {# entry} other {# entries}}",
     "searchPlaceholder": "Search memory…",
     "filterBadge": "filter",
     "loadError": "Could not load memory.",
     "empty": {
       "title": "No memory matches",
-      "body": "Memory is created by the 'Learn' action on findings and by retrieval-backed agents. Adjust filters to see more."
+      "body": "Memory is created by the 'Learn' action on findings. Adjust filters to see more."
     },
     "filters": {
       "scope": "Scope",
       "kind": "Kind",
       "freshness": "Freshness",
       "showStale": "Show stale (>60d)"
-    }
+    },
+    "archived": "Show archived",
+    "searchMode": {
+      "semantic": "semantic",
+      "text": "text"
+    },
+    "searchModeHint": "Search mode"
   },
   "scope": {
     "repo": "repo",
@@ -33,7 +39,11 @@
     "neverUsed": "never used",
     "usedToday": "used today",
     "usedDayAgo": "used 1d ago",
-    "usedDaysAgo": "used {days}d ago"
+    "usedDaysAgo": "used {days}d ago",
+    "unlinked": "Unlinked",
+    "archived": "archived",
+    "stale": "stale",
+    "confidence": "{pct}% conf"
   },
   "detail": {
     "edit": "Edit",
@@ -50,6 +60,48 @@
     },
     "sourceContexts": "Source contexts",
     "noSources": "No source contexts recorded.",
-    "prLabel": "PR #{pr}"
+    "prLabel": "PR #{pr}",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "confirmDelete": "Delete this memory? Agents will stop using it.",
+    "links": "Applies to",
+    "allAgents": "All agents",
+    "globs": "Files",
+    "anyFile": "Any file",
+    "empty": "Select a memory to see details.",
+    "findingLabel": "finding",
+    "confirmDeleteAction": "Confirm delete"
+  },
+  "form": {
+    "content": "Memory",
+    "contentHint": "State the rule and why. Agents read this on future reviews.",
+    "contentCount": "{count} / {max}",
+    "contentTooLong": "Keep it under {max} characters.",
+    "kind": "Kind",
+    "scope": "Scope",
+    "scopeRepo": "This repo",
+    "scopeGlobal": "All repos",
+    "links": "Applies to",
+    "allAgents": "All agents",
+    "agents": "Agents",
+    "skills": "Skills",
+    "noLinks": "Pick at least one agent or skill, or apply it to all agents.",
+    "globs": "Only for files matching",
+    "globsHint": "One glob per line, e.g. src/middleware/**. Leave empty to apply to any file.",
+    "similarTitle": "Similar memories already exist",
+    "merge": "Merge into this",
+    "source": "Source",
+    "sourcePr": "PR #{pr}"
+  },
+  "learn": {
+    "title": "Learn from this finding",
+    "subtitle": "Review the draft, then save it to Memory.",
+    "drafting": "Drafting…",
+    "fallback": "Could not draft automatically — edit the text below.",
+    "editTitle": "Edit learned memory",
+    "save": "Save to Memory",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "failed": "Could not save: {message}"
   }
 }

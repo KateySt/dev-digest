@@ -17,6 +17,8 @@ export interface ReviewDtoFinding extends Finding {
   eval_cases: { case_id: string; target_kind: 'agent' | 'skill'; target_id: string }[];
   reply_url: string | null;
   replied_at: string | null;
+  /** Memory created from this finding via Learn (SPEC-2026-10-12-memory AC-7). */
+  memory_id: string | null;
 }
 
 export interface ReviewDto {
@@ -61,6 +63,7 @@ export function findingRowToDto(
     eval_cases: evalCases.map((c) => ({ case_id: c.caseId, target_kind: c.ownerKind, target_id: c.ownerId })),
     reply_url: row.replyUrl ?? null,
     replied_at: row.repliedAt?.toISOString() ?? null,
+    memory_id: row.memoryId ?? null,
   };
 }
 

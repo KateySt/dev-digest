@@ -23,6 +23,7 @@ import { isScanBlocking } from '../skills/helpers.js';
 import { IntentService } from '../intent/service.js';
 import { renderIntentDigest } from '../intent/helpers.js';
 import { ProjectContextService } from '../project-context/service.js';
+import { EMPTY_MEMORY, MemoryRetriever, buildQueryText, type ResolvedMemory } from '../memory/retrieval.js';
 import { reviewGroupNotification } from '../notifications/helpers.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
@@ -317,9 +318,10 @@ export class ReviewRunExecutor {
       // A skill unlinked or disabled after being linked has zero effect on the
       // prompt — resolved fresh on every run, never cached on the agent row.
       const linkedSkills = await this.agents.linkedSkills(agent.id);
-      const skillBodies = linkedSkills
-        .filter((l) => l.skill.enabled && !isScanBlocking(l.skill.scanStatus as SkillScanStatus, l.skill.scanFindings as SkillScanFinding[] | null))
-        .map((l) => l.skill.body);
+      const activeSkills = linkedSkills.filter(
+        (l) => l.skill.enabled && !isScanBlocking(l.skill.scanStatus as SkillScanStatus, l.skill.scanFindings as SkillScanFinding[] | null),
+      );
+      const skillBodies = activeSkills.map((l) => l.skill.body);
       if (skillBodies.length > 0) {
         runLog.info(`${skillBodies.length} skill(s) attached to prompt`);
       }
@@ -346,6 +348,28 @@ export class ReviewRunExecutor {
         runLog.info(`project context: resolution failed — ${(err as Error).message}`);
       }
 
+      // SPEC-2026-10-12-memory — team memory applicable to (agent + its ACTIVE
+      // skills, repo, changed files), ranked + token-budgeted. Fail-soft like
+      // project context: a retrieval error means no memory, never a failed run.
+      let memory: ResolvedMemory = EMPTY_MEMORY;
+      try {
+        const files = diff.files.map((f) => f.path);
+        memory = await new MemoryRetriever(this.container).resolveForRun({
+          workspaceId,
+          repoId: pull.repoId,
+          agentId: agent.id,
+          skillIds: activeSkills.map((l) => l.skill.id),
+          changedFiles: files,
+          queryText: buildQueryText(pull.title, files, diff.raw),
+          model: agent.model,
+        });
+        if (memory.entries.length > 0) {
+          runLog.info(`${memory.entries.length} memory item(s) attached to prompt`);
+        }
+      } catch (err) {
+        runLog.info(`memory: retrieval failed — ${(err as Error).message}`);
+      }
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -362,6 +386,8 @@ export class ReviewRunExecutor {
         ...(skillBodies.length > 0 ? { skills: skillBodies } : {}),
         // SPEC-04 — Project Context, resolved above; omit-when-empty, same idiom.
         ...(projectContext.texts.length > 0 ? { specs: projectContext.texts } : {}),
+        // SPEC-2026-10-12-memory — omit-when-empty, same idiom.
+        ...(memory.entries.length > 0 ? { memory: memory.entries } : {}),
         // T1.3 — pass the callers digest only when we built one. assemblePrompt
         // omits the section when this is empty/undefined.
         ...(callersDigest ? { callers: callersDigest } : {}),
@@ -444,7 +470,7 @@ export class ReviewRunExecutor {
           ms: Math.round(durationMs / Math.max(outcome.chunks.length, 1)),
         })),
         raw_output: outcome.raw,
-        memory_pulled: [],
+        memory_pulled: memory.pulled,
         specs_read: projectContext.specsRead,
         grounding: groundingForTrace(outcome),
         // Persisted log = the run's FULL event buffer (incl. shared pre-work:

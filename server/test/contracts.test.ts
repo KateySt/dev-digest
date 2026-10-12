@@ -286,3 +286,97 @@ describe('SPEC-10 multi-agent contracts', () => {
     expect(ConflictTake.safeParse({ agent_id: 'a', agent_name: 'A', verdict: 'ignored' }).success).toBe(false);
   });
 });
+
+// ---- SPEC-2026-10-12-memory (Task 1) ----
+import {
+  MemoryInput,
+  MemoryPulled,
+  FindingRecord,
+  FeatureModelId,
+  LearnDraftResponse,
+} from '@devdigest/shared';
+
+describe('Memory contracts', () => {
+  const base = {
+    content: 'Do not flag try/catch around JSON.parse — intentional defensive parsing.',
+    kind: 'learning',
+    scope: 'repo',
+    repo_id: '00000000-0000-4000-8000-000000000001',
+  };
+
+  it('MemoryInput applies defaults', () => {
+    const v = MemoryInput.parse(base);
+    expect(v.path_globs).toEqual([]);
+    expect(v.links).toEqual([]);
+    expect(v.applies_to_all_agents).toBe(false);
+    expect(v.confidence).toBe(0.8);
+  });
+
+  it('MemoryInput rejects 601-char content', () => {
+    expect(MemoryInput.safeParse({ ...base, content: 'x'.repeat(601) }).success).toBe(false);
+    expect(MemoryInput.safeParse({ ...base, content: 'x'.repeat(600) }).success).toBe(true);
+  });
+
+  it('MemoryInput rejects whitespace-only content', () => {
+    expect(MemoryInput.safeParse({ ...base, content: '   ' }).success).toBe(false);
+  });
+
+  it('MemoryInput rejects scope team', () => {
+    expect(MemoryInput.safeParse({ ...base, scope: 'team' }).success).toBe(false);
+  });
+
+  it('MemoryInput rejects 11 globs', () => {
+    const globs = Array.from({ length: 11 }, (_, i) => `src/${i}/**`);
+    expect(MemoryInput.safeParse({ ...base, path_globs: globs }).success).toBe(false);
+  });
+
+  it('MemoryPulled parses a legacy {pr,text} entry', () => {
+    expect(MemoryPulled.safeParse({ pr: 288, text: 'legacy' }).success).toBe(true);
+  });
+
+  it('MemoryPulled carries id/kind/source_prs', () => {
+    const p = MemoryPulled.parse({
+      id: '00000000-0000-4000-8000-000000000002',
+      kind: 'fact',
+      pr: null,
+      text: 't',
+      source_prs: [482],
+    });
+    expect(p.source_prs).toEqual([482]);
+  });
+
+  it('FindingRecord accepts missing memory_id and carries it when present', () => {
+    const f = {
+      id: 'f1',
+      severity: 'WARNING',
+      category: 'bug',
+      title: 't',
+      file: 'a.ts',
+      start_line: 1,
+      end_line: 1,
+      rationale: 'r',
+      suggestion: null,
+      confidence: 0.5,
+      review_id: 'r1',
+      accepted_at: null,
+      dismissed_at: null,
+    };
+    expect(FindingRecord.safeParse(f).success).toBe(true);
+    const id = '00000000-0000-4000-8000-000000000003';
+    expect(FindingRecord.parse({ ...f, memory_id: id }).memory_id).toBe(id);
+  });
+
+  it('FeatureModelId includes memory', () => {
+    expect(FeatureModelId.safeParse('memory').success).toBe(true);
+  });
+
+  it('LearnDraftResponse parses a draft with similar entries', () => {
+    const r = LearnDraftResponse.parse({
+      draft: { ...base, fallback: false },
+      source: { pr: 482, context: 'finding: x' },
+      similar: [{ id: '00000000-0000-4000-8000-000000000004', content: 'c', kind: 'fact', scope: 'repo', similarity: 0.9 }],
+      existing_memory_id: null,
+    });
+    expect(r.similar).toHaveLength(1);
+  });
+});

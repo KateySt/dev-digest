@@ -25,6 +25,8 @@ export const FindingRecord = Finding.extend({
   /** GitHub comment URL / time of a studio-posted "Reply to author". */
   reply_url: z.string().nullish(),
   replied_at: z.string().nullish(),
+  /** Memory created from this finding via Learn. `.nullish()` — older payloads omit it. */
+  memory_id: z.string().nullish(),
 });
 export type FindingRecord = z.infer<typeof FindingRecord>;
 

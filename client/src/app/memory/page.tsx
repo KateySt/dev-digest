@@ -1,14 +1,12 @@
-import { FeaturePlaceholder } from "@/components/page-shell";
+import { Suspense } from "react";
+import { MemoryView } from "./_components/MemoryView";
 
-/* Route: /memory. Nav entry exists per design; screen not built yet — see
-   root AGENTS.md course-template convention (FeaturePlaceholder). */
+/* Route: /memory (SPEC-2026-10-12-memory). Suspense: MemoryView reads
+   useSearchParams (`?id=` preselect from a finding's "Learned" link). */
 export default function MemoryPage() {
   return (
-    <FeaturePlaceholder
-      crumb={[{ label: "Memory" }]}
-      title="Memory"
-      icon="Brain"
-      owner="a future iteration"
-    />
+    <Suspense>
+      <MemoryView />
+    </Suspense>
   );
 }

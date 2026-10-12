@@ -43,6 +43,7 @@ export const s = {
     textDecoration: dismissed ? "line-through" : "none",
   }),
   acceptedTag: { fontSize: 12, fontWeight: 600, color: "var(--ok)" } satisfies CSSProperties,
+  learnedTag: { fontSize: 12, fontWeight: 600, color: "var(--accent)", textDecoration: "none" } satisfies CSSProperties,
   dismissedTag: {
     fontSize: 12,
     fontWeight: 600,
@@ -167,6 +168,14 @@ export const s = {
     minWidth: 0,
   } satisfies CSSProperties,
   dialogError: { fontSize: 13, color: "var(--crit)", overflowWrap: "anywhere", minWidth: 0 } satisfies CSSProperties,
+  dialogNotice: {
+    fontSize: 13,
+    color: "var(--warn)",
+    border: "1px solid var(--warn)",
+    borderRadius: 7,
+    padding: "8px 12px",
+    marginBottom: 8,
+  } satisfies CSSProperties,
   dialogFooter: { display: "flex", justifyContent: "flex-end", gap: 8 } satisfies CSSProperties,
   composer: {
     marginTop: 12,

@@ -1,0 +1,26 @@
+{
+  "name": "Learn from a finding, then find the memory on the Memory page",
+  "description": "SPEC-2026-10-12-memory. From PR #482's Agent runs tab, open the seeded Security Reviewer run and click Learn on its SSRF finding. The modal opens in edit mode with a draft (an LLM draft when a model key is configured, otherwise the deterministic fallback 'title: rationale' — the flow asserts neither text). Saving creates the memory: the card now shows a 'Learned' link, which opens /memory?id=… with that memory preselected in the detail panel. Injection into a later review run is covered by server/test/memory-retrieval.it.test.ts with MockLLMProvider (no model call here). Creates one memory. Assumes a freshly-seeded DB with no memories (e2e-web.yml); run locally via the hermetic stack (see e2e/README.md).",
+  "steps": [
+    { "cmd": ["open", "{BASE}/"], "label": "load the app root" },
+    { "cmd": ["wait", "--url", "/pulls"], "label": "land on the PR list" },
+    { "cmd": ["find", "text", "Add rate limiting to public API endpoints", "click"], "label": "open the PR row" },
+    { "cmd": ["wait", "--url", "/pulls/482"], "label": "navigate to the PR detail route" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "PR detail data settles" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Agent runs"], "label": "switch to the Agent runs tab" },
+    { "cmd": ["wait", "--url", "tab=findings"], "label": "findings tab is active in the URL" },
+    { "cmd": ["find", "text", "2 findings", "click"], "label": "collapse the agentless run so only one set of finding actions is on screen" },
+    { "cmd": ["find", "text", "1 finding", "click"], "label": "expand the seeded Security Reviewer run" },
+    { "cmd": ["wait", "--text", "SSRF: webhook target URL is fetched without an allowlist"], "label": "the agent's finding is visible" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Learn"], "label": "open the Learn modal" },
+    { "cmd": ["wait", "--text", "Learn from this finding"], "label": "the Learn modal is open" },
+    { "cmd": ["wait", "--text", "Applies to"], "label": "the draft is loaded into the edit form" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Save to Memory"], "label": "save the memory" },
+    { "cmd": ["wait", "--text", "Learned"], "label": "the finding now shows the Learned link" },
+    { "cmd": ["find", "role", "link", "click", "--name", "Learned"], "label": "follow the Learned link" },
+    { "cmd": ["wait", "--url", "/memory?id="], "label": "Memory page with the memory preselected" },
+    { "cmd": ["wait", "--text", "1 entry"], "label": "the new memory is listed" },
+    { "cmd": ["wait", "--text", "Source contexts"], "label": "the detail panel shows the memory's provenance" },
+    { "cmd": ["wait", "--text", "PR #482"], "label": "provenance names the PR it was learned from" }
+  ]
+}

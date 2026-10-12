@@ -72,9 +72,14 @@ export const PromptAssembly = z.object({
 });
 export type PromptAssembly = z.infer<typeof PromptAssembly>;
 
+/** One memory injected into a run (SPEC-2026-10-12-memory AC-18). `id`/`kind`/
+ *  `source_prs` are `.nullish()` — traces written before Memory carry `{pr,text}`. */
 export const MemoryPulled = z.object({
+  id: z.string().nullish(),
+  kind: z.enum(['decision', 'convention', 'preference', 'fact', 'learning']).nullish(),
   pr: z.number().int().nullish(),
   text: z.string(),
+  source_prs: z.array(z.number().int()).nullish(),
 });
 export type MemoryPulled = z.infer<typeof MemoryPulled>;
 

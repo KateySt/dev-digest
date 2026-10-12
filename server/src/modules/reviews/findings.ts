@@ -5,9 +5,9 @@ import type { FindingEvalCaseRef, ReviewRepository } from './repository.js';
 import { findingRowToDto, type ReviewDtoFinding } from './helpers.js';
 
 /**
- * Finding actions available in the starter: accept / dismiss. These decisions
- * are the dataset later lessons build on (eval cases from accept/dismiss, the
- * `learn → memory` action, etc.).
+ * Finding actions: accept / dismiss. These decisions are the dataset later
+ * lessons build on (eval cases from accept/dismiss). Learn (finding → memory)
+ * lives in modules/memory (POST /findings/:id/learn/draft + POST /memories).
  */
 export async function actOnFinding(
   repo: ReviewRepository,
