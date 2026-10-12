@@ -3,7 +3,7 @@ import React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Memory, MemoryListResponse } from "@devdigest/shared";
-import { get, mockFetch, renderApp } from "@/test/eval-utils";
+import { get, mockFetch, post, renderApp } from "@/test/eval-utils";
 
 const nav = vi.hoisted(() => ({ search: new URLSearchParams() }));
 vi.mock("next/navigation", () => ({
@@ -40,6 +40,8 @@ const mem = (over: Partial<Memory> = {}): Memory => ({
   last_used_at: null,
   archived_at: null,
   stale: false,
+  merged_into: null,
+  kept_at: null,
   ...over,
 });
 
@@ -148,5 +150,20 @@ describe("MemoryView", () => {
     renderApp(<MemoryView />);
     expect(await screen.findByText("No memory matches")).toBeTruthy();
     expect(screen.getByText(/created by the 'Learn' action/)).toBeTruthy();
+  });
+  // SPEC-2026-10-12-memory-curation AC-C1: nothing scans until the user clicks Curate.
+  it("clicking Curate opens the drawer; nothing is scanned before the click", async () => {
+    const api = mockFetch([
+      get(/^\/memories\?/, () => list([mem()])),
+      get("/agents", () => []),
+      get(/^\/skills/, () => []),
+      post("/memories/curate/scan", () => ({ groups: [], stale: [], totals: { groups: 0, stale: 0 }, mode: "text" })),
+    ]);
+    renderApp(<MemoryView />);
+    await screen.findByText("bucketKey() must include the API version prefix.");
+    expect(api.calls.some((c) => c.path === "/memories/curate/scan")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Curate" }));
+    expect(await screen.findByText("Memory looks clean")).toBeTruthy();
+    expect(api.calls.filter((c) => c.path === "/memories/curate/scan")).toHaveLength(1);
   });
 });

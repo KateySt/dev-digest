@@ -108,3 +108,68 @@ describe("useSimilarMemories", () => {
     expect(qs.get("repo_id")).toBe("00000000-0000-4000-8000-000000000001");
   });
 });
+
+// ---- SPEC-2026-10-12-memory-curation (Task 5) ----
+import { useCurateMerge, useCurateScan, useKeepMemory } from "./memory";
+
+const MEMORY_ID = "00000000-0000-4000-8000-000000000001";
+
+describe("useCurateScan", () => {
+  it("posts the repo to the scan endpoint and caches nothing", async () => {
+    const api = mockFetch([post("/memories/curate/scan", () => ({ groups: [], stale: [], totals: { groups: 0, stale: 0 }, mode: "text" }))]);
+    const { qc, wrapper } = setup();
+    const { result } = renderHook(() => useCurateScan(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ repoId: MEMORY_ID });
+    });
+    expect(api.calls[0]!.body).toEqual({ repo_id: MEMORY_ID });
+    expect(qc.getQueryCache().getAll()).toHaveLength(0);
+  });
+});
+
+describe("useCurateMerge", () => {
+  it("useCurateMerge invalidates the memory list on success", async () => {
+    mockFetch([post("/memories/curate/merge", () => ({ id: MEMORY_ID }))]);
+    const { qc, wrapper } = setup();
+    qc.setQueryData(["memories", {}], EMPTY_LIST);
+    qc.setQueryData(["memory", "other"], {});
+    const { result } = renderHook(() => useCurateMerge(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({
+        primary_id: MEMORY_ID,
+        member_ids: [MEMORY_ID, "00000000-0000-4000-8000-000000000002"],
+        expected: {},
+        result: {
+          content: "c",
+          kind: "fact",
+          scope: "global",
+          repo_id: null,
+          path_globs: [],
+          links: [],
+          applies_to_all_agents: true,
+          confidence: 0.8,
+        },
+      });
+    });
+    expect(invalidated(qc, ["memories", {}])).toBe(true);
+    // archived members' details changed too (merged_into / archived_at)
+    expect(invalidated(qc, ["memory", "other"])).toBe(true);
+    expect(qc.getQueryData(["memory", MEMORY_ID])).toEqual({ id: MEMORY_ID });
+  });
+});
+
+describe("useKeepMemory", () => {
+  it("useKeepMemory sends { kept: true }", async () => {
+    const api = mockFetch([
+      { method: "PATCH", match: `/memories/${MEMORY_ID}`, respond: () => ({ id: MEMORY_ID }) },
+    ]);
+    const { qc, wrapper } = setup();
+    qc.setQueryData(["memories", {}], EMPTY_LIST);
+    const { result } = renderHook(() => useKeepMemory(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync(MEMORY_ID);
+    });
+    expect(api.calls[0]).toMatchObject({ method: "PATCH", body: { kept: true } });
+    expect(invalidated(qc, ["memories", {}])).toBe(true);
+  });
+});

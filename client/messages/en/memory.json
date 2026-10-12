@@ -70,7 +70,9 @@
     "anyFile": "Any file",
     "empty": "Select a memory to see details.",
     "findingLabel": "finding",
-    "confirmDeleteAction": "Confirm delete"
+    "confirmDeleteAction": "Confirm delete",
+    "mergedInto": "Merged into another memory",
+    "openMergedInto": "Open it"
   },
   "form": {
     "content": "Memory",
@@ -88,6 +90,7 @@
     "noLinks": "Pick at least one agent or skill, or apply it to all agents.",
     "globs": "Only for files matching",
     "globsHint": "One glob per line, e.g. src/middleware/**. Leave empty to apply to any file.",
+    "tooManyGlobs": "Use at most {max} file patterns.",
     "similarTitle": "Similar memories already exist",
     "merge": "Merge into this",
     "source": "Source",
@@ -103,5 +106,44 @@
     "saving": "Saving…",
     "cancel": "Cancel",
     "failed": "Could not save: {message}"
+  },
+  "curate": {
+    "button": "Curate",
+    "title": "Curate memory",
+    "subtitle": "Proposals only — nothing changes until you apply it.",
+    "scanning": "Scanning memory…",
+    "scanError": "Could not scan memory.",
+    "clean": "Memory looks clean",
+    "cleanBody": "No duplicates or stale memories in this scope.",
+    "duplicates": "Duplicates ({count})",
+    "stale": "Stale ({count})",
+    "showing": "Showing {shown} of {total}",
+    "conflict": "A memory changed since the scan. Re-scan to see current proposals.",
+    "rescan": "Re-scan",
+    "reason": {
+      "unused": "Unused for 60+ days",
+      "unlinked": "Not linked to any agent"
+    },
+    "action": {
+      "archive": "Archive",
+      "keep": "Keep",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete this memory? Agents will stop using it.",
+      "confirmDeleteAction": "Confirm delete"
+    },
+    "group": {
+      "similarity": "{pct}% similar",
+      "primary": "Primary",
+      "makePrimary": "Make primary",
+      "remove": "Remove from group",
+      "merge": "Merge…",
+      "apply": "Apply merge",
+      "drafting": "Drafting merged text…",
+      "fallback": "Could not draft automatically — the primary's text is pre-filled. Edit it below.",
+      "hint": "The other memories are archived and can be restored with Unarchive."
+    }
   }
 }

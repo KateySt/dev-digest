@@ -1,4 +1,4 @@
-# Spec: Memory Curation   |   Spec ID: SPEC-2026-10-12-memory-curation   |   Status: draft
+# Spec: Memory Curation   |   Spec ID: SPEC-2026-10-12-memory-curation   |   Status: approved
 Builds on: `specs/2026-10-12-memory.md` (SPEC-2026-10-12-memory), which listed curation as a
 Non-goal and Future work. This spec replaces the design's "curated nightly" idea with a
 **manual, human-approved** Curate action. Nothing in this spec runs on a schedule.
@@ -291,6 +291,14 @@ PATCH /memories/:id                 body: … | { kept: true }        (existing 
 ## Changelog
 
 - 2026-10-12: Draft written after the design dialog.
+- 2026-10-12: Implemented (uncommitted on `feat/add-memory`; plan
+  `docs/plans/2026-10-12-memory-curation-plan.md`, migration `0028`). Clarified during build:
+  a member archived after the scan gets 409 (its `updated_at` moved) and one already archived
+  when sent gets 422; the full-text pair score is the exact AC-9 `ts_rank_cd` closed form
+  computed in the app from `content_tsv` (an SQL self-join took minutes at 1,000 memories);
+  the merge form blocks more than 10 path globs client-side; the merge-draft fallback keeps the
+  primary the user chose. Status stays `approved` until `e2e/specs/11-memory-curation.flow.json`
+  has run green.
 
 ## Future work
 

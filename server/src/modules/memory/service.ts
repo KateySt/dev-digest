@@ -80,12 +80,14 @@ export class MemoryService {
 
   async update(workspaceId: string, id: string, patch: UpdateMemoryBody): Promise<Memory> {
     const current = await this.get(workspaceId, id);
-    const { archived, ...fields } = patch;
+    const { archived, kept, ...fields } = patch;
+    // Curation "Keep" never bumps updated_at (SPEC-2026-10-12-memory-curation AC-C20).
+    if (kept) await this.repo.setKeptAt(workspaceId, id, new Date());
     // Archive / unarchive alone never re-validates: an Unlinked memory (its
     // agent was deleted, AC-13) must still be retirable (AC-27).
     if (Object.values(fields).every((v) => v === undefined)) {
       if (archived !== undefined) {
-        await this.repo.update(workspaceId, id, { archivedAt: archived ? new Date() : null });
+        await this.repo.update(workspaceId, id, archiveWrite(archived));
       }
       return this.get(workspaceId, id);
     }
@@ -107,7 +109,7 @@ export class MemoryService {
       await tx.update(workspaceId, id, {
         ...writeOf(merged, current.sources),
         ...(contentChanged ? { embedding } : {}),
-        ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
+        ...(archived === undefined ? {} : archiveWrite(archived)),
       });
       if (fields.links !== undefined) await tx.replaceLinks(id, merged.links);
     });
@@ -179,7 +181,7 @@ export class MemoryService {
     return rows.map((r) => memoryRowToDto(r, links.get(r.id) ?? [], now));
   }
 
-  private async validate(workspaceId: string, input: MemoryInput): Promise<void> {
+  protected async validate(workspaceId: string, input: MemoryInput): Promise<void> {
     const agentIds = input.links.filter((l) => l.target_kind === 'agent').map((l) => l.target_id);
     const skillIds = input.links.filter((l) => l.target_kind === 'skill').map((l) => l.target_id);
     const [agents, skillRepoIds] = await Promise.all([
@@ -206,7 +208,12 @@ export class MemoryService {
   }
 }
 
-function writeOf(input: MemoryInput, sources: MemorySource[]) {
+/** Unarchive also forgets which memory a curation merge folded this one into (AC-C22). */
+function archiveWrite(archived: boolean) {
+  return archived ? { archivedAt: new Date() } : { archivedAt: null, mergedInto: null };
+}
+
+export function writeOf(input: MemoryInput, sources: MemorySource[]) {
   return {
     repoId: input.scope === 'repo' ? input.repo_id : null,
     scope: input.scope,

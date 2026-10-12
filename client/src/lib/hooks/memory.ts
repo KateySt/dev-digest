@@ -6,6 +6,9 @@ import React from "react";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateMemoryBody,
+  CurateMergeBody,
+  CurateMergeDraftResponse,
+  CurateScanResponse,
   LearnDraftResponse,
   Memory,
   MemoryListQuery,
@@ -141,6 +144,63 @@ export function useDeleteMemory() {
     onSuccess: (_d, id) => {
       qc.removeQueries({ queryKey: memoryQueries.detail(id).queryKey });
       return invalidateAfterLearn(qc);
+    },
+  });
+}
+
+// ---- Curation (SPEC-2026-10-12-memory-curation) ------------------------------
+// Everything here runs only from an explicit click; nothing polls or auto-scans.
+
+/** Dry-run scan. A mutation, not a query: it runs on the Curate click and its
+ *  result is a snapshot the review drawer works through — never cached. */
+export function useCurateScan() {
+  return useMutation({
+    mutationFn: ({ repoId }: { repoId: string | null }) =>
+      api.post<CurateScanResponse>("/memories/curate/scan", repoId ? { repo_id: repoId } : {}),
+  });
+}
+
+/** LLM merged text for one group (persists nothing; falls back server-side). */
+export function useMergeDraft() {
+  return useMutation({
+    mutationFn: ({ memberIds }: { memberIds: string[] }) =>
+      api.post<CurateMergeDraftResponse>("/memories/curate/merge-draft", { member_ids: memberIds }),
+  });
+}
+
+/** Apply one group merge. 409 (changed since scan) and 422 (invalid result) are
+ *  shown inline by the drawer, so they don't toast. */
+export function useCurateMerge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CurateMergeBody) => api.post<Memory>("/memories/curate/merge", body),
+    onSuccess: (saved) => {
+      qc.setQueryData(memoryQueries.detail(saved.id).queryKey, saved);
+      return Promise.all([
+        qc.invalidateQueries({ queryKey: memoryQueries.all() }),
+        // archived members changed (archived_at / merged_into)
+        qc.invalidateQueries({
+          queryKey: ["memory"],
+          predicate: (q) => q.queryKey[1] !== saved.id,
+        }),
+        qc.invalidateQueries({ queryKey: ["memories-similar"] }),
+        // findings now point at the primary ("Learned" link)
+        qc.invalidateQueries({ queryKey: ["reviews"] }),
+        qc.invalidateQueries({ queryKey: ["multi-agent-run"] }),
+      ]);
+    },
+    meta: { silentCodes: ["curation_stale", "validation_error"] },
+  });
+}
+
+/** Curation "Keep": resets the stale clock; nothing else changes. */
+export function useKeepMemory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch<Memory>(`/memories/${id}`, { kept: true }),
+    onSuccess: (saved) => {
+      qc.setQueryData(memoryQueries.detail(saved.id).queryKey, saved);
+      return qc.invalidateQueries({ queryKey: memoryQueries.all() });
     },
   });
 }

@@ -51,4 +51,12 @@ describe('memory schema on PGlite', () => {
       handle.pg.query(`INSERT INTO memory_links (memory_id) VALUES ($1)`, [m[0]!.id]),
     ).rejects.toThrow();
   });
+  it('has the curation columns merged_into and kept_at', async () => {
+    const { rows } = await handle.pg.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'memory'`,
+    );
+    const cols = rows.map((r) => r.column_name);
+    expect(cols).toContain('merged_into');
+    expect(cols).toContain('kept_at');
+  });
 });

@@ -1,0 +1,318 @@
+{
+  "name": "Curate memory: merge two duplicate memories into one",
+  "description": "SPEC-2026-10-12-memory-curation. Runs after 10-memory (which leaves one memory learned from the Security Reviewer's SSRF finding; in the hermetic stack its text is the deterministic fallback 'SSRF: …'). Learns a second memory from the agentless run's first finding and types a fixed text, then edits the first memory to the same text so the two are exact duplicates. Curate (an explicit click — nothing scans on page load) proposes one duplicate group; the user replaces the merged text and applies it. One memory remains with the merged text; the other is archived and shows 'Merged into another memory'. Works without a model key: full-text duplicate detection and the merge-draft fallback.",
+  "steps": [
+    {
+      "cmd": [
+        "open",
+        "{BASE}/"
+      ],
+      "label": "load the app root"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--url",
+        "/pulls"
+      ],
+      "label": "land on the PR list"
+    },
+    {
+      "cmd": [
+        "find",
+        "text",
+        "Add rate limiting to public API endpoints",
+        "click"
+      ],
+      "label": "open the PR row"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--url",
+        "/pulls/482"
+      ],
+      "label": "navigate to the PR detail route"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--load",
+        "networkidle"
+      ],
+      "label": "PR detail data settles"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Agent runs"
+      ],
+      "label": "switch to the Agent runs tab"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--url",
+        "tab=findings"
+      ],
+      "label": "findings tab is active in the URL"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "2 findings"
+      ],
+      "label": "the agentless run (expanded by default) is listed"
+    },
+    {
+      "cmd": [
+        "find",
+        "nth",
+        "0",
+        "button:has-text('Learn')",
+        "click"
+      ],
+      "label": "open Learn on the agentless run's first finding (two Learn buttons are on screen)"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Applies to"
+      ],
+      "label": "the draft is loaded into the edit form"
+    },
+    {
+      "cmd": [
+        "find",
+        "first",
+        "textarea",
+        "fill",
+        "Every outbound webhook request must go through safeFetch because it enforces the host allowlist."
+      ],
+      "label": "type the memory text"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Save to Memory"
+      ],
+      "label": "save the second memory"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Learned"
+      ],
+      "label": "the finding shows the Learned link"
+    },
+    {
+      "cmd": [
+        "open",
+        "{BASE}/memory"
+      ],
+      "label": "open the Memory page"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "2 entries"
+      ],
+      "label": "both memories are listed"
+    },
+    {
+      "cmd": [
+        "find",
+        "text",
+        "SSRF",
+        "click"
+      ],
+      "label": "select the memory learned in flow 10"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Edit",
+        "--exact"
+      ],
+      "label": "edit it"
+    },
+    {
+      "cmd": [
+        "find",
+        "first",
+        "textarea",
+        "fill",
+        "Every outbound webhook request must go through safeFetch because it enforces the host allowlist."
+      ],
+      "label": "make it an exact duplicate"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Save",
+        "--exact"
+      ],
+      "label": "save the edit"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--load",
+        "networkidle"
+      ],
+      "label": "the list refreshes"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Curate",
+        "--exact"
+      ],
+      "label": "start curation (explicit click)"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Duplicates (1)"
+      ],
+      "label": "one duplicate group is proposed"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Merge…"
+      ],
+      "label": "open the merge editor"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Apply merge"
+      ],
+      "label": "the merge form is open"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--load",
+        "networkidle"
+      ],
+      "label": "the merge draft (or its fallback) has arrived"
+    },
+    {
+      "cmd": [
+        "find",
+        "first",
+        "textarea",
+        "fill",
+        "Outbound webhook requests must use safeFetch, because it enforces the host allowlist (prevents SSRF)."
+      ],
+      "label": "write the merged text"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Apply merge"
+      ],
+      "label": "apply this one merge"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Duplicates (0)"
+      ],
+      "label": "the handled group leaves the drawer"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Close",
+        "--exact"
+      ],
+      "label": "close the drawer"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "1 entry"
+      ],
+      "label": "one memory remains active"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "prevents SSRF"
+      ],
+      "label": "it carries the merged text"
+    },
+    {
+      "cmd": [
+        "find",
+        "role",
+        "checkbox",
+        "click",
+        "--name",
+        "Show archived"
+      ],
+      "label": "show archived memories"
+    },
+    {
+      "cmd": [
+        "find",
+        "text",
+        "safeFetch because it enforces",
+        "click"
+      ],
+      "label": "select the merged-away memory"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--text",
+        "Merged into another memory"
+      ],
+      "label": "it is archived with a link to the memory it was merged into"
+    }
+  ]
+}

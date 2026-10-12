@@ -7,7 +7,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Button, Checkbox, FormField, Textarea } from "@devdigest/ui";
 import {
-  MEMORY_CONTENT_MAX,
+  MEMORY_CONTENT_MAX, MEMORY_MAX_GLOBS,
   type MemoryInput,
   type MemoryKind,
   type MemoryLink,
@@ -26,7 +26,12 @@ export interface LinkOption {
 /** Same rules the server enforces (content length, at least one target). */
 export function isMemoryFormValid(v: MemoryInput): boolean {
   const len = v.content.trim().length;
-  return len > 0 && len <= MEMORY_CONTENT_MAX && (v.applies_to_all_agents || v.links.length > 0);
+  return (
+    len > 0 &&
+    len <= MEMORY_CONTENT_MAX &&
+    v.path_globs.length <= MEMORY_MAX_GLOBS &&
+    (v.applies_to_all_agents || v.links.length > 0)
+  );
 }
 
 const hasLink = (links: MemoryLink[], kind: MemoryLink["target_kind"], id: string) =>
@@ -168,6 +173,9 @@ export function MemoryForm({
 
       <FormField label={t("form.globs")} hint={t("form.globsHint")}>
         <GlobsInput globs={value.path_globs} onChange={(path_globs) => set({ path_globs })} label={t("form.globs")} />
+        {value.path_globs.length > MEMORY_MAX_GLOBS && (
+          <div style={s.error}>{t("form.tooManyGlobs", { max: MEMORY_MAX_GLOBS })}</div>
+        )}
       </FormField>
 
       {readOnlySource && (

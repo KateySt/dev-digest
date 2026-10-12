@@ -1,11 +1,20 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { CreateMemoryBody, MemoryListQuery, MergeMemoryBody, UpdateMemoryBody } from '@devdigest/shared';
+import {
+  CreateMemoryBody,
+  CurateMergeBody,
+  CurateMergeDraftBody,
+  CurateScanBody,
+  MemoryListQuery,
+  MergeMemoryBody,
+  UpdateMemoryBody,
+} from '@devdigest/shared';
 import { z } from 'zod';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { MemoryService } from './service.js';
 import { LearnService } from './learn.js';
+import { CurationService } from './curation.js';
 
 /**
  * Memory module (SPEC-2026-10-12-memory).
@@ -17,6 +26,11 @@ import { LearnService } from './learn.js';
  *   DELETE /memories/:id
  *   POST   /memories/:id/merge        → fold a new Learn into an existing memory (AC-10)
  *   POST   /findings/:id/learn/draft  → LLM draft for the Learn modal; persists nothing (AC-2..6)
+ *
+ * Curation (SPEC-2026-10-12-memory-curation) — only ever called from the Curate click:
+ *   POST   /memories/curate/scan         → dry-run proposals: duplicate groups + stale candidates
+ *   POST   /memories/curate/merge-draft  → LLM merged text for a group; persists nothing
+ *   POST   /memories/curate/merge        → apply ONE group merge (archives the merged-away members)
  */
 
 const SimilarQuery = z.object({
@@ -28,6 +42,7 @@ export default async function memoryRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const service = new MemoryService(app.container);
   const learn = new LearnService(app.container);
+  const curation = new CurationService(app.container);
 
   app.get('/memories', { schema: { querystring: MemoryListQuery } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
@@ -68,5 +83,20 @@ export default async function memoryRoutes(appBase: FastifyInstance) {
   app.post('/memories/:id/merge', { schema: { params: IdParams, body: MergeMemoryBody } }, async (req) => {
     const { workspaceId, userId } = await getContext(app.container, req);
     return service.merge(workspaceId, userId, req.params.id, req.body);
+  });
+
+  app.post('/memories/curate/scan', { schema: { body: CurateScanBody } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return curation.scan(workspaceId, req.body.repo_id ?? null);
+  });
+
+  app.post('/memories/curate/merge-draft', { schema: { body: CurateMergeDraftBody } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return curation.mergeDraft(workspaceId, req.body.member_ids);
+  });
+
+  app.post('/memories/curate/merge', { schema: { body: CurateMergeBody } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return curation.mergeGroup(workspaceId, req.body);
   });
 }

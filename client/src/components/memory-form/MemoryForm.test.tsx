@@ -104,4 +104,13 @@ describe("MemoryForm", () => {
     expect(isMemoryFormValid(value({ links: [], applies_to_all_agents: false }))).toBe(false);
     expect(isMemoryFormValid(value())).toBe(true);
   });
+
+  // SPEC-2026-10-12-memory-curation review fix: a merge can union > 10 globs.
+  it("client-side blocks more than 10 globs with a hint", () => {
+    const globs = Array.from({ length: 11 }, (_, i) => `src/${i}/**`);
+    renderApp(<Harness initial={value({ path_globs: globs })} />);
+    expect(screen.getByText("Use at most 10 file patterns.")).toBeTruthy();
+    expect(isMemoryFormValid(value({ path_globs: globs }))).toBe(false);
+    expect(isMemoryFormValid(value({ path_globs: globs.slice(0, 10) }))).toBe(true);
+  });
 });

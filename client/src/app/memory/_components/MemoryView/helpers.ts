@@ -1,4 +1,4 @@
-import type { Memory } from "@devdigest/shared";
+import type { Memory, MemoryInput } from "@devdigest/shared";
 import { CONFIDENCE_HIGH, CONFIDENCE_MID } from "./constants";
 
 const DAY_MS = 86_400_000;
@@ -28,4 +28,18 @@ export function confidenceTone(c: number): "high" | "mid" | "low" {
  *  server returns facet counts for them. */
 export function filterMemories(items: Memory[], scopes: ReadonlySet<string>, kinds: ReadonlySet<string>): Memory[] {
   return items.filter((m) => scopes.has(m.scope) && kinds.has(m.kind));
+}
+
+/** A stored memory as the editable form value (detail Edit, curation Edit). */
+export function memoryToInput(m: Memory): MemoryInput {
+  return {
+    content: m.content,
+    kind: m.kind,
+    scope: m.scope === "global" ? "global" : "repo",
+    repo_id: m.repo_id,
+    path_globs: m.path_globs,
+    links: m.links.map(({ target_kind, target_id }) => ({ target_kind, target_id })),
+    applies_to_all_agents: m.applies_to_all_agents,
+    confidence: m.confidence,
+  };
 }

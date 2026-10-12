@@ -342,4 +342,44 @@ d('memory routes (Testcontainers pg)', () => {
     expect(emb.calls).toBe(calls + 1);
     await app.close();
   });
+  // ---- SPEC-2026-10-12-memory-curation, Task 2 --------------------------------
+  it('PATCH { kept: true } sets kept_at, memory is listed without stale=true, updated_at unchanged', async () => {
+    const app = await makeMemoryApp(pg);
+    const m = (await app.inject({ method: 'POST', url: '/memories', payload: memoryBody({ content: 'Kept rule.' }) })).json();
+    const old = new Date(Date.now() - 90 * 86_400_000);
+    await pg.handle.db.update(t.memory).set({ lastUsedAt: old, createdAt: old }).where(eq(t.memory.id, m.id));
+    const before = (await memRow(m.id))!.updatedAt;
+    const res = await app.inject({ method: 'PATCH', url: `/memories/${m.id}`, payload: { kept: true } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().kept_at).not.toBeNull();
+    expect(res.json().stale).toBe(false);
+    expect((await memRow(m.id))!.updatedAt.toISOString()).toBe(before.toISOString());
+    const listed = (await app.inject({ method: 'GET', url: '/memories' })).json().items.find((i: { id: string }) => i.id === m.id);
+    expect(listed).toBeDefined();
+    expect(listed.stale).toBe(false);
+    await app.close();
+  });
+
+  it('PATCH { archived: false } clears merged_into', async () => {
+    const app = await makeMemoryApp(pg);
+    const target = (await app.inject({ method: 'POST', url: '/memories', payload: memoryBody({ content: 'Target.' }) })).json();
+    const m = (await app.inject({ method: 'POST', url: '/memories', payload: memoryBody({ content: 'Merged away.' }) })).json();
+    await pg.handle.db.update(t.memory).set({ archivedAt: new Date(), mergedInto: target.id }).where(eq(t.memory.id, m.id));
+    expect((await app.inject({ method: 'GET', url: `/memories/${m.id}` })).json().merged_into).toBe(target.id);
+    const res = await app.inject({ method: 'PATCH', url: `/memories/${m.id}`, payload: { archived: false } });
+    expect(res.json()).toMatchObject({ archived_at: null, merged_into: null });
+    await app.close();
+  });
+
+  it('deleting the target sets merged_into to null', async () => {
+    const app = await makeMemoryApp(pg);
+    const target = (await app.inject({ method: 'POST', url: '/memories', payload: memoryBody({ content: 'Target 2.' }) })).json();
+    const m = (await app.inject({ method: 'POST', url: '/memories', payload: memoryBody({ content: 'Merged away 2.' }) })).json();
+    await pg.handle.db.update(t.memory).set({ archivedAt: new Date(), mergedInto: target.id }).where(eq(t.memory.id, m.id));
+    await app.inject({ method: 'DELETE', url: `/memories/${target.id}` });
+    const row = (await memRow(m.id))!;
+    expect(row.mergedInto).toBeNull();
+    expect(row.archivedAt).not.toBeNull();
+    await app.close();
+  });
 });

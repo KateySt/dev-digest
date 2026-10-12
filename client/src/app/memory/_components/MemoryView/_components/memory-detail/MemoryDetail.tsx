@@ -9,18 +9,8 @@ import { Button, IconBtn, Markdown } from "@devdigest/ui";
 import type { Memory, MemoryInput } from "@devdigest/shared";
 import { MemoryForm, isMemoryFormValid, type LinkOption } from "@/components/memory-form";
 import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/memory";
+import { memoryToInput } from "../../helpers";
 import { s } from "../../styles";
-
-const toInput = (m: Memory): MemoryInput => ({
-  content: m.content,
-  kind: m.kind,
-  scope: m.scope === "global" ? "global" : "repo",
-  repo_id: m.repo_id,
-  path_globs: m.path_globs,
-  links: m.links.map(({ target_kind, target_id }) => ({ target_kind, target_id })),
-  applies_to_all_agents: m.applies_to_all_agents,
-  confidence: m.confidence,
-});
 
 export function MemoryDetail({
   m,
@@ -28,6 +18,7 @@ export function MemoryDetail({
   agentOptions,
   skillOptions,
   onDeleted,
+  onOpenMemory,
 }: {
   m: Memory;
   /** The active repo — used if a global memory is switched to "This repo". */
@@ -35,6 +26,8 @@ export function MemoryDetail({
   agentOptions: LinkOption[];
   skillOptions: LinkOption[];
   onDeleted: () => void;
+  /** Select another memory (the "Merged into" link, AC-C22). */
+  onOpenMemory: (id: string) => void;
 }) {
   const t = useTranslations("memory");
   const [draft, setDraft] = React.useState<MemoryInput | null>(null);
@@ -48,10 +41,19 @@ export function MemoryDetail({
         <span style={s.badge}>{t(`kind.${m.kind}`)}</span>
         {m.unlinked && <span style={s.warnBadge}>{t("card.unlinked")}</span>}
         <div style={s.detailActions}>
-          <IconBtn icon="Edit" label={t("detail.edit")} onClick={() => setDraft(toInput(m))} />
+          <IconBtn icon="Edit" label={t("detail.edit")} onClick={() => setDraft(memoryToInput(m))} />
           <IconBtn icon="Trash" label={t("detail.delete")} danger onClick={() => setConfirming(true)} />
         </div>
       </div>
+
+      {m.merged_into && (
+        <div role="note" style={s.mergedNote}>
+          <span>{t("detail.mergedInto")}</span>
+          <Button kind="secondary" size="sm" onClick={() => onOpenMemory(m.merged_into!)}>
+            {t("detail.openMergedInto")}
+          </Button>
+        </div>
+      )}
 
       {confirming && (
         <div role="alertdialog" style={s.confirm}>

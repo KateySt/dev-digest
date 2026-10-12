@@ -6,7 +6,7 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { EmptyState, ErrorState, Skeleton, TextInput } from "@devdigest/ui";
+import { Button, EmptyState, ErrorState, Skeleton, TextInput } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
 import { useActiveRepo } from "@/lib/contexts";
 import { useAgents } from "@/lib/hooks/agents";
@@ -15,6 +15,7 @@ import { useMemories, useMemory } from "@/lib/hooks/memory";
 import { FilterRail } from "./_components/filter-rail";
 import { MemoryCard } from "./_components/memory-card";
 import { MemoryDetail } from "./_components/memory-detail";
+import { CurateDrawer } from "./_components/curate-drawer";
 import { MEMORY_KINDS, MEMORY_SCOPES, SEARCH_DEBOUNCE_MS } from "./constants";
 import { filterMemories } from "./helpers";
 import { s } from "./styles";
@@ -38,6 +39,7 @@ export function MemoryView() {
   const [search, setSearch] = React.useState("");
   const [q, setQ] = React.useState("");
   const [selectedId, setSelectedId] = React.useState<string | null>(() => params.get("id"));
+  const [curating, setCurating] = React.useState(false);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setQ(search.trim()), SEARCH_DEBOUNCE_MS);
@@ -60,6 +62,11 @@ export function MemoryView() {
   const direct = useMemory(listed ? null : selectedId);
   const selected = listed ?? direct.data ?? null;
   const now = new Date();
+  const agentOptions = (agents.data ?? []).map((a) => ({ id: a.id, name: a.name }));
+  const skillOptionsFor = (memoryRepoId: string | null) =>
+    (skills.data ?? [])
+      .filter((sk) => !sk.repo_id || sk.repo_id === (memoryRepoId ?? repoId))
+      .map((sk) => ({ id: sk.id, name: sk.name }));
 
   return (
     <AppShell crumb={[{ label: t("page.crumb") }]}>
@@ -81,6 +88,11 @@ export function MemoryView() {
             <div style={s.titleRow}>
               <h1 style={s.h1}>{t("page.heading")}</h1>
               <span style={s.subtitle}>{t("page.count", { count: items.length })}</span>
+              <div style={s.titleActions}>
+                <Button kind="secondary" size="sm" icon="Sparkles" onClick={() => setCurating(true)}>
+                  {t("curate.button")}
+                </Button>
+              </div>
             </div>
             <div style={s.searchRow}>
               <div style={{ flex: 1 }}>
@@ -118,11 +130,10 @@ export function MemoryView() {
             key={selected.id}
             m={selected}
             repoId={repoId}
-            agentOptions={(agents.data ?? []).map((a) => ({ id: a.id, name: a.name }))}
-            skillOptions={(skills.data ?? [])
-              .filter((sk) => !sk.repo_id || sk.repo_id === (selected.repo_id ?? repoId))
-              .map((sk) => ({ id: sk.id, name: sk.name }))}
+            agentOptions={agentOptions}
+            skillOptions={skillOptionsFor(selected.repo_id)}
             onDeleted={() => setSelectedId(null)}
+            onOpenMemory={setSelectedId}
           />
         ) : (
           <aside style={s.detail}>
@@ -130,6 +141,19 @@ export function MemoryView() {
           </aside>
         )}
       </div>
+
+      {curating && (
+        <CurateDrawer
+          repoId={repoId}
+          agentOptions={agentOptions}
+          skillOptions={skillOptionsFor(repoId)}
+          onClose={() => setCurating(false)}
+          onOpenMemory={(id) => {
+            setCurating(false);
+            setSelectedId(id);
+          }}
+        />
+      )}
     </AppShell>
   );
 }

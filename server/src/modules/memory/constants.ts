@@ -31,3 +31,11 @@ export const MEMORY_QUERY_DIFF_CHARS = 4000;
 
 /** Search list page size (no pagination in v1). */
 export const MEMORY_LIST_LIMIT = 200;
+
+/** Curation scan caps (SPEC-2026-10-12-memory-curation AC-C7). The group-size
+ *  cap is `CURATE_MAX_GROUP_SIZE` in the shared contracts. */
+export const CURATE_MAX_GROUPS = 50;
+export const CURATE_MAX_STALE = 100;
+
+/** Curation merge draft: structured-output schema name (deadline reuses LEARN_DRAFT_TIMEOUT_MS). */
+export const MERGE_DRAFT_SCHEMA_NAME = 'memory_merge_draft';

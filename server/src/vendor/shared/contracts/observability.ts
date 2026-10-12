@@ -11,7 +11,6 @@ import { FindingRecord } from './review-api.js';
  *   - AgentColumn          one agent's column in the multi-agent view
  *   - DisagreementRow / ConflictTake  where agents disagree on a finding group
  *   - AgentStats           per-agent quality aggregates (GET /agents/:id/stats)
- *   - CuratorResult        the cross-session memory curator outcome
  *
  * The single-document run trace itself stays in `contracts/trace.ts` (RunTrace).
  */
@@ -198,24 +197,3 @@ export const AgentStats = z.object({
   trend: z.array(StatPoint),
 });
 export type AgentStats = z.infer<typeof AgentStats>;
-
-// ---------------------------------------------------------------------------
-// Cross-session memory curator
-// ---------------------------------------------------------------------------
-
-/** A merge the curator performed (or would perform in dry-run). */
-export const CuratorMerge = z.object({
-  kept_id: z.string(),
-  merged_ids: z.array(z.string()),
-  content: z.string(),
-  similarity: z.number(),
-});
-export type CuratorMerge = z.infer<typeof CuratorMerge>;
-
-export const CuratorResult = z.object({
-  scanned: z.number().int(),
-  merges: z.array(CuratorMerge),
-  removed: z.number().int(),
-  dry_run: z.boolean(),
-});
-export type CuratorResult = z.infer<typeof CuratorResult>;

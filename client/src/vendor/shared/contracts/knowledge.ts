@@ -184,6 +184,10 @@ export const Memory = MemoryItem.extend({
   last_used_at: z.string().nullable(),
   archived_at: z.string().nullable(),
   stale: z.boolean(),
+  /** Set on a memory archived by a curation merge: the memory it was merged into. */
+  merged_into: z.string().nullable(),
+  /** Last "Keep" on a stale curation candidate; resets the stale clock. */
+  kept_at: z.string().nullable(),
 });
 export type Memory = z.infer<typeof Memory>;
 
@@ -218,6 +222,8 @@ export type CreateMemoryBody = z.infer<typeof CreateMemoryBody>;
 
 export const UpdateMemoryBody = MemoryInput.partial().extend({
   archived: z.boolean().optional(),
+  /** Curation "Keep": sets `kept_at = now`, changes nothing else. */
+  kept: z.literal(true).optional(),
 });
 export type UpdateMemoryBody = z.infer<typeof UpdateMemoryBody>;
 
@@ -254,6 +260,64 @@ export const MemoryListResponse = z.object({
   search_mode: MemorySearchMode,
 });
 export type MemoryListResponse = z.infer<typeof MemoryListResponse>;
+
+// ---- Memory curation (SPEC-2026-10-12-memory-curation) ----
+/** Max memories in one duplicate group (scan output and merge input). */
+export const CURATE_MAX_GROUP_SIZE = 10;
+
+export const StaleReason = z.enum(['unused', 'unlinked']);
+export type StaleReason = z.infer<typeof StaleReason>;
+
+export const CurateScanBody = z.object({
+  repo_id: z.string().uuid().optional(),
+});
+export type CurateScanBody = z.infer<typeof CurateScanBody>;
+
+export const CurateGroup = z.object({
+  members: z.array(Memory).min(2).max(CURATE_MAX_GROUP_SIZE),
+  primary_id: z.string(),
+  /** Highest pairwise similarity inside the group. */
+  similarity: z.number(),
+});
+export type CurateGroup = z.infer<typeof CurateGroup>;
+
+export const StaleCandidate = z.object({
+  memory: Memory,
+  reasons: z.array(StaleReason).min(1),
+});
+export type StaleCandidate = z.infer<typeof StaleCandidate>;
+
+export const CurateScanResponse = z.object({
+  groups: z.array(CurateGroup),
+  stale: z.array(StaleCandidate),
+  /** Totals before the caps, so the UI can say "showing N of M". */
+  totals: z.object({ groups: z.number().int(), stale: z.number().int() }),
+  mode: MemorySearchMode,
+});
+export type CurateScanResponse = z.infer<typeof CurateScanResponse>;
+
+const CurateMemberIds = z.array(z.string().uuid()).min(2).max(CURATE_MAX_GROUP_SIZE);
+
+export const CurateMergeDraftBody = z.object({ member_ids: CurateMemberIds });
+export type CurateMergeDraftBody = z.infer<typeof CurateMergeDraftBody>;
+
+export const CurateMergeDraftResponse = z.object({
+  content: z.string(),
+  /** True when the LLM failed and the primary's content was used. */
+  fallback: z.boolean(),
+});
+export type CurateMergeDraftResponse = z.infer<typeof CurateMergeDraftResponse>;
+
+export const CurateMergeBody = z.object({
+  /** The repo the scan ran for (absent = global only). */
+  repo_id: z.string().uuid().optional(),
+  primary_id: z.string().uuid(),
+  member_ids: CurateMemberIds,
+  /** member id → its `updated_at` as seen by the scan (optimistic concurrency). */
+  expected: z.record(z.string(), z.string()),
+  result: MemoryInput,
+});
+export type CurateMergeBody = z.infer<typeof CurateMergeBody>;
 
 // ---- Skills ----
 export const SkillType = z.enum(['rubric', 'convention', 'security', 'custom']);

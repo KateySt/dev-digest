@@ -96,6 +96,15 @@ describe('isStale', () => {
     expect(isStale({ lastUsedAt: null, createdAt: daysAgo(61) }, now)).toBe(true);
     expect(isStale({ lastUsedAt: null, createdAt: daysAgo(1) }, now)).toBe(false);
   });
+
+  // SPEC-2026-10-12-memory-curation: Keep resets the stale clock.
+  it('isStale is false when kept_at is recent though last_used_at is 90d old', () => {
+    expect(isStale({ lastUsedAt: daysAgo(90), createdAt: daysAgo(100), keptAt: daysAgo(1) }, now)).toBe(false);
+  });
+
+  it('isStale is true when kept_at is 61d old', () => {
+    expect(isStale({ lastUsedAt: daysAgo(90), createdAt: daysAgo(100), keptAt: daysAgo(61) }, now)).toBe(true);
+  });
 });
 
 // ---- Task 6: Learn draft helpers ----

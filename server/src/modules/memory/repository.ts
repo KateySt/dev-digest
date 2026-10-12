@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { MemoryKind, MemoryLink, MemoryScope, MemorySource, MemorySummary } from '@devdigest/shared';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
@@ -15,6 +16,9 @@ import type { LinkWithName } from './helpers.js';
 
 export type MemoryRow = Omit<typeof t.memory.$inferSelect, 'embedding' | 'contentTsv'>;
 
+/** A non-archived in-scope memory as the curation scan sees it. */
+export type CurationRow = MemoryRow & { embedding: number[] | null; linkCount: number; tsv: string };
+
 const cols = {
   id: t.memory.id,
   workspaceId: t.memory.workspaceId,
@@ -30,6 +34,8 @@ const cols = {
   createdAt: t.memory.createdAt,
   updatedAt: t.memory.updatedAt,
   lastUsedAt: t.memory.lastUsedAt,
+  mergedInto: t.memory.mergedInto,
+  keptAt: t.memory.keptAt,
 };
 
 export interface MemoryWrite {
@@ -93,7 +99,10 @@ export class MemoryRepository {
     where.push(f.archived ? isNotNull(t.memory.archivedAt) : isNull(t.memory.archivedAt));
     if (!f.includeStale) {
       const cutoff = new Date(f.now.getTime() - MEMORY_STALE_DAYS * 86_400_000);
-      where.push(sql`coalesce(${t.memory.lastUsedAt}, ${t.memory.createdAt}) >= ${cutoff.toISOString()}::timestamptz`);
+      // greatest() ignores NULLs, so a never-kept memory uses last use / creation.
+      where.push(
+        sql`greatest(coalesce(${t.memory.lastUsedAt}, ${t.memory.createdAt}), ${t.memory.keptAt}) >= ${cutoff.toISOString()}::timestamptz`,
+      );
     }
     return where;
   }
@@ -175,7 +184,12 @@ export class MemoryRepository {
   async update(
     workspaceId: string,
     id: string,
-    patch: Partial<MemoryWrite> & { archivedAt?: Date | null; embedding?: number[] | null },
+    patch: Partial<MemoryWrite> & {
+      archivedAt?: Date | null;
+      mergedInto?: string | null;
+      embedding?: number[] | null;
+      lastUsedAt?: Date | null;
+    },
   ): Promise<MemoryRow | undefined> {
     const [row] = await this.db
       .update(t.memory)
@@ -183,6 +197,17 @@ export class MemoryRepository {
       .where(and(eq(t.memory.workspaceId, workspaceId), eq(t.memory.id, id)))
       .returning(cols);
     return row;
+  }
+
+  /** Curation "Keep": touches `kept_at` only — not `updated_at`, which the
+   *  merge apply uses for optimistic concurrency. */
+  async setKeptAt(workspaceId: string, id: string, at: Date): Promise<boolean> {
+    const rows = await this.db
+      .update(t.memory)
+      .set({ keptAt: at })
+      .where(and(eq(t.memory.workspaceId, workspaceId), eq(t.memory.id, id)))
+      .returning({ id: t.memory.id });
+    return rows.length > 0;
   }
 
   async delete(workspaceId: string, id: string): Promise<boolean> {
@@ -427,6 +452,50 @@ export class MemoryRepository {
       agentIds: links.filter((l) => l.memoryId === r.id && l.agentId).map((l) => l.agentId!),
       skillIds: links.filter((l) => l.memoryId === r.id && l.skillId).map((l) => l.skillId!),
     }));
+  }
+
+  // ---- Curation (SPEC-2026-10-12-memory-curation) --------------------------
+
+  /** Non-archived memories in curation scope: global + `repoId` (global only when null). */
+  private curationScope(
+    table: Record<'workspaceId' | 'archivedAt' | 'scope' | 'repoId', AnyPgColumn>,
+    workspaceId: string,
+    repoId: string | null,
+  ): SQL {
+    return and(
+      eq(table.workspaceId, workspaceId),
+      isNull(table.archivedAt),
+      repoId ? or(eq(table.scope, 'global'), eq(table.repoId, repoId)) : eq(table.scope, 'global'),
+    )!;
+  }
+
+  async curationRows(workspaceId: string, repoId: string | null): Promise<CurationRow[]> {
+    const rows = await this.db
+      .select({
+        ...cols,
+        embedding: t.memory.embedding,
+        linkCount: sql<number>`(select count(*)::int from ${t.memoryLinks} ml where ml.memory_id = ${t.memory.id})`,
+        // lexemes + positions for the in-app full-text pairing (helpers.textPairs)
+        tsv: sql<string>`${t.memory.contentTsv}::text`,
+      })
+      .from(t.memory)
+      .where(this.curationScope(t.memory, workspaceId, repoId));
+    return rows.map((r) => ({ ...r, linkCount: Number(r.linkCount) }));
+  }
+
+  /** Merge apply: "Learned" findings of merged-away members now point at the primary. */
+  async repointFindings(fromIds: string[], toId: string): Promise<void> {
+    if (fromIds.length === 0) return;
+    await this.db.update(t.findings).set({ memoryId: toId }).where(inArray(t.findings.memoryId, fromIds));
+  }
+
+  /** Merge apply: archive merged-away members, remembering where they went. */
+  async archiveMerged(workspaceId: string, ids: string[], intoId: string, at: Date): Promise<void> {
+    if (ids.length === 0) return;
+    await this.db
+      .update(t.memory)
+      .set({ archivedAt: at, mergedInto: intoId, updatedAt: at })
+      .where(and(eq(t.memory.workspaceId, workspaceId), inArray(t.memory.id, ids)));
   }
 
   async touchLastUsed(ids: string[], at: Date): Promise<void> {

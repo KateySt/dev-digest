@@ -12,6 +12,7 @@ import {
   boolean,
   customType,
   uniqueIndex,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { now } from './_shared';
@@ -46,6 +47,10 @@ export const memory = pgTable(
     pathGlobs: text('path_globs').array().notNull().default(sql`'{}'::text[]`),
     appliesToAllAgents: boolean('applies_to_all_agents').notNull().default(false),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
+    // SPEC-2026-10-12-memory-curation: set on a member archived by a merge.
+    mergedInto: uuid('merged_into').references((): AnyPgColumn => memory.id, { onDelete: 'set null' }),
+    // Curation "Keep": resets the stale clock (greatest(last used / created, kept_at)).
+    keptAt: timestamp('kept_at', { withTimezone: true }),
     // Full-text fallback when embeddings are off (built-in; PGlite has no pg_trgm).
     contentTsv: tsvector('content_tsv').generatedAlwaysAs(sql`to_tsvector('english', content)`),
     createdAt: now(),

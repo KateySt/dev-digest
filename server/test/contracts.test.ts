@@ -380,3 +380,69 @@ describe('Memory contracts', () => {
     expect(r.similar).toHaveLength(1);
   });
 });
+
+// ---- SPEC-2026-10-12-memory-curation (Task 1) ----
+import { CurateMergeBody, UpdateMemoryBody, Memory, CurateScanResponse } from '@devdigest/shared';
+
+describe('Memory curation contracts', () => {
+  const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const result = {
+    content: 'Merged rule — because.',
+    kind: 'fact',
+    scope: 'global',
+    repo_id: null,
+    applies_to_all_agents: true,
+  };
+  const mergeBody = (n: number) => ({
+    primary_id: id(1),
+    member_ids: Array.from({ length: n }, (_, i) => id(i + 1)),
+    expected: {},
+    result,
+  });
+
+  it('CurateMergeBody rejects 11 members', () => {
+    expect(CurateMergeBody.safeParse(mergeBody(11)).success).toBe(false);
+    expect(CurateMergeBody.safeParse(mergeBody(10)).success).toBe(true);
+  });
+
+  it('CurateMergeBody rejects 1 member', () => {
+    expect(CurateMergeBody.safeParse(mergeBody(1)).success).toBe(false);
+  });
+
+  it('UpdateMemoryBody accepts { kept: true } and rejects { kept: false }', () => {
+    expect(UpdateMemoryBody.safeParse({ kept: true }).success).toBe(true);
+    expect(UpdateMemoryBody.safeParse({ kept: false }).success).toBe(false);
+  });
+
+  it('Memory parses merged_into/kept_at null', () => {
+    const m = {
+      id: id(1),
+      content: 'c',
+      scope: 'global',
+      kind: 'fact',
+      confidence: 0.5,
+      sources: [],
+      repo_id: null,
+      path_globs: [],
+      links: [],
+      applies_to_all_agents: true,
+      unlinked: false,
+      created_at: 'x',
+      updated_at: 'x',
+      last_used_at: null,
+      archived_at: null,
+      stale: false,
+      merged_into: null,
+      kept_at: null,
+    };
+    expect(Memory.parse(m).merged_into).toBeNull();
+    expect(
+      CurateScanResponse.safeParse({
+        groups: [{ members: [m, { ...m, id: id(2) }], primary_id: id(1), similarity: 0.9 }],
+        stale: [{ memory: m, reasons: ['unused', 'unlinked'] }],
+        totals: { groups: 1, stale: 1 },
+        mode: 'text',
+      }).success,
+    ).toBe(true);
+  });
+});
