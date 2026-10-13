@@ -1,10 +1,11 @@
 /* FindingCard — ported from findings.jsx (createElement → TSX).
    Severity icon+label, category, file:line, confidence, markdown rationale +
-   suggestion, accept/dismiss actions. Accept/dismiss reflect persisted
-   timestamps. */
+   suggestion, accept/dismiss/learn actions. Accept/dismiss reflect persisted
+   timestamps; "Learned" links to the memory saved from this finding. */
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Icon,
@@ -23,6 +24,7 @@ import { lineLabel, type LinkedSkill } from "./helpers";
 import { githubBlobUrl } from "@/lib/utils";
 import { EvalCaseAction } from "./EvalCaseAction";
 import { ReplyAction } from "./ReplyAction";
+import { LearnAction } from "./LearnAction";
 import { s } from "./styles";
 
 export function FindingCard({
@@ -74,6 +76,15 @@ export function FindingCard({
             <CategoryTag category={f.category as Category} />
             {accepted && <span style={s.acceptedTag}>{t("finding.accepted")}</span>}
             {dismissed && <span style={s.dismissedTag}>{t("finding.dismissed")}</span>}
+            {f.memory_id && (
+              <Link
+                href={`/memory?id=${f.memory_id}`}
+                style={s.learnedTag}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t("finding.learned")}
+              </Link>
+            )}
           </div>
           <div style={s.metaRow}>
             <MonoLink href={fileHref}>
@@ -120,14 +131,7 @@ export function FindingCard({
             >
               {t("finding.dismiss")}
             </Button>
-            <span title={t("finding.learnSoon")} style={s.hintWrap}>
-              <Button kind="secondary" size="sm" icon="Brain" disabled aria-describedby={`${f.id}-learn-hint`}>
-                {t("finding.learn")}
-              </Button>
-              <span id={`${f.id}-learn-hint`} style={s.srOnly}>
-                {t("finding.learnSoon")}
-              </span>
-            </span>
+            <LearnAction f={f} />
             <EvalCaseAction f={f} agentId={agentId} linkedSkills={linkedSkills} />
             <ReplyAction f={f} prId={prId} />
           </div>

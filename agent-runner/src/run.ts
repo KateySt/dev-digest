@@ -98,7 +98,6 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
     // 1. Load + validate the manifest BEFORE it is used for anything (AC-20).
     const manifest = loadManifest(deps.devdigestDir, { readFile, readDir }, deps.agentSlug);
     const skills = loadSkillBodies(deps.devdigestDir, manifest.skills, readFile);
-    const memory = loadMemory(deps.devdigestDir, readFile);
     const postAs: PostAs = deps.postAs ?? manifest.post_as;
 
     // 2. Resolve CI context (PR number/title/body/repo) from env + event payload.
@@ -115,6 +114,12 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
     //    GitHub 422 "diff too large", and reviewing our own config is noise.
     const rawDiff = await fetchDiffImpl(ctx, githubToken ?? '', fetchImpl);
     const diff = parseUnifiedDiff(stripIgnoredFiles(rawDiff));
+    // Memory lines are filtered by this agent + the PR's changed files (needs the diff).
+    const memory = loadMemory(
+      deps.devdigestDir,
+      { agentSlug: manifest.slug, changedFiles: diff.files.map((f) => f.path) },
+      readFile,
+    );
 
     // 4. Run the SAME engine the studio uses. `reviewPullRequest` internally
     //    calls `assemblePrompt`/`wrapUntrusted` (diff → `<untrusted

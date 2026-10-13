@@ -36,7 +36,8 @@
     "replyPost": "Post to GitHub",
     "replyPosting": "Posting…",
     "replyFailed": "Couldn't post the reply: {message}",
-    "replySuggestionHeading": "Suggested fix"
+    "replySuggestionHeading": "Suggested fix",
+    "learned": "Learned"
   },
   "trifecta": {
     "lethal": "LETHAL TRIFECTA — ALL 3 PRESENT",

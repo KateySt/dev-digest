@@ -36,7 +36,7 @@ Non-goals
 - Eval runs never appear in Stats / Agent Performance.
 - Single-case runs ("Run case", "Run on save") are not versioned suite runs and never appear in run history or compare.
 - No parallel execution of cases within a suite run (sequential, as today).
-- FindingCard **Learn** (finding → project Memory lesson) is split out to a separate future spec; nothing here implements the `learn` action. Decisions already made for that spec: inject all `learning` Memory entries for the PR's repo, newest first, at most 20, no embedding retrieval; never inject Memory into eval runs (eval inputs stay frozen).
+- FindingCard **Learn** (finding → project Memory lesson) is specified in `specs/2026-10-12-memory.md` (SPEC-2026-10-12-memory), which supersedes the retrieval decision once recorded here ("all `learning` entries, newest first, max 20, no embeddings"). Still in force: never inject Memory into eval runs (eval inputs stay frozen).
 - Promote does not roll back a skill's text — only skill links are restored.
 
 ## User stories

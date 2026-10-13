@@ -13,6 +13,7 @@ import type {
   EvalCaseRun,
   EvalSuiteRun,
   FindingRecord,
+  Memory,
   Skill,
   SkillEvalRuns,
   SkillEvalSuiteRun,
@@ -24,6 +25,7 @@ import evalDashboardMessages from "../../messages/en/evalDashboard.json";
 import evalMetricsMessages from "../../messages/en/evalMetrics.json";
 import evalSkillMessages from "../../messages/en/evalSkill.json";
 import firstRunMessages from "../../messages/en/firstRun.json";
+import memoryMessages from "../../messages/en/memory.json";
 import prReviewMessages from "../../messages/en/prReview.json";
 import shellMessages from "../../messages/en/shell.json";
 import skillsMessages from "../../messages/en/skills.json";
@@ -35,6 +37,7 @@ export const ALL_MESSAGES = {
   evalMetrics: evalMetricsMessages,
   evalSkill: evalSkillMessages,
   firstRun: firstRunMessages,
+  memory: memoryMessages,
   prReview: prReviewMessages,
   shell: shellMessages,
   skills: skillsMessages,
@@ -314,6 +317,30 @@ export function skill(over: Partial<Skill> = {}): Skill {
     scan_status: "clean",
     scan_findings: null,
     scanned_at: "2026-01-01T00:00:00Z",
+    ...over,
+  };
+}
+
+export function memory(over: Partial<Memory> = {}): Memory {
+  return {
+    id: "m1",
+    content: "bucketKey() must include the API version prefix.",
+    kind: "fact",
+    scope: "repo",
+    repo_id: "r1",
+    confidence: 0.84,
+    sources: [],
+    path_globs: [],
+    links: [],
+    applies_to_all_agents: true,
+    unlinked: false,
+    created_at: "2026-05-01T00:00:00.000Z",
+    updated_at: "2026-05-29T00:00:00.000Z",
+    last_used_at: null,
+    archived_at: null,
+    stale: false,
+    merged_into: null,
+    kept_at: null,
     ...over,
   };
 }

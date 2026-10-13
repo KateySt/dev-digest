@@ -48,7 +48,7 @@ delimiter-wrapped (`prompt.ts:104-122`):
 <task line, e.g. "Review PR #7 '…'">
 ## PR description        (untrusted, author-controlled, truncated to 4000 chars)
 ## Skills / rules        (linked skill bodies)
-## Relevant memory       (curated memory items)
+## Relevant memory       (human-confirmed team memory: fixed usage rules + <team-memory> block)
 ## Repo skeleton         (untrusted, repo-derived)
 ## Project context       (untrusted spec chunks)
 ## Callers of changed symbols  (untrusted, repo-derived)
@@ -58,6 +58,14 @@ delimiter-wrapped (`prompt.ts:104-122`):
 Sections with no content are omitted. Everything repo- or author-derived is wrapped
 in `<untrusted source="…">…</untrusted>` so the model can tell instructions
 (system) from data (user).
+
+`## Relevant memory` is the one exception: memories are human-confirmed via Learn, so
+they sit in their own `<team-memory>` block preceded by a fixed, trusted preamble
+(`MEMORY_PREAMBLE` in `reviewer-core/src/prompt.ts`): `[learning]`/`[preference]`
+entries say what NOT to flag (never a CRITICAL finding), `[fact]`/`[convention]`/`[decision]`
+entries are rules to check the diff against. Wrapping them in `<untrusted>` would cancel
+every "do not flag" entry, because `INJECTION_GUARD` tells the model to ignore such claims
+there. Agent prompts do not need to mention memory (SPEC-2026-10-12-memory).
 
 ## The output schema is NOT in the prompt
 

@@ -3,6 +3,7 @@ import { pgTable, uuid, text, integer, jsonb, timestamp, doublePrecision } from 
 import { now } from './_shared';
 import { workspaces } from './core';
 import { pullRequests } from './pulls';
+import { memory } from './knowledge';
 
 // ============================================================ Review & findings
 
@@ -46,6 +47,8 @@ export const findings = pgTable('findings', {
   // "Reply to author": URL + time of the GitHub comment posted from the studio.
   replyUrl: text('reply_url'),
   repliedAt: timestamp('replied_at', { withTimezone: true }),
+  // Memory created from this finding via Learn (SPEC-2026-10-12-memory AC-7).
+  memoryId: uuid('memory_id').references(() => memory.id, { onDelete: 'set null' }),
 });
 
 export const prIntent = pgTable('pr_intent', {

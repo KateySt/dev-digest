@@ -32,7 +32,7 @@ Non-goals
 - No cost-limit confirmation before a run.
 - Eval runs never appear on Stats or Agent Performance screens.
 - Single-case runs never appear in run history or compare.
-- **Learn** behavior is split out to a separate future spec (decisions carried over: inject all repo `learning` Memory entries newest-first, max 20, no embeddings, never in eval runs). This spec only reserves its slot in the action row (AC-6).
+- **Learn** behavior lives in `specs/2026-10-12-memory.md` (SPEC-2026-10-12-memory), which supersedes the retrieval decisions once carried here; memory is still never injected into eval runs. AC-6 below is superseded by that spec (Learn is now enabled).
 
 ## User stories
 None beyond the goals.
@@ -45,7 +45,7 @@ None beyond the goals.
 - AC-3: IF the finding is neither accepted nor dismissed, THEN the system shall render "Turn into eval case" disabled with the tooltip "Accept or dismiss first". (verify via: unit test)
 - AC-4: WHEN a finding already has an eval case for the agent target (from load or from a 409 response), the system shall mark the agent target "In eval set" linking to that case, keeping other targets selectable (SPEC-08 AC-36). (verify via: unit test)
 - AC-5: IF the finding's review has no agent, THEN the system shall render "Turn into eval case" disabled with a tooltip explaining that only agent reviews can seed cases. (verify via: unit test)
-- AC-6: WHEN the action row renders, the system shall show Learn disabled with the tooltip "Coming soon" and trigger no request on click. (verify via: unit test)
+- AC-6: ~~WHEN the action row renders, the system shall show Learn disabled with the tooltip "Coming soon" and trigger no request on click.~~ Superseded by SPEC-2026-10-12-memory AC-1 (Learn enabled, opens the Learn modal).
 - AC-7: WHEN the user clicks "Reply to author", the system shall open a confirmation dialog showing the target file:line and an editable comment body prefilled from the finding's title, rationale, and suggestion, and post nothing until the user confirms. (verify via: unit test)
 - AC-8: WHEN a finding has a posted reply (just posted or loaded after reload), the system shall render Reply to author as "Posted · View on GitHub" linking to the comment and offer no second reply. (verify via: unit test)
 - AC-9: IF posting the reply fails, THEN the system shall keep the dialog open with the server's error message and the user's edited body intact. (verify via: unit test)

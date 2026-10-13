@@ -91,14 +91,15 @@ describe("FindingCard action row", () => {
     }
   });
 
-  it("C-6: Learn is disabled with the 'Coming soon' hint and fires no request", () => {
-    const net = mockFetch();
+  it("SPEC-2026-10-12-memory AC-1: Learn is enabled on an undecided finding", () => {
     renderCard(FINDING);
-    const learn = screen.getByRole("button", { name: /learn/i });
-    expect(learn).toBeDisabled();
-    expect(learn.closest("span[title]")).toHaveAttribute("title", "Coming soon");
-    fireEvent.click(learn);
-    expect(net.calls).toHaveLength(0);
+    expect(screen.getByRole("button", { name: /^learn$/i })).toBeEnabled();
+  });
+
+  it("AC-7: shows a Learned tag linking to the memory when memory_id is set", () => {
+    renderCard({ ...FINDING, memory_id: "m1" });
+    const tag = screen.getByRole("link", { name: "Learned" });
+    expect(tag).toHaveAttribute("href", "/memory?id=m1");
   });
 });
 

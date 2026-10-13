@@ -382,7 +382,7 @@ export function useFindingAction() {
       reply?: string;
       prId?: string;
     }) =>
-      api.post<{ finding: ReviewRecord["findings"][number]; memoryId?: string }>(
+      api.post<{ finding: ReviewRecord["findings"][number] }>(
         `/findings/${findingId}/${action}`,
         reply ? { reply } : undefined,
       ),

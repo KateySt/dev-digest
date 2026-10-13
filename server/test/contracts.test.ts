@@ -286,3 +286,163 @@ describe('SPEC-10 multi-agent contracts', () => {
     expect(ConflictTake.safeParse({ agent_id: 'a', agent_name: 'A', verdict: 'ignored' }).success).toBe(false);
   });
 });
+
+// ---- SPEC-2026-10-12-memory (Task 1) ----
+import {
+  MemoryInput,
+  MemoryPulled,
+  FindingRecord,
+  FeatureModelId,
+  LearnDraftResponse,
+} from '@devdigest/shared';
+
+describe('Memory contracts', () => {
+  const base = {
+    content: 'Do not flag try/catch around JSON.parse — intentional defensive parsing.',
+    kind: 'learning',
+    scope: 'repo',
+    repo_id: '00000000-0000-4000-8000-000000000001',
+  };
+
+  it('MemoryInput applies defaults', () => {
+    const v = MemoryInput.parse(base);
+    expect(v.path_globs).toEqual([]);
+    expect(v.links).toEqual([]);
+    expect(v.applies_to_all_agents).toBe(false);
+    expect(v.confidence).toBe(0.8);
+  });
+
+  it('MemoryInput rejects 601-char content', () => {
+    expect(MemoryInput.safeParse({ ...base, content: 'x'.repeat(601) }).success).toBe(false);
+    expect(MemoryInput.safeParse({ ...base, content: 'x'.repeat(600) }).success).toBe(true);
+  });
+
+  it('MemoryInput rejects whitespace-only content', () => {
+    expect(MemoryInput.safeParse({ ...base, content: '   ' }).success).toBe(false);
+  });
+
+  it('MemoryInput rejects scope team', () => {
+    expect(MemoryInput.safeParse({ ...base, scope: 'team' }).success).toBe(false);
+  });
+
+  it('MemoryInput rejects 11 globs', () => {
+    const globs = Array.from({ length: 11 }, (_, i) => `src/${i}/**`);
+    expect(MemoryInput.safeParse({ ...base, path_globs: globs }).success).toBe(false);
+  });
+
+  it('MemoryPulled parses a legacy {pr,text} entry', () => {
+    expect(MemoryPulled.safeParse({ pr: 288, text: 'legacy' }).success).toBe(true);
+  });
+
+  it('MemoryPulled carries id/kind/source_prs', () => {
+    const p = MemoryPulled.parse({
+      id: '00000000-0000-4000-8000-000000000002',
+      kind: 'fact',
+      pr: null,
+      text: 't',
+      source_prs: [482],
+    });
+    expect(p.source_prs).toEqual([482]);
+  });
+
+  it('FindingRecord accepts missing memory_id and carries it when present', () => {
+    const f = {
+      id: 'f1',
+      severity: 'WARNING',
+      category: 'bug',
+      title: 't',
+      file: 'a.ts',
+      start_line: 1,
+      end_line: 1,
+      rationale: 'r',
+      suggestion: null,
+      confidence: 0.5,
+      review_id: 'r1',
+      accepted_at: null,
+      dismissed_at: null,
+    };
+    expect(FindingRecord.safeParse(f).success).toBe(true);
+    const id = '00000000-0000-4000-8000-000000000003';
+    expect(FindingRecord.parse({ ...f, memory_id: id }).memory_id).toBe(id);
+  });
+
+  it('FeatureModelId includes memory', () => {
+    expect(FeatureModelId.safeParse('memory').success).toBe(true);
+  });
+
+  it('LearnDraftResponse parses a draft with similar entries', () => {
+    const r = LearnDraftResponse.parse({
+      draft: { ...base, fallback: false },
+      source: { pr: 482, context: 'finding: x' },
+      similar: [{ id: '00000000-0000-4000-8000-000000000004', content: 'c', kind: 'fact', scope: 'repo', similarity: 0.9 }],
+      existing_memory_id: null,
+    });
+    expect(r.similar).toHaveLength(1);
+  });
+});
+
+// ---- SPEC-2026-10-12-memory-curation (Task 1) ----
+import { CurateMergeBody, UpdateMemoryBody, Memory, CurateScanResponse } from '@devdigest/shared';
+
+describe('Memory curation contracts', () => {
+  const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const result = {
+    content: 'Merged rule — because.',
+    kind: 'fact',
+    scope: 'global',
+    repo_id: null,
+    applies_to_all_agents: true,
+  };
+  const mergeBody = (n: number) => ({
+    primary_id: id(1),
+    member_ids: Array.from({ length: n }, (_, i) => id(i + 1)),
+    expected: {},
+    result,
+  });
+
+  it('CurateMergeBody rejects 11 members', () => {
+    expect(CurateMergeBody.safeParse(mergeBody(11)).success).toBe(false);
+    expect(CurateMergeBody.safeParse(mergeBody(10)).success).toBe(true);
+  });
+
+  it('CurateMergeBody rejects 1 member', () => {
+    expect(CurateMergeBody.safeParse(mergeBody(1)).success).toBe(false);
+  });
+
+  it('UpdateMemoryBody accepts { kept: true } and rejects { kept: false }', () => {
+    expect(UpdateMemoryBody.safeParse({ kept: true }).success).toBe(true);
+    expect(UpdateMemoryBody.safeParse({ kept: false }).success).toBe(false);
+  });
+
+  it('Memory parses merged_into/kept_at null', () => {
+    const m = {
+      id: id(1),
+      content: 'c',
+      scope: 'global',
+      kind: 'fact',
+      confidence: 0.5,
+      sources: [],
+      repo_id: null,
+      path_globs: [],
+      links: [],
+      applies_to_all_agents: true,
+      unlinked: false,
+      created_at: 'x',
+      updated_at: 'x',
+      last_used_at: null,
+      archived_at: null,
+      stale: false,
+      merged_into: null,
+      kept_at: null,
+    };
+    expect(Memory.parse(m).merged_into).toBeNull();
+    expect(
+      CurateScanResponse.safeParse({
+        groups: [{ members: [m, { ...m, id: id(2) }], primary_id: id(1), similarity: 0.9 }],
+        stale: [{ memory: m, reasons: ['unused', 'unlinked'] }],
+        totals: { groups: 1, stale: 1 },
+        mode: 'text',
+      }).success,
+    ).toBe(true);
+  });
+});

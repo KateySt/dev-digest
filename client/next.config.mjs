@@ -14,6 +14,13 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:3001",
   },
+  // The vendored @devdigest/shared barrel uses NodeNext-style `./contracts/x.js`
+  // specifiers for `.ts` files. Type-only imports are erased, but a runtime
+  // import (e.g. MEMORY_CONTENT_MAX in MemoryForm) makes webpack resolve them.
+  webpack: (config) => {
+    config.resolve.extensionAlias = { ".js": [".ts", ".tsx", ".js"] };
+    return config;
+  },
   ...(standalone && {
     output: "standalone",
     // Pin the trace root to client/ — with lockfiles higher up, Next would

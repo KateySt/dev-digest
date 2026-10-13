@@ -15,9 +15,15 @@
 export {
   assemblePrompt,
   wrapUntrusted,
+  wrapTeamMemory,
+  MEMORY_PREAMBLE,
+  type MemoryEntry,
   type PromptParts,
   type AssembledPrompt,
 } from './prompt.js';
+
+// Repo-path glob matching (memory path_globs — server retrieval + CI runner).
+export { matchesAnyGlob } from './glob.js';
 
 // Citation grounding — the mandatory mechanical gate for diff findings.
 export { groundFindings, groundingSummary, type GroundingResult } from './grounding.js';
