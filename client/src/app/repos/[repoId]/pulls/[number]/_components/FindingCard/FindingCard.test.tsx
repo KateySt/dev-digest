@@ -144,11 +144,11 @@ describe("FindingCard: Turn into eval case", () => {
 
     const confirmation = await screen.findByRole("status");
     expect(confirmation).toHaveTextContent(/must find/i);
-    expect(within(confirmation).getByRole("link")).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(within(confirmation).getByRole("link")).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
     expect(net.callsTo("POST", "/findings/f1/eval-case")).toHaveLength(1);
     // The button is replaced by the "In eval set" link.
     expect(screen.queryByRole("button", { name: /turn into eval case/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
   });
 
   it("C-2: a dismissed finding is confirmed as 'must not flag'", async () => {
@@ -175,7 +175,7 @@ describe("FindingCard: Turn into eval case", () => {
 
   it("C-4: a finding that already has a case (from load) renders 'In eval set' linking to it, with no create button", () => {
     renderCard({ ...FINDING, accepted_at: "2026-06-01T00:00:00Z", eval_case_id: "case-1" });
-    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
     expect(screen.queryByRole("button", { name: /turn into eval case/i })).not.toBeInTheDocument();
   });
 

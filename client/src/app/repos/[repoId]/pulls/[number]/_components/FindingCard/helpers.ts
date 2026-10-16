@@ -63,5 +63,5 @@ export function existingCaseId(
 
 /** Where a target's cases live: the agent's or the skill's Evals tab. */
 export function evalsHrefFor(target: EvalCaseTarget): string {
-  return target.kind === "agent" ? `/agents/${target.id}?tab=evals` : `/skills?skill=${target.id}&tab=evals`;
+  return target.kind === "agent" ? `/agents?agent=${target.id}&tab=evals` : `/skills?skill=${target.id}&tab=evals`;
 }

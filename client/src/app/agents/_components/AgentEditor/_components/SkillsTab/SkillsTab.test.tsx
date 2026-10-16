@@ -2,17 +2,17 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Agent } from "@devdigest/shared";
-import messages from "../../../../../../../../messages/en/agents.json";
+import messages from "../../../../../../../messages/en/agents.json";
 
 const setSkillsMutate = vi.fn();
 
-vi.mock("../../../../../../../lib/hooks/agents", () => ({
+vi.mock("@/lib/hooks/agents", () => ({
   useAgentSkillLinks: () => ({
     data: [{ agent_id: "ag1", skill_id: "sk-a", order: 0 }],
   }),
   useSetAgentSkills: () => ({ mutate: setSkillsMutate }),
 }));
-vi.mock("../../../../../../../lib/hooks/skills", () => ({
+vi.mock("@/lib/hooks/skills", () => ({
   useSkills: () => ({
     data: [
       { id: "sk-a", name: "pr-quality-rubric", description: "", type: "rubric", source: "manual", body: "", enabled: true, version: 1 },

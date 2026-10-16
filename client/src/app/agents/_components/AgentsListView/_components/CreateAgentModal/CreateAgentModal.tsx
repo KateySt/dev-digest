@@ -52,7 +52,7 @@ export function CreateAgentModal({ onClose }: { onClose: () => void }) {
       system_prompt: systemPrompt,
     });
     onClose();
-    router.push(`/agents/${agent.id}?tab=config`);
+    router.push(`/agents?agent=${agent.id}&tab=config`);
   };
 
   return (
