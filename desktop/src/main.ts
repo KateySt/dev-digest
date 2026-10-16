@@ -12,6 +12,7 @@ import { isOwnOrigin, openExternalSafe } from './validate';
 import { getPrefs, loadPrefs, updatePrefs } from './prefs';
 import { createTray } from './tray';
 import { attachTaskbar } from './taskbar';
+import { loadSecretsKey } from './secrets-key';
 import { deepLinkFromArgv, handleDeepLink, registerProtocol, setDeepLinkTarget } from './deep-link';
 import { initTheme, windowBackground } from './theme';
 import { attachContextMenu } from './context-menu';
@@ -70,7 +71,7 @@ async function boot(): Promise<void> {
 
   log.info('data dir:', dataPaths().userData);
   setSplashStatus(splash, 'Starting services…');
-  api = startApi();
+  api = startApi(loadSecretsKey());
   web = startWeb();
   watchCrash(api);
   watchCrash(web);
