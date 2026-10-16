@@ -47,8 +47,32 @@ flowchart LR
   time (`NEXT_PUBLIC_API_BASE=http://127.0.0.1:43101`).
 - **Data** lives in the OS app-data folder (`%APPDATA%\DevDigest`,
   `~/Library/Application Support/DevDigest`): `pgdata/`, `workspace/` (clones),
-  `secrets.json` (keys from Settings), `logs/` (`main.log`, `api.log`, `web.log`).
-  *Help → Open Data Folder / Open Logs Folder* opens them.
+  `secrets.json` (keys from Settings), `logs/` (`main.log`, `api.log`, `web.log`),
+  `desktop-prefs.json` (theme source, close-to-tray). *Help → Open Data Folder /
+  Open Logs Folder* opens them.
+- **Secrets encryption (Windows):** `secrets.key` holds a random 32-byte key,
+  encrypted with DPAPI through `safeStorage`. The API asks for it over
+  `parentPort` at boot and stores `secrets.json` as AES-256-GCM; an old
+  plaintext file is migrated on first read. This protects against another OS
+  user and an offline copy of the data folder — **not** against malware running
+  as the same user. macOS (ad-hoc signed — Keychain access would break on every
+  update) and Linux without a keyring keep the plaintext file. If the key can't
+  be decrypted, the API moves the file to `secrets.json.unreadable-<ts>` and
+  the keys have to be re-entered in Settings.
+
+### Native integrations
+
+| Feature | Where | Notes |
+|---|---|---|
+| Tray + close-to-tray | `src/tray.ts`, `main.ts` | Windows/Linux close → hide (Settings → Notifications toggle). Tray turns amber while jobs run. |
+| Taskbar progress + badge | `src/taskbar.ts` | Fed by the studio's `app:set-activity` (polls `GET /activity`). Windows: red-dot overlay; macOS: Dock badge. |
+| Deep links | `src/deep-link.ts` | `devdigest://open?path=/…`, `devdigest://pr?url=https://github.com/o/r/pull/N`. Navigation only. |
+| Theme sync | `src/theme.ts` | Studio mode → `nativeTheme.themeSource`; Settings → Appearance has *System*. |
+| Context menu | `src/context-menu.ts` | Edit roles, spelling, links (https only), Inspect in dev. |
+| OS notifications | `src/ipc.ts` | Click opens the notification's route, also from the tray. |
+
+Try a deep link while the app runs (Windows): `start devdigest://open?path=/settings/appearance`.
+Tray/overlay icons are generated: `node scripts/make-tray-icons.mjs` → `build/icons/`.
 
 ## Build locally
 
