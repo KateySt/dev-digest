@@ -5,7 +5,7 @@ import type { RunSummary, RunTrace } from '@devdigest/shared';
 
 /** A run in either of these states is "in flight" (SPEC-10 S-AC-7): a `queued`
  *  row is merely waiting for a slot but still blocks a second review. */
-const IN_FLIGHT = ['queued', 'running'] as const;
+export const IN_FLIGHT = ['queued', 'running'] as const;
 
 /** Reason stamped on rows orphaned by a restart (S-AC-18). */
 export const SERVER_RESTART_REASON = 'Server restarted while the run was queued or running';

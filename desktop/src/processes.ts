@@ -36,17 +36,26 @@ function fork(name: string, modulePath: string, cwd: string, env: Record<string,
   return { name, proc, exited };
 }
 
-export function startApi(): Child {
+/**
+ * `secretsKey` (null = keep secrets.json plaintext) is handed over the parent
+ * port when the API asks for it at boot — never through env (server/src/desktop.ts).
+ */
+export function startApi(secretsKey: string | null): Child {
   const root = join(resourcesDir(), 'server');
   const { pgdata, workspace, secrets } = dataPaths();
-  return fork('api', join(root, 'app', 'desktop.mjs'), root, {
+  const child = fork('api', join(root, 'app', 'desktop.mjs'), root, {
     API_HOST: HOST,
     API_PORT: String(API_PORT),
     WEB_ORIGIN: WEB_URL,
     PGLITE_DATA_DIR: pgdata,
     DEVDIGEST_CLONE_DIR: workspace,
     DEVDIGEST_SECRETS_PATH: secrets,
+    DEVDIGEST_SECRETS_KEY_FROM_PARENT: '1',
   });
+  child.proc.on('message', (msg: { type?: unknown } | null) => {
+    if (msg?.type === 'secrets-key-request') child.proc.postMessage({ type: 'secrets-key', key: secretsKey });
+  });
+  return child;
 }
 
 export function startWeb(): Child {

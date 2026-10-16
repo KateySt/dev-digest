@@ -1,6 +1,11 @@
 import { app, BrowserWindow, ipcMain, Notification, shell, type IpcMainInvokeEvent } from 'electron';
-import { RELEASES_URL, WEB_URL, dataPaths } from './config';
+import log from 'electron-log/main';
+import { RELEASES_URL, dataPaths } from './config';
 import { checkForUpdates } from './updater';
+import { clampInt, isOwnOrigin, isStudioRoute, oneOf } from './validate';
+import { setActivity } from './activity';
+import { THEME_SOURCES, getPrefs, updatePrefs } from './prefs';
+import { setThemeSource } from './theme';
 
 /**
  * Main-process side of the preload bridge (preload.ts — keep channel names in
@@ -8,7 +13,8 @@ import { checkForUpdates } from './updater';
  * showing the studio, so a navigated-away or foreign frame can't drive them.
  */
 function ownWindow(e: IpcMainInvokeEvent): BrowserWindow | null {
-  if (!e.senderFrame?.url.startsWith(WEB_URL)) return null;
+  // Exact origin compare — a prefix check passes `http://127.0.0.1:43100@evil.com`.
+  if (!e.senderFrame || !isOwnOrigin(e.senderFrame.url)) return null;
   return BrowserWindow.fromWebContents(e.sender);
 }
 
@@ -43,18 +49,29 @@ function showNotification(win: BrowserWindow, arg: unknown): boolean {
   const title = clip(req.title, 200);
   if (!title || !Notification.isSupported()) return false;
   if (win.isFocused() && !win.isMinimized()) return false;
-  const href = typeof req.href === 'string' && /^\/(?!\/)/.test(req.href) ? req.href : null;
+  const href = isStudioRoute(req.href) ? req.href : null;
 
   const toast = new Notification({ title, body: clip(req.body, 500), silent: req.silent === true });
   shown.add(toast);
   const forget = () => shown.delete(toast);
   toast.on('close', forget);
+  // macOS unsigned builds can't post UNNotifications (E3) — the bell still has it.
+  toast.on('failed', (_e, error) => {
+    forget();
+    log.warn('notification failed:', error);
+  });
   toast.on('click', () => {
     forget();
     if (win.isDestroyed()) return;
+    // show() also brings the window back from the tray (close-to-tray hides it).
     if (win.isMinimized()) win.restore();
     win.show();
     win.focus();
+    // Windows' foreground lock can refuse focus(); flash the taskbar button instead.
+    if (!win.isFocused()) {
+      win.flashFrame(true);
+      win.once('focus', () => win.flashFrame(false));
+    }
     if (href) win.webContents.send('app:navigate', href);
   });
   toast.show();
@@ -68,7 +85,21 @@ export function registerIpc(): void {
   handle('window:is-maximized', (win) => win.isMaximized());
 
   handle('app:version', () => app.getVersion());
+  handle('app:set-theme-source', (win, arg) => {
+    if (oneOf(arg, THEME_SOURCES)) setThemeSource(win, arg);
+  });
   handle('app:notify', showNotification);
+  // Only the user-facing prefs cross the bridge (not themeSource/trayHintShown).
+  handle('app:get-prefs', () => ({ closeToTray: getPrefs().closeToTray }));
+  handle('app:set-prefs', (_win, arg) => {
+    const p = (arg ?? {}) as Record<string, unknown>;
+    if (typeof p.closeToTray === 'boolean') updatePrefs({ closeToTray: p.closeToTray });
+    return { closeToTray: getPrefs().closeToTray };
+  });
+  handle('app:set-activity', (_win, arg) => {
+    const a = (arg ?? {}) as Record<string, unknown>;
+    setActivity({ running: clampInt(a.running, 0, 999), unread: clampInt(a.unread, 0, 999) });
+  });
   handle('app:check-for-updates', () => checkForUpdates(true));
   handle('app:open-releases', () => shell.openExternal(RELEASES_URL));
   handle('app:open-logs', () => shell.openPath(dataPaths().logs));

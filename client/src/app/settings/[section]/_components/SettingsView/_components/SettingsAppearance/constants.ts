@@ -1,9 +1,10 @@
-import type { Theme, ThemeAccent, ThemePalette } from "@/lib/contexts";
+import type { ThemePref, ThemeAccent, ThemePalette } from "@/lib/contexts";
 
 /** Swatch fill per option. Full class names so Tailwind's scanner sees them. */
-export const MODE_SWATCH: Record<Theme, string> = {
+export const MODE_SWATCH: Record<ThemePref, string> = {
   dark: "bg-neutral-950",
   light: "bg-white",
+  system: "bg-linear-to-br from-white from-50% to-neutral-950 to-50%",
 };
 
 export const PALETTE_SWATCH: Record<ThemePalette, string> = {

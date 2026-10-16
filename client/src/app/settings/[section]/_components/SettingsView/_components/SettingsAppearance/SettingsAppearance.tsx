@@ -4,7 +4,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { THEME_ACCENTS, THEME_MODES, THEME_PALETTES, useTheme } from "@/lib/contexts";
+import { THEME_ACCENTS, THEME_PALETTES, THEME_PREFS, useTheme } from "@/lib/contexts";
 import { cn } from "@/lib/utils";
 import { SectionTitle } from "../SectionTitle";
 import { ACCENT_SWATCH, MODE_SWATCH, PALETTE_SWATCH } from "./constants";
@@ -62,7 +62,7 @@ function ChoiceGroup<T extends string>({
 
 export function SettingsAppearance() {
   const t = useTranslations("settings.appearance");
-  const { theme, palette, accent, set, setPalette, setAccent } = useTheme();
+  const { themePref, palette, accent, set, setPalette, setAccent } = useTheme();
 
   return (
     <div className="max-w-[640px]">
@@ -70,8 +70,8 @@ export function SettingsAppearance() {
       <ChoiceGroup
         label={t("modeLabel")}
         hint={t("modeHint")}
-        options={THEME_MODES}
-        value={theme}
+        options={THEME_PREFS}
+        value={themePref}
         optionLabel={(m) => t(`modes.${m}`)}
         swatch={MODE_SWATCH}
         onChange={set}

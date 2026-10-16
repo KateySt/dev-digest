@@ -55,9 +55,11 @@ function setup(
   items: AppNotification[],
   unread = items.filter((i) => !i.read).length,
   settings: Record<string, unknown> = {},
+  activity = { reviews_running: 0, evals_running: 0 },
 ) {
   const api = mockFetch([
     get("/notifications", () => ({ items, unread })),
+    get("/activity", () => activity),
     get("/settings", () => settings),
     post(/\/notifications\/.+\/read$/, () => ({ ok: true })),
     post("/notifications/read-all", () => ({ ok: true })),
@@ -157,6 +159,18 @@ describe("NotificationCenter", () => {
       const second = installFakeBridge().bridge;
       await stream(setup([], 0, { desktop_notifications: false }));
       expect(second.app.notify).not.toHaveBeenCalled();
+    });
+
+    it("reports running jobs and the unread count to the desktop app", async () => {
+      const { bridge } = installFakeBridge();
+      setup([n()], 1, {}, { reviews_running: 2, evals_running: 1 });
+      await waitFor(() => expect(bridge.app.setActivity).toHaveBeenLastCalledWith({ running: 3, unread: 1 }));
+    });
+
+    it("does not poll /activity in a browser", async () => {
+      const { api } = setup([]);
+      await screen.findByRole("button", { name: /^Notifications/ });
+      expect(api.calls.some((c) => c.path.includes("/activity"))).toBe(false);
     });
 
     it("opens the route of a clicked OS notification", async () => {

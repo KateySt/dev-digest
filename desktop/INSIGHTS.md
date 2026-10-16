@@ -14,6 +14,27 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-16 — Main → studio pushes need a buffer in the preload
+
+A deep link is delivered on `did-finish-load`, but React subscribes
+(`useEffect` → `onNavigate`) only after hydration — a plain
+`ipcRenderer.on` inside the subscribe call drops anything sent in between.
+`preload.ts` `bufferedChannel()` registers the IPC listener at preload time and
+replays queued values to the first subscriber. Use it for any new push channel.
+
+### 2026-10-16 — The repo-root `.gitignore` ignores `build/`
+
+electron-builder's `buildResources` is `desktop/build/`, so committed assets
+there (tray icons) were silently left out of commits. `desktop/.gitignore`
+re-includes it with `!/build/` — check `git status` shows new files there.
+
+### 2026-10-16 — Close-to-tray vs. quitting
+
+The window `close` handler hides instead of closing unless `quitting` is set.
+Every quit path (tray Quit, Cmd+Q, `autoUpdater.quitAndInstall()`) goes through
+`app.quit()` → `before-quit`, which sets `quitting` before any window closes —
+so don't add a quit path that closes windows directly, or it will only hide.
+
 ### 2026-10-11 — Windows toasts need the AppUserModelID
 
 `new Notification(...).show()` from an installed (NSIS) app shows nothing on

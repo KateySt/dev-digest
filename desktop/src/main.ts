@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog, Notification } from 'electron';
 import log from 'electron-log/main';
 import { join } from 'node:path';
 import { API_PORT, API_URL, GIT_DOWNLOAD_URL, WEB_PORT, WEB_URL, dataPaths } from './config';
@@ -8,6 +8,14 @@ import { buildMenu } from './menu';
 import { forwardMaximizeState, registerIpc } from './ipc';
 import { initUpdates } from './updater';
 import { createSplash, setSplashStatus } from './splash';
+import { isOwnOrigin, openExternalSafe } from './validate';
+import { getPrefs, loadPrefs, updatePrefs } from './prefs';
+import { createTray } from './tray';
+import { attachTaskbar } from './taskbar';
+import { loadSecretsKey } from './secrets-key';
+import { deepLinkFromArgv, handleDeepLink, registerProtocol, setDeepLinkTarget } from './deep-link';
+import { initTheme, windowBackground } from './theme';
+import { attachContextMenu } from './context-menu';
 
 // `pnpm start` keeps its DB/logs apart from the installed app's.
 if (!app.isPackaged) {
@@ -20,16 +28,25 @@ let api: Child | undefined;
 let web: Child | undefined;
 let mainWindow: BrowserWindow | undefined;
 let quitting = false;
+let trayHint: Notification | undefined;
 
 if (!app.requestSingleInstanceLock()) {
   // A second launch would fight over the ports and PGlite's single-process data dir.
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
+  // A link clicked while we run (Windows/Linux) starts a second instance carrying it.
+  app.on('second-instance', (_event, argv) => {
+    handleDeepLink(deepLinkFromArgv(argv));
+    showWindow();
   });
+  // macOS delivers links as an event — it can fire before `ready`, so it's registered here.
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleDeepLink(url);
+    if (app.isReady()) showWindow();
+  });
+  // Cold start from a link (Windows/Linux): it is on our own command line.
+  handleDeepLink(deepLinkFromArgv(process.argv));
   app.whenReady().then(boot).catch((err) => fatal('DevDigest failed to start', err));
 }
 
@@ -37,6 +54,9 @@ async function boot(): Promise<void> {
   // Windows drops toasts from an installed app unless they carry its AppUserModelID
   // (electron-builder's appId). No-op elsewhere.
   if (process.platform === 'win32') app.setAppUserModelId('dev.devdigest.app');
+  loadPrefs();
+  initTheme();
+  registerProtocol();
   buildMenu();
   registerIpc();
   const splash = createSplash();
@@ -51,7 +71,7 @@ async function boot(): Promise<void> {
 
   log.info('data dir:', dataPaths().userData);
   setSplashStatus(splash, 'Starting services…');
-  api = startApi();
+  api = startApi(loadSecretsKey());
   web = startWeb();
   watchCrash(api);
   watchCrash(web);
@@ -61,6 +81,7 @@ async function boot(): Promise<void> {
   ]);
 
   createWindow();
+  createTray(showWindow);
   splash.destroy();
   initUpdates();
 }
@@ -73,7 +94,7 @@ function createWindow(): void {
     minHeight: 640,
     title: 'DevDigest',
     show: false,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: windowBackground(),
     // Custom title bar: the studio's top bar is the window's title bar (drag
     // region + its own window controls, via the preload bridge). macOS keeps
     // its native traffic lights, centred in the 52px top bar.
@@ -90,20 +111,61 @@ function createWindow(): void {
   // itself (just hidden) keeps its accelerators — copy/paste, reload, devtools.
   mainWindow.setMenuBarVisibility(false);
   forwardMaximizeState(mainWindow);
+  attachContextMenu(mainWindow);
+  attachTaskbar(mainWindow);
   mainWindow.once('ready-to-show', () => mainWindow?.show());
-  // Links to GitHub PRs, docs, etc. open in the default browser, not in the app.
+  // Links to GitHub PRs, docs, etc. open in the default browser (https only),
+  // never in the app; the window itself never leaves the studio's origin.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url) && !url.startsWith(WEB_URL)) void shell.openExternal(url);
+    if (!isOwnOrigin(url)) openExternalSafe(url);
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(WEB_URL)) {
-      event.preventDefault();
-      void shell.openExternal(url);
-    }
+    if (isOwnOrigin(url)) return;
+    event.preventDefault();
+    openExternalSafe(url);
+  });
+  mainWindow.webContents.on('will-redirect', (event, url) => {
+    if (!isOwnOrigin(url)) event.preventDefault();
+  });
+  mainWindow.on('close', (event) => {
+    if (quitting || !closesToTray()) return;
+    event.preventDefault();
+    mainWindow?.hide();
+    showTrayHintOnce();
   });
   mainWindow.on('closed', () => (mainWindow = undefined));
+  const win = mainWindow;
+  win.webContents.once('did-finish-load', () => setDeepLinkTarget(win));
   void mainWindow.loadURL(WEB_URL);
+}
+
+/** Bring the window back from the tray, the taskbar or behind other windows. */
+function showWindow(): void {
+  if (!mainWindow) {
+    if (web && !quitting) createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+/** Windows/Linux only — on macOS closing the window already keeps the app in the Dock. */
+function closesToTray(): boolean {
+  return process.platform !== 'darwin' && getPrefs().closeToTray;
+}
+
+/** First close-to-tray: tell the user the app is still running, once. */
+function showTrayHintOnce(): void {
+  if (getPrefs().trayHintShown || !Notification.isSupported()) return;
+  updatePrefs({ trayHintShown: true });
+  // Held in a module variable: Windows can GC a toast before it is shown/clicked.
+  trayHint = new Notification({
+    title: 'DevDigest is still running',
+    body: 'It keeps working in the system tray. Quit from the tray menu, or turn this off in Settings → Notifications.',
+  });
+  trayHint.show();
 }
 
 function watchCrash(child: Child): void {
@@ -121,7 +183,7 @@ async function warnNoGit(): Promise<void> {
     message: 'Git was not found',
     detail: 'DevDigest needs Git to clone and review repositories. Install it, then restart DevDigest.',
   });
-  if (response === 0) void shell.openExternal(GIT_DOWNLOAD_URL);
+  if (response === 0) openExternalSafe(GIT_DOWNLOAD_URL);
 }
 
 function fatal(message: string, err?: unknown): void {

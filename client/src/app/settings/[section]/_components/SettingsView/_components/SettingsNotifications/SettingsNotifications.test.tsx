@@ -51,4 +51,26 @@ describe("SettingsNotifications", () => {
     expect(screen.getByRole("switch", { name: /Sound/ })).toBeDisabled();
     expect(screen.getByText(/available in the DevDigest desktop app/)).toBeInTheDocument(); // browser: no bridge
   });
+
+  it("desktop on Windows: the tray toggle reads and saves the main-process pref", async () => {
+    const { bridge } = installFakeBridge("win32");
+    renderPanel({});
+    const tray = await screen.findByRole("switch", { name: /Keep running in the tray/ });
+    expect(tray).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(tray);
+    await waitFor(() => expect(tray).toHaveAttribute("aria-checked", "false"));
+    expect(bridge.app.setPrefs).toHaveBeenCalledWith({ closeToTray: false });
+  });
+
+  it("hides the tray toggle on macOS and in a browser", async () => {
+    installFakeBridge("darwin");
+    renderPanel({});
+    await screen.findByRole("switch", { name: /System notifications/ });
+    expect(screen.queryByRole("switch", { name: /Keep running in the tray/ })).not.toBeInTheDocument();
+    cleanup();
+    removeFakeBridge();
+    renderPanel({});
+    await screen.findByRole("switch", { name: /System notifications/ });
+    expect(screen.queryByRole("switch", { name: /Keep running in the tray/ })).not.toBeInTheDocument();
+  });
 });

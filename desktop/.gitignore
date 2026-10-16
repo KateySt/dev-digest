@@ -2,3 +2,5 @@ node_modules/
 dist/
 resources/
 release/
+# Root .gitignore drops every build/; this one is electron-builder buildResources (committed icons).
+!/build/

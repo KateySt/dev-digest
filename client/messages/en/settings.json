@@ -150,20 +150,23 @@
     "desktopHint": "Show a Windows / macOS notification when a long operation finishes and DevDigest isn't the focused window.",
     "soundLabel": "Sound",
     "soundHint": "Play the system notification sound with them.",
+    "trayLabel": "Keep running in the tray",
+    "trayHint": "Closing the window hides DevDigest to the system tray, so running reviews finish and notifications still arrive. Quit from the tray menu.",
     "browserNote": "System notifications are available in the DevDigest desktop app."
   },
   "appearance": {
     "title": "Appearance",
     "body": "How the studio looks on this device. Saved in this browser only.",
     "modeLabel": "Mode",
-    "modeHint": "Dark or light colour scheme.",
+    "modeHint": "Dark, light, or follow your system setting.",
     "paletteLabel": "Palette",
     "paletteHint": "Surface and text colours.",
     "accentLabel": "Accent",
     "accentHint": "Colour for primary actions, links and focus. Severity colours stay the same.",
     "modes": {
       "dark": "Dark",
-      "light": "Light"
+      "light": "Light",
+      "system": "System"
     },
     "palettes": {
       "classic": "Classic",

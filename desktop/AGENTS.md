@@ -20,9 +20,17 @@ window loads the Next.js studio served by a child process.
 - `src/updater.ts` — Windows auto-update / macOS "new version" check
 - `src/config.ts` — fixed ports, GitHub repo, data paths
 - `src/preload.ts` + `src/ipc.ts` — `window.devdigestDesktop` bridge: custom
-  title-bar window controls, the former Help-menu actions, and OS
-  notifications (`app:notify`, click → `app:navigate`). Channel names are
-  duplicated in both files — a sandboxed preload can't import `ipc.ts`
+  title-bar window controls, the former Help-menu actions, OS notifications
+  (`app:notify`, click → `app:navigate`), activity, prefs, theme source, deep
+  links. Channel names are duplicated in both files — a sandboxed preload
+  can't import `ipc.ts`. Every bridge change also lands in
+  `client/src/lib/desktop.ts` and `client/src/test/fake-desktop-bridge.ts`
+- `src/validate.ts` — `isOwnOrigin`, `isStudioRoute`, `openExternalSafe`, … —
+  use these for every IPC arg / URL instead of ad-hoc checks
+- `src/tray.ts`, `src/taskbar.ts`, `src/activity.ts` — tray, taskbar progress
+  and badge, both rendering the activity the studio pushes
+- `src/deep-link.ts`, `src/theme.ts`, `src/context-menu.ts`, `src/prefs.ts`
+  (`desktop-prefs.json`), `src/secrets-key.ts` (safeStorage key for secrets.json)
 - `scripts/stage.mjs` — builds `resources/` (gitignored)
 - `scripts/after-pack.cjs` — copies `node_modules` into the packaged resources
 - `../.github/workflows/release.yml` — tag → draft release → build → publish

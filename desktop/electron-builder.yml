@@ -18,7 +18,16 @@ extraResources:
     to: server
   - from: resources/web
     to: web
+  # Tray + taskbar-overlay PNGs, loaded at runtime from resources/icons.
+  - from: build/icons
+    to: icons
 afterPack: scripts/after-pack.cjs
+
+# devdigest:// links (src/deep-link.ts): NSIS writes the registry keys,
+# macOS gets CFBundleURLTypes in Info.plist.
+protocols:
+  - name: DevDigest
+    schemes: [devdigest]
 
 win:
   target:
