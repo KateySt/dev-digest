@@ -1,10 +1,15 @@
 "use client";
 
 import React from "react";
-import { Icon, Avatar, Badge, Button, Tabs } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { Icon } from "@/components/icon";
+import { PageTabs } from "@/components/page-tabs";
+import { UserAvatar } from "@/components/user-avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AgentPickerDropdown } from "./_components/AgentPickerDropdown";
 import { formatAbsoluteDateTime, fullRelativeTime } from "@/app/repos/[repoId]/pulls/helpers";
-import { s } from "./styles";
 import type { PrDetail } from "@/lib/types";
 
 interface PrDetailHeaderProps {
@@ -30,92 +35,76 @@ export function PrDetailHeader({
   onSetTab,
   onRunsStarted,
 }: PrDetailHeaderProps) {
-
-  const statusColor =
+  const t = useTranslations("prReview.detail");
+  const status =
     pr.status === "merged"
-      ? "var(--ok)"
+      ? { text: "text-ok", dot: "bg-ok" }
       : pr.status === "closed"
-        ? "var(--stale)"
-        : "var(--warn)";
+        ? { text: "text-stale", dot: "bg-stale" }
+        : { text: "text-warn", dot: "bg-warn" };
+  const finished = pr.status === "merged" || pr.status === "closed";
 
   return (
-    <div style={s.root}>
-      <div style={s.titleRow}>
-        <div style={s.titleCol}>
-          <h1 style={s.h1}>
-            <span className="mono" style={s.prNumber}>
-              #{pr.number}
-            </span>
+    <div className="shrink-0 border-b border-border bg-background px-8 pt-4.5">
+      <div className="flex items-start gap-4.5">
+        <div className="min-w-0 flex-1">
+          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-[-0.02em]">
+            <span className="mono text-xl font-medium text-subtle-foreground">#{pr.number}</span>
             {pr.title}
           </h1>
-          <div style={s.meta}>
-            <span style={s.authorChip}>
-              <Avatar name={pr.author} avatarUrl={pr.avatar_url} size={17} />
+          <div className="mt-2.5 mb-3.5 flex flex-wrap items-center gap-3.5 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <UserAvatar name={pr.author} avatarUrl={pr.avatar_url} size={17} />
               {pr.author}
             </span>
             {pr.opened_at && (
-              <span style={s.openedChip} title={formatAbsoluteDateTime(pr.opened_at)}>
-                <Icon.Clock size={13} style={{ color: "var(--text-muted)" }} />
-                opened {fullRelativeTime(pr.opened_at)}
+              <span className="inline-flex cursor-default items-center gap-1.5" title={formatAbsoluteDateTime(pr.opened_at)}>
+                <Icon.Clock size={13} className="text-subtle-foreground" aria-hidden />
+                {t("opened", { time: fullRelativeTime(pr.opened_at) })}
               </span>
             )}
-            <span style={s.branchChip}>
-              <Icon.GitBranch size={13} style={{ color: "var(--text-muted)" }} />
-              <span className="mono" style={s.branchMono}>
-                {pr.branch}
-              </span>
-              <Icon.ArrowRight size={11} />
-              <span className="mono" style={s.branchMono}>
-                {pr.base}
-              </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon.GitBranch size={13} className="text-subtle-foreground" aria-hidden />
+              <span className="mono text-xs">{pr.branch}</span>
+              <Icon.ArrowRight size={11} aria-hidden />
+              <span className="mono text-xs">{pr.base}</span>
             </span>
             <span className="mono tnum">
-              <span style={{ color: "var(--code-add-text)" }}>+{pr.additions}</span>{" "}
-              <span style={{ color: "var(--code-del-text)" }}>−{pr.deletions}</span>
+              <span className="text-code-add-text">+{pr.additions}</span>{" "}
+              <span className="text-code-del-text">−{pr.deletions}</span>
             </span>
-            <Badge dot bg="transparent" color={statusColor}>
+            <Badge variant="ghost" className={cn("gap-1.5 px-0", status.text)}>
+              <span aria-hidden className={cn("size-1.5 rounded-full", status.dot)} />
               {pr.status}
             </Badge>
           </div>
         </div>
-        <div style={s.actions}>
+        <div className="flex shrink-0 gap-2.5">
           <Button
-            kind="ghost"
+            variant="outline"
             size="sm"
-            icon="ExternalLink"
             disabled={!githubUrl}
-            onClick={() =>
-              githubUrl && window.open(githubUrl, "_blank", "noopener,noreferrer")
-            }
+            onClick={() => githubUrl && window.open(githubUrl, "_blank", "noopener,noreferrer")}
           >
-            View on GitHub
+            <Icon.ExternalLink aria-hidden />
+            {t("viewOnGithub")}
           </Button>
-          {prId && (
-            <AgentPickerDropdown
-              prId={prId}
-              warnMerged={pr.status === "merged" || pr.status === "closed"}
-              onRunsStarted={onRunsStarted}
-            />
-          )}
+          {prId && <AgentPickerDropdown prId={prId} warnMerged={finished} onRunsStarted={onRunsStarted} />}
         </div>
       </div>
-      {(pr.status === "merged" || pr.status === "closed") && (
-        <div style={s.staleBanner}>
-          <Icon.AlertTriangle size={13} style={{ color: "var(--warn)", flexShrink: 0 }} />
-          <span>
-            This PR is already {pr.status} — running a review is informational and won't affect the
-            merged code.
-          </span>
+      {finished && (
+        <div className="mt-3 flex items-center gap-2 text-ui text-subtle-foreground">
+          <Icon.AlertTriangle size={13} className="shrink-0 text-warn" aria-hidden />
+          <span>{t("mergedNotice", { status: pr.status })}</span>
         </div>
       )}
-      <Tabs
+      <PageTabs
         value={tab}
         onChange={onSetTab}
-        pad="0"
         tabs={[
-          { key: "overview", label: "Overview", icon: "FileText" },
-          { key: "findings", label: "Agent runs", icon: "AlertOctagon", count: findingsCount || undefined },
-          { key: "diff", label: "Files changed", icon: "Code", count: pr.files_count },
+          { key: "overview", label: t("tabs.overview"), icon: "FileText" },
+          { key: "findings", label: t("tabs.findings"), icon: "AlertOctagon", count: findingsCount || undefined },
+          { key: "diff", label: t("tabs.diff"), icon: "Code", count: pr.files_count },
         ]}
       />
     </div>

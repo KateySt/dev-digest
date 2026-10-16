@@ -4,10 +4,9 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { LiveLogStream, type LogLine } from "@devdigest/ui";
+import { LiveLogStream, type LogLine } from "@/components/live-log-stream";
 import { useRunEvents, type ActiveRun } from "@/lib/hooks/reviews";
 import { LOG_HEIGHT } from "./constants";
-import { s } from "./styles";
 
 export function RunStatus({
   runIds,
@@ -39,13 +38,13 @@ export function RunStatus({
   }));
 
   return (
-    <div style={s.wrap}>
+    <div className="mb-2.5">
       {queued.length > 0 && (
-        <ul style={s.queuedList} aria-label={tRuns("configure.recent.status.queued")}>
+        <ul className="m-0 mb-2 flex list-none flex-col gap-1 p-0" aria-label={tRuns("configure.recent.status.queued")}>
           {queued.map((r) => (
-            <li key={r.run_id} style={s.queuedItem}>
-              <span style={s.queuedName}>{r.agent_name ?? "Agent"}</span>
-              <span style={s.queuedLabel}>
+            <li key={r.run_id} className="flex gap-2.5 text-ui">
+              <span className="font-semibold text-foreground">{r.agent_name ?? t("runStatus.agentFallback")}</span>
+              <span className="text-subtle-foreground">
                 {r.queue_position != null
                   ? tRuns("columns.queued", { position: r.queue_position })
                   : tRuns("configure.recent.status.queued")}

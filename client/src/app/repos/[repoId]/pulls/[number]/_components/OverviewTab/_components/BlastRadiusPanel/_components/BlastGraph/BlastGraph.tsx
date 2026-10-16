@@ -10,8 +10,11 @@ import { Background, Controls, ReactFlow, type AriaLabelConfig } from "@xyflow/r
 import "@xyflow/react/dist/style.css";
 import type { BlastRadius } from "@devdigest/shared";
 import { buildGraphModel } from "./helpers";
-import { NODE_COLOR_SYMBOL, NODE_COLOR_CALLER, NODE_COLOR_TARGET } from "./constants";
-import { s } from "./styles";
+import { NODE_DOT_CLASS } from "./constants";
+import { cn } from "@/lib/utils";
+
+const LEGEND_ITEM = "inline-flex items-center gap-1.5 text-xs text-subtle-foreground";
+const legendDot = (cls: string) => cn("size-2 shrink-0 rounded-full", cls);
 
 export function BlastGraph({ radius }: { radius: BlastRadius }) {
   const t = useTranslations("blast");
@@ -48,12 +51,16 @@ export function BlastGraph({ radius }: { radius: BlastRadius }) {
   };
 
   if (nodes.length === 0) {
-    return <div style={s.empty}>{t("graph.empty")}</div>;
+    return (
+      <div className="rounded-lg border border-border bg-elevated px-4 py-3.25 text-sm text-subtle-foreground">
+        {t("graph.empty")}
+      </div>
+    );
   }
 
   return (
-    <div style={s.wrapOuter}>
-      <div style={s.wrap} aria-label={t("graph.ariaLabel")}>
+    <div className="flex flex-col gap-2">
+      <div className="h-80 rounded-lg border border-border bg-surface" aria-label={t("graph.ariaLabel")}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -66,25 +73,25 @@ export function BlastGraph({ radius }: { radius: BlastRadius }) {
           nodesConnectable={false}
         >
           <Background />
-          <Controls showInteractive={false} style={s.controls} />
+          {/* The default zoom buttons render tiny; scale the cluster up from its docked corner. */}
+          <Controls showInteractive={false} className="origin-bottom-left scale-160" />
         </ReactFlow>
       </div>
 
       {/* "Never color alone" (see Badge.tsx's SeverityBadge comment) — each
-         dot pairs with a text label, and the dot colors are imported from
-         the same ./constants module helpers.ts uses for the node borders, so
-         the legend can't silently drift out of sync with the graph. */}
-      <div style={s.legend} role="list" aria-label={t("legend.ariaLabel")}>
-        <span style={s.legendItem} role="listitem">
-          <span style={s.legendDot(NODE_COLOR_SYMBOL)} aria-hidden />
+         dot pairs with a text label, and the dot classes live next to the node
+         border colours in ./constants, so the legend can't drift from the graph. */}
+      <div className="flex flex-wrap gap-4" role="list" aria-label={t("legend.ariaLabel")}>
+        <span className={LEGEND_ITEM} role="listitem">
+          <span className={legendDot(NODE_DOT_CLASS.symbol)} aria-hidden />
           {t("legend.symbol")}
         </span>
-        <span style={s.legendItem} role="listitem">
-          <span style={s.legendDot(NODE_COLOR_CALLER)} aria-hidden />
+        <span className={LEGEND_ITEM} role="listitem">
+          <span className={legendDot(NODE_DOT_CLASS.caller)} aria-hidden />
           {t("legend.callers")}
         </span>
-        <span style={s.legendItem} role="listitem">
-          <span style={s.legendDot(NODE_COLOR_TARGET)} aria-hidden />
+        <span className={LEGEND_ITEM} role="listitem">
+          <span className={legendDot(NODE_DOT_CLASS.target)} aria-hidden />
           {t("legend.endpoints")}
         </span>
       </div>

@@ -6,13 +6,25 @@
 "use client";
 
 import React from "react";
-import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Button, Modal, Textarea } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import type { FindingRecord } from "@devdigest/shared";
 import { useReplyToFinding } from "@/lib/hooks/reviews";
 import { buildReplyBody } from "./helpers";
-import { s } from "./styles";
+import { INLINE_LINK } from "./constants";
+
+const LABEL = "mt-1 text-xs font-bold tracking-[0.04em] text-subtle-foreground uppercase";
 
 export function ReplyAction({ f, prId }: { f: FindingRecord; prId?: string | null }) {
   const t = useTranslations("prReview");
@@ -22,7 +34,7 @@ export function ReplyAction({ f, prId }: { f: FindingRecord; prId?: string | nul
   const url = f.reply_url ?? postedUrl;
   if (url) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" style={s.inlineLink}>
+      <a href={url} target="_blank" rel="noopener noreferrer" className={INLINE_LINK}>
         {t("finding.replyPosted")}
       </a>
     );
@@ -30,23 +42,22 @@ export function ReplyAction({ f, prId }: { f: FindingRecord; prId?: string | nul
 
   return (
     <>
-      <Button kind="secondary" size="sm" icon="MessageSquare" onClick={() => setOpen(true)}>
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <Icon.MessageSquare aria-hidden />
         {t("finding.replyToAuthor")}
       </Button>
-      {/* Portal: the card is dimmed (opacity) once decided, which would fade the dialog too. */}
-      {open &&
-        createPortal(
-          <ReplyDialog
-            f={f}
-            prId={prId}
-            onClose={() => setOpen(false)}
-            onPosted={(posted) => {
-              setPostedUrl(posted);
-              setOpen(false);
-            }}
-          />,
-          document.body,
-        )}
+      {/* The dialog portals to <body>, so the dimmed (decided) card does not fade it. */}
+      {open && (
+        <ReplyDialog
+          f={f}
+          prId={prId}
+          onClose={() => setOpen(false)}
+          onPosted={(posted) => {
+            setPostedUrl(posted);
+            setOpen(false);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -74,31 +85,42 @@ function ReplyDialog({
   };
 
   return (
-    <Modal width={600} onClose={close}>
-      <Modal.Header title={t("finding.replyDialogTitle")} subtitle={t("finding.replyDialogSubtitle")} onClose={close} />
-      <div style={s.dialogBody}>
-        <div style={s.dialogLabel}>{t("finding.replyTarget")}</div>
-        <div className="mono" style={s.dialogTarget}>
+    <Dialog open onOpenChange={(open) => !open && close()}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{t("finding.replyDialogTitle")}</DialogTitle>
+          <DialogDescription>{t("finding.replyDialogSubtitle")}</DialogDescription>
+        </DialogHeader>
+      <DialogBody className="flex flex-col gap-2 px-6 py-4">
+        <div className={LABEL}>{t("finding.replyTarget")}</div>
+        {/* file:line is one unbreakable mono word: let it wrap (client/INSIGHTS.md 2026-09-24). */}
+        <div className="mono min-w-0 text-sm text-foreground wrap-anywhere break-words">
           {f.file}:{f.end_line}
         </div>
-        <div style={s.dialogLabel}>{t("finding.replyBodyLabel")}</div>
-        <Textarea value={body} onChange={setBody} rows={9} mono />
+        <div className={LABEL}>{t("finding.replyBodyLabel")}</div>
+        <Textarea
+          className="mono"
+          aria-label={t("finding.replyBodyLabel")}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={9}
+        />
         {reply.isError && (
-          <div role="alert" style={s.dialogError}>
+          <div role="alert" className="min-w-0 text-sm text-crit wrap-anywhere">
             {t("finding.replyFailed", { message: reply.error instanceof Error ? reply.error.message : String(reply.error) })}
           </div>
         )}
-      </div>
-      <Modal.Footer>
-        <div style={s.dialogFooter}>
-          <Button kind="secondary" onClick={close} disabled={reply.isPending}>
-            {t("finding.cancel")}
-          </Button>
-          <Button kind="primary" onClick={confirm} loading={reply.isPending} disabled={!body.trim()}>
-            {reply.isPending ? t("finding.replyPosting") : t("finding.replyPost")}
-          </Button>
-        </div>
-      </Modal.Footer>
-    </Modal>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="secondary" onClick={close} disabled={reply.isPending}>
+          {t("finding.cancel")}
+        </Button>
+        <Button onClick={confirm} disabled={reply.isPending || !body.trim()}>
+          {reply.isPending && <Icon.Loader className="animate-spin" aria-hidden />}
+          {reply.isPending ? t("finding.replyPosting") : t("finding.replyPost")}
+        </Button>
+      </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

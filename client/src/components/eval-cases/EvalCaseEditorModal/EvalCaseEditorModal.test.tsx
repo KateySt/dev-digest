@@ -72,8 +72,8 @@ describe("EvalCaseEditorModal: new case", () => {
   it("offers Diff and PR meta input tabs only (no Files tab) and flags invalid JSON", () => {
     setup();
     openAdvanced();
-    expect(screen.getByRole("button", { name: "Diff" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "PR meta" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Diff" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "PR meta" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^files/i })).not.toBeInTheDocument();
 
     expect(screen.getByText("valid JSON")).toBeInTheDocument();

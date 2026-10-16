@@ -4,7 +4,10 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Toggle, EmptyState, Chip, SEV } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { FilterChip } from "@/components/filter-chip";
+import { SEVERITY_STYLE } from "@/components/severity";
+import { Switch } from "@/components/ui/switch";
 import type { FindingRecord, Severity } from "@devdigest/shared";
 import { FindingCard } from "@/app/repos/[repoId]/pulls/[number]/_components/FindingCard";
 import { useLinkedSkills } from "@/lib/hooks/agents";
@@ -12,7 +15,6 @@ import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
 import { countBySeverity } from "../../../../../../../lib/findings";
 import { KEY_TO_ACTION, SEVERITY_FILTER_ORDER } from "./constants";
 import { visibleFindings } from "./helpers";
-import { s } from "./styles";
 
 export function FindingsPanel({
   findings,
@@ -33,6 +35,7 @@ export function FindingsPanel({
   agentId?: string | null;
 }) {
   const t = useTranslations("prReview");
+  const tSev = useTranslations("common.severity");
   const action = useFindingAction();
   const linkedSkills = useLinkedSkills(agentId);
   const [hideLow, setHideLow] = React.useState(false);
@@ -90,35 +93,35 @@ export function FindingsPanel({
 
   return (
     <div>
-      <div style={s.toolbar}>
-        <div style={s.severityGroup}>
-          <Chip
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterChip
             active={severityFilter === null}
             count={confidenceFiltered.length}
             onClick={() => setSeverityFilter(null)}
           >
             {t("panel.all")}
-          </Chip>
+          </FilterChip>
           {SEVERITY_FILTER_ORDER.filter((sev) => severityCounts[sev] > 0).map((sev) => (
-            <Chip
+            <FilterChip
               key={sev}
-              icon={SEV[sev].icon}
-              color={SEV[sev].c}
+              icon={SEVERITY_STYLE[sev].icon}
+              iconClassName={SEVERITY_STYLE[sev].text}
               count={severityCounts[sev]}
               active={severityFilter === sev}
               onClick={() => setSeverityFilter(sev)}
             >
-              {SEV[sev].label}
-            </Chip>
+              {tSev(sev)}
+            </FilterChip>
           ))}
         </div>
-        <div style={s.toggleGroup}>
+        <label className="ml-auto flex cursor-pointer items-center gap-2.5 text-sm text-muted-foreground">
           {t("panel.hideLowConfidence")}
-          <Toggle on={hideLow} onChange={setHideLow} size={16} />
-        </div>
+          <Switch checked={hideLow} onCheckedChange={setHideLow} />
+        </label>
       </div>
 
-      <div style={s.list}>
+      <div className="flex flex-col gap-3">
         {shown.length === 0 ? (
           <EmptyState icon="Filter" title={t("panel.noMatchTitle")} body={t("panel.noMatchBody")} />
         ) : (

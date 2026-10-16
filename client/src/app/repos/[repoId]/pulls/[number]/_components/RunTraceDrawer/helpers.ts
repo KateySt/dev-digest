@@ -1,4 +1,4 @@
-import type { LogLine } from "@devdigest/ui";
+import type { LogLine } from "@/components/live-log-stream";
 import type { RunTrace } from "@devdigest/shared";
 
 interface RawEvent {

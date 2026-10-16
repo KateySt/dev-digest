@@ -3,7 +3,7 @@ export { Drawer } from "./Drawer";
 export { Modal } from "./Modal";
 export { Tabs } from "./Tabs";
 export { Dropdown } from "./Dropdown";
-export { FormField } from "./FormField";
+export { FormField } from "@/components/form-field"; // moved — shim until vendor/ui is removed
 export { TextInput } from "./TextInput";
 export { Select } from "./Select";
 export { SearchableSelect } from "./SearchableSelect";

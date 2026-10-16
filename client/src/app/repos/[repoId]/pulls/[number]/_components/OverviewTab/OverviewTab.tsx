@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { SectionLabel, EmptyState, Card } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { SectionLabel } from "@/components/section-label";
 import type { ReviewRecord, RunSummary, Verdict } from "@devdigest/shared";
 import { useRefreshPrBrief } from "@/lib/hooks/reviews";
 import { IntentPanel } from "./_components/IntentPanel";
@@ -11,7 +12,6 @@ import { ReviewFocusList } from "./_components/ReviewFocusList";
 import { BlastRadiusPanel } from "./_components/BlastRadiusPanel";
 import { CommitHistoryPanel } from "./_components/CommitHistoryPanel";
 import { VerdictBanner } from "../VerdictBanner";
-import { s } from "./styles";
 
 interface OverviewTabProps {
   prBody: string | null | undefined;
@@ -59,13 +59,15 @@ export function OverviewTab({
     <>
       {prBody && (
         <section>
-          <SectionLabel icon="MessageSquare">Description</SectionLabel>
-          <div style={s.descriptionBox}>{prBody}</div>
+          <SectionLabel icon="MessageSquare">{t("sections.description")}</SectionLabel>
+          <div className="rounded-lg border border-border bg-elevated p-4.5 text-base leading-[1.55] whitespace-pre-wrap text-muted-foreground">
+            {prBody}
+          </div>
         </section>
       )}
 
       <section>
-        <SectionLabel icon="FileText">PR brief</SectionLabel>
+        <SectionLabel icon="FileText">{t("sections.prBrief")}</SectionLabel>
         {latestReview?.verdict ? (
           <VerdictBanner
             verdict={latestReview.verdict as Verdict}
@@ -99,23 +101,26 @@ export function OverviewTab({
         onNavigateToFile={onNavigateToFile}
       />
 
-      <div style={s.grid}>
-        <div style={s.gridCol}>
+      {/* minmax(0, 1fr), not a bare 1fr: a bare track's minimum is its content's
+          max-content width, so an unbreakable mono path would blow the column past
+          the panel instead of letting the child's ellipsis apply. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           {/* Merged card: Intent + Risk Areas share one border/Card (see
              client/INSIGHTS.md's "not yet resolved vs confirmed empty" —
              both headers render unconditionally so the card shell never
              looks like an empty box with just a divider while intent is
              still loading; each section's own body independently renders
              its own loading/empty state, same as before the merge). */}
-          <Card>
+          <div className="rounded-lg border border-border bg-elevated p-(--card-pad)">
             <SectionLabel icon="Target">{t("block.intent")}</SectionLabel>
             <IntentPanel prId={prId} />
-            <div style={s.divider} />
+            <div className="my-4.5 border-t border-border" />
             <SectionLabel icon="AlertTriangle">{t("block.risks")}</SectionLabel>
             <RiskAreasList prId={prId} onNavigateToFile={onNavigateToFile} />
-          </Card>
+          </div>
         </div>
-        <div style={s.gridCol}>
+        <div className="flex min-w-0 flex-col gap-5">
           {/* BlastRadiusPanel renders its own "BLAST RADIUS" header as the
              first row inside its Card (in all three of its states — see
              BlastRadiusPanel.tsx) rather than as a sibling SectionLabel here,

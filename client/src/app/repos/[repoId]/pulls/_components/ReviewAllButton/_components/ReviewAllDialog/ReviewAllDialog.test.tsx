@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { screen, cleanup, fireEvent } from "@testing-library/react";
+import { screen, cleanup, fireEvent, within } from "@testing-library/react";
 import type { PrMeta } from "@/lib/types";
 import { apiError, get, mockFetch, post, renderApp } from "@/test/eval-utils";
 import { ReviewAllDialog } from "./ReviewAllDialog";
@@ -108,15 +108,17 @@ describe("ReviewAllDialog", () => {
     mockFetch([estimate({})]);
     renderApp(<ReviewAllDialog repoId="r1" pulls={PULLS} onClose={() => {}} />);
     await screen.findByText(/6 review runs/);
-    const first = screen.getByRole("button", { name: "Close" });
-    const last = screen.getByRole("button", { name: "Start reviews" });
-    expect(last).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Start reviews" })).toBeEnabled();
+    const buttons = within(screen.getByRole("dialog")).getAllByRole("button");
+    const first = buttons[0]!;
+    const last = buttons[buttons.length - 1]!;
 
+    // The focus trap handles Tab on the focused control (Radix FocusScope).
     last.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
+    fireEvent.keyDown(last, { key: "Tab" });
     expect(first).toHaveFocus();
 
-    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    fireEvent.keyDown(first, { key: "Tab", shiftKey: true });
     expect(last).toHaveFocus();
   });
 

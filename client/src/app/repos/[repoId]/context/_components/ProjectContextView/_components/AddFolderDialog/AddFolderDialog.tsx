@@ -2,7 +2,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Modal, TextInput } from "@devdigest/ui";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { buildDocumentPath, defaultDocumentContent } from "../../helpers";
 
 /** "Add folder" (C-AC-6) — requires both a folder name and a first document
@@ -20,6 +24,8 @@ export function AddFolderDialog({
   error?: string | null;
 }) {
   const t = useTranslations("context");
+  const folderId = React.useId();
+  const documentId = React.useId();
   const [folder, setFolder] = React.useState("");
   const [document, setDocument] = React.useState("");
 
@@ -32,37 +38,47 @@ export function AddFolderDialog({
   };
 
   return (
-    <Modal onClose={onClose} width={480}>
-      <Modal.Header title={t("addFolderDialog.title")} onClose={onClose} />
-      <div style={{ padding: 24 }}>
-        <FormField label={t("addFolderDialog.folderLabel")} hint={t("addFolderDialog.folderHint")} required>
-          <TextInput
-            value={folder}
-            onChange={setFolder}
-            placeholder={t("addFolderDialog.folderPlaceholder")}
-            mono
-          />
-        </FormField>
-        <FormField label={t("addFolderDialog.documentLabel")} required>
-          <TextInput
-            value={document}
-            onChange={setDocument}
-            placeholder={t("addFolderDialog.documentPlaceholder")}
-            mono
-          />
-        </FormField>
-        {error && <div style={{ fontSize: 13, color: "var(--crit)" }}>{error}</div>}
-      </div>
-      <Modal.Footer>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Button kind="ghost" onClick={onClose}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[480px]" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>{t("addFolderDialog.title")}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="p-6">
+          <FormField
+            label={t("addFolderDialog.folderLabel")}
+            hint={t("addFolderDialog.folderHint")}
+            required
+            htmlFor={folderId}
+          >
+            <Input
+              id={folderId}
+              className="mono"
+              value={folder}
+              onChange={(e) => setFolder(e.target.value)}
+              placeholder={t("addFolderDialog.folderPlaceholder")}
+            />
+          </FormField>
+          <FormField label={t("addFolderDialog.documentLabel")} required htmlFor={documentId}>
+            <Input
+              id={documentId}
+              className="mono"
+              value={document}
+              onChange={(e) => setDocument(e.target.value)}
+              placeholder={t("addFolderDialog.documentPlaceholder")}
+            />
+          </FormField>
+          {error && <div className="text-sm text-crit">{error}</div>}
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
             {t("addFolderDialog.cancel")}
           </Button>
-          <Button kind="primary" onClick={submit} disabled={!canCreate} loading={creating}>
+          <Button onClick={submit} disabled={!canCreate}>
+            {creating && <Icon.Loader className="animate-spin" aria-hidden />}
             {creating ? t("addFolderDialog.creating") : t("addFolderDialog.create")}
           </Button>
-        </div>
-      </Modal.Footer>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

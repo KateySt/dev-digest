@@ -1,6 +1,9 @@
+/* Shim: vendor Tabs → @/components/page-tabs, mapping the old `pad` strings
+   to padding classes. Removed with vendor/ui once call sites use PageTabs. */
 import React from "react";
-import { Icon } from "../icons";
-import { type TabDef } from "./types";
+import { PageTabs, type TabDef } from "@/components/page-tabs";
+
+const PAD_CLASS: Record<string, string> = { "0": "", "0 24px": "px-6", "0 28px": "px-7" };
 
 export function Tabs({
   tabs,
@@ -13,55 +16,5 @@ export function Tabs({
   onChange: (k: string) => void;
   pad?: string;
 }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 2,
-        padding: pad,
-        // Inset shadow instead of border-bottom: the active underline paints over it
-        // without a negative margin, so nothing overflows vertically.
-        boxShadow: "inset 0 -1px 0 var(--border)",
-        overflowX: "auto",
-        overflowY: "hidden",
-      }}
-    >
-      {tabs.map((t) => {
-        const k = typeof t === "string" ? t : t.key;
-        const label = typeof t === "string" ? t : t.label;
-        const icon = typeof t === "object" ? t.icon : undefined;
-        const on = value === k;
-        const I = icon ? Icon[icon] : null;
-        return (
-          <button
-            key={k}
-            onClick={() => onChange(k)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "12px 16px",
-              border: "none",
-              background: "transparent",
-              borderBottom: "2px solid " + (on ? "var(--accent)" : "transparent"),
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: on ? 600 : 500,
-              color: on ? "var(--text-primary)" : "var(--text-secondary)",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {I && <I size={14} style={{ color: on ? "var(--accent)" : "var(--text-muted)" }} />}
-            {label}
-            {typeof t === "object" && t.count != null && (
-              <span className="tnum" style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                {t.count}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return <PageTabs tabs={tabs} value={value} onChange={onChange} className={PAD_CLASS[pad] ?? ""} />;
 }

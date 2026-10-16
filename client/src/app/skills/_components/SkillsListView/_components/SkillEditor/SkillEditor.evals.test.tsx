@@ -160,9 +160,9 @@ describe("Skill Editor: Run on evals", () => {
     setup({ tab: "config" });
     const editor = await screen.findByLabelText("Skill body editor");
     fireEvent.change(editor, { target: { value: "keep me" } });
-    fireEvent.click(screen.getByRole("button", { name: "Evals" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Evals" }));
     await screen.findByRole("button", { name: /Run all evals/ });
-    fireEvent.click(screen.getByRole("button", { name: "Config" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Config" }));
     expect(await screen.findByLabelText("Skill body editor")).toHaveValue("keep me");
   });
 });

@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord, RunSummary } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import common from "../../../../../../../../messages/en/common.json";
 import { VerdictBanner } from "./VerdictBanner";
 
 afterEach(cleanup);
@@ -54,7 +55,7 @@ function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
       {ui}
     </NextIntlClientProvider>,
   );

@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PrMeta } from "@/lib/types";
 import messages from "../../../../../../../messages/en/prReview.json";
+import common from "../../../../../../../messages/en/common.json";
 
 const push = vi.fn();
 const usePrReviews = vi.fn((_prId: string | null) => ({ data: undefined }));
@@ -27,7 +28,7 @@ afterEach(() => {
 function renderWithIntl(ui: React.ReactElement) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
         {ui}
       </NextIntlClientProvider>
     </QueryClientProvider>,

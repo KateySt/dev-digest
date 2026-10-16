@@ -5,11 +5,14 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ApiError } from "@/lib/api";
 import { useAgents, useAgentEstimates, useStartMultiRun, useWorkspace } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 import { estimateSeconds, keepEnabled, readStoredSelection, writeStoredSelection } from "./helpers";
-import { s } from "./styles";
 
 interface AgentPickerDropdownProps {
   /** PR id (not the PR number) — used for the run request and the Configure link. */
@@ -24,7 +27,6 @@ export function AgentPickerDropdown({ prId, warnMerged = false, onRunsStarted }:
   const t = useTranslations("runs.multiAgent.picker");
   const tPr = useTranslations("prReview");
   const router = useRouter();
-  const rootRef = React.useRef<HTMLDivElement>(null);
   const [open, setOpen] = React.useState(false);
   // null = the user hasn't touched the checkboxes yet -> fall back to the stored selection.
   const [touched, setTouched] = React.useState<string[] | null>(null);
@@ -46,22 +48,6 @@ export function AgentPickerDropdown({ prId, warnMerged = false, onRunsStarted }:
     () => new Map((estimates?.agents ?? []).map((e) => [e.agent_id, e])),
     [estimates],
   );
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   const toggle = (id: string) =>
     setTouched(checked.includes(id) ? checked.filter((x) => x !== id) : [...checked, id]);
@@ -91,93 +77,92 @@ export function AgentPickerDropdown({ prId, warnMerged = false, onRunsStarted }:
   };
 
   return (
-    <div ref={rootRef} style={s.root}>
+    <Popover open={open} onOpenChange={setOpen}>
       <span
         title={warnMerged ? tPr("runReview.mergedTooltip") : undefined}
-        style={warnMerged ? { opacity: 0.6 } : undefined}
+        className={cn("inline-block", warnMerged && "opacity-60")}
       >
-        <Button
-          kind="primary"
-          size="sm"
-          icon="Sparkles"
-          iconRight="ChevronDown"
-          aria-haspopup="true"
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-        >
-          {tPr("runReview.runReview")}
-        </Button>
+        <PopoverTrigger asChild>
+          <Button size="sm">
+            <Icon.Sparkles aria-hidden />
+            {tPr("runReview.runReview")}
+            <Icon.ChevronDown aria-hidden />
+          </Button>
+        </PopoverTrigger>
       </span>
-      {open && (
-        <div style={s.panel} role="dialog" aria-label={t("title")}>
-          <div style={s.header}>
-            <span style={s.title}>{t("title")}</span>
-            <button type="button" style={s.clear} onClick={() => setTouched([])}>
-              {t("clear")}
-            </button>
-          </div>
-          {enabled.length === 0 ? (
-            <div style={s.empty}>{t("noAgents")}</div>
-          ) : (
-            <div style={s.list}>
-              {enabled.map((a) => {
-                const est = estimateById.get(a.id);
-                const secs = estimateSeconds(est?.mean_duration_ms, est?.sample_size);
-                return (
-                  <label key={a.id} style={s.row}>
-                    <input type="checkbox" checked={checked.includes(a.id)} onChange={() => toggle(a.id)} />
-                    <Icon.Cpu size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-                    <span style={s.name} title={a.name}>
-                      {a.name}
-                    </span>
-                    <span style={s.estimate}>
-                      {secs == null ? t("estimateMissing") : t("estimate", { duration: secs })}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-          {error && (
-            <div style={s.error} role="alert">
-              {error.message}
-              {error.runId && (
-                <button
-                  type="button"
-                  style={s.errorLink}
-                  onClick={() => router.push(`/multi-agent/${error.runId}`)}
-                >
-                  {t("error.viewInProgressRun")}
-                </button>
-              )}
-            </div>
-          )}
-          <div style={s.runWrap}>
-            <Button
-              kind="primary"
-              size="md"
-              icon="Users"
-              full
-              loading={start.isPending}
-              disabled={checked.length === 0}
-              onClick={run}
-            >
-              {t("run", { count: checked.length })}
-            </Button>
-          </div>
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        aria-label={t("title")}
+        className="w-80 rounded-[9px] border-border-strong bg-elevated p-0 shadow-modal"
+      >
+        <div className="flex items-center justify-between px-3.5 pt-2.5 pb-1.5">
+          <span className="text-2xs font-semibold tracking-[0.06em] text-subtle-foreground">{t("title")}</span>
           <button
             type="button"
-            style={s.configure}
-            onClick={() => {
-              setOpen(false);
-              router.push(`/multi-agent?pr=${encodeURIComponent(prId)}`);
-            }}
+            className="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-primary"
+            onClick={() => setTouched([])}
           >
-            <Icon.Settings size={14} style={{ color: "var(--text-muted)" }} />
-            {t("configure")}
+            {t("clear")}
           </button>
         </div>
-      )}
-    </div>
+        {enabled.length === 0 ? (
+          <div className="px-3.5 pt-2 pb-3 text-sm text-subtle-foreground">{t("noAgents")}</div>
+        ) : (
+          <div className="px-1.5 pb-1.5">
+            {enabled.map((a) => {
+              const est = estimateById.get(a.id);
+              const secs = estimateSeconds(est?.mean_duration_ms, est?.sample_size);
+              return (
+                <label
+                  key={a.id}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-md p-2 text-base font-medium hover:bg-accent"
+                >
+                  <Checkbox checked={checked.includes(a.id)} onCheckedChange={() => toggle(a.id)} />
+                  <Icon.Cpu size={14} className="shrink-0 text-subtle-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate" title={a.name}>
+                    {a.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-subtle-foreground">
+                    {secs == null ? t("estimateMissing") : t("estimate", { duration: secs })}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+        {error && (
+          <div className="mx-2.5 mb-2.5 rounded-md bg-crit-bg px-2.5 py-2 text-ui break-words text-crit" role="alert">
+            {error.message}
+            {error.runId && (
+              <button
+                type="button"
+                className="mt-1 block cursor-pointer border-none bg-transparent p-0 font-semibold text-primary underline"
+                onClick={() => router.push(`/multi-agent/${error.runId}`)}
+              >
+                {t("error.viewInProgressRun")}
+              </button>
+            )}
+          </div>
+        )}
+        <div className="border-t border-border p-2.5">
+          <Button className="w-full" disabled={checked.length === 0 || start.isPending} onClick={run}>
+            {start.isPending ? <Icon.Loader className="animate-spin" aria-hidden /> : <Icon.Users aria-hidden />}
+            {t("run", { count: checked.length })}
+          </Button>
+        </div>
+        <button
+          type="button"
+          className="flex w-full cursor-pointer items-center gap-2.5 border-0 border-t border-border bg-transparent px-3.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={() => {
+            setOpen(false);
+            router.push(`/multi-agent?pr=${encodeURIComponent(prId)}`);
+          }}
+        >
+          <Icon.Settings size={14} className="text-subtle-foreground" aria-hidden />
+          {t("configure")}
+        </button>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -127,11 +127,9 @@ describe("BlastRadiusPanel", () => {
     renderPanel();
 
     const callerCountEl = screen.getByText("2 callers");
-    // Badge always renders `display: inline-flex`; the plain-text style used
-    // here is a bare `<span>` with no background — asserting the tag name and
-    // absence of a background distinguishes it from the old pill.
+    // A bare <span>, not a Badge pill (Badge renders data-slot="badge").
     expect(callerCountEl.tagName).toBe("SPAN");
-    expect(callerCountEl.style.background).toBe("");
+    expect(callerCountEl).not.toHaveAttribute("data-slot", "badge");
   });
 
   it("gives endpoint and cron chips distinct tinted styling", () => {
@@ -139,11 +137,11 @@ describe("BlastRadiusPanel", () => {
     renderPanel();
 
     // The first symbol with callers starts expanded, so its chips are visible.
-    const endpointChip = screen.getByText("POST /checkout").closest("span");
-    const cronChip = screen.getByText("nightly-reconcile").closest("span");
+    const endpointChip = screen.getByText("POST /checkout").closest("[data-slot='badge']");
+    const cronChip = screen.getByText("nightly-reconcile").closest("[data-slot='badge']");
 
-    expect(endpointChip?.style.background).toBe("var(--accent-bg)");
-    expect(cronChip?.style.background).toBe("var(--warn-bg)");
+    expect(endpointChip).toHaveAttribute("data-variant", "brand");
+    expect(cronChip).toHaveAttribute("data-variant", "warn");
   });
 
   it("expands the first symbol with callers by default and collapses it on click", () => {

@@ -21,5 +21,9 @@
     "blame": "blame",
     "noHistory": "No history available for this line.",
     "noCommits": "No commits found for this line."
+  },
+  "sections": {
+    "description": "Description",
+    "prBrief": "PR brief"
   }
 }

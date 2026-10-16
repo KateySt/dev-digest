@@ -56,7 +56,7 @@ describe("A5 Run Trace drawer (smoke)", () => {
 
   it("switches to the live log tab", () => {
     renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
-    fireEvent.click(screen.getByText("log"));
+    fireEvent.click(screen.getByRole("tab", { name: "Live log" }));
     // LiveLogStream renders its filter input
     expect(screen.getByPlaceholderText("Filter log…")).toBeInTheDocument();
   });
@@ -96,7 +96,7 @@ describe("grounding + not-started states", () => {
   it("queued run without a trace shows the not-started note, not an error", () => {
     traceState.data = undefined;
     renderWithIntl(<RunTraceDrawer runId="r1" running queued onClose={() => {}} />);
-    fireEvent.click(screen.getByText("trace"));
+    fireEvent.click(screen.getByRole("tab", { name: "Trace" }));
     expect(screen.getByText(/has not started yet/)).toBeInTheDocument();
     expect(screen.queryByText("No trace available yet.")).not.toBeInTheDocument();
   });

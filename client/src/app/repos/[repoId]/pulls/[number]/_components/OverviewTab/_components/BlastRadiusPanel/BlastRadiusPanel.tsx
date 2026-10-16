@@ -16,14 +16,18 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Card, EmptyState, Icon, SectionLabel } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { SectionLabel } from "@/components/section-label";
+import { cn } from "@/lib/utils";
 import { useBlast } from "@/lib/hooks/reviews";
 import { BlastTree } from "./_components/BlastTree";
 import { BlastGraph } from "./_components/BlastGraph";
 import { PriorPrsList } from "./_components/PriorPrsList";
-import { s } from "./styles";
 
 type BlastView = "tree" | "graph";
+
+const STAT = "inline-flex items-center gap-1.25 text-ui text-muted-foreground";
 
 const VIEWS: BlastView[] = ["tree", "graph"];
 
@@ -62,35 +66,38 @@ export function BlastRadiusPanel({
 
     blastBody =
       callerCount === 0 ? (
-        <div style={s.placeholderHint}>{t("noDownstream", { count: data.changed_symbols.length })}</div>
+        <div className="rounded-lg border border-border bg-elevated px-4 py-3.25 text-sm text-subtle-foreground">
+          {t("noDownstream", { count: data.changed_symbols.length })}
+        </div>
       ) : (
-        <div style={s.wrap}>
-          <div style={s.headerRow}>
-            <div style={s.statRow}>
-              <span style={s.stat}>
-                <Icon.Code size={13} aria-hidden style={s.statIcon} />
-                <b className="tnum" style={s.statValue}>
+        <div className="flex flex-col gap-2.5">
+          {/* Stats on the left, the segmented Tree | Graph toggle pushed right. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className={STAT}>
+                <Icon.Code size={13} aria-hidden className="shrink-0 text-subtle-foreground" />
+                <b className="tnum font-strong text-foreground">
                   {data.changed_symbols.length}
                 </b>
                 {t("stat.symbols")}
               </span>
-              <span style={s.stat}>
-                <Icon.CornerDownRight size={13} aria-hidden style={s.statIcon} />
-                <b className="tnum" style={s.statValue}>
+              <span className={STAT}>
+                <Icon.CornerDownRight size={13} aria-hidden className="shrink-0 text-subtle-foreground" />
+                <b className="tnum font-strong text-foreground">
                   {callerCount}
                 </b>
                 {t("stat.callers")}
               </span>
-              <span style={s.stat}>
-                <Icon.Globe size={13} aria-hidden style={s.statIcon} />
-                <b className="tnum" style={s.statValue}>
+              <span className={STAT}>
+                <Icon.Globe size={13} aria-hidden className="shrink-0 text-subtle-foreground" />
+                <b className="tnum font-strong text-foreground">
                   {endpointCount}
                 </b>
                 {t("stat.endpoints")}
               </span>
-              <span style={s.stat}>
-                <Icon.Clock size={13} aria-hidden style={s.statIcon} />
-                <b className="tnum" style={s.statValue}>
+              <span className={STAT}>
+                <Icon.Clock size={13} aria-hidden className="shrink-0 text-subtle-foreground" />
+                <b className="tnum font-strong text-foreground">
                   {cronCount}
                 </b>
                 {t("stat.crons")}
@@ -100,14 +107,21 @@ export function BlastRadiusPanel({
             {/* Segmented Tree | Graph control — one bordered track with the
                active segment raised onto --bg-elevated (the mockup's look),
                rather than two free-standing Chips. */}
-            <div role="group" aria-label={t("view.ariaLabel")} style={s.segmented}>
+            <div
+              role="group"
+              aria-label={t("view.ariaLabel")}
+              className="ml-auto flex shrink-0 gap-0.5 rounded-[7px] border border-border bg-surface p-0.5"
+            >
               {VIEWS.map((v) => (
                 <button
                   key={v}
                   type="button"
                   aria-pressed={view === v}
                   onClick={() => setView(v)}
-                  style={s.segment(view === v)}
+                  className={cn(
+                    "cursor-pointer rounded-[5px] border-none px-2.5 py-0.75 text-[11.5px] font-semibold",
+                    view === v ? "bg-elevated text-foreground" : "bg-transparent text-subtle-foreground",
+                  )}
                 >
                   {t(`view.${v}`)}
                 </button>
@@ -125,11 +139,11 @@ export function BlastRadiusPanel({
   }
 
   return (
-    <Card>
+    <div className="rounded-lg border border-border bg-elevated p-(--card-pad)">
       {header}
       {blastBody}
-      <hr style={s.divider} />
+      <hr className="my-4 border-0 border-t border-border" />
       <PriorPrsList prId={prId} onNavigateToFile={onNavigateToFile} />
-    </Card>
+    </div>
   );
 }

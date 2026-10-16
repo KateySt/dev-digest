@@ -52,27 +52,47 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
   const t = useTranslations("common.ui")
+  // Our dialogs are mostly opened programmatically (no DialogTrigger), so
+  // Radix's default "focus the trigger on close" would drop focus on <body>.
+  // Remember whatever was focused when the dialog opened and return there.
+  const openerRef = React.useRef<HTMLElement | null>(null)
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          "fixed top-[50%] left-[50%] z-50 flex max-h-[92%] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-[14px] border border-border-strong bg-elevated shadow-modal duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className
         )}
+        onOpenAutoFocus={(event) => {
+          const active = document.activeElement
+          openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null
+          onOpenAutoFocus?.(event)
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (event.defaultPrevented) return
+          const opener = openerRef.current
+          if (opener?.isConnected) {
+            event.preventDefault()
+            opener.focus()
+          }
+        }}
         {...props}
       >
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="absolute top-4.5 right-5 grid size-7.5 place-items-center rounded-md text-muted-foreground opacity-70 hover:bg-accent ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             <span className="sr-only">{t("close")}</span>
@@ -87,7 +107,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      className={cn("flex flex-col gap-0.5 border-b border-border px-6 py-4.5 pr-14 text-left", className)}
       {...props}
     />
   )
@@ -106,7 +126,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2.5 border-t border-border bg-elevated px-6 py-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -121,6 +141,11 @@ function DialogFooter({
   )
 }
 
+/** Scrollable body between DialogHeader and DialogFooter. */
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="dialog-body" className={cn("min-h-0 flex-1 overflow-auto", className)} {...props} />
+}
+
 function DialogTitle({
   className,
   ...props
@@ -128,7 +153,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-lg leading-none font-semibold", className)}
+      className={cn("text-lg font-bold", className)}
       {...props}
     />
   )
@@ -141,13 +166,14 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("mt-0.5 text-sm text-muted-foreground", className)}
       {...props}
     />
   )
 }
 
 export {
+  DialogBody,
   Dialog,
   DialogClose,
   DialogContent,

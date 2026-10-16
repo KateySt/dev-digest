@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
 import type { OnboardingRunCommand } from "@/lib/types";
 
 /**
@@ -15,7 +15,7 @@ export function RunLocallySection({ commands }: { commands: OnboardingRunCommand
   const t = useTranslations("onboarding.sections.runLocally");
   const [copiedOrder, setCopiedOrder] = React.useState<number | null>(null);
 
-  if (commands.length === 0) return <div style={s.empty}>{t("empty")}</div>;
+  if (commands.length === 0) return <div className="py-1 text-sm text-subtle-foreground">{t("empty")}</div>;
 
   const copy = async (command: string, order: number) => {
     try {
@@ -30,13 +30,13 @@ export function RunLocallySection({ commands }: { commands: OnboardingRunCommand
   };
 
   return (
-    <ol style={s.list}>
+    <ol className="m-0 flex min-w-0 list-none flex-col gap-2 p-0">
       {commands.map((c) => (
-        <li key={c.order} style={s.row}>
-          <span className="mono" style={s.order}>
+        <li key={c.order} className="flex min-w-0 items-center gap-2">
+          <span className="mono shrink-0 text-ui text-subtle-foreground">
             {c.order}.
           </span>
-          <span className="mono" style={s.command}>
+          <span className="mono min-w-0 flex-1 text-sm text-foreground wrap-anywhere break-words">
             {c.command}
           </span>
           <button
@@ -44,12 +44,12 @@ export function RunLocallySection({ commands }: { commands: OnboardingRunCommand
             onClick={() => copy(c.command, c.order)}
             aria-label={t("copyCommand", { command: c.command })}
             title={t("copyCommand", { command: c.command })}
-            style={s.copyBtn}
+            className="inline-flex shrink-0 cursor-pointer border-none bg-transparent p-1 text-subtle-foreground hover:text-foreground"
           >
-            <Icon.Copy size={14} />
+            <Icon.Copy size={14} aria-hidden />
           </button>
           {copiedOrder === c.order && (
-            <span role="status" style={s.copied}>
+            <span role="status" className="shrink-0 text-[11.5px] text-ok">
               {t("copied")}
             </span>
           )}
@@ -58,30 +58,5 @@ export function RunLocallySection({ commands }: { commands: OnboardingRunCommand
     </ol>
   );
 }
-
-const s = {
-  list: { margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8, minWidth: 0 } as React.CSSProperties,
-  row: { display: "flex", alignItems: "center", gap: 8, minWidth: 0 } as React.CSSProperties,
-  order: { fontSize: 12.5, color: "var(--text-muted)", flexShrink: 0 } as React.CSSProperties,
-  command: {
-    fontSize: 13,
-    color: "var(--text-primary)",
-    flex: 1,
-    minWidth: 0,
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  } as React.CSSProperties,
-  copyBtn: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: 4,
-    display: "inline-flex",
-    color: "var(--text-muted)",
-    flexShrink: 0,
-  } as React.CSSProperties,
-  copied: { fontSize: 11.5, color: "var(--ok)", flexShrink: 0 } as React.CSSProperties,
-  empty: { fontSize: 13, color: "var(--text-muted)", padding: "4px 0" } as React.CSSProperties,
-};
 
 export default RunLocallySection;

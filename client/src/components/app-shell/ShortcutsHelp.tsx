@@ -3,7 +3,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { SHORTCUTS, type ShortcutDef, type ShortcutGroup } from "./nav";
 
@@ -16,12 +16,12 @@ export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="border-border-strong bg-elevated shadow-modal sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">{t("shortcuts.title")}</DialogTitle>
+          <DialogTitle>{t("shortcuts.title")}</DialogTitle>
           <DialogDescription className="sr-only">{t("shortcuts.description")}</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4.5">
+        <DialogBody className="grid grid-cols-2 gap-x-6 gap-y-4.5 p-6">
           {GROUPS.map((g) => (
             <section key={g}>
               <h3 className="mb-2.5 text-xs font-bold tracking-[0.06em] text-subtle-foreground uppercase">
@@ -41,7 +41,7 @@ export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () =>
               </ul>
             </section>
           ))}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

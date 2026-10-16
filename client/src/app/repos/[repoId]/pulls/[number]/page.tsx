@@ -7,8 +7,10 @@
 
 import React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Skeleton, ErrorState } from "@devdigest/ui";
-import { AppShell } from "../../../../../components/app-shell";
+import { useTranslations } from "next-intl";
+import { AppShell } from "@/components/app-shell";
+import { ErrorState } from "@/components/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RepoNotFound } from "@/components/repo-not-found";
 import { PrDetailHeader } from "./_components/PrDetailHeader";
 import { OverviewTab } from "./_components/OverviewTab";
@@ -24,6 +26,7 @@ import { githubPrUrl } from "@/lib/utils";
 import type { FindingRecord } from "@devdigest/shared";
 
 export default function PRDetailPage() {
+  const t = useTranslations("prReview");
   const params = useParams<{ repoId: string; number: string }>();
   const search = useSearchParams();
   const router = useRouter();
@@ -116,10 +119,10 @@ export default function PRDetailPage() {
   if (isLoading) {
     return (
       <AppShell crumb={crumb}>
-        <div style={{ padding: "28px 32px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 1080, margin: "0 auto" }}>
-          <Skeleton height={28} width={420} />
-          <Skeleton height={16} width={300} />
-          <Skeleton height={200} />
+        <div className="mx-auto flex max-w-[1080px] flex-col gap-4 px-8 py-7">
+          <Skeleton className="h-7 w-105" />
+          <Skeleton className="h-4 w-75" />
+          <Skeleton className="h-50 w-full" />
         </div>
       </AppShell>
     );
@@ -130,8 +133,8 @@ export default function PRDetailPage() {
       <AppShell crumb={crumb}>
         <ErrorState
           fullScreen
-          title="Couldn't load this pull request"
-          body={error instanceof ApiError ? error.message : `PR #${number} could not be loaded.`}
+          title={t("detail.loadErrorTitle")}
+          body={error instanceof ApiError ? error.message : t("detail.loadErrorBody", { number })}
           onRetry={() => refetch()}
         />
       </AppShell>
@@ -140,7 +143,7 @@ export default function PRDetailPage() {
 
   return (
     <AppShell crumb={crumb}>
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div className="flex h-full min-h-0 flex-col">
         <PrDetailHeader
           pr={pr}
           prId={prId}
@@ -151,8 +154,8 @@ export default function PRDetailPage() {
           onRunsStarted={() => invalidateActiveRuns()}
         />
 
-        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          <div style={{ padding: "24px 32px 44px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 1080, margin: "0 auto" }}>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="mx-auto flex max-w-[1080px] flex-col gap-6 px-8 pt-6 pb-11">
             {tab === "overview" && (
               <OverviewTab
                 prBody={pr.body}

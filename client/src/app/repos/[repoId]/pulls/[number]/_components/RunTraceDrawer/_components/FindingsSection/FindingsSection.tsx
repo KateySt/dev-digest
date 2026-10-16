@@ -4,15 +4,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge } from "@devdigest/ui";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { FindingRecord } from "@devdigest/shared";
-import { s } from "../../styles";
 import { TraceSection } from "../TraceSection";
 
-const SEV_COLOR: Record<string, string> = {
-  CRITICAL: "var(--crit)",
-  WARNING: "var(--warn)",
-  SUGGESTION: "var(--accent)",
+const SEV_TEXT: Record<string, string> = {
+  CRITICAL: "text-crit",
+  WARNING: "text-warn",
+  SUGGESTION: "text-primary",
 };
 
 export function FindingsSection({ findings }: { findings: FindingRecord[] }) {
@@ -21,37 +21,29 @@ export function FindingsSection({ findings }: { findings: FindingRecord[] }) {
     <TraceSection
       icon="AlertOctagon"
       title={t("trace.findings")}
-      right={<Badge color="var(--text-muted)">{findings.length}</Badge>}
+      right={<Badge variant="neutral">{findings.length}</Badge>}
     >
       {findings.length === 0 ? (
-        <span style={s.noToolCalls}>{t("trace.noFindings")}</span>
+        <span className="text-sm text-subtle-foreground">{t("trace.noFindings")}</span>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {findings.map((f) => (
-            <div
-              key={f.id}
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                background: "var(--bg-surface)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <Badge color={SEV_COLOR[f.severity] ?? "var(--text-muted)"} bg="transparent">
+            <div key={f.id} className="rounded-lg border border-border bg-surface px-3 py-2.5">
+              <div className="mb-1 flex items-center gap-2">
+                <Badge variant="ghost" className={cn("px-0", SEV_TEXT[f.severity] ?? "text-subtle-foreground")}>
                   {f.severity}
                 </Badge>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{f.title}</span>
+                <span className="text-sm font-semibold">{f.title}</span>
               </div>
-              <div className="mono" style={{ fontSize: 11.5, color: "var(--text-muted)", marginBottom: 6 }}>
+              <div className="mono mb-1.5 text-[11.5px] text-subtle-foreground">
                 {f.file}:{f.start_line}
                 {f.end_line !== f.start_line ? `-${f.end_line}` : ""}
               </div>
-              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              <div className="text-ui leading-normal text-muted-foreground">
                 {f.rationale}
               </div>
               {f.suggestion && (
-                <div style={{ fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.5, marginTop: 6 }}>
+                <div className="mt-1.5 text-ui leading-normal text-muted-foreground">
                   <strong>{t("trace.suggestedFix")} </strong>
                   {f.suggestion}
                 </div>

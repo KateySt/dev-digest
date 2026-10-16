@@ -11,7 +11,8 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
 import type { FindingRecord } from "@devdigest/shared";
 import { createEvalCaseFromFinding, type EvalCaseFromFinding } from "@/lib/hooks/eval-cases";
 import { notify } from "@/lib/contexts";
@@ -24,7 +25,7 @@ import {
   type LinkedSkill,
 } from "./helpers";
 import { EvalTargetPicker } from "./_components/EvalTargetPicker";
-import { s } from "./styles";
+import { EVAL_SET_LINK, INLINE_LINK } from "./constants";
 
 export function EvalCaseAction({
   f,
@@ -78,11 +79,11 @@ export function EvalCaseAction({
   });
 
   const confirmationNodes = confirmations.map(({ target, kindLabel }) => (
-    <span key={target.key} role="status" style={s.confirmation}>
+    <span key={target.key} role="status" className="min-w-0 self-center text-ui text-ok wrap-anywhere break-words">
       {menu
         ? t("finding.evalCreatedFor", { target: target.name ?? t("finding.evalTargetAgentName"), kind: kindLabel })
         : t("finding.evalCreated", { kind: kindLabel })}{" "}
-      <Link href={evalsHrefFor(target)} style={s.inlineLink}>
+      <Link href={evalsHrefFor(target)} className={INLINE_LINK}>
         {target.kind === "skill" ? t("finding.viewSkillEvalCase") : t("finding.viewEvalCase")}
       </Link>
     </span>
@@ -92,7 +93,7 @@ export function EvalCaseAction({
   if (!menu && agentTarget && caseIdFor(agentTarget)) {
     return (
       <>
-        <Link href={evalsHrefFor(agentTarget)} style={s.evalSetLink}>
+        <Link href={evalsHrefFor(agentTarget)} className={EVAL_SET_LINK}>
           {t("finding.inEvalSet")}
         </Link>
         {confirmationNodes}
@@ -102,23 +103,23 @@ export function EvalCaseAction({
 
   return (
     <>
-      <span style={menu ? s.pickerWrap : s.hintWrap}>
-        <span title={disabledReason ?? undefined} style={s.hintWrap}>
+      <span className={menu ? "relative inline-flex flex-col gap-1.5" : "inline-flex"}>
+        <span title={disabledReason ?? undefined} className="inline-flex">
           <Button
-            kind="secondary"
+            variant="secondary"
             size="sm"
-            icon="FlaskConical"
-            iconRight={menu ? "ChevronDown" : undefined}
             disabled={!!disabledReason || pendingKey !== null}
             aria-describedby={disabledReason ? hintId : undefined}
             aria-expanded={menu ? open : undefined}
             aria-haspopup={menu ? "true" : undefined}
             onClick={() => (menu ? setOpen((v) => !v) : agentTarget && create(agentTarget))}
           >
+            <Icon.FlaskConical aria-hidden />
             {pendingKey !== null && !menu ? t("finding.evalCreating") : t("finding.turnIntoEval")}
+            {menu && <Icon.ChevronDown aria-hidden />}
           </Button>
           {disabledReason && (
-            <span id={hintId} style={s.srOnly}>
+            <span id={hintId} className="sr-only">
               {disabledReason}
             </span>
           )}

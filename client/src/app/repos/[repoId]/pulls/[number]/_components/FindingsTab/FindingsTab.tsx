@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { SectionLabel } from "@/components/section-label";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { ActiveRun } from "@/lib/hooks/reviews";
 import { RunStatus } from "../RunStatus";
 import { RunHistory } from "../RunHistory/RunHistory";
 import { ReviewRunAccordion } from "../ReviewRunAccordion";
-import { s } from "./styles";
 import type { FindingRecord, ReviewRecord, RunSummary, PrCommit } from "@devdigest/shared";
 import type { UseMutationResult } from "@tanstack/react-query";
 
@@ -51,6 +55,7 @@ export function FindingsTab({
   onDelete,
   onRunDone,
 }: FindingsTabProps) {
+  const t = useTranslations("prReview.findingsTab");
   const handleCancelAll = useCallback(() => {
     liveRunIds.forEach((id) => cancelMutation.mutate(id));
   }, [liveRunIds, cancelMutation]);
@@ -104,59 +109,50 @@ export function FindingsTab({
   return (
     <section>
       {liveRunIds.length > 0 && (
-        <div style={s.liveRunSection}>
+        <div className="mb-4.5">
           <SectionLabel
             icon="Sparkles"
             right={
-              <div style={s.cancelActions}>
-                <Button
-                  kind="danger"
-                  size="sm"
-                  icon="X"
-                  loading={cancelMutation.isPending}
-                  onClick={handleCancelAll}
-                >
-                  Cancel
+              <div className="flex gap-2">
+                <Button variant="destructive" size="sm" disabled={cancelMutation.isPending} onClick={handleCancelAll}>
+                  {cancelMutation.isPending ? <Icon.Loader className="animate-spin" aria-hidden /> : <Icon.X aria-hidden />}
+                  {t("cancel")}
                 </Button>
-                <Button kind="ghost" size="sm" icon="FileText" onClick={handleOpenFirstTrace}>
-                  Open run trace
+                <Button variant="outline" size="sm" onClick={handleOpenFirstTrace}>
+                  <Icon.FileText aria-hidden />
+                  {t("openTrace")}
                 </Button>
               </div>
             }
           >
-            Live review
+            {t("liveReview")}
           </SectionLabel>
           <RunStatus runIds={liveRunIds} activeRuns={activeRuns} onDone={onRunDone} />
         </div>
       )}
 
       {reviewRunning && (
-        <div style={s.reviewInProgress}>
-          <Icon.RefreshCw size={16} style={{ color: "var(--accent)", animation: "ddspin 1s linear infinite" }} />
-          <span style={s.reviewInProgressText}>Review in progress…</span>
-          <span style={s.reviewInProgressSub}>
-            the agent is analyzing the diff — this can take a while on large PRs.
-          </span>
+        <div className="mb-4.5 flex items-center gap-3 rounded-lg border border-border-strong bg-elevated px-4 py-3">
+          <Icon.RefreshCw size={16} className="animate-dd-spin text-primary" aria-hidden />
+          <span className="text-base font-semibold text-foreground">{t("inProgress")}</span>
+          <span className="text-sm text-muted-foreground">{t("inProgressHint")}</span>
         </div>
       )}
 
       {lethalTrifecta.length > 0 && (
-        <div style={s.lethalTrifecta}>
-          <Icon.Shield size={16} style={{ color: "var(--crit)" }} />
-          <span style={s.lethalTrifectaTitle}>Lethal Trifecta detected</span>
-          <Badge color="var(--crit)" bg="transparent">
-            {lethalTrifecta.length} finding(s)
+        <div className="mb-4.5 flex items-center gap-3 rounded-lg border border-crit bg-crit-bg px-4 py-3">
+          <Icon.Shield size={16} className="text-crit" aria-hidden />
+          <span className="text-base font-bold text-crit">{t("trifectaTitle")}</span>
+          <Badge variant="ghost" className="text-crit">
+            {t("trifectaCount", { count: lethalTrifecta.length })}
           </Badge>
         </div>
       )}
 
       {((prRuns && prRuns.length > 0) || prCommits.length > 0) && (
-        <div style={s.timelineSection}>
-          <SectionLabel
-            icon="Activity"
-            right={<span style={{ fontSize: 12, color: "var(--text-muted)" }}>runs &amp; commits · newest first</span>}
-          >
-            Timeline
+        <div className="mb-4.5">
+          <SectionLabel icon="Activity" right={<span className="text-xs text-subtle-foreground">{t("timelineHint")}</span>}>
+            {t("timeline")}
           </SectionLabel>
           <RunHistory
             runs={prRuns ?? []}
@@ -174,19 +170,12 @@ export function FindingsTab({
         </div>
       )}
 
-      <SectionLabel
-        icon="AlertOctagon"
-        right={<span style={{ fontSize: 12, color: "var(--text-muted)" }}>grouped by run · newest first</span>}
-      >
-        Review runs
+      <SectionLabel icon="AlertOctagon" right={<span className="text-xs text-subtle-foreground">{t("reviewRunsHint")}</span>}>
+        {t("reviewRuns")}
       </SectionLabel>
       {runs.length === 0 ? (
         reviewRunning || liveRunIds.length > 0 ? null : (
-          <EmptyState
-            icon="Sparkles"
-            title="No findings yet"
-            body="Run a review to generate findings. Use Run Review ▾ above (run all enabled agents or a specific one)."
-          />
+          <EmptyState icon="Sparkles" title={t("emptyTitle")} body={t("emptyBody")} />
         )
       ) : (
         prId &&

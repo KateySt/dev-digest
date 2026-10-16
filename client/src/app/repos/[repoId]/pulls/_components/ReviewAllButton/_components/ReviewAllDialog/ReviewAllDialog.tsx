@@ -7,15 +7,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Modal } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ApiError } from "@/lib/api";
 import { formatRunCost } from "@/components/run-cost-badge";
 import { useBulkReview, useReviewEstimate } from "@/lib/hooks/reviews";
 import type { PrMeta } from "@/lib/types";
 import { BULK_REVIEW_MAX_PRS } from "../../constants";
 import { estimateView } from "./helpers";
-import { useDialogKeyboard } from "./useDialogKeyboard";
-import { s } from "./styles";
 
 export function ReviewAllDialog({
   repoId,
@@ -29,8 +29,6 @@ export function ReviewAllDialog({
   const t = useTranslations("prReview");
   const estimate = useReviewEstimate(repoId, true);
   const bulk = useBulkReview(repoId);
-
-  const bodyRef = useDialogKeyboard(onClose);
 
   const result = bulk.data?.results;
   const view = estimate.data ? estimateView(estimate.data) : null;
@@ -50,12 +48,16 @@ export function ReviewAllDialog({
   const pullById = new Map(pulls.map((p) => [p.id, p]));
 
   return (
-    <Modal width={520} onClose={onClose}>
-      <Modal.Header title={t("list.reviewAll.dialogTitle")} onClose={onClose} />
-      <div ref={bodyRef} style={s.body} aria-live="polite">
+    // Radix Dialog traps focus, closes on Escape and returns focus to the opener.
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[520px]" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>{t("list.reviewAll.dialogTitle")}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-3 p-6" aria-live="polite">
         {result ? (
           <>
-            <p style={s.text}>
+            <p className="text-[13.5px] leading-normal text-foreground">
               {t("list.reviewAll.resultSummary", {
                 started: result.filter((r) => r.outcome === "started").length,
                 skipped: result.filter((r) => r.outcome === "skipped").length,
@@ -64,12 +66,13 @@ export function ReviewAllDialog({
             </p>
             {result.some((r) => r.outcome === "failed") && (
               <div>
-                <p style={s.muted}>{t("list.reviewAll.failedHeading")}</p>
-                <ul style={s.failedList}>
+                <p className="text-sm leading-normal text-muted-foreground">{t("list.reviewAll.failedHeading")}</p>
+                <ul className="m-0 list-disc pl-4.5 text-sm text-muted-foreground">
                   {result
                     .filter((r) => r.outcome === "failed")
                     .map((r) => (
-                      <li key={r.pr_id} style={s.failedItem}>
+                      // Untrusted PR titles / server error text: allow long unbroken strings to wrap.
+                      <li key={r.pr_id} className="min-w-0 wrap-anywhere break-words">
                         {t("list.reviewAll.failedItem", {
                           number: pullById.get(r.pr_id)?.number ?? "?",
                           title: pullById.get(r.pr_id)?.title ?? r.pr_id,
@@ -82,55 +85,54 @@ export function ReviewAllDialog({
             )}
           </>
         ) : estimate.isLoading ? (
-          <p style={s.muted}>{t("list.reviewAll.loading")}</p>
+          <p className="text-sm leading-normal text-muted-foreground">{t("list.reviewAll.loading")}</p>
         ) : estimate.isError ? (
-          <p style={s.refusal}>{t("list.reviewAll.estimateError")}</p>
+          <p className="text-[13.5px] leading-normal text-crit">{t("list.reviewAll.estimateError")}</p>
         ) : estimate.data ? (
           <>
-            {view === "noPrs" && <p style={s.text}>{t("list.reviewAll.noPrs")}</p>}
-            {view === "noAgents" && <p style={s.refusal}>{t("list.reviewAll.noAgents")}</p>}
+            {view === "noPrs" && <p className="text-[13.5px] leading-normal text-foreground">{t("list.reviewAll.noPrs")}</p>}
+            {view === "noAgents" && <p className="text-[13.5px] leading-normal text-crit">{t("list.reviewAll.noAgents")}</p>}
             {view === "tooMany" && (
-              <p style={s.refusal}>
+              <p className="text-[13.5px] leading-normal text-crit">
                 {t("list.reviewAll.tooMany", { count: estimate.data.pr_count, max: BULK_REVIEW_MAX_PRS })}
               </p>
             )}
-            {view === "allInFlight" && <p style={s.text}>{t("list.reviewAll.allInFlight")}</p>}
+            {view === "allInFlight" && <p className="text-[13.5px] leading-normal text-foreground">{t("list.reviewAll.allInFlight")}</p>}
             {view === "ready" && (
               <>
-                <p style={s.text}>
+                <p className="text-[13.5px] leading-normal text-foreground">
                   {t("list.reviewAll.counts", {
                     prs: estimate.data.pr_count,
                     agents: estimate.data.agent_count,
                     runs: estimate.data.run_count,
                   })}
                 </p>
-                <p style={s.muted}>
+                <p className="text-sm leading-normal text-muted-foreground">
                   {estimate.data.approx_cost_usd == null
                     ? t("list.reviewAll.noCostHistory")
                     : t("list.reviewAll.approxCost", { cost: formatRunCost(estimate.data.approx_cost_usd) })}
                 </p>
                 {estimate.data.skip_count > 0 && (
-                  <p style={s.muted}>{t("list.reviewAll.skipped", { count: estimate.data.skip_count })}</p>
+                  <p className="text-sm leading-normal text-muted-foreground">{t("list.reviewAll.skipped", { count: estimate.data.skip_count })}</p>
                 )}
               </>
             )}
-            {serverRefusal && <p style={s.refusal}>{serverRefusal}</p>}
+            {serverRefusal && <p className="text-[13.5px] leading-normal text-crit">{serverRefusal}</p>}
           </>
         ) : null}
-      </div>
-      <Modal.Footer>
-        <div style={s.footer}>
-          <div style={s.spacer} />
-          <Button kind="ghost" onClick={onClose}>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
             {result ? t("list.reviewAll.close") : t("list.reviewAll.cancel")}
           </Button>
           {!result && (
-            <Button kind="primary" icon="Zap" disabled={!canConfirm} onClick={() => bulk.mutate()}>
+            <Button disabled={!canConfirm} onClick={() => bulk.mutate()}>
+              <Icon.Zap aria-hidden />
               {bulk.isPending ? t("list.reviewAll.starting") : t("list.reviewAll.confirm")}
             </Button>
           )}
-        </div>
-      </Modal.Footer>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

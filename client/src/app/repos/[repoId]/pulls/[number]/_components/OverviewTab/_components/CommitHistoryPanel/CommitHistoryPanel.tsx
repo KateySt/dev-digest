@@ -10,10 +10,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { EmptyState, MonoLink } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { MonoLink } from "@/components/mono-link";
+import { cn } from "@/lib/utils";
 import { usePrCommits } from "@/lib/hooks/reviews";
-import { FILE_SEVERITY_COLOR } from "./constants";
-import { s } from "./styles";
+import { FILE_SEVERITY_BORDER } from "./constants";
 
 export function CommitHistoryPanel({
   prId,
@@ -36,31 +37,40 @@ export function CommitHistoryPanel({
   }
 
   if (data.commits.length === 0) {
-    return <div style={s.placeholderHint}>{t("empty")}</div>;
+    return (
+      <div className="rounded-lg border border-border bg-elevated px-4 py-3.25 text-sm text-subtle-foreground">
+        {t("empty")}
+      </div>
+    );
   }
 
   return (
-    <div style={s.wrap}>
+    <div className="flex flex-col gap-2">
       {data.commits.map((commit) => (
-        <div key={commit.sha} style={s.commitCard}>
-          <div style={s.commitHeader}>
-            <span className="mono" style={s.sha}>
+        <div key={commit.sha} className="flex flex-col gap-1.5 rounded-lg border border-border bg-elevated px-3 py-2.5">
+          <div className="flex items-baseline gap-2">
+            <span className="mono text-xs text-brand-text">
               {commit.sha.slice(0, 7)}
             </span>
-            <span style={s.message}>{commit.message.split("\n")[0]}</span>
+            <span className="text-sm font-semibold text-foreground">{commit.message.split("\n")[0]}</span>
           </div>
-          <div style={s.meta}>
+          <div className="text-xs text-subtle-foreground">
             {commit.author}
             {commit.committed_at ? ` · ${new Date(commit.committed_at).toLocaleDateString()}` : ""}
             {" · "}
             {t("fileCount", { count: commit.files.length })}
           </div>
           {commit.files.length > 0 && (
-            <div style={s.fileList}>
+            <div className="mt-0.5 flex flex-col gap-1">
               {commit.files.map((file) => (
+                // Left-border colour marks the file's worst finding; none when it has no findings.
                 <div
                   key={file.path}
-                  style={s.fileRow(file.severity ? FILE_SEVERITY_COLOR[file.severity] : null)}
+                  data-severity={file.severity ?? undefined}
+                  className={cn(
+                    "flex items-center gap-1.5 border-l-2 pl-2",
+                    file.severity ? FILE_SEVERITY_BORDER[file.severity] : "border-transparent",
+                  )}
                 >
                   <MonoLink onClick={() => onNavigateToFile(file.path, file.line ?? 1)}>
                     {file.path}

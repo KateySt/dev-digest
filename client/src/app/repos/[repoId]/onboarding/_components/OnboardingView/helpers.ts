@@ -1,4 +1,4 @@
-import type { IconName } from "@devdigest/ui";
+import type { IconName } from "@/components/icon";
 
 /** Anchor ids for the five section cards — the SINGLE source of truth for
  *  section order (C-AC-6, C-AC-7). Both the anchor nav and the section-card

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { MonoLink } from "@devdigest/ui";
+import { MonoLink } from "@/components/mono-link";
 import { githubBlobUrl } from "@/lib/utils";
 import type { OnboardingCriticalPathEntry } from "@/lib/types";
 
@@ -22,21 +22,21 @@ export function CriticalPathsSection({
   blobRef: string;
 }) {
   const t = useTranslations("onboarding.sections.criticalPaths");
-  if (entries.length === 0) return <div style={s.empty}>{t("empty")}</div>;
+  if (entries.length === 0) return <div className="py-1 text-sm text-subtle-foreground">{t("empty")}</div>;
 
   return (
-    <div style={s.list}>
+    <div className="flex min-w-0 flex-col gap-3">
       {entries.map((entry, i) => {
         const chainText = entry.chain.join(" → ");
         const targetPath = entry.chain[entry.chain.length - 1] ?? entry.chain[0] ?? "";
         return (
-          <div key={`${chainText}-${i}`} style={s.row}>
-            <span className="mono" style={s.chain}>
+          <div key={`${chainText}-${i}`} className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border px-3 py-2.5">
+            <span className="mono min-w-0 text-sm text-foreground wrap-anywhere break-words">
               {chainText}
             </span>
-            {entry.reason && <span style={s.reason}>{entry.reason}</span>}
+            {entry.reason && <span className="text-sm text-muted-foreground">{entry.reason}</span>}
             {repoFullName && targetPath && (
-              <span style={s.openLink}>
+              <span className="min-w-0">
                 <MonoLink wrap href={githubBlobUrl(repoFullName, blobRef, targetPath)}>
                   {t("openFile", { path: targetPath })}
                 </MonoLink>
@@ -48,28 +48,5 @@ export function CriticalPathsSection({
     </div>
   );
 }
-
-const s = {
-  list: { display: "flex", flexDirection: "column", gap: 12, minWidth: 0 } as React.CSSProperties,
-  row: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    padding: "10px 12px",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    minWidth: 0,
-  } as React.CSSProperties,
-  chain: {
-    fontSize: 13,
-    color: "var(--text-primary)",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-    minWidth: 0,
-  } as React.CSSProperties,
-  reason: { fontSize: 13, color: "var(--text-secondary)" } as React.CSSProperties,
-  openLink: { minWidth: 0 } as React.CSSProperties,
-  empty: { fontSize: 13, color: "var(--text-muted)", padding: "4px 0" } as React.CSSProperties,
-};
 
 export default CriticalPathsSection;
