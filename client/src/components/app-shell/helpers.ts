@@ -37,6 +37,5 @@ export function activeKeyFor(pathname: string): string {
   if (pathname.startsWith("/memory")) return "memory";
   if (pathname.startsWith("/agent-performance")) return "agent-performance";
   if (pathname.startsWith("/ci-runs")) return "ci-runs";
-  if (pathname.startsWith("/conformance")) return "conformance";
   return "";
 }

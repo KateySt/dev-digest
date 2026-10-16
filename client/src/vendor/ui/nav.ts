@@ -45,12 +45,6 @@ export const NAV: NavGroup[] = [
       { key: "ci-runs", label: "CI Runs", icon: "Workflow", href: "/ci-runs", gKey: "c" },
     ],
   },
-  {
-    section: "MORE SCREENS",
-    items: [
-      { key: "conformance", label: "Conformance", icon: "Shield", href: "/conformance", gKey: "n" },
-    ],
-  },
 ];
 
 export const SETTINGS_ITEM: NavItemDef = {
@@ -89,7 +83,6 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: "g r", label: "Go to Multi-Agent Review", group: "Navigation" },
   { keys: "g f", label: "Go to Agent Performance", group: "Navigation" },
   { keys: "g c", label: "Go to CI Runs", group: "Navigation" },
-  { keys: "g n", label: "Go to Conformance", group: "Navigation" },
   { keys: "j / k", label: "Next / previous finding", group: "Findings" },
   { keys: "a", label: "Accept finding", group: "Findings" },
   { keys: "d", label: "Dismiss finding", group: "Findings" },
