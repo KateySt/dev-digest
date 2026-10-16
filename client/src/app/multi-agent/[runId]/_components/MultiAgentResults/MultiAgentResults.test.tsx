@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import prReviewMessages from "@/../messages/en/prReview.json";
 import evalMessages from "@/../messages/en/eval.json";
+import common from "@/../messages/en/common.json";
 import { get, mockFetch, post } from "@/test/eval-utils";
 import { MultiAgentResults } from "./MultiAgentResults";
 
@@ -140,7 +141,7 @@ function setup(run: MultiAgentRun | "404", routes: ReturnType<typeof get>[] = []
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <NextIntlClientProvider locale="en" messages={{ runs: runsMessages, prReview: prReviewMessages, eval: evalMessages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, runs: runsMessages, prReview: prReviewMessages, eval: evalMessages }}>
         <MultiAgentResults />
       </NextIntlClientProvider>
     </QueryClientProvider>,

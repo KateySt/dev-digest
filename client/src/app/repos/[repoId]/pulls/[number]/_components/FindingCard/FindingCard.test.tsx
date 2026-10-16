@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import common from "../../../../../../../../messages/en/common.json";
 import { FindingCard } from "./FindingCard";
 import { apiError, finding as makeFinding, mockFetch, post } from "@/test/eval-utils";
 
@@ -33,7 +34,7 @@ const FINDING: FindingRecord = {
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
       {ui}
     </NextIntlClientProvider>,
   );
@@ -70,7 +71,7 @@ function renderCard(f: FindingRecord, props: { agentId?: string | null } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
         <FindingCard f={f} defaultExpanded onAction={() => {}} agentId={"agentId" in props ? props.agentId : "ag1"} prId="pr1" />
       </NextIntlClientProvider>
     </QueryClientProvider>,

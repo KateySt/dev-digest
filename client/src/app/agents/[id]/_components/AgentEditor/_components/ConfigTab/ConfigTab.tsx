@@ -2,19 +2,29 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { FormField, TextInput, Select, SearchableSelect, CodeField, Toggle, Button } from "@devdigest/ui";
+import { CodeField } from "@/components/code-field";
+import { Combobox } from "@/components/combobox";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { SelectField } from "@/components/select-field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import type { Agent, CiFailOn, Provider, ReviewStrategy } from "@devdigest/shared";
-import { useUpdateAgent, useProviderModels } from "../../../../../../../lib/hooks/agents";
+import { useUpdateAgent, useProviderModels } from "@/lib/hooks/agents";
 import { useToast } from "@/lib/contexts";
 import { toModelOptions } from "@/lib/utils";
 import { slugify } from "@/lib/slug";
-import { CI_FAIL_ON_VALUES, OUTPUT_SCHEMA_VALUE, PROVIDER_OPTIONS, STRATEGY_VALUES } from "./constants";
-import { s } from "./styles";
+import { CI_FAIL_ON_VALUES, PROVIDER_OPTIONS, STRATEGY_VALUES } from "./constants";
+
+const TOGGLE_LABEL = "ml-auto flex items-center gap-2.5 text-sm text-muted-foreground";
 
 /** Config tab — name/description/provider/model/system-prompt + enabled toggle. */
 export function ConfigTab({ agent }: { agent: Agent }) {
   const t = useTranslations("agents");
   const toast = useToast();
+  const nameId = React.useId();
+  const descriptionId = React.useId();
   const update = useUpdateAgent();
   const [name, setName] = React.useState(agent.name);
   const [description, setDescription] = React.useState(agent.description);
@@ -76,55 +86,59 @@ export function ConfigTab({ agent }: { agent: Agent }) {
     );
 
   return (
-    <div style={s.wrap}>
-      <div style={s.header}>
-        <h2 style={s.h2}>{t("config.title")}</h2>
-        <label style={s.enabledLabel}>
+    <div className="max-w-[760px]">
+      <div className="mb-5 flex items-center">
+        <h2 className="text-xl font-bold">{t("config.title")}</h2>
+        <label className={TOGGLE_LABEL}>
           {t("config.enabled")}
-          <Toggle on={agent.enabled} onChange={toggleEnabled} size={16} />
+          <Switch checked={agent.enabled} onCheckedChange={toggleEnabled} />
         </label>
       </div>
-      <FormField label={t("config.name")} required>
-        <TextInput value={name} onChange={setName} />
+      <FormField label={t("config.name")} required htmlFor={nameId}>
+        <Input id={nameId} value={name} onChange={(e) => setName(e.target.value)} />
       </FormField>
-      <FormField label={t("config.description")}>
-        <TextInput value={description} onChange={setDescription} />
+      <FormField label={t("config.description")} htmlFor={descriptionId}>
+        <Input id={descriptionId} value={description} onChange={(e) => setDescription(e.target.value)} />
       </FormField>
       <FormField label={t("config.provider")}>
-        <Select
+        <SelectField
           value={provider}
           onChange={(v) => setProvider(v as Provider)}
-          options={[...PROVIDER_OPTIONS]}
+          options={PROVIDER_OPTIONS}
+          ariaLabel={t("config.provider")}
         />
       </FormField>
       <FormField
         label={t("config.model")}
         hint={noModels ? t("config.modelEmptyHint", { provider }) : t("config.modelHint")}
       >
-        <SearchableSelect
+        <Combobox
           value={model}
           onChange={setModel}
           options={modelOptions}
           placeholder={t("config.modelSearch")}
+          ariaLabel={t("config.model")}
         />
       </FormField>
       <FormField label={t("config.strategy")} hint={t("config.strategyHint")}>
-        <Select
+        <SelectField
           value={strategy}
           onChange={(v) => setStrategy(v as ReviewStrategy)}
           options={strategyOptions}
+          ariaLabel={t("config.strategy")}
         />
       </FormField>
       <FormField label={t("config.ciFailOn")} hint={t("config.ciFailOnHint")}>
-        <Select
+        <SelectField
           value={ciFailOn}
           onChange={(v) => setCiFailOn(v as CiFailOn)}
           options={ciFailOnOptions}
+          ariaLabel={t("config.ciFailOn")}
         />
       </FormField>
       <FormField label={t("config.repoIntel")} hint={t("config.repoIntelHint")}>
-        <label style={s.enabledLabel}>
-          <Toggle on={repoIntel} onChange={setRepoIntel} size={16} />
+        <label className={TOGGLE_LABEL}>
+          <Switch checked={repoIntel} onCheckedChange={setRepoIntel} aria-label={t("config.repoIntel")} />
         </label>
       </FormField>
       <FormField label={t("config.systemPrompt")} hint={t("config.systemPromptHint")}>
@@ -137,14 +151,19 @@ export function ConfigTab({ agent }: { agent: Agent }) {
         />
       </FormField>
       <FormField label={t("config.outputSchema")}>
-        <Select value={OUTPUT_SCHEMA_VALUE} options={[OUTPUT_SCHEMA_VALUE]} />
+        <SelectField
+          value="standard"
+          options={[{ value: "standard", label: t("config.outputSchemaStandard") }]}
+          ariaLabel={t("config.outputSchema")}
+        />
       </FormField>
-      <div style={s.actions}>
-        <Button kind="primary" icon="Check" onClick={save} disabled={update.isPending}>
+      <div className="mt-2.5 flex gap-2.5">
+        <Button onClick={save} disabled={update.isPending}>
+          <Icon.Check aria-hidden />
           {update.isPending ? t("config.saving") : t("config.save")}
         </Button>
         {update.isSuccess && (
-          <span style={s.savedNote}>{t("config.saved", { version: update.data?.version })}</span>
+          <span className="self-center text-sm text-ok">{t("config.saved", { version: update.data?.version })}</span>
         )}
       </div>
     </div>

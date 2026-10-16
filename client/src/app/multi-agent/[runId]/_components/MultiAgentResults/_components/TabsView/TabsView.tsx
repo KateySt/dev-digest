@@ -6,7 +6,10 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { CircularScore, Icon, Tabs, type TabDef } from "@devdigest/ui";
+import { CircularScore } from "@/components/circular-score";
+import { Icon } from "@/components/icon";
+import { PageTabs, type TabDef } from "@/components/page-tabs";
+import { cn } from "@/lib/utils";
 import type { AgentColumn, FindingActionKind, FindingGroup } from "@devdigest/shared";
 import { FindingCard } from "@/app/repos/[repoId]/pulls/[number]/_components/FindingCard";
 import { useLinkedSkills } from "@/lib/hooks/agents";
@@ -14,7 +17,6 @@ import { resolveAccent } from "@/app/multi-agent/helpers";
 import { metaLine, otherMembers, selectedColumn } from "../../helpers";
 import { AlsoFlaggedBadge } from "../AlsoFlaggedBadge";
 import { RunStatusNotice } from "../RunStatusNotice";
-import { s } from "./styles";
 
 export interface TabsViewProps {
   columns: readonly AgentColumn[];
@@ -79,17 +81,23 @@ export function TabsView({
   const AgentIcon = Icon[accent.icon];
 
   return (
-    <div style={s.root}>
-      <Tabs tabs={tabs} value={current.agent_id} onChange={onSelectAgent} pad="0" />
-      <div ref={panelRef} style={s.panel}>
-        <div style={s.summary(accent.color)} data-testid="agent-summary">
+    <div className="flex min-w-0 flex-col gap-4">
+      <PageTabs tabs={tabs} value={current.agent_id} onChange={onSelectAgent} />
+      <div ref={panelRef} className="flex max-w-[720px] min-w-0 flex-col gap-3">
+        <div
+          className={cn(
+            "flex min-w-0 items-start gap-4 rounded-xl border border-l-[3px] border-border border-l-(--agent) bg-elevated p-4",
+            accent.tone,
+          )}
+          data-testid="agent-summary"
+        >
           {done && current.score != null && <CircularScore score={current.score} size={52} />}
-          <div style={s.summaryMain}>
-            <span style={s.summaryName(accent.color)}>
-              <AgentIcon size={14} /> {current.agent_name}
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="inline-flex items-center gap-1.5 text-md font-semibold text-(--agent)">
+              <AgentIcon size={14} aria-hidden /> {current.agent_name}
             </span>
             {done ? (
-              <span style={s.summaryText}>{current.summary ?? "—"}</span>
+              <span className="min-w-0 text-[13.5px] leading-normal break-words wrap-anywhere text-muted-foreground">{current.summary ?? "—"}</span>
             ) : (
               <RunStatusNotice
                 column={current}
@@ -99,20 +107,23 @@ export function TabsView({
               />
             )}
           </div>
-          <div style={s.summaryAside}>
-            <button type="button" className="mono" style={s.traceBtn} onClick={() => onViewTrace(current.run_id)}>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              className="mono cursor-pointer border-none bg-transparent p-0 text-ui text-muted-foreground"
+              onClick={() => onViewTrace(current.run_id)}>
               {tc("viewTrace")}
             </button>
-            <span className="mono" style={s.meta}>
+            <span className="mono text-[11.5px] text-subtle-foreground">
               {metaLine(current.duration_ms, current.cost_usd)}
             </span>
           </div>
         </div>
 
-        {done && current.findings.length === 0 && <div style={s.empty}>{tc("noFindings")}</div>}
+        {done && current.findings.length === 0 && <div className="text-sm text-muted-foreground">{tc("noFindings")}</div>}
         {done &&
           current.findings.map((f, i) => (
-            <div key={f.id} style={s.findingWrap}>
+            <div key={f.id} className="flex min-w-0 flex-col gap-1.5">
               <FindingCard
                 f={f}
                 defaultExpanded={f.id === focusedFindingId || (focusedFindingId == null && i === 0)}

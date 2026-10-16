@@ -2,37 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { SeverityBadge, CategoryTag, MonoLink, type Severity, type Category } from "@devdigest/ui";
 import type { FindingRecord } from "@devdigest/shared";
+import { MonoLink } from "@/components/mono-link";
+import { CategoryTag, SeverityBadge, type Category, type Severity } from "@/components/severity";
 import { githubBlobUrl } from "@/lib/utils";
 
 function lineLabel(f: Pick<FindingRecord, "start_line" | "end_line">): string {
   return f.start_line === f.end_line ? `${f.start_line}` : `${f.start_line}-${f.end_line}`;
 }
 
-const titleStyle: React.CSSProperties = {
-  fontSize: 12.5,
-  fontWeight: 600,
-  color: "var(--text-primary)",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
-const descriptionStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 12,
-  color: "var(--text-muted)",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
-const fileLinkStyle: React.CSSProperties = {
-  overflowWrap: "anywhere",
-};
+const TITLE = "line-clamp-2 text-ui font-semibold text-foreground";
 
 export function FindingSummaryRow({
   finding,
@@ -57,30 +36,20 @@ export function FindingSummaryRow({
       : undefined;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        padding: "8px 10px",
-        borderTop: "1px solid var(--border)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="flex flex-col gap-1 border-t border-border px-2.5 py-2">
+      <div className="flex items-center gap-2">
         <SeverityBadge severity={finding.severity as Severity} compact />
         {findingHref ? (
-          <Link href={findingHref} style={{ ...titleStyle, textDecoration: "none" }}>
-            <span style={{ textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 2 }}>
-              {finding.title}
-            </span>
+          <Link href={findingHref} className={`${TITLE} no-underline`}>
+            <span className="underline decoration-dotted underline-offset-2">{finding.title}</span>
           </Link>
         ) : (
-          <span style={titleStyle}>{finding.title}</span>
+          <span className={TITLE}>{finding.title}</span>
         )}
       </div>
-      <p style={descriptionStyle}>{finding.rationale}</p>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={fileLinkStyle}>
+      <p className="m-0 line-clamp-2 text-xs text-subtle-foreground">{finding.rationale}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="wrap-anywhere">
           <MonoLink href={fileHref}>
             {finding.file}:{lineLabel(finding)}
           </MonoLink>

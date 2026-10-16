@@ -5,16 +5,25 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Dropdown, EmptyState, ErrorState, Skeleton, Icon } from "@devdigest/ui";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent, AgentPerfRow } from "@devdigest/shared";
-import { AppShell } from "../../../../components/app-shell";
-import { useAgents, useAgentSkillLinks, useUpdateAgent } from "../../../../lib/hooks/agents";
-import { useAgentPerformance } from "../../../../lib/hooks/agent-performance";
+import { AppShell } from "@/components/app-shell";
+import { useAgents, useAgentSkillLinks, useUpdateAgent } from "@/lib/hooks/agents";
+import { useAgentPerformance } from "@/lib/hooks/agent-performance";
 import { AgentCard } from "../AgentCard";
 import { CreateAgentModal } from "./_components/CreateAgentModal";
-import { TEMPLATES } from "./constants";
+import { CARD_GRID, TEMPLATES } from "./constants";
 import { filterAgents } from "./helpers";
-import { s } from "./styles";
 
 /** Wraps AgentCard with its own skill-link count (AgentCard itself stays a
  *  dumb, prop-driven component — hooks can't run inside a .map() callback).
@@ -59,47 +68,51 @@ export function AgentsListView() {
   return (
     <AppShell crumb={[{ label: t("list.breadcrumbLab") }, { label: t("list.breadcrumb") }]}>
       {creating && <CreateAgentModal onClose={() => setCreating(false)} />}
-      <div style={s.page}>
-        <div style={s.header}>
-          <div style={s.headerText}>
-            <h1 style={s.h1}>{t("list.title")}</h1>
-            <p style={s.subtitle}>{t("list.subtitle")}</p>
+      <div className="mx-auto max-w-[1100px] px-8 pt-6 pb-11">
+        <div className="mb-5 flex items-center gap-3.5">
+          <div className="flex-1">
+            <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("list.title")}</h1>
+            <p className="mt-1 text-base text-muted-foreground">{t("list.subtitle")}</p>
           </div>
-          <div style={s.search}>
-            <Icon.Search size={13} style={s.searchIcon} />
+          <div className="flex w-50 items-center gap-2.5 rounded-[7px] border border-border bg-surface px-3 py-2">
+            <Icon.Search size={13} className="text-subtle-foreground" aria-hidden />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("list.searchPlaceholder")}
-              style={s.searchInput}
+              aria-label={t("list.searchLabel")}
+              className="flex-1 border-none bg-transparent text-sm text-foreground outline-none"
             />
           </div>
-          <Dropdown
-            width={220}
-            align="right"
-            trigger={
-              <Button kind="primary" size="sm" icon="Plus" iconRight="ChevronDown">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm">
+                <Icon.Plus aria-hidden />
                 {t("list.addAgent")}
+                <Icon.ChevronDown aria-hidden />
               </Button>
-            }
-            items={[
-              { label: t("list.createFromScratch"), icon: "Edit", onClick: () => setCreating(true) },
-              { divider: true },
-              ...TEMPLATES.map((tp) => ({
-                label: tp,
-                icon: "Cpu" as const,
-                muted: true,
-                onClick: () => setCreating(true),
-              })),
-            ]}
-          />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-55">
+              <DropdownMenuItem onSelect={() => setCreating(true)}>
+                <Icon.Edit aria-hidden />
+                {t("list.createFromScratch")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {TEMPLATES.map((tp) => (
+                <DropdownMenuItem key={tp} className="text-muted-foreground" onSelect={() => setCreating(true)}>
+                  <Icon.Cpu aria-hidden />
+                  {tp}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {isLoading && (
-          <div style={s.grid}>
-            <Skeleton height={120} />
-            <Skeleton height={120} />
-            <Skeleton height={120} />
+          <div className={CARD_GRID}>
+            <Skeleton className="h-30 w-full" />
+            <Skeleton className="h-30 w-full" />
+            <Skeleton className="h-30 w-full" />
           </div>
         )}
         {isError && <ErrorState body={t("list.loadError")} onRetry={() => refetch()} />}
@@ -113,7 +126,7 @@ export function AgentsListView() {
           />
         )}
         {list.length > 0 && (
-          <div style={s.grid}>
+          <div className={CARD_GRID}>
             {list.map((a) => (
               <AgentCardWithExtras
                 key={a.id}

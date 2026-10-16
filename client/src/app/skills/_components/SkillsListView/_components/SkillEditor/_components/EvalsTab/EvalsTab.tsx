@@ -3,14 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
 import type { Skill } from "@devdigest/shared";
 import { useEvalCases, useEvalStats } from "@/lib/hooks/eval-cases";
 import { useSkillEvalRuns, type SkillEvalActivity } from "@/lib/hooks/eval-runs";
 import { EvalCaseList, MetricTiles, type RunAllControl } from "@/components/eval-cases";
 import { DraftResults } from "./_components/DraftResults";
 import { MiniTrend } from "./_components/MiniTrend";
-import { s } from "./styles";
 
 /** Skill Editor's Evals tab: metric tiles + mini trend (latest REAL suite run),
  *  the Draft results block (unsaved-text run, kept apart from the real numbers),
@@ -42,14 +41,14 @@ export function EvalsTab({
   };
 
   return (
-    <div style={s.wrap}>
+    <div className="flex max-w-[900px] min-w-0 flex-col gap-6">
       <div>
-        <div style={s.metricsHeader}>
-          <span style={s.metricsLabel}>
-            <Icon.Gauge size={14} />
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex items-center gap-2 text-xs font-bold tracking-[0.06em] text-subtle-foreground uppercase">
+            <Icon.Gauge size={14} aria-hidden />
             {t("evalsTab.metricsLabel")}
           </span>
-          <Link href={`/eval/skills/${skill.id}`} className="mono" style={s.dashLink}>
+          <Link href={`/eval/skills/${skill.id}`} className="mono ml-auto text-ui text-muted-foreground no-underline">
             {t("evalsTab.viewDashboard")}
           </Link>
         </div>
@@ -58,7 +57,7 @@ export function EvalsTab({
       </div>
 
       {activity.startError && (
-        <div role="alert" style={s.error}>
+        <div role="alert" className="min-w-0 rounded-lg border border-crit px-3 py-2 text-sm text-crit wrap-anywhere break-words">
           {ts("evals.startFailed", { message: activity.startError })}
         </div>
       )}

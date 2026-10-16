@@ -6,7 +6,11 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, ErrorState, Skeleton, TextInput } from "@devdigest/ui";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppShell } from "@/components/app-shell";
 import { useActiveRepo } from "@/lib/contexts";
 import { useAgents } from "@/lib/hooks/agents";
@@ -16,9 +20,8 @@ import { FilterRail } from "./_components/filter-rail";
 import { MemoryCard } from "./_components/memory-card";
 import { MemoryDetail } from "./_components/memory-detail";
 import { CurateDrawer } from "./_components/curate-drawer";
-import { MEMORY_KINDS, MEMORY_SCOPES, SEARCH_DEBOUNCE_MS } from "./constants";
+import { MEMORY_CLASSES, MEMORY_KINDS, MEMORY_SCOPES, SEARCH_DEBOUNCE_MS } from "./constants";
 import { filterMemories } from "./helpers";
-import { s } from "./styles";
 
 const toggle = (set: ReadonlySet<string>, v: string) => {
   const next = new Set(set);
@@ -70,7 +73,7 @@ export function MemoryView() {
 
   return (
     <AppShell crumb={[{ label: t("page.crumb") }]}>
-      <div style={s.layout}>
+      <div className="grid h-full min-h-0 grid-cols-[220px_minmax(0,1fr)_360px]">
         <FilterRail
           scopes={scopes}
           kinds={kinds}
@@ -83,33 +86,41 @@ export function MemoryView() {
           onShowArchived={setShowArchived}
         />
 
-        <div style={s.center}>
-          <div style={s.header}>
-            <div style={s.titleRow}>
-              <h1 style={s.h1}>{t("page.heading")}</h1>
-              <span style={s.subtitle}>{t("page.count", { count: items.length })}</span>
-              <div style={s.titleActions}>
-                <Button kind="secondary" size="sm" icon="Sparkles" onClick={() => setCurating(true)}>
+        <div className="flex min-h-0 min-w-0 flex-col">
+          <div className="border-b border-border px-6 pt-5 pb-3.5">
+            <div className="mb-3.5 flex items-baseline gap-3">
+              <h1 className="m-0 text-3xl font-bold">{t("page.heading")}</h1>
+              <span className="text-[13.5px] text-subtle-foreground">{t("page.count", { count: items.length })}</span>
+              <div className="ml-auto">
+                <Button variant="secondary" size="sm" onClick={() => setCurating(true)}>
+                  <Icon.Sparkles aria-hidden />
                   {t("curate.button")}
                 </Button>
               </div>
             </div>
-            <div style={s.searchRow}>
-              <div style={{ flex: 1 }}>
-                <TextInput value={search} onChange={setSearch} placeholder={t("page.searchPlaceholder")} />
+            <div className="flex items-center gap-2.5">
+              <div className="flex-1">
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("page.searchPlaceholder")}
+                  aria-label={t("page.searchPlaceholder")}
+                />
               </div>
               {memories.data && (
-                <span style={s.modeBadge} title={t("page.searchModeHint")}>
+                <span
+                  className="rounded-[5px] bg-elevated px-2 py-0.5 text-xs whitespace-nowrap text-subtle-foreground"
+                  title={t("page.searchModeHint")}>
                   {t(`page.searchMode.${memories.data.search_mode}`)}
                 </span>
               )}
             </div>
           </div>
 
-          <div style={s.list}>
+          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto px-6 py-4">
             {memories.data ? (
               items.length === 0 ? (
-                <div style={s.empty}>
+                <div className="p-6">
                   <EmptyState icon="Brain" title={t("page.empty.title")} body={t("page.empty.body")} />
                 </div>
               ) : (
@@ -120,7 +131,7 @@ export function MemoryView() {
             ) : memories.error ? (
               <ErrorState title={t("page.loadError")} onRetry={() => memories.refetch()} />
             ) : (
-              <Skeleton height={120} />
+              <Skeleton className="h-30 w-full" />
             )}
           </div>
         </div>
@@ -136,8 +147,8 @@ export function MemoryView() {
             onOpenMemory={setSelectedId}
           />
         ) : (
-          <aside style={s.detail}>
-            <span style={s.muted}>{t("detail.empty")}</span>
+          <aside className={MEMORY_CLASSES.detail}>
+            <span className={MEMORY_CLASSES.muted}>{t("detail.empty")}</span>
           </aside>
         )}
       </div>

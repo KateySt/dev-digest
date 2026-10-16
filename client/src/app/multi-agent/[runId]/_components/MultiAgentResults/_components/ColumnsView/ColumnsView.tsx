@@ -1,11 +1,10 @@
 /* ColumnsView — one AgentColumnCard per selected agent, in selection order.
-   Horizontal scroll (min column width) instead of squeezing at 5+ columns. */
+   Horizontal scroll (300px min column width) instead of squeezing at 5+ columns. */
 "use client";
 
 import React from "react";
 import type { AgentColumn, FindingGroup } from "@devdigest/shared";
 import { resolveAccent } from "@/app/multi-agent/helpers";
-import { COLUMN_MIN_WIDTH } from "../../constants";
 import { AgentColumnCard, type AgentColumnCardProps } from "../AgentColumnCard";
 
 export interface ColumnsViewProps
@@ -21,14 +20,7 @@ export interface ColumnsViewProps
 export function ColumnsView({ columns, cancellingRunId, ...rest }: ColumnsViewProps) {
   return (
     <div
-      style={{
-        display: "grid",
-        gridAutoFlow: "column",
-        gridAutoColumns: `minmax(${COLUMN_MIN_WIDTH}px, 1fr)`,
-        gap: 14,
-        overflowX: "auto",
-        paddingBottom: 6,
-      }}
+      className="grid auto-cols-[minmax(300px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-1.5"
       data-testid="columns-scroller"
     >
       {columns.map((c) => (

@@ -37,7 +37,7 @@ put them in the module's own `AGENTS.md` instead.
   loads the same content — edit `AGENTS.md`, never `CLAUDE.md` directly.
 - No monorepo tool (pnpm workspaces, turborepo, nx). Cross-package code is
   shared via tsconfig `paths` aliases (`@devdigest/shared`,
-  `@devdigest/reviewer-core`, `@devdigest/ui`) pointing at `src/vendor/*` —
+  `@devdigest/reviewer-core`) pointing at `src/vendor/*` —
   not published packages, not a workspace symlink.
 - DB migrations never run on boot — always `pnpm db:migrate` by hand after
   pulling schema changes.
@@ -50,8 +50,8 @@ put them in the module's own `AGENTS.md` instead.
 
 ## Do-not-touch
 
-- `server/src/vendor/shared`, `client/src/vendor/shared`, `client/src/vendor/ui`
-  — vendored copies. Check the owning package before editing.
+- `server/src/vendor/shared`, `client/src/vendor/shared` — vendored copies.
+  Check the owning package before editing.
 - Lock files (`package-lock.json`, `pnpm-lock.yaml`) in any module — generated
   by the package manager, never hand-edit; regenerate via `pnpm install`.
   `client/` and `server/` currently carry **both** lock files — `pnpm-lock.yaml`

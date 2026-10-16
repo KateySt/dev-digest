@@ -1,8 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import React from "react";
+import { render as rtlRender, screen, cleanup, fireEvent } from "@testing-library/react";
 import type { FindingRecord } from "@devdigest/shared";
 import { FindingsTooltip } from "./FindingsTooltip";
 import { githubBlobUrl } from "@/lib/utils";
+import { IntlWrapper } from "@/test/intl";
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: IntlWrapper });
 
 afterEach(cleanup);
 

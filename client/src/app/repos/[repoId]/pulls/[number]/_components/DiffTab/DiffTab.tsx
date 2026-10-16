@@ -2,7 +2,9 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { SectionLabel, Button } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { SectionLabel } from "@/components/section-label";
+import { Button } from "@/components/ui/button";
 import { DiffViewer, buildRiskAnnotations, type DiffCommentApi, type DiffFindingApi } from "@/components/diff-viewer";
 import {
   usePrComments,
@@ -147,30 +149,28 @@ export function DiffTab({
       <SectionLabel
         icon="Code"
         right={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="flex items-center gap-2">
             <Button
-              kind="ghost"
+              variant="outline"
               size="sm"
-              active={orderMode === "smart"}
+              data-active={orderMode === "smart"}
+              aria-pressed={orderMode === "smart"}
               onClick={() => setOrderMode("smart")}
             >
               {t("smartDiff.smartOrder")}
             </Button>
             <Button
-              kind="ghost"
+              variant="outline"
               size="sm"
-              active={orderMode === "original"}
+              data-active={orderMode === "original"}
+              aria-pressed={orderMode === "original"}
               onClick={() => setOrderMode("original")}
             >
               {t("smartDiff.originalOrder")}
             </Button>
             {hasAnnotations && (
-              <Button
-                kind="ghost"
-                size="sm"
-                icon={showAnnotations ? "EyeOff" : "Eye"}
-                onClick={() => setShowAnnotations((v) => !v)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setShowAnnotations((v) => !v)}>
+                {showAnnotations ? <Icon.EyeOff aria-hidden /> : <Icon.Eye aria-hidden />}
                 {showAnnotations ? t("diffFindings.hide") : t("diffFindings.show")} (
                 {commentCount + allFindings.length})
               </Button>
@@ -178,10 +178,10 @@ export function DiffTab({
           </div>
         }
       >
-        Files changed · {filesCount} files
+        {t("smartDiff.filesTitle", { count: filesCount })}
       </SectionLabel>
       {orderMode === "smart" && !reviews?.length && (
-        <div style={{ padding: "0 0 8px", fontSize: 12, color: "var(--text-muted)" }}>
+        <div className="pb-2 text-xs text-subtle-foreground">
           {t("smartDiff.notRunYet")}
         </div>
       )}

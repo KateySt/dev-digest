@@ -5,7 +5,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { TextInput } from "@devdigest/ui";
+import { Input } from "@/components/ui/input";
 
 /** Highlight every case-insensitive occurrence of `q` within a single line. */
 function highlightLine(line: string, q: string): React.ReactNode {
@@ -22,7 +22,7 @@ function highlightLine(line: string, q: string): React.ReactNode {
     }
     if (idx > i) parts.push(line.slice(i, idx));
     parts.push(
-      <mark key={idx} style={{ background: "var(--accent)", color: "var(--bg-primary)", borderRadius: 2 }}>
+      <mark key={idx} className="rounded-[2px] bg-primary text-background">
         {line.slice(idx, idx + q.length)}
       </mark>,
     );
@@ -38,31 +38,27 @@ export function PromptModalBody({ text }: { text: string }) {
   const ql = q.trim().toLowerCase();
   const shown = ql ? lines.filter((l) => l.toLowerCase().includes(ql)) : lines;
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "70vh" }}>
-      <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-        <TextInput
+    <div className="flex h-[70vh] flex-col">
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-border px-6 py-3">
+        <Input
           value={q}
-          onChange={setQ}
+          onChange={(e) => setQ(e.target.value)}
           placeholder={t("trace.prompt.search")}
-          suffix={
-            ql ? (
-              <span style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                {shown.length} / {lines.length}
-              </span>
-            ) : undefined
-          }
+          aria-label={t("trace.prompt.search")}
         />
+        {ql && (
+          <span className="text-xs whitespace-nowrap text-subtle-foreground">
+            {shown.length} / {lines.length}
+          </span>
+        )}
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+      <div className="min-h-0 flex-1 overflow-auto">
         {ql && shown.length === 0 ? (
-          <div style={{ padding: "32px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
+          <div className="px-6 py-8 text-center text-sm text-subtle-foreground">
             {t("trace.prompt.noMatches", { q: q.trim() })}
           </div>
         ) : (
-          <pre
-            className="mono"
-            style={{ margin: 0, padding: "16px 24px", whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.6 }}
-          >
+          <pre className="mono m-0 px-6 py-4 text-ui leading-[1.6] whitespace-pre-wrap">
             {ql ? shown.map((l, i) => <div key={i}>{highlightLine(l, q)}</div>) : text || "—"}
           </pre>
         )}

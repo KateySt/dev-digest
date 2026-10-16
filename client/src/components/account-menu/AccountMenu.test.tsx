@@ -4,6 +4,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { get, mockFetch, renderApp } from "@/test/eval-utils";
 import { installFakeBridge, removeFakeBridge } from "@/test/fake-desktop-bridge";
+import { openMenu } from "@/test/radix";
 import { AccountMenu } from "./AccountMenu";
 
 const push = vi.fn();
@@ -30,7 +31,7 @@ describe("AccountMenu", () => {
     const api = mockFetch([get("/settings/github-account", () => ({ account: null }))]);
     renderApp(<AccountMenu />);
     await vi.waitFor(() => expect(api.callsTo("GET", "/settings/github-account")).toHaveLength(1));
-    fireEvent.click(screen.getByRole("button", { name: "Account" }));
+    openMenu(screen.getByRole("button", { name: "Account" }));
     fireEvent.click(await screen.findByText("Connect GitHub"));
     expect(push).toHaveBeenCalledWith("/settings/api-keys");
   });
@@ -38,17 +39,18 @@ describe("AccountMenu", () => {
   it("carries the former Help-menu actions only in the desktop app", async () => {
     mockFetch([get("/settings/github-account", () => ({ account: octocat }))]);
     renderApp(<AccountMenu />);
-    fireEvent.click(await screen.findByRole("button", { name: "Account @octocat" }));
+    openMenu(await screen.findByRole("button", { name: "Account @octocat" }));
+    expect(await screen.findByText("Settings")).toBeInTheDocument();
     expect(screen.queryByText("Check for updates…")).toBeNull();
     cleanup();
 
     const { bridge } = installFakeBridge();
     mockFetch([get("/settings/github-account", () => ({ account: octocat }))]);
     renderApp(<AccountMenu />);
-    fireEvent.click(await screen.findByRole("button", { name: "Account @octocat" }));
+    openMenu(await screen.findByRole("button", { name: "Account @octocat" }));
     fireEvent.click(await screen.findByText("Check for updates…"));
     expect(bridge.app.checkForUpdates).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "Account @octocat" }));
+    openMenu(screen.getByRole("button", { name: "Account @octocat" }));
     fireEvent.click(await screen.findByText("Open logs folder"));
     expect(bridge.app.openLogsFolder).toHaveBeenCalledOnce();
   });

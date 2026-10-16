@@ -5,6 +5,7 @@ import type { Skill } from "@devdigest/shared";
 import type { SkillEvalActivity } from "@/lib/hooks/eval-runs";
 import evalMessages from "../../../../../../../../../messages/en/eval.json";
 import skillsMessages from "../../../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../../../messages/en/common.json";
 
 // The shared case list / tiles have their own coverage — here we only verify
 // this tab wires the skill owner and the run controller into them.
@@ -59,7 +60,7 @@ function activity(over: Partial<SkillEvalActivity> = {}): SkillEvalActivity {
 
 function renderTab(a: SkillEvalActivity, runBlockText?: string) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ eval: evalMessages, skills: skillsMessages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, eval: evalMessages, skills: skillsMessages }}>
       <EvalsTab skill={SKILL} activity={a} runBlockText={runBlockText} />
     </NextIntlClientProvider>,
   );

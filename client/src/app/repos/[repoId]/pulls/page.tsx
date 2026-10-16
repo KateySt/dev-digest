@@ -5,21 +5,19 @@
 import React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  Skeleton,
-  EmptyState,
-  ErrorState,
-  AutoTriggerStatus,
-  Button,
-  LanguageBar,
-} from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
+import { AutoTriggerStatus } from "@/components/auto-trigger-status";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { LanguageBar } from "@/components/language-bar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { RepoNotFound } from "@/components/repo-not-found";
 import { usePulls, useRefreshRepo } from "@/lib/hooks";
 import { useActiveRepo, useRepoNotFound } from "@/lib/contexts/repoContext";
 import { ApiError } from "@/lib/api";
-import { COLUMN_KEYS, SKELETON_ROWS } from "./constants";
-import { s } from "./styles";
+import { COLUMN_KEYS, GRID_COLS, SKELETON_ROWS } from "./constants";
 import { compareByRisk } from "./helpers";
 import { PRRow } from "./_components/PRRow";
 import { FilterBar } from "./_components/FilterBar";
@@ -126,36 +124,31 @@ export default function PullsPage() {
 
   return (
     <AppShell crumb={[{ label: repoName, mono: true }, { label: t("list.breadcrumb") }]}>
-      <div style={s.pageHeader}>
+      <div className="flex items-end gap-4 px-8 pt-6 pb-2.5">
         <div>
-          <h1 style={s.pageTitle}>{t("list.title")}</h1>
-          <p style={s.pageSubtitle}>
+          <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("list.title")}</h1>
+          <p className="mt-1 text-base text-muted-foreground">
             {pulls
               ? t("list.summary", { open: openCount, needsReview: needsReviewCount })
               : t("list.loading")}
           </p>
           {activeRepo?.languages && (
-            <div style={{ maxWidth: 420, marginTop: 10 }}>
+            <div className="mt-2.5 max-w-[420px]">
               <LanguageBar languages={activeRepo.languages} height={5} showLegend />
             </div>
           )}
         </div>
-        <div style={s.headerActions}>
+        <div className="ml-auto flex items-center gap-2.5">
           <AutoTriggerStatus on={false} />
-          <Button
-            kind="tertiary"
-            icon="Filter"
-            active={triageOn}
-            aria-pressed={triageOn}
-            onClick={toggleTriage}
-          >
+          <Button variant="ghost" data-active={triageOn} aria-pressed={triageOn} onClick={toggleTriage}>
+            <Icon.Filter aria-hidden />
             {t("list.triageQueue")}
           </Button>
           <ReviewAllButton repoId={repoId} pulls={pulls} />
         </div>
       </div>
 
-      <div style={s.tableCard}>
+      <div className="mx-8 mt-3.5 mb-11 overflow-hidden rounded-xl border border-border bg-elevated">
         <FilterBar
           active={status}
           onActive={setStatus}
@@ -166,18 +159,41 @@ export default function PullsPage() {
           onRefresh={() => refresh.mutate(repoId)}
           refreshing={refresh.isPending}
         />
-        <div style={s.headRow}>
-          {COLUMN_KEYS.map((key, i) => (
-            <div key={key} style={s.headCell(i === COLUMN_KEYS.length - 1)}>
-              {t(`list.columns.${key}`)}
+        {/* Only the header and the rows scroll sideways (the grid keeps a
+            150px title column); loading/error/empty states stay at the
+            card's visible width. */}
+        <div className="overflow-x-auto">
+          <div className="w-full min-w-fit">
+            <div
+              className={cn(
+                "grid gap-3.5 border-b border-border bg-surface px-5 py-2.5 text-xs font-bold tracking-[0.06em] text-subtle-foreground uppercase",
+                GRID_COLS,
+              )}
+            >
+              {COLUMN_KEYS.map((key, i) => (
+                <div key={key} className={i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left"}>
+                  {t(`list.columns.${key}`)}
+                </div>
+              ))}
             </div>
-          ))}
+            {!isLoading &&
+              !isError &&
+              filtered.map((pr) => (
+                <PRRow
+                  key={pr.number}
+                  pr={pr}
+                  repoId={repoId}
+                  repoFullName={activeRepo?.full_name}
+                  showRiskTooltip={sort === "highest_risk"}
+                />
+              ))}
+          </div>
         </div>
 
         {isLoading ? (
-          <div style={s.loadingStack}>
+          <div className="flex flex-col gap-3.5 p-5">
             {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-              <Skeleton key={i} height={28} />
+              <Skeleton key={i} className="h-7 w-full" />
             ))}
           </div>
         ) : isError ? (
@@ -190,23 +206,9 @@ export default function PullsPage() {
           <EmptyState
             icon="GitPullRequest"
             title={t("list.emptyTitle")}
-            body={
-              status === "all"
-                ? t("list.emptyAllBody")
-                : t("list.emptyStatusBody", { status })
-            }
+            body={status === "all" ? t("list.emptyAllBody") : t("list.emptyStatusBody", { status })}
           />
-        ) : (
-          filtered.map((pr) => (
-            <PRRow
-              key={pr.number}
-              pr={pr}
-              repoId={repoId}
-              repoFullName={activeRepo?.full_name}
-              showRiskTooltip={sort === "highest_risk"}
-            />
-          ))
-        )}
+        ) : null}
       </div>
     </AppShell>
   );

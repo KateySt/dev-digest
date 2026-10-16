@@ -8,11 +8,11 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Icon, Skeleton } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TitlebarStrip } from "@/components/window-chrome";
 import { SETUP_STEPS, useSecretsStatus, useSetupState, type SetupStep } from "@/lib/hooks";
 import { LLM_PROVIDERS } from "./constants";
-import { s } from "./styles";
 import { Stepper } from "./_components/Stepper";
 import { KeyStep } from "./_components/KeyStep";
 import { RepoStep } from "./_components/RepoStep";
@@ -40,21 +40,21 @@ export function FirstRunWizard() {
   const go = (offset: 1 | -1) => setChosen(SETUP_STEPS[stepIdx + offset]!);
 
   return (
-    <div style={s.page}>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background px-7 py-11">
       <TitlebarStrip />
-      <div style={s.brand}>
-        <div style={s.brandMark}>
-          <Icon.Layers size={17} style={{ color: "var(--bg-primary)" }} />
+      <div className="mb-8 flex items-center gap-3">
+        <div className="grid size-7.5 place-items-center rounded-lg bg-foreground">
+          <Icon.Layers size={17} className="text-background" aria-hidden />
         </div>
-        <span style={s.brandName}>DevDigest</span>
+        <span className="text-2xl font-bold tracking-[-0.02em]">{t("brand")}</span>
       </div>
 
-      <div style={s.card}>
+      <div className="w-[520px] max-w-full rounded-[14px] border border-border bg-elevated p-8 shadow-modal">
         {isLoading ? (
-          <div style={s.loading}>
-            <Skeleton height={26} />
-            <Skeleton height={22} width={260} />
-            <Skeleton height={44} />
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-6.5 w-full" />
+            <Skeleton className="h-5.5 w-65" />
+            <Skeleton className="h-11 w-full" />
           </div>
         ) : (
           <>
@@ -88,7 +88,7 @@ export function FirstRunWizard() {
         )}
       </div>
 
-      <p style={s.footer}>{t("footer", { current: stepIdx + 1, total: SETUP_STEPS.length })}</p>
+      <p className="mt-6 text-sm text-subtle-foreground">{t("footer", { current: stepIdx + 1, total: SETUP_STEPS.length })}</p>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { EmptyState } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
 
 export function NotFoundState({ onBack }: { onBack: () => void }) {
   const t = useTranslations("runs.multiAgent.results.notFound");

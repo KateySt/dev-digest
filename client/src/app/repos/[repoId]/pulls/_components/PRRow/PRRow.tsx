@@ -5,16 +5,20 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Icon, Avatar, Badge, CircularScore, HoverPopover } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { CircularScore } from "@/components/circular-score";
+import { UserAvatar } from "@/components/user-avatar";
+import { HoverPopover } from "@/components/hover-popover";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { RunCostBadge } from "@/components/run-cost-badge";
 import { FindingsTooltip, SeverityCountBadges } from "@/components/findings-tooltip";
 import { RunReviewDropdown } from "@/components/run-review-dropdown";
 import { usePrActiveRuns, usePrReviews, usePrRuns } from "@/lib/hooks/reviews";
 import { latestReview } from "@/lib/findings";
 import type { PrMeta } from "@/lib/types";
-import { SIZE_COLOR, STATUS_META } from "../../constants";
+import { GRID_COLS, SIZE_CLASS, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
-import { s } from "../../styles";
 
 const EMPTY_FINDINGS_COUNTS = { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 } as const;
 
@@ -34,7 +38,6 @@ export function PRRow({
   const t = useTranslations("prReview");
   const router = useRouter();
   const qc = useQueryClient();
-  const [h, setH] = React.useState(false);
   const st = STATUS_META[pr.status] ?? STATUS_META.needs_review!;
   const { size, lines } = sizeOf(pr);
   const reviewed = pr.score != null; // null score ⇒ PR has never been reviewed
@@ -78,35 +81,34 @@ export function PRRow({
   }, []);
   return (
     <div
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
       onClick={() => router.push(`/repos/${repoId}/pulls/${pr.number}`)}
-      style={s.row(h)}
+      className={cn(
+        "group/row grid cursor-pointer items-center gap-3.5 border-b border-border px-5 py-3 transition-colors duration-100 hover:bg-surface",
+        GRID_COLS,
+      )}
     >
-      <div style={s.rowTitleCell}>
-        <Icon.GitPullRequest size={15} style={s.rowIcon(st.c)} />
-        <div style={s.rowTitleWrap}>
-          <div style={s.rowTitle(h)}>{pr.title}</div>
-          <span className="mono" style={s.rowNumber}>
-            #{pr.number}
-          </span>
+      <div className="flex min-w-0 items-center gap-3">
+        <Icon.GitPullRequest size={15} className={cn("shrink-0", st.text)} aria-hidden />
+        <div className="min-w-0">
+          <div className="truncate text-base font-[550] text-foreground group-hover/row:text-brand-text">{pr.title}</div>
+          <span className="mono text-xs text-subtle-foreground">#{pr.number}</span>
         </div>
       </div>
-      <div style={s.authorCell}>
-        <Avatar name={pr.author} avatarUrl={pr.avatar_url} size={18} />
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <UserAvatar name={pr.author} avatarUrl={pr.avatar_url} size={18} />
         {pr.author}
       </div>
       <div onClick={(e) => e.stopPropagation()}>
         {showRiskTooltip ? (
           <HoverPopover
             trigger={
-              <Badge color={SIZE_COLOR[size]} bg="transparent" style={s.sizeBadgeBorder(SIZE_COLOR[size]!)}>
+              <Badge variant="outline" className={SIZE_CLASS[size]}>
                 {size} · {lines}
               </Badge>
             }
-            width={220}
+            className="w-55"
           >
-            <div style={s.riskTooltip}>
+            <div className="flex flex-col gap-1.5 px-3 py-2.5 text-ui text-muted-foreground">
               <div>{t("list.riskTooltip.diffSize", { lines })}</div>
               <div>
                 {pr.blast_size != null
@@ -121,16 +123,16 @@ export function PRRow({
             </div>
           </HoverPopover>
         ) : (
-          <Badge color={SIZE_COLOR[size]} bg="transparent" style={s.sizeBadgeBorder(SIZE_COLOR[size]!)}>
+          <Badge variant="outline" className={SIZE_CLASS[size]}>
             {size} · {lines}
           </Badge>
         )}
       </div>
-      <div style={s.scoreCell}>
+      <div className="flex items-center">
         {reviewed ? (
           <CircularScore score={pr.score!} size={34} stroke={3} />
         ) : (
-          <span style={s.muted}>—</span>
+          <span className="text-subtle-foreground">—</span>
         )}
       </div>
       <div onClick={(e) => e.stopPropagation()}>
@@ -146,19 +148,20 @@ export function PRRow({
             onOpenChange={handleFindingsOpenChange}
           />
         ) : (
-          <span style={s.muted}>—</span>
+          <span className="text-subtle-foreground">—</span>
         )}
       </div>
       <div>
-        <Badge dot color={st.c} bg="transparent">
+        <Badge variant="ghost" className={cn("gap-1.5 px-0", st.text)}>
+          <span aria-hidden className={cn("size-1.5 rounded-full", st.dot)} />
           {t(`list.status.${st.labelKey}`)}
         </Badge>
       </div>
       <div>
         <RunCostBadge costUsd={pr.cost_usd ?? null} />
       </div>
-      <div style={s.updatedCell}>{relativeTime(pr.updated_at)}</div>
-      <div onClick={(e) => e.stopPropagation()} style={s.actionsCell}>
+      <div className="text-right text-xs text-subtle-foreground">{relativeTime(pr.updated_at)}</div>
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-end gap-2">
         {failedRun && (
           <span
             title={
@@ -167,13 +170,15 @@ export function PRRow({
                 : t("list.rowFailedNoReason")
             }
           >
-            <Badge icon="AlertTriangle" color="var(--crit)" bg="transparent">
+            <Badge variant="ghost" className="text-crit">
+              <Icon.AlertTriangle aria-hidden />
               {t("list.rowFailed")}
             </Badge>
           </span>
         )}
         {isRunning ? (
-          <Badge icon="RefreshCw" color="var(--accent)" bg="var(--accent-bg)">
+          <Badge variant="brand">
+            <Icon.RefreshCw aria-hidden />
             {t("runReview.running")}
           </Badge>
         ) : (

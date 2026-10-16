@@ -5,12 +5,22 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Avatar, Dropdown, Icon, type DropdownItemDef } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { Icon } from "@/components/icon";
+import { UserAvatar } from "@/components/user-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useGithubAccount } from "@/lib/hooks";
 import { useDesktop } from "@/lib/desktop";
-import { s } from "./styles";
 
 export function AccountMenu() {
+  const t = useTranslations("shell.account");
   const router = useRouter();
   const desktop = useDesktop();
   const { data } = useGithubAccount();
@@ -22,42 +32,64 @@ export function AccountMenu() {
   }, [desktop]);
 
   const openExternal = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
-
-  const items: DropdownItemDef[] = [
-    account
-      ? { label: `@${account.login}`, icon: "ExternalLink", hint: "GitHub", onClick: () => openExternal(account.html_url) }
-      : { label: "Connect GitHub", icon: "User", onClick: () => router.push("/settings/api-keys") },
-    { label: "Settings", icon: "Settings", onClick: () => router.push("/settings/api-keys") },
-  ];
-  if (desktop) {
-    items.push(
-      { divider: true },
-      { label: "Check for updates…", icon: "RefreshCw", onClick: () => void desktop.app.checkForUpdates() },
-      { label: "Releases", icon: "Tag", hint: version ? `v${version}` : undefined, onClick: () => void desktop.app.openReleases() },
-      { divider: true },
-      { label: "Open logs folder", icon: "Folder", muted: true, onClick: () => void desktop.app.openLogsFolder() },
-      { label: "Open data folder", icon: "Folder", muted: true, onClick: () => void desktop.app.openDataFolder() },
-    );
-  }
+  const toSettings = () => router.push("/settings/api-keys");
 
   return (
-    <Dropdown
-      align="right"
-      width={240}
-      items={items}
-      trigger={
-        <button type="button" aria-label={account ? `Account @${account.login}` : "Account"} style={s.trigger}>
-          {account ? (
-            <Avatar name={account.login} avatarUrl={account.avatar_url} size={26} />
-          ) : (
-            <span style={s.anon}>
-              <Icon.User size={14} />
-            </span>
-          )}
-          {account && <span style={s.login}>{account.login}</span>}
-          <Icon.ChevronDown size={13} style={{ color: "var(--text-muted)" }} />
-        </button>
-      }
-    />
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={account ? t("labelWithLogin", { login: account.login }) : t("label")}
+        className="app-no-drag inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface py-0.75 pr-2 pl-0.75 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {account ? (
+          <UserAvatar name={account.login} avatarUrl={account.avatar_url} size={26} />
+        ) : (
+          <span className="grid size-6.5 place-items-center rounded-full bg-muted text-subtle-foreground">
+            <Icon.User size={14} aria-hidden />
+          </span>
+        )}
+        {account && <span className="max-w-[140px] truncate text-sm font-semibold">{account.login}</span>}
+        <Icon.ChevronDown size={13} className="text-subtle-foreground" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">
+        {account ? (
+          <DropdownMenuItem onSelect={() => openExternal(account.html_url)}>
+            <Icon.ExternalLink aria-hidden />@{account.login}
+            <DropdownMenuShortcut>{t("github")}</DropdownMenuShortcut>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={toSettings}>
+            <Icon.User aria-hidden />
+            {t("connectGithub")}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={toSettings}>
+          <Icon.Settings aria-hidden />
+          {t("settings")}
+        </DropdownMenuItem>
+        {desktop && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => void desktop.app.checkForUpdates()}>
+              <Icon.RefreshCw aria-hidden />
+              {t("checkUpdates")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void desktop.app.openReleases()}>
+              <Icon.Tag aria-hidden />
+              {t("releases")}
+              {version && <DropdownMenuShortcut>v{version}</DropdownMenuShortcut>}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-muted-foreground" onSelect={() => void desktop.app.openLogsFolder()}>
+              <Icon.Folder aria-hidden />
+              {t("openLogs")}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-muted-foreground" onSelect={() => void desktop.app.openDataFolder()}>
+              <Icon.Folder aria-hidden />
+              {t("openData")}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

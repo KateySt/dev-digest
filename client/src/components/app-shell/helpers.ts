@@ -1,15 +1,15 @@
 /** Pure helpers for AppShell. */
 
-import type { RepoSummary } from "@devdigest/ui";
-import type { Repo } from "../../lib/types";
+import type { Repo } from "@/lib/types";
+import type { RepoSummary } from "./types";
 
-/** Map a lib `Repo` to the `RepoSummary` shape the AppFrame shell context expects. */
+/** Map a lib `Repo` to the `RepoSummary` shape the shell expects. */
 export function toShellRepo(r: Repo): RepoSummary {
   return {
     id: r.id,
     full_name: r.full_name,
     default_branch: r.default_branch,
-    syncedLabel: r.last_polled_at ? "synced" : "not synced",
+    synced: Boolean(r.last_polled_at),
   };
 }
 

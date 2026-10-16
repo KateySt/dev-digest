@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Markdown } from "@devdigest/ui";
+import { Markdown } from "@/components/markdown";
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import type { OnboardingDiagramEdge } from "@/lib/types";
 
@@ -29,52 +29,31 @@ export function ArchitectureSection({
   const hasDiagramFacts = diagramNodes.length > 0 || diagramEdges.length > 0;
 
   const fallback = hasDiagramFacts ? (
-    <div style={s.fallback}>
-      <div style={s.fallbackTitle}>{t("diagramFallbackTitle")}</div>
-      <ul style={s.fallbackList}>
+    <div className="min-w-0 rounded-lg border border-border bg-surface p-3">
+      <div className="mb-2 text-ui text-subtle-foreground">{t("diagramFallbackTitle")}</div>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {diagramNodes.map((node) => (
-          <li key={node} className="mono" style={s.fallbackItem}>
+          <li key={node} className="mono min-w-0 text-ui text-muted-foreground wrap-anywhere break-words">
             {node}
           </li>
         ))}
         {diagramEdges.map((edge, i) => (
-          <li key={`${edge.from}>${edge.to}-${i}`} className="mono" style={s.fallbackItem}>
+          <li key={`${edge.from}>${edge.to}-${i}`} className="mono min-w-0 text-ui text-muted-foreground wrap-anywhere break-words">
             {edge.from} → {edge.to}
           </li>
         ))}
       </ul>
     </div>
   ) : (
-    <div style={s.empty}>{t("diagramEmpty")}</div>
+    <div className="py-1 text-sm text-subtle-foreground">{t("diagramEmpty")}</div>
   );
 
   return (
-    <div style={s.wrap}>
-      {architectureMd ? <Markdown>{architectureMd}</Markdown> : <div style={s.empty}>{t("empty")}</div>}
+    <div className="flex min-w-0 flex-col gap-3.5">
+      {architectureMd ? <Markdown>{architectureMd}</Markdown> : <div className="py-1 text-sm text-subtle-foreground">{t("empty")}</div>}
       {diagramSource ? <MermaidDiagram chart={diagramSource} fallback={fallback} /> : hasDiagramFacts ? fallback : null}
     </div>
   );
 }
-
-const s = {
-  wrap: { display: "flex", flexDirection: "column", gap: 14, minWidth: 0 } as React.CSSProperties,
-  empty: { fontSize: 13, color: "var(--text-muted)", padding: "4px 0" } as React.CSSProperties,
-  fallback: {
-    padding: 12,
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    background: "var(--bg-surface)",
-    minWidth: 0,
-  } as React.CSSProperties,
-  fallbackTitle: { fontSize: 12.5, color: "var(--text-muted)", marginBottom: 8 } as React.CSSProperties,
-  fallbackList: { margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 } as React.CSSProperties,
-  fallbackItem: {
-    fontSize: 12.5,
-    color: "var(--text-secondary)",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-    minWidth: 0,
-  } as React.CSSProperties,
-};
 
 export default ArchitectureSection;

@@ -5,14 +5,14 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { SEV } from "@devdigest/ui";
+import { SEVERITY_STYLE } from "@/components/severity";
+import { cn } from "@/lib/utils";
 import type { FindingRecord } from "@devdigest/shared";
 import type { Severity } from "@/lib/types";
-import { commentTargetFor, type CommentThread, type DiffCommentApi, cs } from "../comments";
+import { commentTargetFor, type CommentThread, type DiffCommentApi } from "../comments";
 import { type DiffFindingApi } from "../findings";
 import { type Line } from "../helpers";
-import { SEVERITY_LABEL_KEYS } from "../constants";
-import { s, lineRowFor, lineSignFor } from "../styles";
+import { FINDING_BLOCK, SEVERITY_LABEL, SEVERITY_LABEL_KEYS } from "../constants";
 import { CommentThreadView } from "../CommentThreadView";
 import { InlineComposer } from "../InlineComposer";
 import { RiskAnnotationCard, type RiskAnnotation } from "../RiskAnnotationCard";
@@ -48,12 +48,13 @@ export function CodeLine({
   riskAnnotation?: RiskAnnotation | null;
 }) {
   const t = useTranslations("prReview");
+  const tShell = useTranslations("shell");
   const [hover, setHover] = React.useState(false);
   const [composing, setComposing] = React.useState(false);
 
   if (ln.kind === "hunk") {
     return (
-      <div className="mono" style={s.hunk}>
+      <div className="mono bg-brand-bg px-3.5 text-xs leading-5 text-brand-text">
         {ln.text}
       </div>
     );
@@ -66,29 +67,40 @@ export function CodeLine({
   return (
     <div
       ref={anchorRef}
-      style={highlight ? { ...cs.rowWrap, background: "var(--warn-bg)", outline: "2px solid var(--warn)", outlineOffset: -2 } : cs.rowWrap}
+      className={cn("relative", highlight && "bg-warn-bg outline-2 -outline-offset-2 outline-warn")}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div style={lineRowFor(ln.kind)}>
-        <span className="mono tnum" style={{ ...s.lineNo, position: "relative" }}>
+      <div
+        className={cn(
+          "flex items-stretch text-sm leading-5",
+          ln.kind === "add" && "bg-code-add",
+          ln.kind === "del" && "bg-code-del",
+        )}
+      >
+        <span className="mono tnum relative w-11 shrink-0 pr-2.5 text-right text-subtle-foreground select-none">
           {showAdd && target && (
             <button
               type="button"
-              title="Add a comment on this line"
-              aria-label="Add a comment on this line"
+              title={tShell("diffViewer.addComment")}
+              aria-label={tShell("diffViewer.addComment")}
               onClick={() => setComposing(true)}
-              style={cs.addBtn}
+              className="absolute top-1/2 left-0.5 z-1 flex size-4.5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-[5px] border-none bg-primary p-0 text-base leading-4.5 text-primary-foreground shadow-[0_1px_3px_rgba(0,0,0,.35)]"
             >
               +
             </button>
           )}
           {ln.newNo ?? ln.oldNo ?? ""}
         </span>
-        <span className="mono" style={lineSignFor(ln.kind)}>
+        <span
+          className={cn(
+            "mono w-3.5 shrink-0 text-center",
+            ln.kind === "add" ? "text-code-add-text" : ln.kind === "del" ? "text-code-del-text" : "text-subtle-foreground",
+          )}
+        >
           {sign}
         </span>
-        <span className="mono" style={s.lineText}>
+        <span className="mono flex-1 pr-3 break-words whitespace-pre-wrap text-foreground">
           {ln.text || " "}
         </span>
       </div>
@@ -122,10 +134,10 @@ export function CodeLine({
         findings.showFindings &&
         (findingsForLine ?? []).map((f) => {
           const severity = f.severity as Severity;
-          const color = SEV[severity].c;
+          const sev = SEVERITY_STYLE[severity];
           return (
-            <div key={f.id} style={{ ...s.findingBlock, borderLeft: `3px solid ${color}`, paddingLeft: 10 }}>
-              <span style={{ ...s.findingSeverityLabel, color }}>
+            <div key={f.id} className={cn(FINDING_BLOCK, "border-l-3 pl-2.5", sev.border)}>
+              <span className={cn(SEVERITY_LABEL, sev.text)}>
                 {t(`diffFindings.${SEVERITY_LABEL_KEYS[severity]}`)}
               </span>
               {findings.renderFinding(f)}

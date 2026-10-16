@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 
 let seq = 0;
 
@@ -67,15 +68,10 @@ export function MermaidDiagram({ chart, fallback }: { chart: string; fallback?: 
   return (
     <div
       ref={ref}
-      style={{
-        display: state === "ok" ? "flex" : "none",
-        justifyContent: "center",
-        background: "var(--bg-elevated)",
-        border: "1px solid var(--border)",
-        borderRadius: 8,
-        padding: 12,
-        overflowX: "auto",
-      }}
+      className={cn(
+        "justify-center overflow-x-auto rounded-lg border border-border bg-elevated p-3",
+        state === "ok" ? "flex" : "hidden",
+      )}
     />
   );
 }

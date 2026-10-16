@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Icon, type IconName } from "@devdigest/ui";
+import { Icon, type IconName } from "@/components/icon";
+import { cn } from "@/lib/utils";
 
 /**
  * One collapsible section card (C-AC-8): icon + heading + collapse control,
@@ -32,58 +33,35 @@ export function SectionCard({
   const headingId = `${id}-heading`;
 
   return (
-    <section id={id} style={s.card} aria-labelledby={headingId}>
-      <div style={s.header}>
-        <I size={16} style={s.icon} />
-        <h2 id={headingId} style={s.heading}>
+    <section
+      id={id}
+      aria-labelledby={headingId}
+      className="min-w-0 scroll-mt-4 overflow-hidden rounded-xl border border-border bg-elevated"
+    >
+      <div className="flex min-w-0 items-center gap-2.5 px-4 py-3.25">
+        <I size={16} className="shrink-0 text-subtle-foreground" aria-hidden />
+        <h2 id={headingId} className="m-0 text-md font-strong text-foreground">
           {heading}
         </h2>
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
         <button
           type="button"
           aria-expanded={open}
           aria-controls={bodyId}
           aria-label={open ? collapseLabel : expandLabel}
           onClick={() => setOpen((o) => !o)}
-          style={s.collapseBtn}
+          className="inline-flex shrink-0 cursor-pointer border-none bg-transparent p-1 text-subtle-foreground"
         >
-          <Icon.ChevronDown
-            size={16}
-            style={{ transform: open ? "none" : "rotate(-90deg)", transition: "transform .15s" }}
-          />
+          <Icon.ChevronDown size={16} className={cn("transition-transform duration-150", !open && "-rotate-90")} aria-hidden />
         </button>
       </div>
       {open && (
-        <div id={bodyId} style={s.body}>
+        <div id={bodyId} className="min-w-0 px-4 pb-4">
           {children}
         </div>
       )}
     </section>
   );
 }
-
-const s = {
-  card: {
-    border: "1px solid var(--border)",
-    borderRadius: 10,
-    background: "var(--bg-elevated)",
-    overflow: "hidden",
-    scrollMarginTop: 16,
-    minWidth: 0,
-  } as React.CSSProperties,
-  header: { display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", minWidth: 0 } as React.CSSProperties,
-  icon: { color: "var(--text-muted)", flexShrink: 0 } as React.CSSProperties,
-  heading: { fontSize: 15, fontWeight: 650, margin: 0, color: "var(--text-primary)" } as React.CSSProperties,
-  collapseBtn: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: 4,
-    display: "inline-flex",
-    color: "var(--text-muted)",
-    flexShrink: 0,
-  } as React.CSSProperties,
-  body: { padding: "0 16px 16px", minWidth: 0 } as React.CSSProperties,
-};
 
 export default SectionCard;

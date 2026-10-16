@@ -2,9 +2,9 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge } from "@devdigest/ui";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import type { EvalCaseKind } from "@devdigest/shared";
-import { s } from "../../styles";
 
 /** Raw expected-output JSON editor (the "Advanced" mode): the textarea, the
  *  valid/invalid badge and the skeleton button (a finding skeleton for must
@@ -29,23 +29,23 @@ export function AdvancedJsonEditor({
   const mustNotFlag = kind === "must_not_flag";
   return (
     <div>
-      <div style={s.jsonHeader}>
-        <Badge color={valid ? "var(--ok)" : "var(--crit)"}>
-          {valid ? t("caseEditor.validJson") : t("caseEditor.invalidJson")}
-        </Badge>
-        <button type="button" style={s.skeletonBtn} onClick={onAddSkeleton}>
+      <div className="mb-2 flex items-center gap-2.5">
+        <Badge variant={valid ? "ok" : "crit"}>{valid ? t("caseEditor.validJson") : t("caseEditor.invalidJson")}</Badge>
+        <button
+          type="button"
+          className="ml-auto cursor-pointer border-none bg-transparent p-0 text-xs text-primary"
+          onClick={onAddSkeleton}
+        >
           {mustNotFlag ? t("caseEditor.locationSkeleton") : t("caseEditor.findingSkeleton")}
         </button>
       </div>
-      {/* Native textarea (not the vendored Textarea) so it can carry aria-describedby. */}
-      <textarea
-        className="mono"
+      <Textarea
+        className="mono field-sizing-fixed resize-y leading-[1.55]"
         value={value}
         rows={12}
         aria-describedby={hintId}
         aria-invalid={hintId ? true : undefined}
         onChange={(e) => onChange(e.target.value)}
-        style={s.jsonTextarea}
       />
     </div>
   );

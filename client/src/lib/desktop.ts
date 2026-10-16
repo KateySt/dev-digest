@@ -34,9 +34,6 @@ declare global {
   }
 }
 
-/** Left inset the macOS traffic lights need at the sidebar's top-left (px). */
-export const MAC_TRAFFIC_LIGHTS_INSET = 64;
-
 const noopSubscribe = () => () => {};
 
 /**

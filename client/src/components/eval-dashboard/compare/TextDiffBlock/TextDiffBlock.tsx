@@ -2,9 +2,16 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
-import { collapseDiff, lineDiff } from "@/lib/eval";
-import { s } from "../../styles";
+import { Icon } from "@/components/icon";
+import { collapseDiff, lineDiff, type DiffLineKind } from "@/lib/eval";
+import { cn } from "@/lib/utils";
+import { SECTION_LABEL, WRAP } from "../../constants";
+
+const LINE: Record<DiffLineKind, string> = {
+  same: "text-muted-foreground",
+  add: "bg-ok-bg text-foreground",
+  del: "bg-crit-bg text-foreground line-through",
+};
 
 /** Titled line diff of two texts (system prompts, skill text): removed lines
  *  struck through, added lines highlighted, long unchanged runs collapsed.
@@ -27,30 +34,36 @@ export function TextDiffBlock({
   const diff = React.useMemo(() => collapseDiff(lineDiff(oldText, newText)), [oldText, newText]);
   return (
     <div>
-      <div style={s.compareSectionLabel}>
-        <Icon.FileText size={14} />
+      <div className={cn(SECTION_LABEL, "mb-2.5")}>
+        <Icon.FileText size={14} aria-hidden />
         {title}
       </div>
-      <div style={s.diffLegend}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span style={s.swatch("var(--crit-bg, rgba(239,68,68,0.3))")} />
+      <div className="mb-2.5 flex gap-4 text-ui text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-3 rounded-xs bg-crit-bg" />
           {oldLabel}
         </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span style={s.swatch("var(--ok-bg, rgba(16,185,129,0.3))")} />
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-3 rounded-xs bg-ok-bg" />
           {newLabel}
         </span>
       </div>
-      <div className="mono" style={s.diffBlock}>
+      <div className="mono min-w-0 rounded-lg border border-border bg-surface py-2.5 text-sm leading-[1.6]">
         {diff.map((l, i) =>
           l.kind === "skip" ? (
-            <div key={i} style={s.diffSkip}>
+            <div key={i} className="px-3.5 py-0.5 text-xs text-subtle-foreground italic">
               {t("compare.unchangedLines", { count: l.count })}
             </div>
           ) : (
-            <div key={i} style={s.diffLine(l.kind)}>
-              <span style={s.diffMark}>{l.kind === "add" ? t("compare.addedMark") : l.kind === "del" ? t("compare.removedMark") : ""}</span>
-              <span style={{ minWidth: 0 }}>{l.text || " "}</span>
+            <div
+              key={i}
+              data-kind={l.kind}
+              className={cn("flex gap-2.5 px-3.5 whitespace-pre-wrap", WRAP, LINE[l.kind])}
+            >
+              <span className="w-2.5 shrink-0 text-subtle-foreground no-underline">
+                {l.kind === "add" ? t("compare.addedMark") : l.kind === "del" ? t("compare.removedMark") : ""}
+              </span>
+              <span className="min-w-0">{l.text || " "}</span>
             </div>
           ),
         )}

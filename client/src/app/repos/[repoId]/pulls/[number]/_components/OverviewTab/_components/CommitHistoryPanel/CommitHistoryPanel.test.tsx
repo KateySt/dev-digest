@@ -108,7 +108,8 @@ describe("CommitHistoryPanel", () => {
     renderPanel();
 
     const row = screen.getByRole("button", { name: "src/a.ts" }).closest("div");
-    expect(row).toHaveStyle({ borderLeft: "2px solid var(--crit)" });
+    expect(row).toHaveAttribute("data-severity", "CRITICAL");
+    expect(row).toHaveClass("border-crit");
   });
 
   it("gives a file with no findings no severity color treatment", () => {
@@ -118,10 +119,9 @@ describe("CommitHistoryPanel", () => {
     usePrCommitsMock.mockReturnValue({ data: history, isLoading: false });
     renderPanel();
 
-    // jsdom's getComputedStyle normalizes the CSS `transparent` keyword to its
-    // rgba() form (unlike the unresolved `var(--crit)` case above).
     const row = screen.getByRole("button", { name: "src/untouched.ts" }).closest("div");
-    expect(row).toHaveStyle({ borderLeft: "2px solid rgba(0, 0, 0, 0)" });
+    expect(row).not.toHaveAttribute("data-severity");
+    expect(row).toHaveClass("border-transparent");
   });
 
   it("clicking a file calls onNavigateToFile with its path and line", () => {

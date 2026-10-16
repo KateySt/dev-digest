@@ -1,6 +1,7 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { openMenu } from "@/test/radix";
 import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import runsMessages from "../../../../../messages/en/runs.json";
@@ -65,7 +66,7 @@ describe("ConfigureRun", () => {
 
   it("lists only open PRs as '#n · title' (AC-2)", async () => {
     setup();
-    fireEvent.click(await screen.findByText("Select a pull request…"));
+    openMenu((await screen.findByText("Select a pull request…")).closest("button")!);
     expect(await screen.findByText("#482 · PR 482")).toBeInTheDocument();
     expect(screen.getByText("#483 · PR 483")).toBeInTheDocument();
     expect(screen.queryByText("#1 · PR 1")).not.toBeInTheDocument();

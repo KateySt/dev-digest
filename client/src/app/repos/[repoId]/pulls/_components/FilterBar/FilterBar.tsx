@@ -3,9 +3,12 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Chip, Button, TextInput, Select } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { FilterChip } from "@/components/filter-chip";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STATUS_FILTERS } from "../../constants";
-import { s } from "../../styles";
 
 export function FilterBar({
   active,
@@ -33,26 +36,36 @@ export function FilterBar({
     { value: "highest_risk", label: t("list.sort.highestRisk") },
   ];
   return (
-    <div style={s.filterBar}>
-      <div style={s.filterChips}>
-        <div style={{ width: 240 }}>
-          <TextInput value={query} onChange={onQuery} placeholder={t("list.filterPlaceholder")} />
-        </div>
+    <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
+      <div className="flex gap-2">
+        <Input
+          className="w-60"
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          placeholder={t("list.filterPlaceholder")}
+          aria-label={t("list.filterPlaceholder")}
+        />
         {STATUS_FILTERS.map(({ key, labelKey }) => (
-          <Chip key={key} active={active === key} onClick={() => onActive(key)}>
+          <FilterChip key={key} active={active === key} onClick={() => onActive(key)}>
             {t(`list.filter.${labelKey}`)}
-          </Chip>
+          </FilterChip>
         ))}
       </div>
-      <div style={s.filterActions}>
-        <Select value={sort} onChange={onSort} options={sortOptions} mono={false} />
-        <Button
-          kind="secondary"
-          size="sm"
-          icon="RefreshCw"
-          onClick={onRefresh}
-          disabled={refreshing}
-        >
+      <div className="ml-auto flex items-center gap-3">
+        <Select value={sort} onValueChange={onSort}>
+          <SelectTrigger aria-label={t("list.sort.label")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {sortOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="secondary" size="sm" onClick={onRefresh} disabled={refreshing}>
+          <Icon.RefreshCw className={refreshing ? "animate-spin" : undefined} aria-hidden />
           {refreshing ? t("list.refreshing") : t("list.refresh")}
         </Button>
       </div>

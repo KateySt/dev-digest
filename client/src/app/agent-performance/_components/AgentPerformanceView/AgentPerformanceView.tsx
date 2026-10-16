@@ -2,13 +2,20 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Donut, ErrorState, MetricCard, Select, Skeleton, Sparkline } from "@devdigest/ui";
-import { AppShell } from "../../../../components/app-shell";
-import { useAgentPerformance } from "../../../../lib/hooks/agent-performance";
-import { formatRunCost } from "../../../../components/run-cost-badge";
+import { AppShell } from "@/components/app-shell";
+import { Donut, MetricCard, Sparkline } from "@/components/charts";
+import { ErrorState } from "@/components/empty-state";
+import { formatRunCost } from "@/components/run-cost-badge";
+import { SelectField } from "@/components/select-field";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAgentPerformance } from "@/lib/hooks/agent-performance";
 import { SORT_KEYS, type SortKey } from "./constants";
 import { sortAgents, toDonutSegments } from "./helpers";
-import { s } from "./styles";
+
+const SECTION_TITLE = "mb-3 text-base font-bold";
+const TH =
+  "border-b border-border px-2.5 pb-2 text-left text-2xs font-semibold tracking-[0.03em] text-subtle-foreground uppercase";
+const TD = "border-b border-border p-2.5 text-sm text-muted-foreground";
 
 export function AgentPerformanceView() {
   const t = useTranslations("agentPerformance");
@@ -17,25 +24,25 @@ export function AgentPerformanceView() {
 
   return (
     <AppShell crumb={[{ label: t("title") }]}>
-      <div style={s.page}>
-        <div style={s.header}>
-          <h1 style={s.h1}>{t("title")}</h1>
-          <p style={s.subtitle}>{t("subtitle")}</p>
+      <div className="mx-auto max-w-[1100px] px-8 pt-6 pb-11">
+        <div className="mb-5">
+          <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("title")}</h1>
+          <p className="mt-1 text-base text-muted-foreground">{t("subtitle")}</p>
         </div>
 
         {isLoading && (
-          <div style={s.tileRow}>
-            <Skeleton height={90} />
-            <Skeleton height={90} />
-            <Skeleton height={90} />
-            <Skeleton height={90} />
+          <div className="mb-7 flex gap-3.5">
+            <Skeleton className="h-22.5 flex-1" />
+            <Skeleton className="h-22.5 flex-1" />
+            <Skeleton className="h-22.5 flex-1" />
+            <Skeleton className="h-22.5 flex-1" />
           </div>
         )}
         {isError && <ErrorState body={t("loadError")} onRetry={() => refetch()} />}
 
         {data && (
           <>
-            <div style={s.tileRow}>
+            <div className="mb-7 flex gap-3.5">
               <MetricCard label={t("summary.totalRuns")} value={data.summary.runs} />
               <MetricCard
                 label={t("summary.totalCost")}
@@ -49,17 +56,17 @@ export function AgentPerformanceView() {
               <MetricCard label={t("summary.mostActive")} value={data.summary.most_active_agent ?? "—"} />
             </div>
 
-            <div style={s.donutRow}>
-              <div style={s.donutCol}>
-                <div style={s.sectionTitle}>{t("costByAgent")}</div>
+            <div className="mb-7 flex gap-8">
+              <div className="flex-1">
+                <div className={SECTION_TITLE}>{t("costByAgent")}</div>
                 {data.cost_by_agent.length === 0 ? (
                   <div>{t("noCost")}</div>
                 ) : (
                   <Donut segments={toDonutSegments(data.cost_by_agent)} />
                 )}
               </div>
-              <div style={s.donutCol}>
-                <div style={s.sectionTitle}>{t("costByModel")}</div>
+              <div className="flex-1">
+                <div className={SECTION_TITLE}>{t("costByModel")}</div>
                 {data.cost_by_model.length === 0 ? (
                   <div>{t("noCost")}</div>
                 ) : (
@@ -70,41 +77,42 @@ export function AgentPerformanceView() {
 
             {data.agents.length === 0 ? (
               <div>
-                <div style={s.sectionTitle}>{t("empty.title")}</div>
+                <div className={SECTION_TITLE}>{t("empty.title")}</div>
                 <div>{t("empty.body")}</div>
               </div>
             ) : (
               <div>
-                <div style={s.tableHeader}>
-                  <div style={s.sectionTitle}>{t("perAgent")}</div>
-                  <div style={s.sortWrap}>
-                    <Select
+                <div className="mb-3 flex items-center">
+                  <div className="text-base font-bold">{t("perAgent")}</div>
+                  <div className="ml-auto w-40">
+                    <SelectField
                       value={sortKey}
                       onChange={(v) => setSortKey(v as SortKey)}
                       options={SORT_KEYS.map((k) => ({ value: k, label: t(`sort.${k}`) }))}
+                      ariaLabel={t("perAgent")}
                     />
                   </div>
                 </div>
-                <table style={s.table}>
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th style={s.th}>{t("table.agent")}</th>
-                      <th style={s.th}>{t("table.accept")}</th>
-                      <th style={s.th}>{t("table.runs")}</th>
-                      <th style={s.th}>{t("table.findings")}</th>
-                      <th style={s.th}>{t("table.cost")}</th>
-                      <th style={s.th}>{t("table.trend")}</th>
+                      <th className={TH}>{t("table.agent")}</th>
+                      <th className={TH}>{t("table.accept")}</th>
+                      <th className={TH}>{t("table.runs")}</th>
+                      <th className={TH}>{t("table.findings")}</th>
+                      <th className={TH}>{t("table.cost")}</th>
+                      <th className={TH}>{t("table.trend")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortAgents(data.agents, sortKey).map((row) => (
                       <tr key={row.agent_id}>
-                        <td style={{ ...s.td, ...s.agentName }}>{row.agent_name}</td>
-                        <td style={s.td}>{row.accept_rate != null ? `${Math.round(row.accept_rate * 100)}%` : "—"}</td>
-                        <td style={s.td}>{row.runs}</td>
-                        <td style={s.td}>{row.findings_total}</td>
-                        <td style={s.td}>{row.total_cost_usd != null ? formatRunCost(row.total_cost_usd) : "—"}</td>
-                        <td style={s.td}>
+                        <td className={`${TD} font-semibold text-foreground`}>{row.agent_name}</td>
+                        <td className={TD}>{row.accept_rate != null ? `${Math.round(row.accept_rate * 100)}%` : "—"}</td>
+                        <td className={TD}>{row.runs}</td>
+                        <td className={TD}>{row.findings_total}</td>
+                        <td className={TD}>{row.total_cost_usd != null ? formatRunCost(row.total_cost_usd) : "—"}</td>
+                        <td className={TD}>
                           {row.trend.length > 0 && <Sparkline data={row.trend} w={64} h={20} />}
                         </td>
                       </tr>

@@ -207,7 +207,7 @@ describe("DiffTab — inline findings", () => {
   it("shows a dot indicator on a file card that has findings", () => {
     usePrReviewsMock.mockReturnValue({ data: [reviewWithFindings([finding()])] });
     renderTab();
-    expect(screen.getByTitle("1 finding(s), worst severity CRITICAL")).toBeInTheDocument();
+    expect(screen.getByTitle("1 finding, worst severity blocker")).toBeInTheDocument();
   });
 
   it("shows severity + title + rationale inline under the matching line once the file is expanded", () => {

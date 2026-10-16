@@ -13,7 +13,6 @@ import type { PrFile, SmartDiffGroup } from "@/lib/types";
 import { type DiffCommentApi } from "../comments";
 import { type DiffFindingApi } from "../findings";
 import { ROLE_ORDER } from "../constants";
-import { s } from "../styles";
 import { FileCard } from "../FileCard";
 import { FileGroup } from "../FileGroup";
 import type { RiskAnnotationsByFile } from "../RiskAnnotationCard";
@@ -44,14 +43,14 @@ export function DiffViewer({
 }) {
   const t = useTranslations("shell");
   if (!files || files.length === 0) {
-    return <div style={s.empty}>{t("diffViewer.noChangedFiles")}</div>;
+    return <div className="p-6 text-center text-base text-subtle-foreground">{t("diffViewer.noChangedFiles")}</div>;
   }
 
   if (groups) {
     const filesByPath = new Map(files.map((f) => [f.path, f]));
     const byRole = new Map(groups.map((g) => [g.role, g]));
     return (
-      <div style={s.list}>
+      <div className="flex flex-col gap-2.5">
         {ROLE_ORDER.map((role) => {
           const group = byRole.get(role);
           if (!group) return null;
@@ -73,7 +72,7 @@ export function DiffViewer({
   }
 
   return (
-    <div style={s.list}>
+    <div className="flex flex-col gap-2.5">
       {files.map((f, i) => (
         <FileCard
           key={i}

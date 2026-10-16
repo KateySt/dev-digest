@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { LineChart } from "@devdigest/ui";
+import { LineChart } from "@/components/charts";
 import { METRICS, type MetricKey } from "@/lib/eval";
 
 export type TrendPoint = Record<MetricKey, number | null>;
@@ -22,7 +22,15 @@ export function MetricTrendChart({ points, height = 220 }: { points: TrendPoint[
     const padL = 38;
     const y = (v: number) => 14 + (1 - (Math.min(Y_MAX, Math.max(Y_MIN, v)) - Y_MIN) / (Y_MAX - Y_MIN)) * (h - 14 - 22);
     return (
-      <svg role="img" aria-label={t("trend.ariaLabel")} viewBox={`0 0 ${w} ${h}`} width="100%" style={{ maxWidth: w, height, display: "block" }}>
+      <svg
+        role="img"
+        aria-label={t("trend.ariaLabel")}
+        viewBox={`0 0 ${w} ${h}`}
+        width="100%"
+        // Runtime chart height (prop).
+        style={{ "--h": `${h}px` } as React.CSSProperties}
+        className="block h-(--h) max-w-[620px]"
+      >
         {TICKS.map((tick) => (
           <g key={tick}>
             <line x1={padL} x2={w - 14} y1={y(tick)} y2={y(tick)} stroke="var(--border)" />

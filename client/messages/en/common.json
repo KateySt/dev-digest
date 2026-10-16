@@ -17,5 +17,70 @@
     "title": "No repo selected",
     "body": "This repository isn't in your workspace — it may have been removed, or the link is stale. Add a repo or pick another from the switcher to get started.",
     "cta": "Add repository"
+  },
+  "ui": {
+    "close": "Close",
+    "toggleSidebar": "Toggle sidebar",
+    "sidebarTitle": "Navigation",
+    "sidebarDescription": "App navigation.",
+    "commandPaletteTitle": "Command palette",
+    "commandPaletteDescription": "Search for a command to run…",
+    "noMatches": "No matches",
+    "searchPlaceholder": "Search…"
+  },
+  "severity": {
+    "CRITICAL": "Critical",
+    "WARNING": "Warning",
+    "SUGGESTION": "Suggestion",
+    "INFO": "Info"
+  },
+  "category": {
+    "bug": "bug",
+    "security": "security",
+    "perf": "perf",
+    "style": "style",
+    "test": "test"
+  },
+  "confidence": {
+    "title": "Model confidence",
+    "value": "{pct}% conf"
+  },
+  "codeField": {
+    "unsaved": "unsaved",
+    "tokens": "{count, plural, one {# token} other {# tokens}}"
+  },
+  "logStream": {
+    "filter": "Filter log…",
+    "running": "Running",
+    "lines": "{count, plural, one {# line} other {# lines}}",
+    "copy": "Copy log",
+    "copied": "Copied!"
+  },
+  "autoTrigger": {
+    "title": "Settings → Automatic Reviews",
+    "label": "Auto-review:",
+    "on": "ON",
+    "off": "OFF",
+    "defaultDetail": "polling 5m"
+  },
+  "home": {
+    "crumb": "DevDigest",
+    "title": "Welcome to DevDigest",
+    "subtitle": "Local-first AI PR review",
+    "empty": {
+      "title": "No repositories yet",
+      "body": "Add a repository to start reviewing pull requests. Set your API keys once in Settings → API Keys.",
+      "cta": "Add repository"
+    },
+    "redirecting": "Taking you to your repository…",
+    "open": "Open {repo}"
+  },
+  "findingsTooltip": {
+    "loading": "Findings",
+    "count": "{count, plural, one {# finding} other {# findings}}",
+    "empty": "No findings."
+  },
+  "toast": {
+    "dismiss": "Dismiss"
   }
 }

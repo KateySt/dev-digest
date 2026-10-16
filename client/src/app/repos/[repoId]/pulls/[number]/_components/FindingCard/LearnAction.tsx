@@ -6,9 +6,18 @@
 "use client";
 
 import React from "react";
-import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Button, Modal } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { FindingRecord, LearnDraftResponse, MemoryInput } from "@devdigest/shared";
 import { MemoryForm, isMemoryFormValid } from "@/components/memory-form";
 import { useAgents } from "@/lib/hooks/agents";
@@ -20,18 +29,21 @@ import {
   useSimilarMemories,
   useUpdateMemory,
 } from "@/lib/hooks/memory";
-import { s } from "./styles";
+
+const BODY = "flex flex-col gap-2 px-6 py-4";
+const ERROR = "min-w-0 text-sm text-crit wrap-anywhere";
 
 export function LearnAction({ f }: { f: FindingRecord }) {
   const t = useTranslations("prReview");
   const [open, setOpen] = React.useState(false);
   return (
     <>
-      <Button kind="secondary" size="sm" icon="Brain" onClick={() => setOpen(true)}>
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <Icon.Brain aria-hidden />
         {t("finding.learn")}
       </Button>
-      {/* Portal: the card is dimmed (opacity) once decided, which would fade the dialog too. */}
-      {open && createPortal(<LearnDialog f={f} onClose={() => setOpen(false)} />, document.body)}
+      {/* The dialog portals to <body>, so the dimmed (decided) card does not fade it. */}
+      {open && <LearnDialog f={f} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -42,25 +54,26 @@ function LearnDialog({ f, onClose }: { f: FindingRecord; onClose: () => void }) 
 
   const editing = !!data?.existing_memory_id;
   return (
-    <Modal width={640} onClose={onClose}>
-      <Modal.Header
-        title={editing ? t("learn.editTitle") : t("learn.title")}
-        subtitle={t("learn.subtitle")}
-        onClose={onClose}
-      />
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[640px]">
+        <DialogHeader>
+          <DialogTitle>{editing ? t("learn.editTitle") : t("learn.title")}</DialogTitle>
+          <DialogDescription>{t("learn.subtitle")}</DialogDescription>
+        </DialogHeader>
       {data ? (
         <LearnDraftForm key={data.existing_memory_id ?? "new"} f={f} res={data} onClose={onClose} />
       ) : (
-        <div style={s.dialogBody}>
+        <DialogBody className={BODY}>
           {isPending && <div>{t("learn.drafting")}</div>}
           {error && (
-            <div role="alert" style={s.dialogError}>
+            <div role="alert" className={ERROR}>
               {t("learn.failed", { message: error.message })}
             </div>
           )}
-        </div>
+        </DialogBody>
       )}
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -100,9 +113,9 @@ function LearnDraftForm({ f, res, onClose }: { f: FindingRecord; res: LearnDraft
 
   return (
     <>
-      <div style={s.dialogBody}>
+      <DialogBody className={BODY}>
         {res.draft.fallback && (
-          <div role="status" style={s.dialogNotice}>
+          <div role="status" className="mb-2 rounded-[7px] border border-warn px-3 py-2 text-sm text-warn">
             {t("learn.fallback")}
           </div>
         )}
@@ -118,21 +131,20 @@ function LearnDraftForm({ f, res, onClose }: { f: FindingRecord; res: LearnDraft
           readOnlySource={res.source}
         />
         {failure && (
-          <div role="alert" style={s.dialogError}>
+          <div role="alert" className={ERROR}>
             {t("learn.failed", { message: failure.message })}
           </div>
         )}
-      </div>
-      <Modal.Footer>
-        <div style={s.dialogFooter}>
-          <Button kind="secondary" onClick={onClose} disabled={saving}>
-            {t("learn.cancel")}
-          </Button>
-          <Button kind="primary" onClick={save} loading={saving} disabled={!isMemoryFormValid(value)}>
-            {saving ? t("learn.saving") : t("learn.save")}
-          </Button>
-        </div>
-      </Modal.Footer>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="secondary" onClick={onClose} disabled={saving}>
+          {t("learn.cancel")}
+        </Button>
+        <Button onClick={save} disabled={saving || !isMemoryFormValid(value)}>
+          {saving && <Icon.Loader className="animate-spin" aria-hidden />}
+          {saving ? t("learn.saving") : t("learn.save")}
+        </Button>
+      </DialogFooter>
     </>
   );
 }

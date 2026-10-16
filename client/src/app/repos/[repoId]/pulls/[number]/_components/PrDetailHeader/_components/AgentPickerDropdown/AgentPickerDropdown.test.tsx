@@ -94,8 +94,8 @@ describe("AgentPickerDropdown", () => {
     setup();
     await open();
     await waitFor(() => {
-      const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
-      expect(boxes.map((b) => b.checked)).toEqual([false, true]);
+      const boxes = screen.getAllByRole("checkbox");
+      expect(boxes.map((b) => b.getAttribute("aria-checked"))).toEqual(["false", "true"]);
     });
     expect(screen.getByRole("button", { name: /Run multi-agent review \(1\)/ })).toBeInTheDocument();
   });

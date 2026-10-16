@@ -7,7 +7,11 @@ import React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, Icon, Select } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { SelectField } from "@/components/select-field";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { AppShell } from "@/components/app-shell";
 import { useActiveRepo } from "@/lib/contexts";
@@ -17,7 +21,6 @@ import { resolveAccent } from "@/app/multi-agent/helpers";
 import { formatCost, formatDuration } from "@/app/multi-agent/helpers";
 import { DEFAULT_CONCURRENCY } from "./constants";
 import { estimateTotal, inFlightMultiRunId, isOpenPr } from "./helpers";
-import { s } from "./styles";
 
 type Translate = ReturnType<typeof useTranslations>;
 
@@ -25,6 +28,15 @@ function estimateLabel(t: Translate, ms: number | null, usd: number | null): str
   if (ms == null && usd == null) return t("estimateMissing");
   return t("estimate", { duration: formatDuration(ms), cost: formatCost(usd) });
 }
+
+const STEP_HEADER = "mb-3 flex items-center gap-2.5";
+const stepBadge = (dim: boolean) =>
+  cn(
+    "grid size-6 place-items-center rounded-full text-xs font-semibold",
+    dim ? "bg-muted text-subtle-foreground" : "bg-brand-bg text-brand-text",
+  );
+const stepTitle = (dim: boolean) =>
+  cn("flex-1 text-base font-semibold", dim ? "text-subtle-foreground" : "text-foreground");
 
 export function ConfigureRun() {
   const t = useTranslations("runs.multiAgent.configure");
@@ -111,22 +123,22 @@ export function ConfigureRun() {
 
   return (
     <AppShell crumb={[{ label: tRuns("multiAgent.crumb"), href: "/multi-agent" }, { label: t("crumb") }]}>
-      <div style={s.page}>
+      <div className="mx-auto flex max-w-[680px] flex-col gap-7 px-6 pt-8 pb-16">
         <div>
-          <h1 style={s.h1}>{t("title")}</h1>
-          <p style={s.subtitle}>{t("subtitle")}</p>
+          <h1 className="m-0 text-3xl font-bold text-foreground">{t("title")}</h1>
+          <p className="mt-1.5 mb-0 text-base leading-normal text-muted-foreground">{t("subtitle")}</p>
         </div>
 
         <section>
-          <div style={s.stepHeader}>
-            <span style={s.badge(false)}>1</span>
-            <span style={s.stepTitle(false)}>{t("stepPr")}</span>
+          <div className={STEP_HEADER}>
+            <span className={stepBadge(false)}>1</span>
+            <span className={stepTitle(false)}>{t("stepPr")}</span>
           </div>
-          <div style={s.prSelect}>
+          <div className="max-w-[420px]">
             {openPulls.length === 0 && pulls.isSuccess ? (
-              <div style={s.muted}>{t("noOpenPrs")}</div>
+              <div className="text-sm text-subtle-foreground">{t("noOpenPrs")}</div>
             ) : (
-              <Select
+              <SelectField
                 mono={false}
                 value={prId ?? t("prPlaceholder")}
                 options={prOptions}
@@ -140,11 +152,14 @@ export function ConfigureRun() {
         </section>
 
         <section>
-          <div style={s.stepHeader}>
-            <span style={s.badge(agentsDim)}>2</span>
-            <span style={s.stepTitle(agentsDim)}>{t("stepAgents")}</span>
+          <div className={STEP_HEADER}>
+            <span className={stepBadge(agentsDim)}>2</span>
+            <span className={stepTitle(agentsDim)}>{t("stepAgents")}</span>
             {prId && agents.length > 0 && (
-              <button type="button" style={s.selectAll} onClick={() => setChecked(new Set(agents.map((a) => a.id)))}>
+              <button
+                type="button"
+                className="cursor-pointer border-none bg-transparent text-sm font-semibold text-brand-text"
+                onClick={() => setChecked(new Set(agents.map((a) => a.id)))}>
                 {t("selectAll")}
               </button>
             )}
@@ -159,11 +174,11 @@ export function ConfigureRun() {
               onCta={() => router.push("/agents")}
             />
           ) : !prId ? (
-            <div style={s.placeholder}>
+            <div className="rounded-xl border border-dashed border-border-strong bg-elevated">
               <EmptyState icon="GitPullRequest" title={t("pickPrFirst.title")} body={t("pickPrFirst.body")} />
             </div>
           ) : (
-            <div style={s.list}>
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
               {agents.map((a) => {
                 const accent = resolveAccent(a.name);
                 const on = checked.has(a.id);
@@ -176,17 +191,30 @@ export function ConfigureRun() {
                     role="checkbox"
                     aria-checked={on}
                     onClick={() => toggle(a.id)}
-                    style={s.card(on, accent.color)}
+                    className={cn(
+                      "flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-lg border px-3.5 py-3 text-left text-inherit",
+                      accent.tone,
+                      on ? "border-(--agent) bg-(--agent)/10" : "border-border bg-elevated",
+                    )}
                   >
-                    <span style={s.box(on, accent.color)}>{on && <Icon.Check size={11} />}</span>
-                    <span style={s.iconBox(accent.color)}>
-                      <I size={15} />
+                    <span
+                      className={cn(
+                        "mt-0.5 grid size-4 shrink-0 place-items-center rounded-sm border-[1.5px] text-white",
+                        on ? "border-(--agent) bg-(--agent)" : "border-border-strong bg-transparent",
+                      )}
+                    >
+                      {on && <Icon.Check size={11} aria-hidden />}
                     </span>
-                    <span style={s.body}>
-                      <div style={s.name}>{a.name}</div>
-                      <div style={s.desc}>{a.description}</div>
+                    <span className="grid size-7.5 shrink-0 place-items-center rounded-lg bg-(--agent)/15 text-(--agent)">
+                      <I size={15} aria-hidden />
                     </span>
-                    <span className="mono" style={s.estimate}>
+                    <span className="min-w-0 flex-1">
+                      <div className="text-base font-semibold wrap-anywhere text-foreground">{a.name}</div>
+                      <div className="mt-0.5 text-ui leading-[1.45] wrap-anywhere text-muted-foreground">
+                        {a.description}
+                      </div>
+                    </span>
+                    <span className="mono shrink-0 text-[11.5px] whitespace-nowrap text-subtle-foreground">
                       {estimateLabel(t, est?.mean_duration_ms ?? null, est?.mean_cost_usd ?? null)}
                     </span>
                   </button>
@@ -195,31 +223,32 @@ export function ConfigureRun() {
             </div>
           )}
 
-          <div style={s.footer}>
-            <Button kind="primary" icon="Users" disabled={!canRun} onClick={run}>
+          <div className="mt-5 flex flex-wrap items-center gap-3.5">
+            <Button disabled={!canRun} onClick={run}>
+              <Icon.Users aria-hidden />
               {start.isPending ? t("starting") : t("run", { count: selected.length })}
             </Button>
             {selected.length > 0 && (
-              <span className="mono" style={s.total} aria-label={t("totalLabel")}>
+              <span className="mono text-xs text-subtle-foreground" aria-label={t("totalLabel")}>
                 {t("total", { duration: formatDuration(total.durationMs), cost: formatCost(total.costUsd) })}
                 {total.incompleteCount > 0 && (
-                  <span style={s.incomplete}>{t("totalIncomplete", { count: total.incompleteCount })}</span>
+                  <span className="ml-2 text-warn">{t("totalIncomplete", { count: total.incompleteCount })}</span>
                 )}
               </span>
             )}
           </div>
 
           {error && (
-            <div role="alert" style={s.error}>
+            <div role="alert" className="mt-3 flex flex-wrap items-center gap-2.5 text-sm wrap-anywhere text-crit">
               {error.code === "review_in_progress" ? (
                 <>
                   <span>{t("error.reviewInProgress")}</span>
                   {error.multiRunId ? (
-                    <Link href={`/multi-agent/${error.multiRunId}`} style={s.link}>
+                    <Link href={`/multi-agent/${error.multiRunId}`} className="text-brand-text underline">
                       {t("error.viewInProgressRun")}
                     </Link>
                   ) : (
-                    <Link href={prHref} style={s.link}>
+                    <Link href={prHref} className="text-brand-text underline">
                       {t("error.viewPr")}
                     </Link>
                   )}

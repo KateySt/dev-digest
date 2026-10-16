@@ -100,8 +100,8 @@ function setup(payload: () => EvalCrossSkillDashboard = () => skillsDashboard(),
 describe("EvalDashboardView: tabs", () => {
   it("SK-30: shows Agents and Skills tabs with the existing cross-agent content under Agents (the default)", async () => {
     setup(undefined, "");
-    expect(await screen.findByRole("button", { name: "Agents" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Skills" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Agents" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Skills" })).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "Open Security Reviewer eval dashboard" })).toHaveAttribute("href", "/eval/ag1");
     expect(screen.getByRole("button", { name: "Run all agents" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Run all skills" })).not.toBeInTheDocument();
@@ -109,7 +109,7 @@ describe("EvalDashboardView: tabs", () => {
 
   it("SK-30: clicking Skills puts ?tab=skills in the URL; ?tab=skills renders the Skills content instead of Agents", async () => {
     setup(undefined, "");
-    fireEvent.click(await screen.findByRole("button", { name: "Skills" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Skills" }));
     expect(nav.replace).toHaveBeenCalledWith("/eval?tab=skills");
     cleanup();
 

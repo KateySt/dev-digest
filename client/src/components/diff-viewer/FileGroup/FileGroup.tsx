@@ -6,15 +6,16 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { cn } from "@/lib/utils";
 import type { PrFile, SmartDiffGroup } from "@/lib/types";
 import {
   AUTO_EXPAND_MAX_LINES,
+  CHEVRON,
   DEFAULT_COLLAPSED_ROLES,
   ROLE_DESCRIPTION_KEYS,
   ROLE_LABEL_KEYS,
 } from "../constants";
-import { s, chevronFor } from "../styles";
 import { FileCard } from "../FileCard";
 import { type DiffCommentApi } from "../comments";
 import { type DiffFindingApi } from "../findings";
@@ -66,20 +67,20 @@ export function FileGroup({
   if (files.length === 0) return null;
 
   return (
-    <div style={s.groupWrap}>
-      <div onClick={() => setOpen((o) => !o)} style={s.groupHeader}>
-        <Icon.ChevronRight size={13} style={chevronFor(open)} />
-        <span style={s.groupLabel}>{t(`smartDiff.${ROLE_LABEL_KEYS[group.role]}`)}</span>
-        <span style={s.groupDescription}>{t(`smartDiff.${ROLE_DESCRIPTION_KEYS[group.role]}`)}</span>
-        <span style={s.groupCount}>{t("smartDiff.filesCount", { count: files.length })}</span>
+    <div className="flex flex-col gap-2">
+      <div onClick={() => setOpen((o) => !o)} className="flex cursor-pointer items-center gap-2.5 py-2">
+        <Icon.ChevronRight size={13} className={cn(CHEVRON, open && "rotate-90")} aria-hidden />
+        <span className="shrink-0 text-ui font-bold tracking-[0.04em] text-muted-foreground uppercase">{t(`smartDiff.${ROLE_LABEL_KEYS[group.role]}`)}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-subtle-foreground">{t(`smartDiff.${ROLE_DESCRIPTION_KEYS[group.role]}`)}</span>
+        <span className="shrink-0 text-xs text-subtle-foreground">{t("smartDiff.filesCount", { count: files.length })}</span>
         {filesWithFindingsCount > 0 && (
-          <span style={s.groupFindingsCount}>
+          <span className="shrink-0 text-xs text-warn">
             {t("smartDiff.filesWithFindings", { count: filesWithFindingsCount })}
           </span>
         )}
       </div>
       {open && (
-        <div style={s.groupBody}>
+        <div className="flex flex-col gap-2.5">
           {files.map((file) => (
             <FileCard
               key={file.path}

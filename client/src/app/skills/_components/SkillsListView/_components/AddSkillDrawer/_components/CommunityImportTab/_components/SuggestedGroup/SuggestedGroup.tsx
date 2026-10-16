@@ -1,10 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
 import type { CommunitySkill } from "@/lib/types";
 import { EntryRow } from "../EntryRow";
-import { s } from "./styles";
 
 /**
  * Pinned "Suggested for <project>" group above the folder accordion (client
@@ -33,12 +32,12 @@ export function SuggestedGroup({
   if (entries.length === 0) return null;
 
   return (
-    <div style={s.wrap}>
-      <div style={s.header}>
-        <Icon.Sparkles size={14} style={s.icon} />
+    <div className="mb-3 overflow-hidden rounded-lg border border-primary">
+      <div className="flex items-center gap-1.75 bg-brand-bg px-3 py-2.25 text-ui font-semibold text-primary">
+        <Icon.Sparkles size={14} aria-hidden />
         <span>{t("community.suggestedFor", { project: projectName })}</span>
       </div>
-      <div style={s.entries}>
+      <div className="flex flex-col gap-1.5 p-2">
         {entries.map((entry) => (
           <EntryRow
             key={entry.path}

@@ -2,11 +2,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { CiInstallation } from "@devdigest/shared";
-import { ciStatusTone, isKnownCiStatus } from "@/lib/ci-status";
+import { ciStatusBadge, isKnownCiStatus } from "@/lib/ci-status";
 import { fullRelativeTime } from "@/app/repos/[repoId]/pulls/helpers";
-import { s } from "./styles";
+
+const META = "text-ui whitespace-nowrap text-subtle-foreground";
 
 /** One installation: repo, target chip, workflow version, last run status +
  *  relative time and the install PR. An out-of-date installation (its exported
@@ -20,38 +24,44 @@ export function InstallationRow({
 }) {
   const t = useTranslations("ci");
   const status = installation.last_run_status;
-  const tone = ciStatusTone(status);
+  const tone = ciStatusBadge(status);
 
   return (
-    <div style={s.row}>
-      <Icon.GitBranch size={15} style={s.icon} />
-      <span className="mono" style={s.repo}>
+    <div className="flex min-w-0 flex-wrap items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-2.75">
+      <Icon.GitBranch size={15} className="shrink-0 text-subtle-foreground" aria-hidden />
+      {/* The repo is an unbroken mono string: let it wrap. */}
+      <span className="mono min-w-0 flex-1 text-[13.5px] font-semibold wrap-anywhere">
         {installation.repo}
       </span>
-      <Badge mono>{t("ciTab.githubActions")}</Badge>
+      <Badge variant="neutral" className="mono">
+        {t("ciTab.githubActions")}
+      </Badge>
       {installation.workflow_version != null && (
-        <span style={s.meta}>{t("ciTab.workflowVersion", { version: installation.workflow_version })}</span>
+        <span className={META}>{t("ciTab.workflowVersion", { version: installation.workflow_version })}</span>
       )}
       {installation.out_of_date && (
-        <Badge color="var(--warn)" bg="var(--warn-bg)" icon="AlertTriangle">
+        <Badge variant="warn">
+          <Icon.AlertTriangle aria-hidden />
           {t("ciTab.outOfDate")}
         </Badge>
       )}
       {status ? (
-        <Badge color={tone.color} bg={tone.bg} dot>
+        <Badge variant={tone.variant}>
+          <span aria-hidden className={cn("size-1.5 rounded-full", tone.dot)} />
           {isKnownCiStatus(status) ? t(`runs.status.${status}`) : status}
         </Badge>
       ) : (
-        <span style={s.meta}>{t("ciTab.neverRun")}</span>
+        <span className={META}>{t("ciTab.neverRun")}</span>
       )}
-      {installation.last_run_at && <span style={s.meta}>{fullRelativeTime(installation.last_run_at)}</span>}
+      {installation.last_run_at && <span className={META}>{fullRelativeTime(installation.last_run_at)}</span>}
       {installation.pr_url && (
-        <a href={installation.pr_url} target="_blank" rel="noopener noreferrer" style={s.link}>
+        <a href={installation.pr_url} target="_blank" rel="noopener noreferrer" className="text-ui text-brand-text">
           {t("ciTab.viewPr")}
         </a>
       )}
       {installation.out_of_date && (
-        <Button size="sm" icon="RefreshCw" onClick={() => onUpdate(installation)}>
+        <Button variant="secondary" size="sm" onClick={() => onUpdate(installation)}>
+          <Icon.RefreshCw aria-hidden />
           {t("ciTab.updateCiConfig")}
         </Button>
       )}

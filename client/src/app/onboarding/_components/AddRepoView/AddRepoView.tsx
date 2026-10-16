@@ -6,13 +6,20 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Icon, IconBtn, Kbd, TextInput, FormField } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { TitlebarStrip } from "@/components/window-chrome";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 import { useAddRepo } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
-import { TitlebarStrip } from "@/components/window-chrome";
 
 export function AddRepoView() {
+  const t = useTranslations("onboarding.addRepo");
   const router = useRouter();
+  const urlId = React.useId();
   const [repoUrl, setRepoUrl] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const addRepo = useAddRepo();
@@ -35,70 +42,57 @@ export function AddRepoView() {
       const repo = await addRepo.mutateAsync(repoUrl.trim());
       router.push(`/repos/${repo.id}/pulls`);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not add repository");
+      setError(e instanceof ApiError ? e.message : t("failed"));
     }
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        background: "var(--bg-primary)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "44px 28px",
-      }}
-    >
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background px-7 py-11">
       <TitlebarStrip />
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--text-primary)", display: "grid", placeItems: "center" }}>
-          <Icon.Layers size={17} style={{ color: "var(--bg-primary)" }} />
+      <div className="mb-8 flex items-center gap-3">
+        <div className="grid size-7.5 place-items-center rounded-lg bg-foreground">
+          <Icon.Layers size={17} className="text-background" aria-hidden />
         </div>
-        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>DevDigest</span>
+        <span className="text-2xl font-bold tracking-[-0.02em]">{t("brand")}</span>
       </div>
 
-      <div
-        style={{
-          position: "relative",
-          width: 520,
-          maxWidth: "100%",
-          background: "var(--bg-elevated)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: 36,
-          boxShadow: "var(--shadow-modal)",
-        }}
-      >
-        <div style={{ position: "absolute", top: 16, right: 16 }}>
-          <IconBtn icon="X" label="Close" onClick={close} />
-        </div>
+      <div className="relative w-[520px] max-w-full rounded-[14px] border border-border bg-elevated p-9 shadow-modal">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-4 right-4"
+          aria-label={t("close")}
+          title={t("close")}
+          onClick={close}
+        >
+          <Icon.X aria-hidden />
+        </Button>
 
-        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>Add a repository</h1>
-        <p style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 8, marginBottom: 28, lineHeight: 1.5 }}>
-          Paste a GitHub repository URL — DevDigest clones it locally and imports open PRs.
-          API keys aren’t needed here; set them once in{" "}
-          <a
-            href="/settings/api-keys"
-            onClick={(e) => {
-              e.preventDefault();
-              router.push("/settings/api-keys");
-            }}
-            style={{ color: "var(--accent-text)" }}
-          >
-            Settings → API Keys
-          </a>
-          .
+        <h1 className="text-3xl font-bold tracking-[-0.02em]">{t("title")}</h1>
+        <p className="mt-2 mb-7 text-base leading-normal text-muted-foreground">
+          {t.rich("body", {
+            settings: (chunks) => (
+              <a
+                href="/settings/api-keys"
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push("/settings/api-keys");
+                }}
+                className="text-brand-text"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
 
-        <FormField label="Repository URL" hint="e.g. https://github.com/acme/payments-api">
-          <TextInput
+        <FormField label={t("urlLabel")} hint={t("urlHint")} htmlFor={urlId}>
+          <Input
+            id={urlId}
+            className="mono"
             value={repoUrl}
-            onChange={setRepoUrl}
-            mono
-            placeholder="https://github.com/owner/repo"
+            onChange={(e) => setRepoUrl(e.target.value)}
+            placeholder={t("urlPlaceholder")}
             onKeyDown={(e) => {
               if (e.key === "Enter") submit();
             }}
@@ -106,42 +100,29 @@ export function AddRepoView() {
         </FormField>
 
         {error && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "12px 14px",
-              borderRadius: 8,
-              background: "var(--crit-bg)",
-              border: "1px solid rgba(239,68,68,0.25)",
-              marginTop: 16,
-            }}
-          >
-            <Icon.XCircle size={16} style={{ color: "var(--crit)" }} />
-            <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{error}</span>
+          <div className="mt-4 flex items-center gap-3 rounded-lg border border-crit/25 bg-crit-bg px-3.5 py-3">
+            <Icon.XCircle size={16} className="text-crit" aria-hidden />
+            <span className="text-sm text-muted-foreground">{error}</span>
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 24 }}>
-          <Button kind="ghost" size="md" onClick={close}>
-            Cancel
+        <div className="mt-6 flex items-center gap-3">
+          <Button variant="outline" onClick={close}>
+            {t("cancel")}
           </Button>
-          <div style={{ flex: 1 }} />
-          <Button
-            kind="primary"
-            size="md"
-            icon="Plus"
-            onClick={submit}
-            disabled={!repoUrl.trim() || addRepo.isPending}
-          >
-            {addRepo.isPending ? "Cloning…" : "Add repository"}
+          <div className="flex-1" />
+          <Button onClick={submit} disabled={!repoUrl.trim() || addRepo.isPending}>
+            <Icon.Plus aria-hidden />
+            {addRepo.isPending ? t("adding") : t("add")}
           </Button>
         </div>
       </div>
 
-      <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 24, display: "inline-flex", gap: 8, alignItems: "center" }}>
-        <Icon.Lock size={12} /> API keys live in Settings · <Kbd>esc</Kbd> to close
+      <p className="mt-6 inline-flex items-center gap-2 text-sm text-subtle-foreground">
+        <Icon.Lock size={12} aria-hidden />
+        {t.rich("footer", {
+          kbd: (chunks) => <Kbd className="mono border border-border-strong bg-surface">{chunks}</Kbd>,
+        })}
       </p>
     </div>
   );

@@ -2,21 +2,29 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Icon, FormField, TextInput } from "@devdigest/ui";
-import { useTestConnection, useSecretsStatus } from "../../../../../../../lib/hooks";
-import { ApiError } from "../../../../../../../lib/api";
-import type { ConnTestProvider } from "../../../../../../../lib/types";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useTestConnection, useSecretsStatus } from "@/lib/hooks";
+import { ApiError } from "@/lib/api";
+import type { ConnTestProvider } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { SectionTitle } from "../SectionTitle";
 import { KEY_ROWS } from "./constants";
-import { s } from "./styles";
 
 /** "Configured / Not set" pill driven by GET /settings/secrets-status. */
 function StatusBadge({ configured }: { configured: boolean | undefined }) {
   const t = useTranslations("settings");
   if (configured === undefined) return null; // status still loading
   return (
-    <span style={s.badge(configured)}>
-      <span style={s.badgeDot(configured)} />
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 text-xs font-semibold",
+        configured ? "text-ok" : "text-subtle-foreground",
+      )}
+    >
+      <span aria-hidden className={cn("size-[7px] rounded-full", configured ? "bg-ok" : "bg-subtle-foreground")} />
       {configured ? t("apiKeys.configured") : t("apiKeys.notSet")}
     </span>
   );
@@ -34,6 +42,7 @@ function KeyRow({
   configured: boolean | undefined;
 }) {
   const t = useTranslations("settings");
+  const inputId = React.useId();
   const [val, setVal] = React.useState("");
   const [reveal, setReveal] = React.useState(false);
   const test = useTestConnection();
@@ -50,27 +59,34 @@ function KeyRow({
   };
 
   return (
-    <FormField label={label} hint={hint} right={<StatusBadge configured={configured} />}>
-      <div style={s.keyRow}>
-        <div style={s.keyInput}>
-          <TextInput
+    <FormField label={label} hint={hint} right={<StatusBadge configured={configured} />} htmlFor={inputId}>
+      <div className="flex items-center gap-2.5">
+        <div className="relative flex-1">
+          <Input
+            id={inputId}
+            className="mono pr-9"
             value={val}
-            onChange={setVal}
-            mono
+            onChange={(e) => setVal(e.target.value)}
             type={reveal ? "text" : "password"}
             placeholder={t("apiKeys.placeholder")}
-            suffix={
-              <Icon.EyeOff size={14} style={s.revealIcon} onClick={() => setReveal((r) => !r)} />
-            }
           />
+          <button
+            type="button"
+            onClick={() => setReveal((r) => !r)}
+            aria-label={reveal ? t("apiKeys.hideKey") : t("apiKeys.showKey")}
+            aria-pressed={reveal}
+            className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-subtle-foreground hover:text-foreground"
+          >
+            <Icon.EyeOff size={14} aria-hidden />
+          </button>
         </div>
-        <Button kind="secondary" size="md" onClick={run} disabled={test.isPending}>
+        <Button variant="secondary" onClick={run} disabled={test.isPending}>
           {test.isPending ? t("apiKeys.testing") : t("apiKeys.testConnection")}
         </Button>
       </div>
       {res && (
-        <div style={s.result(res.ok)}>
-          {res.ok ? <Icon.CheckCircle size={13} /> : <Icon.XCircle size={13} />}
+        <div className={cn("mt-2.5 inline-flex items-center gap-2 text-sm font-semibold", res.ok ? "text-ok" : "text-crit")}>
+          {res.ok ? <Icon.CheckCircle size={13} aria-hidden /> : <Icon.XCircle size={13} aria-hidden />}
           {res.message}
         </div>
       )}
@@ -82,7 +98,7 @@ export function SettingsApiKeys() {
   const t = useTranslations("settings");
   const { data: status } = useSecretsStatus();
   return (
-    <div style={s.wrap}>
+    <div className="max-w-[640px]">
       <SectionTitle title={t("apiKeys.title")} body={t("apiKeys.body")} />
       {KEY_ROWS.map((row) => (
         <KeyRow

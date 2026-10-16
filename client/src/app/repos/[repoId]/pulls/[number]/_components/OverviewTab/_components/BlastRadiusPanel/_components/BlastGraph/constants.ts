@@ -9,13 +9,18 @@ export const NODE_COLOR_SYMBOL = "var(--accent)";
 export const NODE_COLOR_CALLER = "var(--border-strong)";
 export const NODE_COLOR_TARGET = "var(--accent)";
 
+/** Legend dot class per column — the same colours as above, as utilities. */
+export const NODE_DOT_CLASS = {
+  symbol: "bg-primary",
+  caller: "bg-border-strong",
+  target: "bg-primary",
+} as const;
+
 /**
- * Explicit per-node inline styles, keyed to this app's dark-theme CSS vars.
- * React Flow's own default node CSS (white bg, dark text) reads as blank
- * boxes here — the app's global stylesheet cascade overrides its text color
- * without also overriding the background, so labels go invisible. An inline
- * `style` on the node wins over any cascade, so we set it explicitly instead
- * of fighting specificity.
+ * Per-node styles passed through React Flow's node `style` API, keyed to the
+ * theme CSS vars. React Flow's own default node CSS (white bg, dark text) is
+ * unlayered, so it beats Tailwind's layered utilities and would leave labels
+ * invisible on the dark theme — a style object on the node wins instead.
  */
 const NODE_STYLE_BASE: CSSProperties = {
   background: "var(--bg-elevated)",

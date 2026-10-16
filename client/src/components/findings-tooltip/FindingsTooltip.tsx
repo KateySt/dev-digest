@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { HoverPopover, Skeleton } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
+import { HoverPopover } from "@/components/hover-popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import { sortBySeverity } from "@/lib/findings";
 import { FindingSummaryRow } from "./FindingSummaryRow";
 
@@ -30,33 +32,23 @@ export function FindingsTooltip({
   prNumber?: number | null;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const t = useTranslations("common.findingsTooltip");
   const sorted = React.useMemo(() => sortBySeverity(findings ?? []), [findings]);
   const disabled = !loading && findings !== undefined && findings.length === 0;
 
   return (
-    <HoverPopover trigger={trigger} onOpenChange={onOpenChange} disabled={disabled} width={340}>
-      <div
-        style={{
-          padding: "8px 10px",
-          fontSize: 12,
-          fontWeight: 600,
-          color: "var(--text-muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-        }}
-      >
-        {loading ? "Findings" : `${sorted.length} finding${sorted.length === 1 ? "" : "s"}`}
+    <HoverPopover trigger={trigger} onOpenChange={onOpenChange} disabled={disabled} className="w-85">
+      <div className="px-2.5 py-2 text-xs font-semibold tracking-[0.04em] text-subtle-foreground uppercase">
+        {loading ? t("loading") : t("count", { count: sorted.length })}
       </div>
-      <div style={{ maxHeight: 320, overflowY: "auto", overflowX: "hidden" }}>
+      <div className="max-h-80 overflow-x-hidden overflow-y-auto">
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "4px 10px 10px" }}>
-            <Skeleton height={32} />
-            <Skeleton height={32} />
+          <div className="flex flex-col gap-2 px-2.5 pt-1 pb-2.5">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
           </div>
         ) : sorted.length === 0 ? (
-          <div style={{ padding: "0 10px 10px", fontSize: 12.5, color: "var(--text-muted)" }}>
-            No findings.
-          </div>
+          <div className="px-2.5 pb-2.5 text-ui text-subtle-foreground">{t("empty")}</div>
         ) : (
           sorted.map((f) => (
             <FindingSummaryRow

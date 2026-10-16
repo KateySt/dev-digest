@@ -1,7 +1,7 @@
 import type { Severity } from "@devdigest/shared";
 
 /** Bar color per severity — matches the findings-taxonomy colors used
- *  elsewhere (SeverityBadge/CategoryTag in @devdigest/ui). */
+ *  elsewhere (SeverityBadge/CategoryTag in @/components/severity). */
 export const SEVERITY_COLOR: Record<Severity, string> = {
   CRITICAL: "var(--crit)",
   WARNING: "var(--warn)",

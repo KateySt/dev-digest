@@ -1,4 +1,4 @@
-/* providers.tsx — client provider stack: React Query + Theme + active Repo. */
+/* providers.tsx — client provider stack: React Query + Theme + Tooltip + active Repo. */
 "use client";
 
 import React from "react";
@@ -8,6 +8,7 @@ import {
   QueryCache,
   MutationCache,
 } from "@tanstack/react-query";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./theme";
 import { RepoProvider } from "./repoContext";
 import { ToastProvider, notify } from "./toast";
@@ -52,9 +53,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
       <ThemeProvider>
-        <ToastProvider>
-          <RepoProvider>{children}</RepoProvider>
-        </ToastProvider>
+        <TooltipProvider delayDuration={300}>
+          <ToastProvider>
+            <RepoProvider>{children}</RepoProvider>
+          </ToastProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

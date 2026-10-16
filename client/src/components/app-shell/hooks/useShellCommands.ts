@@ -3,13 +3,14 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { NAV, SETTINGS_ITEM, resolveHref, type Command } from "@devdigest/ui";
-import { useActiveRepo } from "../../../lib/contexts/repoContext";
-import { useTheme } from "../../../lib/contexts/theme";
+import { useActiveRepo } from "@/lib/contexts/repoContext";
+import { useTheme } from "@/lib/contexts/theme";
+import { NAV, SETTINGS_ITEM, resolveHref } from "../nav";
+import type { Command } from "../types";
 
 /**
  * Builds the command-palette command set: one "Go to …" command per nav item,
- * plus Settings and a theme toggle. Memoized on its inputs.
+ * plus Settings, a theme toggle and Appearance settings. Memoized on its inputs.
  */
 export function useShellCommands(): Command[] {
   const t = useTranslations("shell");
@@ -22,7 +23,7 @@ export function useShellCommands(): Command[] {
       g.items.map((it) => ({
         id: it.key,
         label: t("commandPalette.goTo", { label: t(`nav.${it.key}`) }),
-        group: g.section,
+        group: t(`navSection.${g.section}`),
         icon: it.icon,
         run: () => router.push(resolveHref(it.href, repoId)),
       }))
@@ -42,6 +43,13 @@ export function useShellCommands(): Command[] {
       group: t("commandPalette.themeAppearanceGroup"),
       icon: theme === "dark" ? "Sun" : "Moon",
       run: toggle,
+    });
+    navCmds.push({
+      id: "appearance-settings",
+      label: t("commandPalette.appearanceSettings"),
+      group: t("commandPalette.themeAppearanceGroup"),
+      icon: SETTINGS_ITEM.icon,
+      run: () => router.push("/settings/appearance"),
     });
     return navCmds;
   }, [t, router, repoId, theme, toggle]);

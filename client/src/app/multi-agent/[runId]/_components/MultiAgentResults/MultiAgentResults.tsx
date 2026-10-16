@@ -8,7 +8,7 @@
 import React from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ErrorState } from "@devdigest/ui";
+import { ErrorState } from "@/components/empty-state";
 import type { AgentColumn, FindingActionKind, FindingRecord } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
 import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
@@ -22,7 +22,6 @@ import { DisagreementBlock } from "./_components/DisagreementBlock";
 import { NotFoundState } from "./_components/NotFoundState";
 import { ResultsHeader } from "./_components/ResultsHeader";
 import { TabsView } from "./_components/TabsView";
-import { s } from "./styles";
 
 export function MultiAgentResults() {
   const t = useTranslations("runs.multiAgent");
@@ -98,7 +97,7 @@ export function MultiAgentResults() {
           onViewChange={changeView}
           onCancelAll={() => setConfirmCancelAll(true)}
         />
-        <div style={s.results}>
+        <div className="min-w-0">
           {view === "tabs" ? (
             <TabsView
               {...common}
@@ -148,12 +147,12 @@ export function MultiAgentResults() {
       />
     );
   } else {
-    body = <div style={s.loading}>{t("results.loading")}</div>;
+    body = <div className="text-sm text-subtle-foreground">{t("results.loading")}</div>;
   }
 
   return (
     <AppShell crumb={crumb}>
-      <div style={s.page}>{body}</div>
+      <div className="flex min-w-0 flex-col gap-6 px-7 pt-6 pb-16">{body}</div>
     </AppShell>
   );
 }

@@ -6,18 +6,22 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { CircularScore, Icon, SEV, type IconName, type Severity } from "@devdigest/ui";
+import { CircularScore } from "@/components/circular-score";
+import { Icon } from "@/components/icon";
+import { SEVERITY_STYLE, type Severity } from "@/components/severity";
+import { cn } from "@/lib/utils";
 import type { AgentColumn, FindingGroup, FindingRecord } from "@devdigest/shared";
 import { SeverityCountBadges } from "@/components/findings-tooltip";
 import { countBySeverity } from "@/lib/findings";
 import { AlsoFlaggedBadge } from "../AlsoFlaggedBadge";
 import { RunStatusNotice } from "../RunStatusNotice";
 import { metaLine, otherMembers } from "../../helpers";
-import { s } from "./styles";
+import { SEVERITY_STRIPE } from "./constants";
+import type { AgentAccent } from "@/app/multi-agent/constants";
 
 export interface AgentColumnCardProps {
   column: AgentColumn;
-  accent: { color: string; icon: IconName };
+  accent: AgentAccent;
   fallbackStartIso: string;
   groupByFinding: ReadonlyMap<string, FindingGroup>;
   cancelling?: boolean;
@@ -26,6 +30,9 @@ export interface AgentColumnCardProps {
   onOpenFinding: (column: AgentColumn, finding: FindingRecord) => void;
   onMemberAction: (findingId: string, action: "accept" | "dismiss") => void;
 }
+
+/** Long names / paths wrap instead of widening the column. */
+const WRAP = "min-w-0 break-words wrap-anywhere";
 
 export function AgentColumnCard({
   column,
@@ -43,14 +50,19 @@ export function AgentColumnCard({
   const done = column.status === "done";
 
   return (
-    <section style={s.card(accent.color)} aria-label={column.agent_name} data-testid="agent-column">
-      <header style={s.header}>
-        <span style={s.iconBox(accent.color)}>
-          <AgentIcon size={16} />
+    <section
+      className={cn(
+        "flex min-w-0 flex-col overflow-hidden rounded-xl border border-t-2 border-border border-t-(--agent) bg-elevated",
+        accent.tone,
+      )}
+      aria-label={column.agent_name} data-testid="agent-column">
+      <header className="flex min-w-0 items-center gap-2.5 p-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-(--agent)/15 text-(--agent)">
+          <AgentIcon size={16} aria-hidden />
         </span>
-        <div style={s.headMain}>
-          <div style={s.name}>{column.agent_name}</div>
-          <div className="mono" style={s.meta}>
+        <div className="min-w-0 flex-1">
+          <div className={cn("text-base font-semibold text-foreground", WRAP)}>{column.agent_name}</div>
+          <div className="mono text-[11.5px] text-subtle-foreground">
             {metaLine(column.duration_ms, column.cost_usd)}
           </div>
         </div>
@@ -61,29 +73,37 @@ export function AgentColumnCard({
         )}
       </header>
 
-      <div style={s.body}>
+      <div className="flex min-h-30 min-w-0 flex-1 flex-col gap-2 px-3 pb-3">
         {done ? (
           column.findings.length === 0 ? (
-            <div style={s.empty}>{t("noFindings")}</div>
+            <div className="text-sm text-muted-foreground">{t("noFindings")}</div>
           ) : (
             column.findings.map((f) => {
-              const color = SEV[f.severity as Severity]?.c ?? "var(--border-strong)";
-              const SevIcon = Icon[SEV[f.severity as Severity]?.icon ?? "Info"];
+              const sevKey = f.severity as Severity;
+              const sev = SEVERITY_STYLE[sevKey] as (typeof SEVERITY_STYLE)[Severity] | undefined;
+              const SevIcon = Icon[sev?.icon ?? "Info"];
               return (
-                <div key={f.id} style={s.item(color)} data-testid="column-finding">
+                <div
+                  key={f.id}
+                  className={cn(
+                    "flex min-w-0 flex-col gap-1.5 rounded-md border border-l-[3px] border-border bg-muted px-2.5 py-2",
+                    SEVERITY_STRIPE[sevKey] ?? "border-l-border-strong",
+                  )}
+                  data-testid="column-finding"
+                >
                   <button
                     type="button"
-                    style={s.itemBtn}
+                    className="flex min-w-0 cursor-pointer flex-col gap-1 border-none bg-transparent p-0 text-left text-inherit"
                     aria-label={t("openFinding", { title: f.title })}
                     onClick={() => onOpenFinding(column, f)}
                   >
-                    <span style={s.itemTitleRow}>
-                      <span style={{ color, display: "inline-flex" }}>
-                        <SevIcon size={14} />
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className={cn("inline-flex", sev?.text ?? "text-border-strong")}>
+                        <SevIcon size={14} aria-hidden />
                       </span>
-                      <span style={s.itemTitle}>{f.title}</span>
+                      <span className={cn("text-sm font-semibold text-foreground", WRAP)}>{f.title}</span>
                     </span>
-                    <span className="mono" style={s.itemLoc}>
+                    <span className={cn("mono text-[11.5px] text-subtle-foreground", WRAP)}>
                       {f.file}:{f.start_line}
                     </span>
                   </button>
@@ -106,12 +126,15 @@ export function AgentColumnCard({
         )}
       </div>
 
-      <footer style={s.footer}>
-        <button type="button" className="mono" style={s.traceBtn} onClick={() => onViewTrace(column.run_id)}>
+      <footer className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+        <button
+          type="button"
+          className="mono cursor-pointer border-none bg-transparent p-0 text-ui text-muted-foreground"
+          onClick={() => onViewTrace(column.run_id)}>
           {t("viewTrace")}
         </button>
         {done && (
-          <span style={s.count}>
+          <span className="inline-flex items-center gap-2 text-xs text-subtle-foreground">
             <SeverityCountBadges counts={countBySeverity(column.findings)} />
             {t("findingsCount", { count: column.findings.length })}
           </span>

@@ -1,10 +1,14 @@
 "use client";
 
 import React from "react";
-import { Badge, Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { cn } from "@/lib/utils";
 import type { SpecFile } from "@/lib/types";
 import { buildDocumentTree, foldersContaining, type TreeNode } from "./helpers";
-import { s } from "./styles";
+
+/** Tree depth, passed to CSS as `--depth` for GitHub-sidebar-style indentation
+ *  (12px base + 16px per level; files get one extra level for the chevron). */
+const depthStyle = (depth: number) => ({ "--depth": depth }) as React.CSSProperties;
 
 /** GitHub-sidebar-style collapsible folder tree for the Project Context
  *  document list — groups the flat repo-relative path list by folder so a
@@ -43,27 +47,41 @@ export function DocumentTree({
       const doc = node.doc!;
       const active = doc.path === selectedPath;
       return (
-        <div key={node.path} style={s.fileRow(active, depth)} onClick={() => onSelect(doc.path)}>
-          <Icon.FileText size={14} style={s.fileIcon} />
-          <div style={s.filePathBox}>
-            <span style={s.filePath}>{node.name}</span>
+        <div
+          key={node.path}
+          onClick={() => onSelect(doc.path)}
+          aria-current={active ? "true" : undefined}
+          className={cn(
+            "flex min-w-0 cursor-pointer items-center gap-2 py-1.75 pr-3 pl-[calc(28px+var(--depth)*16px)]",
+            active ? "bg-brand-bg" : "hover:bg-accent",
+          )}
+          style={depthStyle(depth)}
+        >
+          <Icon.FileText size={14} className="shrink-0 text-subtle-foreground" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <span className="mono min-w-0 text-sm text-foreground wrap-anywhere break-words">{node.name}</span>
           </div>
-          {doc.locally_modified && <Badge color="var(--warn)" icon="AlertTriangle" />}
+          {doc.locally_modified && (
+            <span className="inline-flex rounded-sm bg-warn-bg p-0.75 text-warn">
+              <Icon.AlertTriangle size={12} aria-hidden />
+            </span>
+          )}
         </div>
       );
     }
 
     const isOpen = expanded.has(node.path);
+    const Chevron = isOpen ? Icon.ChevronDown : Icon.ChevronRight;
     return (
       <div key={node.path}>
-        <div style={s.folderRow(depth)} onClick={() => toggle(node.path)}>
-          {isOpen ? (
-            <Icon.ChevronDown size={14} style={s.folderChevron} />
-          ) : (
-            <Icon.ChevronRight size={14} style={s.folderChevron} />
-          )}
-          <Icon.Folder size={14} style={s.folderIcon} />
-          <span style={s.folderName}>{node.name}</span>
+        <div
+          onClick={() => toggle(node.path)}
+          className="flex min-w-0 cursor-pointer items-center gap-1.5 py-1.75 pr-3 pl-[calc(12px+var(--depth)*16px)] text-muted-foreground hover:bg-accent"
+          style={depthStyle(depth)}
+        >
+          <Chevron size={14} className="shrink-0 text-subtle-foreground" aria-hidden />
+          <Icon.Folder size={14} className="shrink-0 text-subtle-foreground" aria-hidden />
+          <span className="truncate text-sm font-semibold">{node.name}</span>
         </div>
         {isOpen && node.children?.map((child) => renderNode(child, depth + 1))}
       </div>

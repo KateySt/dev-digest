@@ -7,7 +7,7 @@
  * tab, suggestion card, Skills page) so the same slug is always the same
  * color everywhere (AC-12).
  *
- * Palette hues are chosen to exclude the ones `src/vendor/ui/styles.css`
+ * Palette hues are chosen to exclude the ones `src/app/globals.css`
  * already uses for severity/status badges — crit (red), warn (amber), sugg
  * (blue), info (gray), ok (green) — so a tag chip can never be misread as
  * one of those (AC-15). Each entry is a WCAG AA (>=4.5:1) text color against

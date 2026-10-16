@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { screen, cleanup, fireEvent } from "@testing-library/react";
+import { screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import type { PrMeta } from "@/lib/types";
 import { get, mockFetch, post, renderApp } from "@/test/eval-utils";
 import { ReviewAllButton } from "./ReviewAllButton";
@@ -52,7 +52,8 @@ describe("ReviewAllButton", () => {
     expect(trigger).not.toHaveFocus();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    // Radix restores focus to the opener on the next tick.
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("F1 / C-AC-17, C-AC-24: activating opens the dialog with counts, and nothing is posted until confirm", async () => {

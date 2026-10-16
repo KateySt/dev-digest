@@ -4,7 +4,9 @@
     "skillCount": "{count} skills",
     "runsCount": "{count, plural, one {# run} other {# runs}}",
     "acceptRate": "{pct}% accept",
-    "avgCost": "{cost} avg"
+    "avgCost": "{cost} avg",
+    "deleteLabel": "Delete agent",
+    "deleteConfirm": "Delete agent \"{name}\"? This cannot be undone."
   },
   "list": {
     "breadcrumbLab": "Skills Lab",
@@ -17,7 +19,8 @@
     "loadError": "Could not load agents.",
     "emptyTitle": "No agents yet",
     "emptyBody": "An agent is a configured reviewer — a model, a prompt, and the skills it uses. Create one to start reviewing.",
-    "emptyCta": "Create your first agent"
+    "emptyCta": "Create your first agent",
+    "searchLabel": "Search agents"
   },
   "create": {
     "title": "Create agent",
@@ -92,7 +95,8 @@
     "save": "Save agent",
     "saving": "Saving…",
     "saved": "Saved (v{version})",
-    "savedToast": "Agent saved (v{version})"
+    "savedToast": "Agent saved (v{version})",
+    "outputSchemaStandard": "Standard findings JSON"
   },
   "skills": {
     "title": "Skills",
@@ -150,5 +154,13 @@
   },
   "mount": {
     "body": "Mount point for {owner}. The Agent Editor shell + tab routing are wired by A2 — {owner} renders this tab."
+  },
+  "page": {
+    "fallbackName": "Agent",
+    "loadErrorTitle": "Couldn’t load this agent",
+    "loadErrorBody": "The agent could not be loaded.",
+    "add": "Add",
+    "disabled": "disabled",
+    "runOnPr": "Run on a PR…"
   }
 }

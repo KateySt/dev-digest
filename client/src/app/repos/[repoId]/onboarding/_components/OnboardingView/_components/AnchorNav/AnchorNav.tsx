@@ -9,11 +9,14 @@ import React from "react";
  */
 export function AnchorNav({ label, items }: { label: string; items: { id: string; label: string }[] }) {
   return (
-    <nav aria-label={label} style={s.nav}>
-      <ul style={s.list}>
+    <nav aria-label={label} className="sticky top-4 shrink-0">
+      <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
         {items.map((item) => (
           <li key={item.id}>
-            <a href={`#${item.id}`} style={s.link}>
+            <a
+              href={`#${item.id}`}
+              className="block rounded-md px-2.5 py-1.5 text-sm text-muted-foreground no-underline hover:bg-accent hover:text-foreground"
+            >
               {item.label}
             </a>
           </li>
@@ -22,18 +25,5 @@ export function AnchorNav({ label, items }: { label: string; items: { id: string
     </nav>
   );
 }
-
-const s = {
-  nav: { flexShrink: 0, position: "sticky", top: 16 } as React.CSSProperties,
-  list: { listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 } as React.CSSProperties,
-  link: {
-    display: "block",
-    padding: "6px 10px",
-    borderRadius: 6,
-    fontSize: 13,
-    color: "var(--text-secondary)",
-    textDecoration: "none",
-  } as React.CSSProperties,
-};
 
 export default AnchorNav;

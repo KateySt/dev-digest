@@ -4,11 +4,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Toggle } from "@devdigest/ui";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { NOTIFICATION_PREF_KEYS, notificationPrefs, useSettings, useUpdateSettings } from "@/lib/hooks";
 import { useDesktop } from "@/lib/desktop";
 import { SectionTitle } from "../SectionTitle";
-import { s } from "./styles";
 
 function PrefRow({
   label,
@@ -25,12 +25,17 @@ function PrefRow({
 }) {
   return (
     // A <label> names the switch button inside it and makes the whole row clickable.
-    <label style={{ ...s.row, opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? "none" : undefined }}>
-      <div style={s.text}>
-        <div style={s.label}>{label}</div>
-        <div style={s.hint}>{hint}</div>
+    <label
+      className={cn(
+        "flex cursor-pointer items-center gap-4 border-b border-border py-3.5",
+        disabled && "pointer-events-none opacity-50",
+      )}
+    >
+      <div className="flex-1">
+        <div className="text-base font-semibold text-foreground">{label}</div>
+        <div className="mt-0.75 text-sm leading-[1.45] text-muted-foreground">{hint}</div>
       </div>
-      <Toggle on={on} onChange={onChange} />
+      <Switch checked={on} onCheckedChange={onChange} disabled={disabled} />
     </label>
   );
 }
@@ -43,7 +48,7 @@ export function SettingsNotifications() {
   const prefs = notificationPrefs(settings);
 
   return (
-    <div style={s.wrap}>
+    <div className="max-w-[640px]">
       <SectionTitle title={t("title")} body={t("body")} />
       <PrefRow
         label={t("desktopLabel")}
@@ -58,7 +63,7 @@ export function SettingsNotifications() {
         disabled={!prefs.desktop}
         onChange={(v) => mutate({ [NOTIFICATION_PREF_KEYS.sound]: v })}
       />
-      {!desktop && <p style={s.note}>{t("browserNote")}</p>}
+      {!desktop && <p className="mt-4 text-ui text-subtle-foreground">{t("browserNote")}</p>}
     </div>
   );
 }

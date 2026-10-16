@@ -17,4 +17,20 @@ export const SCAN_SEVERITY_COLOR: Record<SkillScanSeverity, string> = {
   low: "var(--text-secondary)",
 };
 
+/** Badge variant (`ui/badge`) per skill type — same palette as SKILL_TYPE_COLOR. */
+export const SKILL_TYPE_BADGE: Record<SkillType, "brand" | "ok" | "crit" | "neutral"> = {
+  rubric: "brand",
+  convention: "ok",
+  security: "crit",
+  custom: "neutral",
+};
+
+/** Badge variant (`ui/badge`) per content-scan finding severity. */
+export const SCAN_SEVERITY_BADGE: Record<SkillScanSeverity, "crit" | "warn" | "neutral"> = {
+  critical: "crit",
+  high: "crit",
+  medium: "warn",
+  low: "neutral",
+};
+
 export const SKILL_TYPES: SkillType[] = ["rubric", "convention", "security", "custom"];

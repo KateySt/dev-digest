@@ -1,16 +1,26 @@
 "use client";
 
 import React from "react";
-import { Badge, Checkbox, Icon, Markdown, Skeleton } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Markdown } from "@/components/markdown";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useProjectContextDocument } from "@/lib/hooks/project-context";
 import type { SpecFile } from "@/lib/types";
-import { s } from "./styles";
+import { cn } from "@/lib/utils";
 
-const SOURCE_FOLDER_COLOR: Record<string, string> = {
-  specs: "var(--accent)",
-  docs: "var(--ok)",
-  insights: "var(--warn)",
+const SOURCE_FOLDER_TONE: Record<string, "brand" | "ok" | "warn"> = {
+  specs: "brand",
+  docs: "ok",
+  insights: "warn",
 };
+
+const REORDER_BTN =
+  "inline-flex cursor-pointer items-center justify-center border-none bg-transparent p-px text-subtle-foreground";
+/* Path text and tags get their own wrap room (client/INSIGHTS.md 2026-09-24) —
+   wrap/min-w-0 on the text's own box, never relying on the row's flex alone. */
+const TAG = "min-w-0 shrink-0 wrap-anywhere";
 
 export interface ContextDocumentRowLabels {
   preview: string;
@@ -73,14 +83,18 @@ export function ContextDocumentRow({
   const { data, isLoading } = useProjectContextDocument(repoId, previewOpen ? doc.path : null);
 
   return (
-    <div style={s.wrap}>
+    <div className="flex flex-col">
       <div
         draggable={draggable}
         onDragStart={draggable ? onDragStart : undefined}
         onDragOver={draggable ? onDragOver : undefined}
         onDrop={draggable ? onDrop : undefined}
         onDragEnd={draggable ? onDragEnd : undefined}
-        style={s.row(dragging, dragOver)}
+        className={cn(
+          "flex min-w-0 items-center gap-2.5 rounded-lg border bg-surface px-2.5 py-2.25",
+          dragOver ? "border-primary" : "border-border",
+          dragging && "opacity-50",
+        )}
       >
         {/* A real (if inert) widget, not a decorative icon: `aria-disabled`
             (never `aria-hidden`, which would remove it from the
@@ -93,54 +107,61 @@ export function ContextDocumentRow({
           aria-disabled={!draggable}
           aria-label={draggable ? labels.dragHandleLabel(doc.path) : labels.dragHandleInertLabel}
           title={draggable ? labels.dragHandleLabel(doc.path) : labels.dragHandleInertLabel}
-          style={s.handle(draggable)}
+          className={cn(
+            "inline-flex shrink-0 text-subtle-foreground",
+            draggable ? "cursor-grab" : "cursor-not-allowed opacity-35",
+          )}
         >
-          <Icon.Menu size={14} />
+          <Icon.Menu size={14} aria-hidden />
         </span>
         {(onMoveUp || onMoveDown) && (
-          <span style={s.reorderButtons}>
+          <span className="inline-flex shrink-0 flex-col gap-px">
             <button
               type="button"
               onClick={onMoveUp}
               disabled={!onMoveUp}
               aria-label={labels.moveUp}
-              style={{ ...s.iconBtn, visibility: onMoveUp ? "visible" : "hidden" }}
+              className={cn(REORDER_BTN, !onMoveUp && "invisible")}
             >
-              <Icon.ArrowUp size={12} />
+              <Icon.ArrowUp size={12} aria-hidden />
             </button>
             <button
               type="button"
               onClick={onMoveDown}
               disabled={!onMoveDown}
               aria-label={labels.moveDown}
-              style={{ ...s.iconBtn, visibility: onMoveDown ? "visible" : "hidden" }}
+              className={cn(REORDER_BTN, !onMoveDown && "invisible")}
             >
-              <Icon.ArrowDown size={12} />
+              <Icon.ArrowDown size={12} aria-hidden />
             </button>
           </span>
         )}
-        <Checkbox checked={checked} onChange={onToggle} />
-        <div style={s.pathBox}>
-          <span style={s.path}>{doc.path}</span>
+        <Checkbox checked={checked} onCheckedChange={(v) => onToggle(v === true)} aria-label={doc.path} />
+        <div className="min-w-0 flex-1">
+          <span className="mono min-w-0 text-sm font-medium break-words wrap-anywhere">{doc.path}</span>
         </div>
         {doc.source_folder && (
-          <Badge color={SOURCE_FOLDER_COLOR[doc.source_folder] ?? "var(--text-secondary)"} style={s.tagBadge}>
+          <Badge variant={SOURCE_FOLDER_TONE[doc.source_folder] ?? "neutral"} className={TAG}>
             {doc.source_folder}
           </Badge>
         )}
-        {doc.locally_modified && <Badge color="var(--warn)" icon="AlertTriangle" style={s.tagBadge} />}
+        {doc.locally_modified && (
+          <Badge variant="warn" className={TAG}>
+            <Icon.AlertTriangle aria-hidden />
+          </Badge>
+        )}
         <button
           type="button"
           onClick={() => setPreviewOpen((o) => !o)}
           aria-expanded={previewOpen}
-          style={s.previewBtn}
+          className="shrink-0 cursor-pointer rounded-md border border-border bg-transparent px-2.25 py-1 text-xs font-semibold text-brand-text"
         >
           {labels.preview}
         </button>
       </div>
       {previewOpen && (
-        <div style={s.previewPane}>
-          {isLoading || data === undefined ? <Skeleton height={60} /> : <Markdown>{data.content ?? ""}</Markdown>}
+        <div className="mt-1 max-h-65 overflow-auto rounded-lg border border-border bg-code-bg px-3.5 py-2.5 text-sm">
+          {isLoading || data === undefined ? <Skeleton className="h-15 w-full" /> : <Markdown>{data.content ?? ""}</Markdown>}
         </div>
       )}
     </div>

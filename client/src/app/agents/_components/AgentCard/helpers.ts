@@ -1,10 +1,10 @@
 import type { AgentPerfRow } from "@devdigest/shared";
 import { formatRunCost } from "../../../../components/run-cost-badge";
-import { MODEL_COLOR } from "./constants";
+import { MODEL_CHIP, MODEL_CHIP_FALLBACK } from "./constants";
 
-/** Resolve the chip colour for an agent's model (unknown → secondary token). */
-export function modelColor(model: string): string {
-  return MODEL_COLOR[model] ?? "var(--text-secondary)";
+/** Chip classes for an agent's model (unknown → neutral). */
+export function modelChipClass(model: string): string {
+  return MODEL_CHIP[model] ?? MODEL_CHIP_FALLBACK;
 }
 
 /** "142 runs · 78% accept · $0.04 avg" — omits accept-rate/avg-cost when

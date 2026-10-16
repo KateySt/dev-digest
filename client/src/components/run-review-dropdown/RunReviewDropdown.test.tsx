@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../messages/en/prReview.json";
+import common from "../../../messages/en/common.json";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -16,6 +17,7 @@ vi.mock("@/lib/hooks/reviews", () => ({
 
 import { ApiError } from "@/lib/api";
 import { ToastProvider } from "@/lib/contexts";
+import { openMenu } from "@/test/radix";
 import { RunReviewDropdown } from "./RunReviewDropdown";
 
 afterEach(() => {
@@ -25,7 +27,7 @@ afterEach(() => {
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
       <ToastProvider>{ui}</ToastProvider>
     </NextIntlClientProvider>,
   );
@@ -40,7 +42,7 @@ describe("RunReviewDropdown (smoke)", () => {
 
 describe("RunReviewDropdown: 409 review_in_progress", () => {
   const runAll = () => {
-    fireEvent.click(screen.getByText("Run Review"));
+    openMenu(screen.getByText("Run Review").closest("button")!);
     fireEvent.click(screen.getByText("Run all enabled agents"));
   };
 

@@ -2,14 +2,18 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Checkbox } from "@devdigest/ui";
 import type { EvalSuiteRun, SkillEvalSuiteRun } from "@devdigest/shared";
 import { MetricBar, RunStatusChip } from "@/components/eval-metrics";
 import { formatRunCost } from "@/components/run-cost-badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { METRICS, formatRanAt, runVersion } from "@/lib/eval";
-import { s } from "../styles";
+import { cn } from "@/lib/utils";
 
 type Run = EvalSuiteRun | SkillEvalSuiteRun;
+
+const TH =
+  "border-b border-border p-3 text-left text-2xs font-bold tracking-[0.05em] whitespace-nowrap text-subtle-foreground uppercase";
+const TD = "border-b border-border px-3 py-2.75 align-middle text-sm text-muted-foreground";
 
 /** Recent-runs table: keyboard-operable checkbox · ran at · version · (optional
  *  model) · three metric bars · pass x/y · cost · status. The version comes from
@@ -41,12 +45,12 @@ export function RunsTable({
   ] as const;
 
   return (
-    <table style={s.table}>
+    <table className="w-full border-collapse">
       <thead>
         <tr>
           {columns.map((c) => (
-            <th key={c} scope="col" style={s.th}>
-              {c === "select" ? <span style={s.srOnly}>{t("runs.columns.select")}</span> : t(`runs.columns.${c}`)}
+            <th key={c} scope="col" className={TH}>
+              {c === "select" ? <span className="sr-only">{t("runs.columns.select")}</span> : t(`runs.columns.${c}`)}
             </th>
           ))}
         </tr>
@@ -57,38 +61,32 @@ export function RunsTable({
           const version = runVersion(r);
           const isSelected = selected.includes(r.id);
           return (
-            <tr key={r.id} style={isSelected ? s.trSelected : undefined}>
-              <td style={s.td}>
+            <tr key={r.id} data-selected={isSelected || undefined} className={cn(isSelected && "bg-accent")}>
+              <td className={TD}>
                 <Checkbox
                   checked={isSelected}
-                  onChange={() => onToggle(r.id)}
-                  label={<span style={s.srOnly}>{t("runs.selectRun", { version: version ?? "?", ranAt })}</span>}
+                  onCheckedChange={() => onToggle(r.id)}
+                  aria-label={t("runs.selectRun", { version: version ?? "?", ranAt })}
                 />
               </td>
-              <td className="mono" style={s.td}>
-                {ranAt}
-              </td>
-              <td className="mono" style={{ ...s.td, color: "var(--accent)" }}>
-                v{version ?? "?"}
-              </td>
+              <td className={cn("mono", TD)}>{ranAt}</td>
+              <td className={cn("mono text-primary", TD)}>v{version ?? "?"}</td>
               {showModel && (
-                <td className="mono" style={{ ...s.td, overflowWrap: "anywhere", minWidth: 0 }}>
-                  {"model" in r && r.model ? r.model : "—"}
-                </td>
+                <td className={cn("mono min-w-0 wrap-anywhere", TD)}>{"model" in r && r.model ? r.model : "—"}</td>
               )}
               {METRICS.map((m) => (
-                <td key={m.key} style={s.td}>
-                  <MetricBar value={r[m.key]} color={m.color} barWidth={64} />
+                <td key={m.key} className={TD}>
+                  <MetricBar value={r[m.key]} metric={m.key} barWidth={64} />
                 </td>
               ))}
-              <td className="tnum" style={{ ...s.td, fontWeight: 700, color: "var(--text-primary)" }}>
+              <td className={cn("tnum", TD, "font-bold text-foreground")}>
                 {r.status === "running" ? `${r.cases_done}/${r.cases_total}` : `${r.passed_count}/${r.evaluated_count}`}
-                {r.errored_count > 0 && <div style={s.erroredNote}>{t("runs.errored", { count: r.errored_count })}</div>}
+                {r.errored_count > 0 && (
+                  <div className="text-2xs font-medium text-warn">{t("runs.errored", { count: r.errored_count })}</div>
+                )}
               </td>
-              <td className="mono" style={s.td}>
-                {r.cost_usd != null ? formatRunCost(r.cost_usd) : "—"}
-              </td>
-              <td style={s.td}>
+              <td className={cn("mono", TD)}>{r.cost_usd != null ? formatRunCost(r.cost_usd) : "—"}</td>
+              <td className={TD}>
                 <RunStatusChip status={r.status} />
               </td>
             </tr>

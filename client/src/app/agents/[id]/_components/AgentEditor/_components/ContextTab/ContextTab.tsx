@@ -3,7 +3,10 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Badge, ErrorState, Icon, Skeleton } from "@devdigest/ui";
+import { ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent } from "@devdigest/shared";
 import { ContextDocumentRow } from "@/components/context-document-row";
 import { useActiveRepo } from "@/lib/contexts";
@@ -14,13 +17,14 @@ import {
   useSetAgentContextDocuments,
 } from "@/lib/hooks/project-context";
 import { filterDocuments, initialOrder, reorder, tokenTotal } from "./helpers";
-import { s } from "./styles";
 
 /** Agent editor's Context tab (C-AC-13..20) — attach/detach/reorder the
  *  active repo's discovered documents. Mirrors SkillsTab.tsx's shape (drag
  *  handle/checkbox/filter/whole-set-replace) with `@/` imports and the
  *  shared `ContextDocumentRow`. Saves are optimistic-on-action, same idiom
  *  as SkillsTab — no separate Save button. */
+const EMPTY = "py-6 text-center text-sm text-subtle-foreground";
+
 export function ContextTab({ agent }: { agent: Agent }) {
   const t = useTranslations("agents");
   const { repoId } = useActiveRepo();
@@ -105,9 +109,9 @@ export function ContextTab({ agent }: { agent: Agent }) {
 
   if (isLoading || order === null) {
     return (
-      <div style={s.wrap}>
-        <Skeleton height={40} />
-        <Skeleton height={200} />
+      <div className="flex max-w-[760px] flex-col gap-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-50 w-full" />
       </div>
     );
   }
@@ -120,30 +124,31 @@ export function ContextTab({ agent }: { agent: Agent }) {
   const { tokens, estimated } = tokenTotal(attachedDocs);
 
   return (
-    <div style={s.wrap}>
-      <div style={s.header}>
-        <h2 style={s.h2}>{t("context.title")}</h2>
-        <Badge color="var(--accent)">
+    <div className="max-w-[760px]">
+      <div className="mb-4 flex items-center gap-2.5">
+        <h2 className="text-xl font-bold">{t("context.title")}</h2>
+        <Badge variant="brand">
           {t("context.attachedBadge", { linked: attachedPaths.size, total: documents.length })}
         </Badge>
       </div>
 
-      <div style={s.filter}>
-        <Icon.Search size={13} style={s.filterIcon} />
+      <div className="mb-4 flex items-center gap-2.5 rounded-[7px] border border-border bg-surface px-3 py-2">
+        <Icon.Search size={13} className="text-subtle-foreground" aria-hidden />
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={t("context.filterPlaceholder")}
-          style={s.filterInput}
+          aria-label={t("context.filterPlaceholder")}
+          className="flex-1 border-none bg-transparent text-sm text-foreground outline-none"
         />
       </div>
 
       {documents.length === 0 ? (
-        <div style={s.empty}>{t("context.empty")}</div>
+        <div className={EMPTY}>{t("context.empty")}</div>
       ) : rows.length === 0 ? (
-        <div style={s.empty}>{t("context.noMatch")}</div>
+        <div className={EMPTY}>{t("context.noMatch")}</div>
       ) : (
-        <div style={s.list}>
+        <div className="flex flex-col gap-1.5">
           {rows.map((path, i) => {
             const doc = byPath.get(path)!;
             return (
@@ -181,17 +186,18 @@ export function ContextTab({ agent }: { agent: Agent }) {
         </div>
       )}
 
-      <div style={s.footerRow}>
-        <span style={s.footerTokens}>
+      <div className="mt-4 flex items-center gap-2">
+        <span className="text-xs text-subtle-foreground wrap-anywhere">
           {t(estimated ? "context.tokenTotalEstimated" : "context.tokenTotal", { tokens })}
         </span>
         {estimated && (
-          <Badge color="var(--info)" icon="Info">
+          <Badge variant="info">
+            <Icon.Info aria-hidden />
             {t("context.estimatedBadge")}
           </Badge>
         )}
       </div>
-      <p style={s.footerNote}>{t("context.footerNote")}</p>
+      <p className="mt-1 text-xs text-subtle-foreground">{t("context.footerNote")}</p>
     </div>
   );
 }

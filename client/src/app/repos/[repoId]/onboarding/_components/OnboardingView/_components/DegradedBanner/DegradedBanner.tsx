@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
 import type { OnboardingIndexDegradedReason, OnboardingModelFailureReason } from "@/lib/types";
 
 /**
@@ -23,50 +23,29 @@ export function DegradedBanner({
   if (!indexReason && !modelReason) return null;
 
   return (
-    <div style={s.wrap}>
+    <div className="mb-4.5 flex flex-col gap-2.5">
       {indexReason && (
-        <div role="alert" style={s.banner}>
-          <div style={s.title}>
-            <Icon.AlertTriangle size={14} />
+        <div role="alert" className="rounded-lg border border-warn bg-warn-bg px-3.5 py-2.5">
+          <div className="mb-1 flex items-center gap-1.5 text-sm font-bold text-warn">
+            <Icon.AlertTriangle size={14} aria-hidden />
             {t("index.title")}
           </div>
-          <div style={s.body}>{t(`index.reason.${indexReason}`)}</div>
-          <div style={s.remedy}>{t("index.remedy")}</div>
+          <div className="text-sm text-muted-foreground">{t(`index.reason.${indexReason}`)}</div>
+          <div className="mt-1 text-ui text-subtle-foreground">{t("index.remedy")}</div>
         </div>
       )}
       {modelReason && (
-        <div role="alert" style={s.banner}>
-          <div style={s.title}>
-            <Icon.AlertTriangle size={14} />
+        <div role="alert" className="rounded-lg border border-warn bg-warn-bg px-3.5 py-2.5">
+          <div className="mb-1 flex items-center gap-1.5 text-sm font-bold text-warn">
+            <Icon.AlertTriangle size={14} aria-hidden />
             {t("model.title")}
           </div>
-          <div style={s.body}>{t(`model.reason.${modelReason}`)}</div>
-          <div style={s.remedy}>{t("model.remedy")}</div>
+          <div className="text-sm text-muted-foreground">{t(`model.reason.${modelReason}`)}</div>
+          <div className="mt-1 text-ui text-subtle-foreground">{t("model.remedy")}</div>
         </div>
       )}
     </div>
   );
 }
-
-const s = {
-  wrap: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 } as React.CSSProperties,
-  banner: {
-    padding: "10px 14px",
-    borderRadius: 8,
-    border: "1px solid var(--warn)",
-    background: "var(--warn-bg)",
-  } as React.CSSProperties,
-  title: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 13,
-    fontWeight: 700,
-    color: "var(--warn)",
-    marginBottom: 4,
-  } as React.CSSProperties,
-  body: { fontSize: 13, color: "var(--text-secondary)" } as React.CSSProperties,
-  remedy: { fontSize: 12.5, color: "var(--text-muted)", marginTop: 4 } as React.CSSProperties,
-};
 
 export default DegradedBanner;

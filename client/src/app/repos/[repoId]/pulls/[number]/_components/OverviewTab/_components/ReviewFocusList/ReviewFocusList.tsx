@@ -15,10 +15,16 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Card, EmptyState, Icon, MonoLink, SectionLabel } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { MonoLink } from "@/components/mono-link";
+import { SectionLabel } from "@/components/section-label";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { FindingRecord } from "@devdigest/shared";
 import { topFindings } from "./helpers";
-import { s } from "./styles";
+
+const CARD = "rounded-lg border border-border bg-elevated p-(--card-pad)";
 
 export function ReviewFocusList({
   findings,
@@ -45,25 +51,25 @@ export function ReviewFocusList({
 
   if (findings === null) {
     return (
-      <Card>
+      <div className={CARD}>
         <SectionLabel icon="ListChecks">{t("block.reviewFocus")}</SectionLabel>
         <EmptyState icon="ListChecks" title={t("unavailable")} body={t("unavailableHint")} />
-      </Card>
+      </div>
     );
   }
 
   const top = topFindings(findings);
 
   return (
-    <Card>
-      <SectionLabel icon="ListChecks" right={<Badge>{top.length}</Badge>}>
+    <div className={CARD}>
+      <SectionLabel icon="ListChecks" right={<Badge variant="neutral">{top.length}</Badge>}>
         {t("block.reviewFocus")}
       </SectionLabel>
 
       {top.length === 0 ? (
-        <div style={s.placeholderHint}>{t("reviewFocusEmpty")}</div>
+        <div className="rounded-lg border border-border bg-elevated px-4 py-3.25 text-sm text-subtle-foreground">{t("reviewFocusEmpty")}</div>
       ) : (
-        <div style={s.wrap}>
+        <div className="flex flex-col gap-1.5">
           {top.map((finding: FindingRecord) => {
             const key = finding.id;
             const isOpen = expanded.has(key);
@@ -78,11 +84,21 @@ export function ReviewFocusList({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") toggle(key);
                   }}
-                  style={s.row(isOpen)}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-2 rounded-lg border border-border px-3 py-2.25",
+                    isOpen ? "bg-accent" : "bg-elevated",
+                  )}
                 >
-                  <Icon.ChevronRight size={14} aria-hidden style={s.chevron(isOpen)} />
-                  <div style={s.content}>
-                    <div style={s.fileRef}>
+                  {/* Right-pointing when collapsed, rotates open (unlike BlastTree's down-chevron). */}
+                  <Icon.ChevronRight
+                    size={14}
+                    aria-hidden
+                    className={cn("mt-0.5 shrink-0 text-subtle-foreground transition-transform duration-150", isOpen && "rotate-90")}
+                  />
+                  {/* File ref and description stacked so the description gets the full row width. */}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {/* file:line has no spaces; let it break instead of overflowing (client/INSIGHTS.md). */}
+                    <div className="min-w-0 wrap-anywhere break-words">
                       <MonoLink
                         onClick={(e?: React.MouseEvent) => {
                           e?.stopPropagation();
@@ -92,16 +108,16 @@ export function ReviewFocusList({
                         {finding.file}:{finding.start_line}
                       </MonoLink>
                     </div>
-                    <div style={s.descriptionRow}>
-                      <span style={s.dash}>—</span>
-                      <span style={s.description}>{finding.title}</span>
+                    <div className="flex min-w-0 gap-1.5">
+                      <span className="shrink-0 text-sm text-subtle-foreground">—</span>
+                      <span className="min-w-0 text-sm leading-normal text-muted-foreground">{finding.title}</span>
                     </div>
                   </div>
                 </div>
 
                 {isOpen && (
-                  <div style={s.detail}>
-                    <p style={s.detailText}>{finding.rationale}</p>
+                  <div className="mt-1 ml-5.5 rounded-lg border border-border bg-surface px-3 py-2.5">
+                    <p className="m-0 text-sm leading-[1.55] text-muted-foreground">{finding.rationale}</p>
                   </div>
                 )}
               </div>
@@ -109,6 +125,6 @@ export function ReviewFocusList({
           })}
         </div>
       )}
-    </Card>
+    </div>
   );
 }

@@ -8,7 +8,6 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@devdigest/shared": path.resolve(__dirname, "src/vendor/shared"),
-      "@devdigest/ui": path.resolve(__dirname, "src/vendor/ui"),
     },
   },
   test: {

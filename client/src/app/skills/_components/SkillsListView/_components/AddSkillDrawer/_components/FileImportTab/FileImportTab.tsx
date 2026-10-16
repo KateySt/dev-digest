@@ -2,13 +2,18 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Select, TextInput, Textarea } from "@devdigest/ui";
 import type { SkillType } from "@devdigest/shared";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { SelectField } from "@/components/select-field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/contexts";
 import { SKILL_TYPES } from "@/lib/skill-constants";
+import { FORM } from "../../constants";
 import { nameFromMarkdown } from "../../helpers";
-import { s } from "../../styles";
 
 /** From-file tab — reads the File client-side, no dedicated fetch hook.
  *  Always global (no project picker here — client spec non-goal: project
@@ -17,6 +22,7 @@ export function FileImportTab({ onClose }: { onClose: () => void }) {
   const t = useTranslations("skills");
   const toast = useToast();
   const create = useCreateSkill();
+  const id = React.useId();
   const [name, setName] = React.useState("");
   const [type, setType] = React.useState<SkillType>("custom");
   const [body, setBody] = React.useState("");
@@ -41,9 +47,10 @@ export function FileImportTab({ onClose }: { onClose: () => void }) {
     );
 
   return (
-    <div style={s.form}>
-      <FormField label="File">
+    <div className={FORM}>
+      <FormField label={t("file.fileLabel")} htmlFor={`${id}-file`}>
         <input
+          id={`${id}-file`}
           type="file"
           accept=".md,.markdown,.txt"
           onChange={(e) => {
@@ -52,16 +59,34 @@ export function FileImportTab({ onClose }: { onClose: () => void }) {
           }}
         />
       </FormField>
-      <FormField label={t("file.nameLabel")} hint={t("file.nameHint")}>
-        <TextInput value={name} onChange={setName} placeholder={t("file.namePlaceholder")} />
+      <FormField label={t("file.nameLabel")} hint={t("file.nameHint")} htmlFor={`${id}-name`}>
+        <Input
+          id={`${id}-name`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("file.namePlaceholder")}
+        />
       </FormField>
       <FormField label={t("preview.typeLabel")}>
-        <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+        <SelectField
+          value={type}
+          onChange={(v) => setType(v as SkillType)}
+          options={typeOptions}
+          ariaLabel={t("preview.typeLabel")}
+        />
       </FormField>
-      <FormField label={t("file.bodyLabel")} hint={t("file.bodyHint")}>
-        <Textarea value={body} onChange={setBody} rows={10} mono placeholder={t("file.bodyPlaceholder")} />
+      <FormField label={t("file.bodyLabel")} hint={t("file.bodyHint")} htmlFor={`${id}-body`}>
+        <Textarea
+          id={`${id}-body`}
+          className="mono"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={10}
+          placeholder={t("file.bodyPlaceholder")}
+        />
       </FormField>
-      <Button kind="primary" icon="Upload" onClick={submit} disabled={!body.trim() || create.isPending}>
+      <Button onClick={submit} disabled={!body.trim() || create.isPending}>
+        {create.isPending ? <Icon.Loader className="animate-spin" aria-hidden /> : <Icon.Upload aria-hidden />}
         {create.isPending ? t("file.importing") : t("file.import")}
       </Button>
     </div>

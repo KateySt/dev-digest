@@ -2,16 +2,27 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, ErrorState, Skeleton } from "@devdigest/ui";
 import type { ConventionCandidate, ConventionStatus } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveRepo } from "@/lib/contexts";
 import { useConventions, useExtractConventions, useUpdateConvention } from "@/lib/hooks/conventions";
 import { ConventionCard } from "./_components/ConventionCard";
 import { CreateSkillModal } from "./_components/CreateSkillModal";
 import { UsedSkillGroup } from "./_components/UsedSkillGroup";
 import { groupConventions, pruneSelection } from "./helpers";
-import { s } from "./styles";
+
+const PAGE = "mx-auto max-w-[920px] px-7 pt-6 pb-11";
+const SECTION = "mb-7 flex flex-col gap-3";
+const SECTION_HEADER = "flex items-center gap-3";
+const H2 = "m-0 text-md font-semibold";
+const COUNT = "text-sm text-subtle-foreground";
+const LIST = "flex flex-col gap-3.5";
+const LINK_BUTTON =
+  "cursor-pointer border-none bg-transparent p-0 text-sm text-muted-foreground underline disabled:cursor-default disabled:opacity-50";
 
 export function ConventionsView() {
   const t = useTranslations("conventions");
@@ -31,7 +42,7 @@ export function ConventionsView() {
   if (reposLoaded && !repoId) {
     return (
       <AppShell crumb={crumb}>
-        <div style={s.page}>
+        <div className={PAGE}>
           <EmptyState icon="GitBranch" title={t("page.noRepo.title")} body={t("page.noRepo.body")} />
         </div>
       </AppShell>
@@ -90,31 +101,23 @@ export function ConventionsView() {
           onCreated={clearSelection}
         />
       )}
-      <div style={s.page}>
-        <div style={s.header}>
-          <div style={s.headerText}>
-            <h1 style={s.h1}>
+      <div className={PAGE}>
+        <div className="mb-1.5 flex items-start gap-3.5">
+          <div className="flex-1">
+            <h1 className="text-4xl font-bold tracking-[-0.02em]">
               {t("page.headingPrefix")}
               {activeRepo?.full_name ?? t("page.repoFallback")}
             </h1>
-            <p style={s.subtitle}>{t("page.subtitle")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("page.subtitle")}</p>
           </div>
-          <div style={s.headerActions}>
-            <Button
-              kind="secondary"
-              icon="RefreshCw"
-              onClick={runExtraction}
-              disabled={extract.isPending || !repoId}
-            >
+          <div className="flex shrink-0 gap-2.5">
+            <Button variant="secondary" onClick={runExtraction} disabled={extract.isPending || !repoId}>
+              <Icon.RefreshCw className={extract.isPending ? "animate-dd-spin" : undefined} aria-hidden />
               {extract.isPending ? t("page.scanning") : hasScanned ? t("page.rescan") : t("page.runExtraction")}
             </Button>
             {groups.ready.length > 0 && (
-              <Button
-                kind="primary"
-                icon="Sparkles"
-                onClick={() => setModalRepoId(repoId)}
-                disabled={selectedList.length === 0}
-              >
+              <Button onClick={() => setModalRepoId(repoId)} disabled={selectedList.length === 0}>
+                <Icon.Sparkles aria-hidden />
                 {t("page.createSkill", { count: selectedList.length })}
               </Button>
             )}
@@ -124,10 +127,10 @@ export function ConventionsView() {
         {extract.isError && <ErrorState body={t("page.extractionFailed")} onRetry={runExtraction} />}
 
         {isLoading && (
-          <div style={s.list}>
-            <Skeleton height={140} />
-            <Skeleton height={140} />
-            <Skeleton height={140} />
+          <div className={LIST}>
+            <Skeleton className="h-35 w-full" />
+            <Skeleton className="h-35 w-full" />
+            <Skeleton className="h-35 w-full" />
           </div>
         )}
 
@@ -145,44 +148,44 @@ export function ConventionsView() {
 
         {!isLoading && !isError && list.length > 0 && (
           <>
-            <div style={s.toolbar}>
-              <div style={s.toolbarLeft}>
-                <span style={s.candidateCount}>{t("page.candidateCount", { count: list.length })}</span>
-                <span style={s.candidateCount}>
+            <div className="mt-4.5 mb-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className={COUNT}>{t("page.candidateCount", { count: list.length })}</span>
+                <span className={COUNT}>
                   {t("page.acceptedCount", { ready: groups.ready.length, used: usedCount })}
                 </span>
               </div>
             </div>
 
             {groups.ready.length > 0 && (
-              <section style={s.section} aria-label={t("sections.ready")}>
-                <div style={s.sectionHeader}>
-                  <h2 style={s.h2}>{t("sections.ready")}</h2>
-                  <span style={s.candidateCount}>{t("selection.count", { count: selectedList.length })}</span>
-                  <div style={s.sectionActions}>
-                    <button style={s.linkButton} onClick={selectAll}>
+              <section className={SECTION} aria-label={t("sections.ready")}>
+                <div className={SECTION_HEADER}>
+                  <h2 className={H2}>{t("sections.ready")}</h2>
+                  <span className={COUNT}>{t("selection.count", { count: selectedList.length })}</span>
+                  <div className="ml-auto flex gap-3">
+                    <button type="button" className={LINK_BUTTON} onClick={selectAll}>
                       {t("selection.selectAll")}
                     </button>
-                    <button style={s.linkButton} onClick={clearSelection} disabled={selectedList.length === 0}>
+                    <button type="button" className={LINK_BUTTON} onClick={clearSelection} disabled={selectedList.length === 0}>
                       {t("selection.clear")}
                     </button>
                   </div>
                 </div>
-                <p style={s.sectionHint}>{t("sections.readyHint")}</p>
-                <div style={s.list}>{groups.ready.map((c) => card(c, true))}</div>
+                <p className="m-0 text-sm text-muted-foreground">{t("sections.readyHint")}</p>
+                <div className={LIST}>{groups.ready.map((c) => card(c, true))}</div>
               </section>
             )}
 
             {groups.toReview.length > 0 && (
-              <section style={s.section} aria-label={t("sections.toReview")}>
-                <h2 style={s.h2}>{t("sections.toReview")}</h2>
-                <div style={s.list}>{groups.toReview.map((c) => card(c))}</div>
+              <section className={SECTION} aria-label={t("sections.toReview")}>
+                <h2 className={H2}>{t("sections.toReview")}</h2>
+                <div className={LIST}>{groups.toReview.map((c) => card(c))}</div>
               </section>
             )}
 
             {groups.used.length > 0 && (
-              <section style={s.section} aria-label={t("sections.used")}>
-                <h2 style={s.h2}>{t("sections.used")}</h2>
+              <section className={SECTION} aria-label={t("sections.used")}>
+                <h2 className={H2}>{t("sections.used")}</h2>
                 {groups.used.map((g) => (
                   <UsedSkillGroup key={g.skill.id} skill={g.skill} items={g.items} renderItem={(c) => card(c)} />
                 ))}
@@ -190,18 +193,19 @@ export function ConventionsView() {
             )}
 
             {groups.rejected.length > 0 && (
-              <section style={s.section} aria-label={t("sections.rejected", { count: groups.rejected.length })}>
-                <div style={s.sectionHeader}>
-                  <h2 style={s.h2}>{t("sections.rejected", { count: groups.rejected.length })}</h2>
+              <section className={SECTION} aria-label={t("sections.rejected", { count: groups.rejected.length })}>
+                <div className={SECTION_HEADER}>
+                  <h2 className={H2}>{t("sections.rejected", { count: groups.rejected.length })}</h2>
                   <button
-                    style={s.linkButton}
+                    type="button"
+                    className={LINK_BUTTON}
                     onClick={() => setShowRejected((v) => !v)}
                     aria-expanded={showRejected}
                   >
                     {showRejected ? t("sections.hideRejected") : t("sections.showRejected")}
                   </button>
                 </div>
-                {showRejected && <div style={s.list}>{groups.rejected.map((c) => card(c))}</div>}
+                {showRejected && <div className={LIST}>{groups.rejected.map((c) => card(c))}</div>}
               </section>
             )}
           </>

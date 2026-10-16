@@ -10,11 +10,9 @@
   "unknownError": "Unknown error",
   "generateFailed": "Couldn't start generation: {message}",
   "generateTimedOut": "Generation didn't finish in time. Try regenerating.",
-
   "anchorNav": {
     "label": "Sections"
   },
-
   "sections": {
     "architecture": {
       "heading": "Architecture overview",
@@ -42,12 +40,10 @@
       "empty": "No starter-task suggestions are available for this tour."
     }
   },
-
   "collapse": {
     "expand": "Expand {section}",
     "collapse": "Collapse {section}"
   },
-
   "empty": {
     "noTour": {
       "title": "No onboarding tour yet",
@@ -58,7 +54,6 @@
       "body": "The onboarding tour needs a local clone of the repo to read its files. Once the repo finishes cloning, come back here to generate the tour."
     }
   },
-
   "degraded": {
     "index": {
       "title": "Index coverage is degraded",
@@ -81,8 +76,21 @@
       "remedy": "The facts below (reading path, critical paths, run commands) are still accurate — try Regenerate to get the written sections."
     }
   },
-
   "loadError": {
     "title": "Couldn't load the onboarding tour"
+  },
+  "addRepo": {
+    "brand": "DevDigest",
+    "close": "Close",
+    "title": "Add a repository",
+    "body": "Paste a GitHub repository URL — DevDigest clones it locally and imports open PRs. API keys aren’t needed here; set them once in <settings>Settings → API Keys</settings>.",
+    "urlLabel": "Repository URL",
+    "urlHint": "e.g. https://github.com/acme/payments-api",
+    "urlPlaceholder": "https://github.com/owner/repo",
+    "failed": "Could not add repository",
+    "cancel": "Cancel",
+    "adding": "Cloning…",
+    "add": "Add repository",
+    "footer": "API keys live in Settings · <kbd>esc</kbd> to close"
   }
 }

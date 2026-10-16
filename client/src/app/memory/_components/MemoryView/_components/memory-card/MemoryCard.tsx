@@ -4,10 +4,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Markdown } from "@devdigest/ui";
+import { Markdown } from "@/components/markdown";
+import { cn } from "@/lib/utils";
 import type { Memory } from "@devdigest/shared";
+import { CONFIDENCE_TONE_CLASS, MEMORY_CLASSES as M } from "../../constants";
 import { confidenceTone, usedLabel } from "../../helpers";
-import { s } from "../../styles";
 
 export function MemoryCard({
   m,
@@ -29,7 +30,10 @@ export function MemoryCard({
       role="button"
       tabIndex={0}
       aria-pressed={selected}
-      style={s.card(selected)}
+      className={cn(
+        "flex w-full cursor-pointer flex-col gap-2.5 rounded-xl border bg-surface px-4 py-3.5 text-left [font:inherit] text-inherit",
+        selected ? "border-primary" : "border-border",
+      )}
       onClick={() => onSelect(m.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -38,27 +42,27 @@ export function MemoryCard({
         }
       }}
     >
-      <div style={s.cardTop}>
-        <span style={s.badge}>{t(`kind.${m.kind}`)}</span>
-        <span style={s.badge}>{t(`scope.${m.scope}`)}</span>
-        {m.unlinked && <span style={s.warnBadge}>{t("card.unlinked")}</span>}
-        {m.stale && <span style={s.badge}>{t("card.stale")}</span>}
-        {m.archived_at && <span style={s.badge}>{t("card.archived")}</span>}
-        <span style={s.conf(tone)} title={t("detail.stat.confidence")}>
-          <span style={s.dot(tone)} />
+      <div className="flex items-center gap-2">
+        <span className={M.badge}>{t(`kind.${m.kind}`)}</span>
+        <span className={M.badge}>{t(`scope.${m.scope}`)}</span>
+        {m.unlinked && <span className={M.warnBadge}>{t("card.unlinked")}</span>}
+        {m.stale && <span className={M.badge}>{t("card.stale")}</span>}
+        {m.archived_at && <span className={M.badge}>{t("card.archived")}</span>}
+        <span className={cn("ml-auto inline-flex items-center gap-1.5 text-xs", CONFIDENCE_TONE_CLASS[tone].text)} title={t("detail.stat.confidence")}>
+          <span className={cn("size-1.75 rounded-full", CONFIDENCE_TONE_CLASS[tone].dot)} />
           {t("card.confidence", { pct: Math.round(m.confidence * 100) })}
         </span>
       </div>
-      <div style={s.content}>
+      <div className={M.content}>
         <Markdown>{m.content}</Markdown>
       </div>
-      <div style={s.cardBottom}>
+      <div className="flex flex-wrap items-center gap-1.5">
         {prs.map((pr) => (
-          <span key={pr} className="mono" style={s.prChip}>
+          <span key={pr} className={M.prChip}>
             #{pr}
           </span>
         ))}
-        <span style={s.used}>{used.key === "usedDaysAgo" ? t("card.usedDaysAgo", { days: used.days }) : t(`card.${used.key}`)}</span>
+        <span className="ml-auto text-xs text-subtle-foreground">{used.key === "usedDaysAgo" ? t("card.usedDaysAgo", { days: used.days }) : t(`card.${used.key}`)}</span>
       </div>
     </div>
   );

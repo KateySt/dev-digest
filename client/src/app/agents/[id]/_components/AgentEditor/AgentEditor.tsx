@@ -5,7 +5,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Tabs } from "@devdigest/ui";
+import { PageTabs } from "@/components/page-tabs";
 import type { Agent } from "@devdigest/shared";
 import { ConfigTab } from "./_components/ConfigTab";
 import { SkillsTab } from "./_components/SkillsTab";
@@ -14,17 +14,16 @@ import { StatsTab } from "./_components/StatsTab";
 import { EvalsTab } from "./_components/EvalsTab";
 import { CiTab } from "./_components/CiTab";
 import { TABS } from "./constants";
-import { s } from "./styles";
 
 export function AgentEditor({ agent, tab, onTab }: { agent: Agent; tab: string; onTab: (t: string) => void }) {
   const t = useTranslations("agents");
   const tabs = TABS.map((tb) => ({ key: tb.key, label: t(tb.labelKey), icon: tb.icon }));
   return (
-    <div style={s.wrap}>
-      <div style={s.tabsBar}>
-        <Tabs tabs={tabs} value={tab} onChange={onTab} pad="0 24px" />
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="mt-3.5">
+        <PageTabs tabs={tabs} value={tab} onChange={onTab} className="px-6" />
       </div>
-      <div style={s.body}>
+      <div className="flex-1 overflow-auto p-7">
         {tab === "skills" ? (
           <SkillsTab agent={agent} />
         ) : tab === "context" ? (

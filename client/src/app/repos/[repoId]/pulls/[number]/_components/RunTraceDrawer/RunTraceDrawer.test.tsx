@@ -2,7 +2,8 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { RunTrace } from "@devdigest/shared";
-import messages from "../../../../../../../../messages/en/runs.json"; // apps/web/messages/en/runs.json
+import messages from "../../../../../../../../messages/en/runs.json";
+import common from "../../../../../../../../messages/en/common.json"; // apps/web/messages/en/runs.json
 
 // Mock the trace hooks so the drawer renders without a query client / SSE.
 const TRACE: RunTrace = {
@@ -37,7 +38,7 @@ afterEach(() => {
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ runs: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, runs: messages }}>
       <div data-theme="dark">{ui}</div>
     </NextIntlClientProvider>,
   );
@@ -55,7 +56,7 @@ describe("A5 Run Trace drawer (smoke)", () => {
 
   it("switches to the live log tab", () => {
     renderWithIntl(<RunTraceDrawer runId="r1" agentName="Security" prNumber={482} onClose={() => {}} />);
-    fireEvent.click(screen.getByText("log"));
+    fireEvent.click(screen.getByRole("tab", { name: "Live log" }));
     // LiveLogStream renders its filter input
     expect(screen.getByPlaceholderText("Filter log…")).toBeInTheDocument();
   });
@@ -95,7 +96,7 @@ describe("grounding + not-started states", () => {
   it("queued run without a trace shows the not-started note, not an error", () => {
     traceState.data = undefined;
     renderWithIntl(<RunTraceDrawer runId="r1" running queued onClose={() => {}} />);
-    fireEvent.click(screen.getByText("trace"));
+    fireEvent.click(screen.getByRole("tab", { name: "Trace" }));
     expect(screen.getByText(/has not started yet/)).toBeInTheDocument();
     expect(screen.queryByText("No trace available yet.")).not.toBeInTheDocument();
   });

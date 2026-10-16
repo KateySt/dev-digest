@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import common from "../../../../../../../../messages/en/common.json";
 
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
@@ -59,7 +60,7 @@ const FINDINGS: FindingRecord[] = [
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
       {ui}
     </NextIntlClientProvider>,
   );

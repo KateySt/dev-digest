@@ -7,9 +7,12 @@
 "use client";
 
 import React from "react";
-import { Avatar, Badge, Card, type IconName } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
 import type { RiskSeverity } from "@devdigest/shared";
-import { cs } from "../comments";
+import { Icon, type IconName } from "@/components/icon";
+import { UserAvatar } from "@/components/user-avatar";
+import { Badge } from "@/components/ui/badge";
+import { COMMENT_BODY, COMMENT_CARD, COMMENT_HEAD, COMMENT_META, COMMENT_USER, RAIL } from "../constants";
 
 const KIND_ICON: Record<string, IconName> = {
   security: "Shield",
@@ -19,10 +22,11 @@ const KIND_ICON: Record<string, IconName> = {
   other: "AlertOctagon",
 };
 
-const SEVERITY_META: Record<RiskSeverity, { c: string; bg: string; label: string }> = {
-  high: { c: "var(--crit)", bg: "var(--crit-bg)", label: "High risk" },
-  medium: { c: "var(--warn)", bg: "var(--warn-bg)", label: "Medium risk" },
-  low: { c: "var(--text-muted)", bg: "var(--bg-hover)", label: "Low risk" },
+/** Badge tone per risk severity; labels live in `prReview.riskAnnotation.severity`. */
+const SEVERITY_TONE: Record<RiskSeverity, "crit" | "warn" | "neutral"> = {
+  high: "crit",
+  medium: "warn",
+  low: "neutral",
 };
 
 /** Shape threaded from an Overview risk's file ref, through the tab-jump
@@ -36,25 +40,26 @@ export interface RiskAnnotation {
 }
 
 export function RiskAnnotationCard({ kind, title, explanation, severity }: RiskAnnotation) {
-  const meta = SEVERITY_META[severity];
-  const kindIcon: IconName = KIND_ICON[kind] ?? "AlertOctagon";
+  const t = useTranslations("prReview.riskAnnotation");
+  const KindIcon = Icon[KIND_ICON[kind] ?? "AlertOctagon"];
   return (
-    <div style={cs.thread}>
-      <Card>
-        <div style={cs.headRow}>
-          <Avatar name="DevDigest AI" size={20} />
-          <span style={cs.user}>DevDigest AI</span>
-          <Badge color={meta.c} bg={meta.bg} icon={kindIcon}>
-            {meta.label}
+    <div className={RAIL}>
+      <div className={COMMENT_CARD}>
+        <div className={COMMENT_HEAD}>
+          <UserAvatar name={t("author")} size={20} />
+          <span className={COMMENT_USER}>{t("author")}</span>
+          <Badge variant={SEVERITY_TONE[severity]}>
+            <KindIcon aria-hidden />
+            {t(`severity.${severity}`)}
           </Badge>
-          <span style={{ flex: 1 }} />
-          <span style={cs.time}>PR risk analysis</span>
+          <span className="flex-1" />
+          <span className={COMMENT_META}>{t("source")}</span>
         </div>
-        <div style={cs.mdBody}>
-          <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>{title}</div>
+        <div className={COMMENT_BODY}>
+          <div className="mb-1 font-semibold text-foreground">{title}</div>
           {explanation}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

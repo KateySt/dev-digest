@@ -4,7 +4,8 @@
     "goToSettings": "Go to Settings",
     "switchTheme": "Switch to {theme} theme",
     "themeAppearanceGroup": "Appearance",
-    "globalGroup": "GLOBAL"
+    "appearanceSettings": "Appearance settings (palette, accent)…",
+    "globalGroup": "Global"
   },
   "theme": {
     "dark": "dark",
@@ -26,7 +27,8 @@
     "multi-agent": "Multi-Agent Review",
     "agent-performance": "Agent Performance",
     "ci-runs": "CI Runs",
-    "first-run-setup": "First-run setup"
+    "first-run-setup": "First-run setup",
+    "settings": "Settings"
   },
   "featurePlaceholder": {
     "defaultBody": "This screen is owned by {owner}. The app shell, routing, theming and data layer are wired — {owner} fills in the screen here."
@@ -49,6 +51,80 @@
     "delete": "Delete",
     "deleteLabel": "Delete comment",
     "deleting": "Deleting…",
-    "deleteConfirm": "Delete this comment from GitHub? This can't be undone."
+    "deleteConfirm": "Delete this comment from GitHub? This can't be undone.",
+    "addComment": "Add a comment on this line"
+  },
+  "brand": "DevDigest",
+  "navSection": {
+    "workspace": "Workspace",
+    "skillsLab": "Skills lab",
+    "global": "Global"
+  },
+  "topbar": {
+    "breadcrumb": "Breadcrumb",
+    "search": "Search or jump to…",
+    "toggleTheme": "Toggle theme"
+  },
+  "repoSwitcher": {
+    "label": "Switch repository",
+    "noRepo": "No repo selected",
+    "addRepoHint": "Add a repo to begin",
+    "addRepo": "Add repository…",
+    "remove": "Remove {name}",
+    "synced": "synced",
+    "notSynced": "not synced",
+    "defaultBranch": "main"
+  },
+  "palette": {
+    "title": "Command palette",
+    "description": "Search for a command or page to open.",
+    "placeholder": "Type a command or search…",
+    "empty": "No commands match."
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "description": "Shortcuts available anywhere in the studio.",
+    "groups": {
+      "global": "Global",
+      "navigation": "Navigation",
+      "findings": "Findings"
+    },
+    "openPalette": "Open command palette",
+    "showHelp": "Show keyboard shortcuts",
+    "goTo": "Go to {label}",
+    "nextPrevFinding": "Next / previous finding",
+    "acceptFinding": "Accept finding",
+    "dismissFinding": "Dismiss finding"
+  },
+  "account": {
+    "label": "Account",
+    "labelWithLogin": "Account @{login}",
+    "github": "GitHub",
+    "connectGithub": "Connect GitHub",
+    "settings": "Settings",
+    "checkUpdates": "Check for updates…",
+    "releases": "Releases",
+    "openLogs": "Open logs folder",
+    "openData": "Open data folder"
+  },
+  "notifications": {
+    "label": "Notifications",
+    "labelUnread": "Notifications ({count} unread)",
+    "title": "Notifications",
+    "newCount": "{count} new",
+    "markAllRead": "Mark all as read",
+    "emptyTitle": "You're all caught up",
+    "emptyBody": "Finished reviews, evals, clones and onboarding tours show up here.",
+    "clearAll": "Clear all",
+    "unreadPrefix": "Unread: {title}",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "remove": "Remove"
+  },
+  "window": {
+    "minimize": "Minimize window",
+    "maximize": "Maximize window",
+    "restore": "Restore window",
+    "close": "Close window"
   }
 }

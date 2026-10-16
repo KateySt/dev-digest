@@ -6,13 +6,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Icon, TextInput } from "@devdigest/ui";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { useTestConnection } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
 import type { ConnTestProvider, SecretsStatus } from "@/lib/types";
-import { KEY_URLS } from "../../constants";
-import { stepStyles } from "../../styles";
-import { s } from "./styles";
+import { KEY_URLS, STEP } from "../../constants";
 
 interface Result {
   ok: boolean;
@@ -92,15 +94,15 @@ export function KeyStep({
 
   return (
     <div>
-      <h1 style={stepStyles.title}>{title}</h1>
-      <p style={stepStyles.body}>{body}</p>
+      <h1 className={STEP.title}>{title}</h1>
+      <p className={STEP.body}>{body}</p>
 
       {providers.length > 1 && (
-        <div style={s.switch} role="group" aria-label={label}>
+        <div className="mb-5 flex gap-1.5" role="group" aria-label={label}>
           {providers.map((p) => (
             <Button
               key={p}
-              kind={p === provider ? "primary" : "secondary"}
+              variant={p === provider ? "default" : "secondary"}
               size="sm"
               aria-pressed={p === provider}
               onClick={() => switchProvider(p)}
@@ -115,18 +117,19 @@ export function KeyStep({
         label={label}
         hint={hint}
         right={
-          <a href={KEY_URLS[provider]} target="_blank" rel="noopener noreferrer" style={stepStyles.link}>
+          <a href={KEY_URLS[provider]} target="_blank" rel="noopener noreferrer" className={STEP.link}>
             {t("whereToGet")} →
           </a>
         }
       >
-        <TextInput
+        <div className="relative">
+        <Input
+          className="mono pr-32"
           value={value}
-          onChange={(v) => {
-            setValue(v);
+          onChange={(e) => {
+            setValue(e.target.value);
             setResult(null);
           }}
-          mono
           autoFocus
           aria-label={label}
           type={reveal ? "text" : "password"}
@@ -134,56 +137,58 @@ export function KeyStep({
           onKeyDown={(e) => {
             if (e.key === "Enter") primary();
           }}
-          suffix={
-            <span style={s.suffix}>
-              <button
-                type="button"
-                aria-label={reveal ? "Hide key" : "Show key"}
-                onClick={() => setReveal((r) => !r)}
-                style={s.revealBtn}
-              >
-                {reveal ? <Icon.Eye size={14} /> : <Icon.EyeOff size={14} />}
-              </button>
-              {showConnected && (
-                <span style={s.connected}>
-                  <Icon.CheckCircle size={13} /> {t("connected")}
-                </span>
-              )}
-            </span>
-          }
         />
+          <span className="absolute top-1/2 right-3 inline-flex -translate-y-1/2 items-center gap-2.5">
+            <button
+              type="button"
+              aria-label={reveal ? t("hideKey") : t("showKey")}
+              onClick={() => setReveal((r) => !r)}
+              className="grid cursor-pointer place-items-center border-none bg-transparent p-0 text-subtle-foreground hover:text-foreground"
+            >
+              {reveal ? <Icon.Eye size={14} aria-hidden /> : <Icon.EyeOff size={14} aria-hidden />}
+            </button>
+            {showConnected && (
+              <span className="inline-flex items-center gap-1.25 text-xs font-semibold whitespace-nowrap text-ok">
+                <Icon.CheckCircle size={13} aria-hidden /> {t("connected")}
+              </span>
+            )}
+          </span>
+        </div>
       </FormField>
-      <p style={stepStyles.note}>
-        <Icon.Lock size={11} /> {t("storedLocally")}
+      <p className={STEP.note}>
+        <Icon.Lock size={11} aria-hidden /> {t("storedLocally")}
       </p>
 
-      {configured && !draft && !result && <p style={s.configuredHint}>{t("configuredHint")}</p>}
+      {configured && !draft && !result && <p className="mt-4 text-sm text-muted-foreground">{t("configuredHint")}</p>}
 
       {result && (
-        <div role="status" style={stepStyles.result(result.ok)}>
+        <div role="status" className={cn(STEP.result, result.ok ? STEP.resultOk : STEP.resultFail)}>
           {result.ok ? (
-            <Icon.CheckCircle size={16} style={{ color: "var(--ok)" }} />
+            <Icon.CheckCircle size={16} className="text-ok" aria-hidden />
           ) : (
-            <Icon.XCircle size={16} style={{ color: "var(--crit)" }} />
+            <Icon.XCircle size={16} className="text-crit" aria-hidden />
           )}
           <span>{result.message}</span>
         </div>
       )}
 
-      <div style={stepStyles.actions}>
+      <div className={STEP.actions}>
         {onBack && (
-          <Button kind="ghost" size="md" onClick={onBack}>
+          <Button variant="outline" onClick={onBack}>
             {t("back")}
           </Button>
         )}
-        <div style={stepStyles.spacer} />
+        <div className="flex-1" />
         {needsVerify ? (
-          <Button kind="primary" size="md" onClick={verify} loading={isPending}>
+          <Button onClick={verify} disabled={isPending}>
+            {isPending && <Icon.Loader className="animate-spin" aria-hidden />}
             {isPending ? t("verifying") : t("verify")}
           </Button>
         ) : (
-          <Button kind="primary" size="md" iconRight="ArrowRight" onClick={next} disabled={!canContinue} loading={isPending}>
+          <Button onClick={next} disabled={!canContinue || isPending}>
+            {isPending && <Icon.Loader className="animate-spin" aria-hidden />}
             {t("continue")}
+            <Icon.ArrowRight aria-hidden />
           </Button>
         )}
       </div>

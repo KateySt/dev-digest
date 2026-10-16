@@ -11,9 +11,14 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, EmptyState, Icon } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { useIntent } from "@/lib/hooks/reviews";
-import { s } from "./styles";
+
+const listLabel = (tone: string) =>
+  cn("mb-1 flex items-center gap-1.25 text-xs font-semibold tracking-[0.04em] uppercase", tone);
 
 export function IntentPanel({ prId }: { prId: string | null | undefined }) {
   const t = useTranslations("brief");
@@ -26,16 +31,15 @@ export function IntentPanel({ prId }: { prId: string | null | undefined }) {
   }
 
   return (
-    <div style={s.content}>
-      <div style={s.headRow}>
-        <p style={s.intentText}>{intent.intent}</p>
+    // Layout only: the parent card (OverviewTab) owns the border.
+    <div className="flex flex-col gap-3.5">
+      {/* Wraps so the long low-confidence badge drops onto its own full-width
+          row instead of squeezing the intent text into a one-word column. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="m-0 flex-[1_1_260px] text-base leading-[1.55] text-foreground italic">{intent.intent}</p>
         {intent.confidence === "low" && (
-          <Badge
-            color="var(--warn)"
-            bg="var(--warn-bg)"
-            icon="AlertTriangle"
-            style={s.lowConfidenceBadge}
-          >
+          <Badge variant="warn" className="flex-[1_1_100%] justify-start text-left whitespace-normal">
+            <Icon.AlertTriangle aria-hidden />
             {t("intent.lowConfidence")}
           </Badge>
         )}
@@ -43,11 +47,11 @@ export function IntentPanel({ prId }: { prId: string | null | undefined }) {
 
       {intent.in_scope.length > 0 && (
         <div>
-          <div style={s.listLabel(true)}>
-            <Icon.Check size={12} />
+          <div className={listLabel("text-ok")}>
+            <Icon.Check size={12} aria-hidden />
             {t("intent.inScope")}
           </div>
-          <ul style={s.list}>
+          <ul className="m-0 pl-4.5 text-sm leading-[1.6] text-muted-foreground">
             {intent.in_scope.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
@@ -57,11 +61,11 @@ export function IntentPanel({ prId }: { prId: string | null | undefined }) {
 
       {intent.out_of_scope.length > 0 && (
         <div>
-          <div style={s.listLabel(false)}>
-            <Icon.X size={12} />
+          <div className={listLabel("text-crit")}>
+            <Icon.X size={12} aria-hidden />
             {t("intent.outOfScope")}
           </div>
-          <ul style={s.list}>
+          <ul className="m-0 pl-4.5 text-sm leading-[1.6] text-muted-foreground">
             {intent.out_of_scope.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
@@ -70,7 +74,7 @@ export function IntentPanel({ prId }: { prId: string | null | undefined }) {
       )}
 
       {intent.spec_ref && (
-        <div style={s.specNote}>{t("intent.specRef", { path: intent.spec_ref })}</div>
+        <div className="mono text-xs text-subtle-foreground">{t("intent.specRef", { path: intent.spec_ref })}</div>
       )}
     </div>
   );

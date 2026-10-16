@@ -3,8 +3,12 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { Badge, Button, EmptyState, ErrorState, Skeleton } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RepoNotFound } from "@/components/repo-not-found";
 import { useActiveRepo, useRepoNotFound } from "@/lib/contexts";
 import { ApiError } from "@/lib/api";
@@ -20,7 +24,6 @@ import { FirstTasksSection } from "./_components/FirstTasksSection";
 import { SkillSuggestionsCard } from "./_components/SkillSuggestionsCard";
 import { POLL_CEILING_MS } from "./constants";
 import { formatRelativeAge, isPartialIndex, SECTION_ORDER } from "./helpers";
-import { s } from "./styles";
 
 /**
  * The repo-scoped Onboarding Tour page (SPEC-06, C-AC-1..30). `page.tsx`
@@ -119,12 +122,10 @@ export function OnboardingView() {
   if (isLoading) {
     return (
       <AppShell crumb={crumb}>
-        <div style={s.page}>
-          <Skeleton height={28} width={320} />
-          <div style={{ height: 16 }} />
-          <Skeleton height={16} width={260} />
-          <div style={{ height: 20 }} />
-          <Skeleton height={300} />
+        <div className="mx-auto box-border max-w-[1080px] px-8 pt-6 pb-15">
+          <Skeleton className="h-7 w-80" />
+          <Skeleton className="mt-4 h-4 w-65" />
+          <Skeleton className="mt-5 h-75 w-full" />
         </div>
       </AppShell>
     );
@@ -141,8 +142,8 @@ export function OnboardingView() {
   if (data.state === "no_clone") {
     return (
       <AppShell crumb={crumb}>
-        <div style={s.page}>
-          <div style={s.centerFill}>
+        <div className="mx-auto box-border max-w-[1080px] px-8 pt-6 pb-15">
+          <div className="flex min-h-[50vh] items-center justify-center">
             <EmptyState icon="GitBranch" title={t("empty.noClone.title")} body={t("empty.noClone.body")} />
           </div>
           {/* C-AC-37: suggestions depend only on repos.languages, not on a
@@ -157,8 +158,8 @@ export function OnboardingView() {
   if (data.state === "not_generated") {
     return (
       <AppShell crumb={crumb}>
-        <div style={s.page}>
-          <div style={{ ...s.centerFill, flexDirection: "column", gap: 12 }}>
+        <div className="mx-auto box-border max-w-[1080px] px-8 pt-6 pb-15">
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
             <EmptyState
               icon="Target"
               title={t("empty.noTour.title")}
@@ -167,7 +168,7 @@ export function OnboardingView() {
               ctaLoading={isGenerating}
               onCta={handleGenerate}
             />
-            {errorText && <div style={s.generateError}>{errorText}</div>}
+            {errorText && <div className="mb-4 rounded-lg border border-crit bg-crit-bg px-3.5 py-2.5 text-sm text-crit">{errorText}</div>}
           </div>
           {/* C-AC-37: see the no_clone branch above for why this is rendered
               here too, not only in the "generated" state. */}
@@ -183,39 +184,43 @@ export function OnboardingView() {
 
   return (
     <AppShell crumb={crumb}>
-      <div style={s.page}>
-        <div style={s.pageHeader}>
+      <div className="mx-auto box-border max-w-[1080px] px-8 pt-6 pb-15">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <div style={s.eyebrow}>{t("title")}</div>
-            <h1 style={s.pageTitle}>{repoName}</h1>
-            <p style={s.pageSubtitle}>
+            <div className="mb-1 text-2xs font-bold tracking-[0.08em] text-subtle-foreground uppercase">{t("title")}</div>
+            <h1 className="m-0 text-3xl font-bold">{repoName}</h1>
+            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-base text-muted-foreground">
               <span>{t("subtitle", { indexed: tour.files_indexed, discovered: tour.files_discovered, age: relAge })}</span>
               {isPartialIndex(tour) && (
-                <Badge color="var(--warn)" icon="AlertTriangle">
+                <Badge variant="warn">
+                  <Icon.AlertTriangle aria-hidden />
                   {t("partialIndexMarker")}
                 </Badge>
               )}
             </p>
           </div>
-          <div style={s.headerActions}>
-            <Button kind="secondary" icon="RefreshCw" loading={isGenerating} disabled={isGenerating} onClick={handleGenerate}>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="secondary" disabled={isGenerating} onClick={handleGenerate}>
+              <Icon.RefreshCw className={isGenerating ? "animate-dd-spin" : undefined} aria-hidden />
               {isGenerating ? t("regenerating") : t("regenerate")}
             </Button>
           </div>
         </div>
 
-        {errorText && <div style={s.generateError}>{errorText}</div>}
+        {errorText && <div className="mb-4 rounded-lg border border-crit bg-crit-bg px-3.5 py-2.5 text-sm text-crit">{errorText}</div>}
 
         <DegradedBanner indexReason={tour.index_degraded_reason} modelReason={tour.model_failure_reason} />
 
         <SkillSuggestionsCard repoId={repoId} />
 
-        <div style={s.layout}>
+        {/* minmax(0, …) tracks so a long unbroken path in the sections column can't
+            widen the grid past the page edge (client/INSIGHTS.md 2026-09-24). */}
+        <div className="grid grid-cols-[minmax(0,200px)_minmax(0,1fr)] items-start gap-6">
           <AnchorNav
             label={t("anchorNav.label")}
             items={SECTION_ORDER.map(({ id, key }) => ({ id, label: t(`sections.${key}.heading`) }))}
           />
-          <div style={s.sections}>
+          <div className="flex min-w-0 flex-col gap-4">
             {SECTION_ORDER.map(({ id, key, icon }) => {
               const heading = t(`sections.${key}.heading`);
               return (

@@ -3,7 +3,7 @@ import { app, BrowserWindow } from 'electron';
 // Startup splash shown while the API and the studio boot. Self-contained HTML
 // (data: URL, no network): the app's logo mark, an accent spinner, a status
 // line main.ts updates as boot advances, and the version. Colours mirror the
-// studio's dark theme (client/src/vendor/ui/styles.css).
+// studio's dark theme (client/src/app/globals.css).
 
 // lucide "layers" — the same mark as the studio's sidebar logo.
 const LOGO_SVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"

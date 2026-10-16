@@ -19,6 +19,7 @@ import {
   skillRun,
   skillRunDetail,
 } from "@/test/eval-utils";
+import { openMenu } from "@/test/radix";
 
 const nav = vi.hoisted(() => ({
   push: vi.fn(),
@@ -156,19 +157,19 @@ describe("SkillEvalDashboard: header", () => {
   it("SK-19: every range option (7, 30, 90 days, All time) is offered and picking one updates ?range=", async () => {
     setup();
     await screen.findByRole("heading", { level: 1, name: "pr-quality-rubric" });
-    fireEvent.click(screen.getByRole("button", { name: "Date range" }));
+    openMenu(screen.getByRole("button", { name: "Date range" }));
     for (const label of ["7 days", "30 days", "90 days", "All time"]) {
-      expect(await screen.findByRole("button", { name: label })).toBeInTheDocument();
+      expect(await screen.findByRole("menuitem", { name: label })).toBeInTheDocument();
     }
-    fireEvent.click(screen.getByRole("button", { name: "7 days" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "7 days" }));
     expect(nav.replace).toHaveBeenCalledWith("/eval/skills/sk1?range=7d");
   });
 
   it("SK-19: the skill picker lists the skills and switches to another skill's dashboard keeping the range", async () => {
     setup();
     await screen.findByRole("heading", { level: 1, name: "pr-quality-rubric" });
-    fireEvent.click(screen.getByRole("button", { name: "Switch skill" }));
-    fireEvent.click(await screen.findByRole("button", { name: /security-checklist/ }));
+    openMenu(screen.getByRole("button", { name: "Switch skill" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /security-checklist/ }));
     expect(nav.push).toHaveBeenCalledWith("/eval/skills/sk2?range=30d");
   });
 });
@@ -365,7 +366,7 @@ describe("SkillEvalDashboard: empty, running and refused states", () => {
     net.on("POST", "/skills/sk1/eval-runs", () => ({ run_id: "run-9", status: "running", cases_total: 1, is_draft: false }));
     net.on("GET", "/eval-suite-runs/run-9", () => skillRunDetail({ id: "run-9", status: "running", cases_done: 0, cases_total: 1 }));
 
-    const cta = within(screen.getByText("No eval runs yet").closest("div")!.parentElement!).getAllByRole("button", { name: "Run eval" });
+    const cta = within(screen.getByText("No eval runs yet").closest<HTMLElement>('[data-slot="empty"]')!).getAllByRole("button", { name: "Run eval" });
     fireEvent.click(cta[cta.length - 1]!);
     expect(await screen.findByRole("button", { name: "Running 0/1…" })).toBeDisabled();
     expect(net.callsTo("POST", "/skills/sk1/eval-runs")).toHaveLength(1);

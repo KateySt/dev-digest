@@ -7,25 +7,22 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  Icon,
-  SeverityBadge,
-  CategoryTag,
-  MonoLink,
-  ConfidenceNum,
-  Button,
-  Markdown,
-  type Severity,
-  type Category,
-} from "@devdigest/ui";
+import { ConfidenceNum } from "@/components/confidence-num";
+import { Icon } from "@/components/icon";
+import { Markdown } from "@/components/markdown";
+import { MonoLink } from "@/components/mono-link";
+import { CategoryTag, SeverityBadge, type Category, type Severity } from "@/components/severity";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { FindingRecord, FindingActionKind } from "@devdigest/shared";
-import { SEV_COLOR, SEV_COLOR_FALLBACK } from "./constants";
+import { SEV_ACCENT, SEV_ACCENT_FALLBACK } from "./constants";
 import { lineLabel, type LinkedSkill } from "./helpers";
 import { githubBlobUrl } from "@/lib/utils";
 import { EvalCaseAction } from "./EvalCaseAction";
 import { ReplyAction } from "./ReplyAction";
 import { LearnAction } from "./LearnAction";
-import { s } from "./styles";
+
+const PROSE = "text-base leading-[1.6] text-muted-foreground";
 
 export function FindingCard({
   f,
@@ -55,7 +52,7 @@ export function FindingCard({
 }) {
   const t = useTranslations("prReview");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
-  const sevColor = SEV_COLOR[f.severity] ?? SEV_COLOR_FALLBACK;
+  const accent = SEV_ACCENT[f.severity] ?? SEV_ACCENT_FALLBACK;
   const fileHref =
     repoFullName && headSha
       ? githubBlobUrl(repoFullName, headSha, f.file, f.start_line, f.end_line)
@@ -65,70 +62,95 @@ export function FindingCard({
   const muted = accepted || dismissed;
 
   return (
-    <div data-finding-id={f.id} style={s.card(!!focused, sevColor, muted)}>
-      <div onClick={() => setExpanded((e) => !e)} style={s.header}>
-        <div style={s.badgeWrap}>
+    <div
+      data-finding-id={f.id}
+      data-focused={focused ? "true" : undefined}
+      className={cn(
+        "overflow-hidden rounded-lg border border-l-3 bg-elevated transition-[opacity,border-color,box-shadow] duration-150",
+        focused ? cn("ring-1", accent.focus) : "border-border",
+        accent.edge,
+        muted && "opacity-60",
+      )}
+    >
+      <div onClick={() => setExpanded((e) => !e)} className="flex cursor-pointer items-start gap-3 px-4 py-3.5">
+        <div className="pt-px">
           <SeverityBadge severity={f.severity as Severity} compact />
         </div>
-        <div style={s.headerMain}>
-          <div style={s.titleRow}>
-            <span style={s.title(muted, dismissed)}>{f.title}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span
+              className={cn(
+                "text-base font-semibold",
+                muted ? "text-subtle-foreground" : "text-foreground",
+                dismissed && "line-through",
+              )}
+            >
+              {f.title}
+            </span>
             <CategoryTag category={f.category as Category} />
-            {accepted && <span style={s.acceptedTag}>{t("finding.accepted")}</span>}
-            {dismissed && <span style={s.dismissedTag}>{t("finding.dismissed")}</span>}
+            {accepted && <span className="text-xs font-semibold text-ok">{t("finding.accepted")}</span>}
+            {dismissed && <span className="text-xs font-semibold text-subtle-foreground">{t("finding.dismissed")}</span>}
             {f.memory_id && (
               <Link
                 href={`/memory?id=${f.memory_id}`}
-                style={s.learnedTag}
+                className="text-xs font-semibold text-primary no-underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {t("finding.learned")}
               </Link>
             )}
           </div>
-          <div style={s.metaRow}>
+          <div className="mt-1.25 flex items-center gap-3">
             <MonoLink href={fileHref}>
               {f.file}:{lineLabel(f)}
             </MonoLink>
             <ConfidenceNum value={f.confidence} />
           </div>
         </div>
-        <Icon.ChevronDown size={16} style={s.chevron(expanded)} />
+        <Icon.ChevronDown
+          size={16}
+          aria-hidden
+          className={cn("mt-0.5 shrink-0 text-subtle-foreground transition-transform duration-150", expanded && "rotate-180")}
+        />
       </div>
 
       {expanded && (
-        <div style={s.body}>
-          <div style={s.prose}>
+        <div className="border-t border-border px-4 pt-3.5 pb-4">
+          <div className={PROSE}>
             <Markdown>{f.rationale}</Markdown>
           </div>
           {f.suggestion && (
-            <div style={s.suggestionWrap}>
-              <div style={s.suggestionLabel}>{t("finding.suggestedFix")}</div>
-              <div style={s.prose}>
+            <div className="mt-3.5">
+              <div className="mb-2 text-xs font-bold tracking-[0.05em] text-subtle-foreground uppercase">
+                {t("finding.suggestedFix")}
+              </div>
+              <div className={PROSE}>
                 <Markdown>{f.suggestion}</Markdown>
               </div>
             </div>
           )}
 
-          <div style={s.actions}>
+          <div className="mt-3.5 flex flex-wrap gap-2">
             <Button
-              kind="secondary"
+              variant="secondary"
               size="sm"
-              icon="Check"
               disabled={pending}
-              active={accepted}
+              data-active={accepted}
+              className="data-[active=true]:bg-accent"
               onClick={() => onAction?.("accept")}
             >
+              <Icon.Check aria-hidden />
               {t("finding.accept")}
             </Button>
             <Button
-              kind="secondary"
+              variant="secondary"
               size="sm"
-              icon="X"
               disabled={pending}
-              active={dismissed}
+              data-active={dismissed}
+              className="data-[active=true]:bg-accent"
               onClick={() => onAction?.("dismiss")}
             >
+              <Icon.X aria-hidden />
               {t("finding.dismiss")}
             </Button>
             <LearnAction f={f} />

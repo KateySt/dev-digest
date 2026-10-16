@@ -1,6 +1,13 @@
 {
   "breadcrumb": "Settings",
   "title": "Settings",
+  "sections": {
+    "api-keys": "API Keys",
+    "models": "Feature Models",
+    "catalog": "Catalog",
+    "notifications": "Notifications",
+    "appearance": "Appearance"
+  },
   "fallbackBody": "Standard configuration forms for {label} live here (A6 finalizes the full Settings surface).",
   "apiKeys": {
     "title": "API Keys",
@@ -18,7 +25,9 @@
     "testing": "Testing…",
     "testFailed": "Test failed",
     "configured": "Configured",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "showKey": "Show key",
+    "hideKey": "Hide key"
   },
   "catalog": {
     "title": "Catalog",
@@ -142,5 +151,29 @@
     "soundLabel": "Sound",
     "soundHint": "Play the system notification sound with them.",
     "browserNote": "System notifications are available in the DevDigest desktop app."
+  },
+  "appearance": {
+    "title": "Appearance",
+    "body": "How the studio looks on this device. Saved in this browser only.",
+    "modeLabel": "Mode",
+    "modeHint": "Dark or light colour scheme.",
+    "paletteLabel": "Palette",
+    "paletteHint": "Surface and text colours.",
+    "accentLabel": "Accent",
+    "accentHint": "Colour for primary actions, links and focus. Severity colours stay the same.",
+    "modes": {
+      "dark": "Dark",
+      "light": "Light"
+    },
+    "palettes": {
+      "classic": "Classic",
+      "stone": "Stone"
+    },
+    "accents": {
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "emerald": "Emerald"
+    }
   }
 }

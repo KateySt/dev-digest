@@ -2,7 +2,10 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Icon, Skeleton } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent, CiInstallation } from "@devdigest/shared";
 import { useAgentCi } from "@/lib/hooks/ci";
 import { ExportWizard, type ExportWizardProps } from "./_components/ExportWizard";
@@ -10,7 +13,6 @@ import { FailCiOnCard } from "./_components/FailCiOnCard";
 import { InstallationRow } from "./_components/InstallationRow";
 import { RecentCiRuns } from "./_components/RecentCiRuns";
 import { wizardPrefill } from "./helpers";
-import { s } from "./styles";
 
 /** CI tab - where this agent is installed, whether each installation is
  *  current, the Fail CI on policy, recent CI history, and the Export wizard. */
@@ -23,22 +25,25 @@ export function CiTab({ agent }: { agent: Agent }) {
   const hasInstallations = installations.length > 0;
 
   return (
-    <div style={s.wrap}>
+    <div className="flex max-w-[720px] min-w-0 flex-col gap-5">
       {wizard && <ExportWizard agent={agent} initial={wizard} onClose={() => setWizard(null)} />}
 
-      <div style={s.header}>
-        <div style={s.headerText}>
-          <span style={s.h2}>{t("ciTab.heading")}</span>
-          <Badge color="var(--ok)" bg="var(--ok-bg)" dot>
+      <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="text-lg font-bold">{t("ciTab.heading")}</span>
+          <Badge variant="ok">
+            <span aria-hidden className="size-1.5 rounded-full bg-ok" />
             {t("ciTab.activeIn", { count: installations.length })}
           </Badge>
         </div>
         {hasInstallations && (
           <>
-            <Button size="sm" icon="RefreshCw" onClick={() => setWizard(wizardPrefill(installations))}>
+            <Button variant="secondary" size="sm" onClick={() => setWizard(wizardPrefill(installations))}>
+              <Icon.RefreshCw aria-hidden />
               {t("ciTab.updateCiConfig")}
             </Button>
-            <Button kind="primary" size="sm" icon="Plus" onClick={() => setWizard({})}>
+            <Button size="sm" onClick={() => setWizard({})}>
+              <Icon.Plus aria-hidden />
               {t("ciTab.addToCi")}
             </Button>
           </>
@@ -47,24 +52,29 @@ export function CiTab({ agent }: { agent: Agent }) {
 
       <FailCiOnCard agent={agent} />
 
-      {isLoading && <Skeleton height={80} />}
+      {isLoading && <Skeleton className="h-20 w-full" />}
 
       {!isLoading && !hasInstallations && (
-        <div style={s.empty}>
+        <div className="flex flex-col items-start gap-3 text-sm text-subtle-foreground">
           <div>{t("ciTab.empty")}</div>
-          <Button kind="primary" size="sm" icon="Plus" onClick={() => setWizard({})}>
+          <Button size="sm" onClick={() => setWizard({})}>
+            <Icon.Plus aria-hidden />
             {t("ciTab.addToCi")}
           </Button>
         </div>
       )}
 
       {hasInstallations && (
-        <div style={s.list}>
+        <div className="flex flex-col gap-2">
           {installations.map((inst) => (
             <InstallationRow key={inst.id} installation={inst} onUpdate={(i) => setWizard(toPrefill(i))} />
           ))}
-          <button type="button" style={s.addRepo} onClick={() => setWizard({})}>
-            <Icon.Plus size={14} />
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-transparent px-3.5 py-2.75 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={() => setWizard({})}
+          >
+            <Icon.Plus size={14} aria-hidden />
             {t("ciTab.addRepository")}
           </button>
         </div>

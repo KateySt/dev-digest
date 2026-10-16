@@ -7,7 +7,7 @@
     { "cmd": ["find", "text", "Add rate limiting to public API endpoints", "click"], "label": "open the PR row" },
     { "cmd": ["wait", "--url", "/pulls/482"], "label": "navigate to the PR detail route" },
     { "cmd": ["wait", "--load", "networkidle"], "label": "PR detail data settles" },
-    { "cmd": ["find", "role", "button", "click", "--name", "Agent runs"], "label": "switch to the Agent runs tab" },
+    { "cmd": ["find", "role", "tab", "click", "--name", "Agent runs"], "label": "switch to the Agent runs tab" },
     { "cmd": ["wait", "--url", "tab=findings"], "label": "findings tab is active in the URL" },
     { "cmd": ["find", "role", "button", "click", "--name", "Agent request changes"], "label": "collapse the agentless run so only one set of finding actions is on screen (its header reads 'Agent request changes …')" },
     { "cmd": ["find", "role", "button", "click", "--name", "Security Reviewer request changes"], "label": "expand the seeded Security Reviewer run" },

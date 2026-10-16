@@ -6,17 +6,20 @@
 "use client";
 
 import React from "react";
-import { Icon, Badge } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { ReviewRecord, Verdict } from "@devdigest/shared";
 import { SeverityChip } from "@/components/SeverityChip/SeverityChip";
 import { FindingsPanel } from "../FindingsPanel";
 import { VerdictBanner } from "../VerdictBanner";
 import { useDeleteReview } from "../../../../../../../lib/hooks/reviews";
 
-const VERDICT_COLOR: Record<string, string> = {
-  request_changes: "var(--crit)",
-  comment: "var(--warn)",
-  approve: "var(--ok)",
+const VERDICT_TEXT: Record<string, string> = {
+  request_changes: "text-crit",
+  comment: "text-warn",
+  approve: "text-ok",
 };
 
 function formatWhen(iso: string): string {
@@ -45,6 +48,7 @@ export function ReviewRunAccordion({
   targetNonce?: number;
   targetFindingId?: string | null;
 }) {
+  const t = useTranslations("prReview");
   const [open, setOpen] = React.useState(defaultOpen);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [pendingScroll, setPendingScroll] = React.useState(false);
@@ -70,20 +74,13 @@ export function ReviewRunAccordion({
   const criticalCount = findings.filter((f) => f.severity === "CRITICAL").length;
   const warningCount = findings.filter((f) => f.severity === "WARNING").length;
   const suggestionCount = findings.filter((f) => f.severity === "SUGGESTION").length;
-  const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
+  const verdictText = (review.verdict && VERDICT_TEXT[review.verdict]) || "text-subtle-foreground";
 
   return (
     <div
       ref={rootRef}
       id={review.run_id ? `review-run-${review.run_id}` : undefined}
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        background: "var(--bg-surface)",
-        marginBottom: 14,
-        overflow: "hidden",
-        scrollMarginTop: 16,
-      }}
+      className="mb-3.5 scroll-mt-4 overflow-hidden rounded-xl border border-border bg-surface"
     >
       <div
         role="button"
@@ -92,73 +89,58 @@ export function ReviewRunAccordion({
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") setOpen((o) => !o);
         }}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "13px 16px",
-          cursor: "pointer",
-          color: "var(--text-primary)",
-        }}
+        className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.25 text-foreground"
       >
-        <Icon.Cpu size={15} style={{ color: "var(--text-muted)" }} />
-        <span style={{ fontWeight: 600, fontSize: 14 }}>{review.agent_name ?? "Agent"}</span>
+        <Icon.Cpu size={15} className="text-subtle-foreground" aria-hidden />
+        <span className="text-base font-semibold">{review.agent_name ?? t("runStatus.agentFallback")}</span>
         {review.verdict && (
-          <Badge color={verdictColor} bg="transparent">
+          <Badge variant="ghost" className={verdictText}>
             {review.verdict.replace("_", " ")}
           </Badge>
         )}
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+        <div className="flex items-end gap-3">
           {criticalCount > 0 && <SeverityChip sev="CRITICAL" count={criticalCount} />}
           {warningCount > 0 && <SeverityChip sev="WARNING" count={warningCount} />}
           {suggestionCount > 0 && <SeverityChip sev="SUGGESTION" count={suggestionCount} />}
           {blockers > 0 && (
-            <span style={{ fontSize: 12, color: "var(--text-muted)", paddingBottom: 2 }}>
-              · {blockers} blocker{blockers !== 1 ? "s" : ""}
-            </span>
+            <span className="pb-0.5 text-xs text-subtle-foreground">{t("reviewRun.blockers", { count: blockers })}</span>
           )}
         </div>
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
         {review.score != null && (
-          <Badge mono color="var(--text-secondary)">
+          <Badge variant="neutral" className="mono">
             {review.score}
           </Badge>
         )}
-        <span className="mono" style={{ fontSize: 12, color: "var(--text-muted)" }}>
+        <span className="mono text-xs text-subtle-foreground">
           {formatWhen(review.created_at)}
         </span>
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
-            if (window.confirm(`Delete this "${review.agent_name ?? "agent"}" review run and its findings?`)) {
+            if (window.confirm(t("reviewRun.deleteConfirm", { agent: review.agent_name ?? t("reviewRun.agentFallback") }))) {
               del.mutate(review.id);
             }
           }}
           disabled={del.isPending}
-          title="Delete this review run"
-          aria-label="Delete this review run"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: del.isPending ? "not-allowed" : "pointer",
-            color: "var(--text-muted)",
-            display: "inline-flex",
-            padding: 4,
-          }}
+          title={t("reviewRun.deleteLabel")}
+          aria-label={t("reviewRun.deleteLabel")}
+          className="inline-flex cursor-pointer border-none bg-transparent p-1 text-subtle-foreground hover:text-crit disabled:cursor-not-allowed"
         >
-          <Icon.Trash size={14} style={del.isPending ? { animation: "ddspin 1s linear infinite" } : undefined} />
+          <Icon.Trash size={14} className={del.isPending ? "animate-dd-spin" : undefined} aria-hidden />
         </button>
         <Icon.ChevronDown
           size={16}
-          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--text-muted)" }}
+          aria-hidden
+          className={cn("text-subtle-foreground transition-transform duration-150", open && "rotate-180")}
         />
       </div>
 
       {open && (
-        <div style={{ padding: "0 16px 16px" }}>
+        <div className="px-4 pb-4">
           {review.verdict && (
-            <div style={{ marginBottom: 16 }}>
+            <div className="mb-4">
               <VerdictBanner
                 verdict={review.verdict as Verdict}
                 summary={review.summary}

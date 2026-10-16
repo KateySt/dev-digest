@@ -2,7 +2,23 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Icon, Modal, Tabs, TextInput, Textarea, Toggle } from "@devdigest/ui";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { PageTabs } from "@/components/page-tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { EvalCaseKind, EvalCaseListItem, EvalOwnerKind } from "@devdigest/shared";
 import { useCreateEvalCase, useRunEvalCase, useUpdateEvalCase } from "@/lib/hooks/eval-cases";
 import { parseUnifiedDiff } from "@/lib/eval";
@@ -13,12 +29,12 @@ import { addFindingSkeleton, addLocationSkeleton, parseExpectedJson, summarizeCa
 import { entriesFromExpected, entriesValid, expectedFromEntries, type EntryDraft } from "./entries";
 import { AdvancedJsonEditor } from "./_components/AdvancedJsonEditor";
 import { ExpectedEntriesForm } from "./_components/ExpectedEntriesForm";
-import { s } from "./styles";
 
-const TABS = [
-  { key: "diff", label: "Diff" },
-  { key: "prMeta", label: "PR meta" },
-];
+const TAB_KEYS = ["diff", "prMeta"] as const;
+
+const WRAP = "min-w-0 break-words wrap-anywhere";
+/** Last-run banner border per outcome. */
+const BANNER_TONE = { ok: "border-ok", warn: "border-warn", crit: "border-crit" } as const;
 
 interface InputMeta {
   title?: string;
@@ -50,6 +66,7 @@ export function EvalCaseEditorModal({
 }) {
   const t = useTranslations("eval");
   const blockedId = React.useId();
+  const nameId = React.useId();
   const summaryToText = useCaseSummaryText();
   const create = useCreateEvalCase();
   const update = useUpdateEvalCase();
@@ -132,7 +149,10 @@ export function EvalCaseEditorModal({
       setSwitchBlocked(true);
       return;
     }
-    const next = entriesFromExpected(expectedState.state === "ok" ? expectedState.value : JSON.parse(expectedText), kind);
+    const next = entriesFromExpected(
+      expectedState.state === "ok" ? expectedState.value : JSON.parse(expectedText),
+      kind,
+    );
     if (next.lossy && !window.confirm(t("caseEditor.lossConfirm"))) return;
     setEntries(next.entries);
     setSwitchBlocked(false);
@@ -207,150 +227,213 @@ export function EvalCaseEditorModal({
         : t("caseEditor.lastRunFailed");
 
   return (
-    <Modal width={960} onClose={onClose}>
-      <Modal.Header
-        title={savedCase ? t("caseEditor.caseTitle", { name: savedCase.name }) : t("caseEditor.newCase")}
-        subtitle={t("caseEditor.subtitle", { owner: ownerName })}
-        onClose={onClose}
-      />
-      <div style={s.columns}>
-        <div style={s.left}>
-          <FormField label={t("caseEditor.nameLabel")} required>
-            <TextInput value={name} onChange={setName} placeholder={t("caseEditor.namePlaceholder")} />
-          </FormField>
-
-          {!savedCase && (
-            <FormField label={t("caseEditor.kindLabel")}>
-              <div role="radiogroup" aria-label={t("caseEditor.kindLabel")} style={s.kindRow}>
-                {(["must_find", "must_not_flag"] as const).map((k) => (
-                  <Button
-                    key={k}
-                    kind="secondary"
-                    size="sm"
-                    role="radio"
-                    aria-checked={kind === k}
-                    active={kind === k}
-                    onClick={() => changeKind(k)}
-                  >
-                    {k === "must_find" ? t("caseEditor.kindMustFind") : t("caseEditor.kindMustNotFlag")}
-                  </Button>
-                ))}
-              </div>
-            </FormField>
-          )}
-
-          <FormField label={t("caseEditor.inputLabel")}>
-            <div style={s.tabsWrap}>
-              <Tabs tabs={TABS} value={tab} onChange={(k) => setTab(k as "diff" | "prMeta")} pad="0" />
-            </div>
-            {tab === "diff" ? (
-              <>
-                <Textarea value={diff} onChange={setDiff} rows={7} mono placeholder={t("caseEditor.diffPlaceholder")} />
-                {diffFiles.length > 0 && (
-                  <div role="region" aria-label={t("caseEditor.diffPreview")} style={s.diffPreview}>
-                    <DiffViewer files={diffFiles} />
-                  </div>
-                )}
-                {diff.trim() && diffFiles.length === 0 && <div style={s.diffHint}>{t("caseEditor.diffUnparsed")}</div>}
-              </>
-            ) : (
-              <>
-                <FormField label={t("caseEditor.titleLabel")}>
-                  <TextInput value={prTitle} onChange={setPrTitle} placeholder={t("caseEditor.titlePlaceholder")} />
-                </FormField>
-                <FormField label={t("caseEditor.bodyLabel")}>
-                  <Textarea value={prBody} onChange={setPrBody} rows={4} placeholder={t("caseEditor.bodyPlaceholder")} />
-                </FormField>
-              </>
-            )}
-          </FormField>
-        </div>
-
-        <div style={s.right}>
-          <FormField
-            label={mustNotFlag ? t("caseEditor.forbiddenLocations") : t("caseEditor.expectedOutput")}
-            right={
-              <label style={s.advancedToggle}>
-                <Toggle on={advanced} onChange={toggleAdvanced} size={14} />
-                {t("caseEditor.advanced")}
-              </label>
-            }
-          >
-            {edited && (
-              <div role="status" style={s.warning}>
-                <Icon.AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-                <span>{t("caseEditor.notComparable")}</span>
-              </div>
-            )}
-            {advanced ? (
-              <>
-                <AdvancedJsonEditor
-                  kind={kind}
-                  value={expectedText}
-                  valid={jsonValid}
-                  hintId={jsonBlocked ? blockedId : undefined}
-                  onChange={(v) => {
-                    setExpectedText(v);
-                    setSwitchBlocked(false);
-                  }}
-                  onAddSkeleton={() =>
-                    setExpectedText(mustNotFlag ? addLocationSkeleton(expectedText) : addFindingSkeleton(expectedText))
-                  }
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[960px]">
+        <DialogHeader>
+          <DialogTitle>
+            {savedCase ? t("caseEditor.caseTitle", { name: savedCase.name }) : t("caseEditor.newCase")}
+          </DialogTitle>
+          <DialogDescription>{t("caseEditor.subtitle", { owner: ownerName })}</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {/* minmax(0, 1fr): a bare 1fr track grows to its content's max-content (client/INSIGHTS.md 2026-09-24). */}
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-col gap-1 border-r border-border p-6">
+              <FormField label={t("caseEditor.nameLabel")} required htmlFor={nameId}>
+                <Input
+                  id={nameId}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("caseEditor.namePlaceholder")}
                 />
-                {switchBlocked && !jsonValid && (
-                  <div role="alert" style={s.modeHint}>
-                    {t("caseEditor.switchBlocked")}
+              </FormField>
+
+              {!savedCase && (
+                <FormField label={t("caseEditor.kindLabel")}>
+                  <div role="radiogroup" aria-label={t("caseEditor.kindLabel")} className="flex gap-2">
+                    {(["must_find", "must_not_flag"] as const).map((k) => (
+                      <Button
+                        key={k}
+                        variant="secondary"
+                        size="sm"
+                        role="radio"
+                        aria-checked={kind === k}
+                        data-active={kind === k}
+                        className="data-[active=true]:border-primary data-[active=true]:bg-brand-bg data-[active=true]:text-brand-text"
+                        onClick={() => changeKind(k)}
+                      >
+                        {k === "must_find" ? t("caseEditor.kindMustFind") : t("caseEditor.kindMustNotFlag")}
+                      </Button>
+                    ))}
+                  </div>
+                </FormField>
+              )}
+
+              <FormField label={t("caseEditor.inputLabel")}>
+                <div className="mb-4">
+                  <PageTabs
+                    tabs={TAB_KEYS.map((key) => ({ key, label: t(`caseEditor.tabs.${key}`) }))}
+                    value={tab}
+                    onChange={(k) => setTab(k as "diff" | "prMeta")}
+                  />
+                </div>
+                {tab === "diff" ? (
+                  <>
+                    <Textarea
+                      value={diff}
+                      onChange={(e) => setDiff(e.target.value)}
+                      rows={7}
+                      className="mono field-sizing-fixed resize-y"
+                      placeholder={t("caseEditor.diffPlaceholder")}
+                    />
+                    {diffFiles.length > 0 && (
+                      // The diff viewer deliberately keeps nowrap + horizontal scroll (code reads wrong when wrapped).
+                      <div
+                        role="region"
+                        aria-label={t("caseEditor.diffPreview")}
+                        className="mt-2.5 max-h-65 min-w-0 overflow-auto"
+                      >
+                        <DiffViewer files={diffFiles} />
+                      </div>
+                    )}
+                    {diff.trim() && diffFiles.length === 0 && (
+                      <div className="mt-2 text-xs wrap-anywhere text-subtle-foreground">
+                        {t("caseEditor.diffUnparsed")}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <FormField label={t("caseEditor.titleLabel")}>
+                      <Input
+                        value={prTitle}
+                        onChange={(e) => setPrTitle(e.target.value)}
+                        placeholder={t("caseEditor.titlePlaceholder")}
+                      />
+                    </FormField>
+                    <FormField label={t("caseEditor.bodyLabel")}>
+                      <Textarea
+                        value={prBody}
+                        onChange={(e) => setPrBody(e.target.value)}
+                        rows={4}
+                        className="field-sizing-fixed resize-y"
+                        placeholder={t("caseEditor.bodyPlaceholder")}
+                      />
+                    </FormField>
+                  </>
+                )}
+              </FormField>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-3 p-6">
+              <FormField
+                label={mustNotFlag ? t("caseEditor.forbiddenLocations") : t("caseEditor.expectedOutput")}
+                right={
+                  <label className="flex items-center gap-2 text-ui text-muted-foreground">
+                    <Switch size="sm" checked={advanced} onCheckedChange={toggleAdvanced} />
+                    {t("caseEditor.advanced")}
+                  </label>
+                }
+              >
+                {edited && (
+                  <div
+                    role="status"
+                    className="mb-2 flex items-start gap-2 rounded-[7px] border border-warn px-2.5 py-2 text-ui wrap-anywhere text-warn"
+                  >
+                    <Icon.AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
+                    <span>{t("caseEditor.notComparable")}</span>
                   </div>
                 )}
-              </>
-            ) : (
-              <ExpectedEntriesForm kind={kind} entries={entries} onChange={setEntries} diff={diff} diffFiles={diffFiles} />
-            )}
-          </FormField>
+                {advanced ? (
+                  <>
+                    <AdvancedJsonEditor
+                      kind={kind}
+                      value={expectedText}
+                      valid={jsonValid}
+                      hintId={jsonBlocked ? blockedId : undefined}
+                      onChange={(v) => {
+                        setExpectedText(v);
+                        setSwitchBlocked(false);
+                      }}
+                      onAddSkeleton={() =>
+                        setExpectedText(
+                          mustNotFlag ? addLocationSkeleton(expectedText) : addFindingSkeleton(expectedText),
+                        )
+                      }
+                    />
+                    {switchBlocked && !jsonValid && (
+                      <div role="alert" className="mt-1.5 text-xs wrap-anywhere text-crit">
+                        {t("caseEditor.switchBlocked")}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <ExpectedEntriesForm
+                    kind={kind}
+                    entries={entries}
+                    onChange={setEntries}
+                    diff={diff}
+                    diffFiles={diffFiles}
+                  />
+                )}
+              </FormField>
 
-          {lastRun && (
-            <div role="status" style={s.banner(bannerTone)}>
-              <strong>{bannerTitle}</strong>
-              {summaryText && <span> · {summaryText}</span>}
-              {lastRun.duration_ms != null && <span> · {(lastRun.duration_ms / 1000).toFixed(1)}s</span>}
-              {lastRun.cost_usd != null && <span> · {formatRunCost(lastRun.cost_usd)}</span>}
+              {lastRun && (
+                <div
+                  role="status"
+                  data-tone={bannerTone}
+                  className={cn(
+                    "rounded-lg border px-3.5 py-2.5 text-sm text-muted-foreground",
+                    WRAP,
+                    BANNER_TONE[bannerTone],
+                  )}
+                >
+                  <strong>{bannerTitle}</strong>
+                  {summaryText && <span> · {summaryText}</span>}
+                  {lastRun.duration_ms != null && <span> · {(lastRun.duration_ms / 1000).toFixed(1)}s</span>}
+                  {lastRun.cost_usd != null && <span> · {formatRunCost(lastRun.cost_usd)}</span>}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </DialogBody>
 
-      <Modal.Footer>
-        <div style={s.footer}>
-          <label style={s.runOnSave}>
-            <Toggle on={runOnSave} onChange={setRunOnSave} size={14} />
+        <DialogFooter className="items-center sm:justify-start">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Switch size="sm" checked={runOnSave} onCheckedChange={setRunOnSave} />
             {t("caseEditor.runOnSave")}
           </label>
           {saveBlocked && (
-            <span id={blockedId} style={s.saveHint}>
+            <span id={blockedId} className="text-xs wrap-anywhere text-crit">
               {blockedMessage}
             </span>
           )}
-          <div style={s.footerActions}>
-            <Button kind="ghost" onClick={onClose}>
+          <div className="ml-auto flex gap-2.5">
+            <Button variant="outline" onClick={onClose}>
               {t("caseEditor.cancel")}
             </Button>
-            <Button kind="secondary" icon="Play" onClick={handleRunCase}
+            <Button
+              variant="secondary"
+              onClick={handleRunCase}
               disabled={saving || running || saveBlocked}
               title={saveBlocked ? blockedMessage : undefined}
               aria-describedby={saveBlocked ? blockedId : undefined}
             >
+              <Icon.Play aria-hidden />
               {running ? t("caseEditor.running") : t("caseEditor.runCase")}
             </Button>
-            <Button kind="primary" icon="Check" onClick={handleSave}
+            <Button
+              onClick={handleSave}
               disabled={saving || running || saveBlocked}
               title={saveBlocked ? blockedMessage : undefined}
               aria-describedby={saveBlocked ? blockedId : undefined}
             >
+              <Icon.Check aria-hidden />
               {saving ? t("caseEditor.saving") : t("caseEditor.save")}
             </Button>
           </div>
-        </div>
-      </Modal.Footer>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

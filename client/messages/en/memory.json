@@ -94,7 +94,8 @@
     "similarTitle": "Similar memories already exist",
     "merge": "Merge into this",
     "source": "Source",
-    "sourcePr": "PR #{pr}"
+    "sourcePr": "PR #{pr}",
+    "globsPlaceholder": "src/middleware/**"
   },
   "learn": {
     "title": "Learn from this finding",

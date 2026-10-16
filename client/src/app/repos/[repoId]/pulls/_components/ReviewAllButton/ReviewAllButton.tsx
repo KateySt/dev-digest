@@ -8,10 +8,10 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
 import type { PrMeta } from "@/lib/types";
 import { ReviewAllDialog } from "./_components/ReviewAllDialog";
-import { s } from "./styles";
 
 export function ReviewAllButton({ repoId, pulls }: { repoId: string; pulls: PrMeta[] | undefined }) {
   const t = useTranslations("prReview");
@@ -23,19 +23,19 @@ export function ReviewAllButton({ repoId, pulls }: { repoId: string; pulls: PrMe
 
   return (
     <>
-      <span style={s.wrap}>
+      <span className="inline-flex items-center gap-2">
         {empty && (
-          <span id="review-all-reason" style={s.reason}>
+          <span id="review-all-reason" className="text-xs text-subtle-foreground">
             {t("list.reviewAll.unavailable")}
           </span>
         )}
         <Button
-          kind="secondary"
-          icon="Zap"
+          variant="secondary"
           disabled={!loaded || empty}
           aria-describedby={empty ? "review-all-reason" : undefined}
           onClick={() => setOpen(true)}
         >
+          <Icon.Zap aria-hidden />
           {t("list.reviewAll.button", { count })}
         </Button>
       </span>

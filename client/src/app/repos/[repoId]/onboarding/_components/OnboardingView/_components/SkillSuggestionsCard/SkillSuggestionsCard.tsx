@@ -3,13 +3,14 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Icon, TagChip } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { TagChip } from "@/components/tag-chip";
+import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/contexts";
 import { tagColor } from "@/lib/tag-colors";
 import { useImportCommunitySkill, useSkillSuggestions } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/contexts";
 import { ApiError } from "@/lib/api";
-import { s } from "./styles";
 
 /**
  * Repo onboarding page's skill-suggestions card (client spec AC-37 – AC-41).
@@ -49,34 +50,34 @@ export function SkillSuggestionsCard({ repoId }: { repoId: string }) {
   };
 
   return (
-    <div style={s.card}>
-      <div style={s.header}>
-        <Icon.Sparkles size={15} style={s.headerIcon} />
-        <span style={s.title}>{t("community.suggestionsCardTitle")}</span>
+    <div className="mb-5 rounded-xl border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Icon.Sparkles size={15} className="text-primary" aria-hidden />
+        <span className="text-base font-bold text-foreground">{t("community.suggestionsCardTitle")}</span>
       </div>
 
       {!data.available ? (
-        <div style={s.unavailable}>
+        <div className="text-sm leading-normal text-muted-foreground">
           <div>{data.message ?? t("community.unavailable.fallbackBody")}</div>
-          <Link href="/settings/catalog" style={s.settingsLink}>
+          <Link href="/settings/catalog" className="font-semibold text-primary">
             {t("community.unavailable.settingsLink")}
           </Link>
         </div>
       ) : (
-        <div style={s.list}>
+        <div className="flex flex-col gap-2">
           {data.entries.map((entry) => (
-            <div key={entry.path} style={s.row}>
-              <div style={s.info}>
-                <div style={s.name}>{entry.name}</div>
-                {entry.description && <div style={s.desc}>{entry.description}</div>}
-                <div style={s.tags}>
+            <div key={entry.path} className="flex items-start gap-3 rounded-lg border border-border bg-elevated px-3 py-2.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <div className="text-[13.5px] font-semibold text-foreground">{entry.name}</div>
+                {entry.description && <div className="text-ui text-muted-foreground">{entry.description}</div>}
+                <div className="mt-0.5 flex flex-wrap gap-1.5">
                   {entry.tags.map((tag) => (
                     <TagChip key={tag} slug={tag} color={tagColor(tag, theme)} />
                   ))}
                 </div>
               </div>
               <Button
-                kind="secondary"
+                variant="secondary"
                 size="sm"
                 onClick={() => handleImport(entry.path)}
                 disabled={importingPath === entry.path}

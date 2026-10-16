@@ -5,14 +5,17 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Markdown } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Markdown } from "@/components/markdown";
+import { Button } from "@/components/ui/button";
 import type { CurateGroup, MemoryInput } from "@devdigest/shared";
 import { MemoryForm, isMemoryFormValid, type LinkOption } from "@/components/memory-form";
 import { ApiError } from "@/lib/api";
 import { useCurateMerge, useMergeDraft } from "@/lib/hooks/memory";
-import { s as page } from "@/app/memory/_components/MemoryView/styles";
+import { MEMORY_CLASSES as page } from "@/app/memory/_components/MemoryView/constants";
+import { cn } from "@/lib/utils";
+import { CURATE_CLASSES as s } from "../../constants";
 import { mergeDefaults } from "../../helpers";
-import { s } from "../../styles";
 
 export function MergeGroup({
   group,
@@ -86,37 +89,51 @@ export function MergeGroup({
   };
 
   return (
-    <article style={s.item}>
-      <div style={page.chipRow}>
-        <span style={page.badge}>{t("curate.group.similarity", { pct: Math.round(group.similarity * 100) })}</span>
+    <article className={s.item}>
+      <div className={page.chipRow}>
+        <span className={page.badge}>{t("curate.group.similarity", { pct: Math.round(group.similarity * 100) })}</span>
       </div>
 
       {members.map((m) => (
-        <div key={m.id} style={s.member(m.id === primaryId)}>
-          <div style={page.chipRow}>
-            <span style={page.badge}>{t(`kind.${m.kind}`)}</span>
-            <span style={page.badge}>{t(`scope.${m.scope}`)}</span>
-            <span style={page.badge}>{t("card.confidence", { pct: Math.round(m.confidence * 100) })}</span>
-            {m.applies_to_all_agents && <span style={page.badge}>{t("detail.allAgents")}</span>}
+        <div
+          key={m.id}
+          className={cn(
+            "flex flex-col gap-1.5 border-l-[3px] pl-2.5",
+            m.id === primaryId ? "border-l-primary" : "border-l-border",
+          )}
+        >
+          <div className={page.chipRow}>
+            <span className={page.badge}>{t(`kind.${m.kind}`)}</span>
+            <span className={page.badge}>{t(`scope.${m.scope}`)}</span>
+            <span className={page.badge}>{t("card.confidence", { pct: Math.round(m.confidence * 100) })}</span>
+            {m.applies_to_all_agents && <span className={page.badge}>{t("detail.allAgents")}</span>}
             {m.links.map((l) => (
-              <span key={`${l.target_kind}:${l.target_id}`} style={page.badge}>
+              <span key={`${l.target_kind}:${l.target_id}`} className={page.badge}>
                 {l.name}
               </span>
             ))}
-            <span style={page.muted}>{m.last_used_at ? m.last_used_at.slice(0, 10) : t("card.neverUsed")}</span>
+            <span className={page.muted}>{m.last_used_at ? m.last_used_at.slice(0, 10) : t("card.neverUsed")}</span>
           </div>
-          <div style={page.content}>
+          <div className={page.content}>
             <Markdown>{m.content}</Markdown>
           </div>
-          <div style={page.rowEnd}>
+          <div className={page.rowEnd}>
             {m.id === primaryId ? (
-              <span style={page.badge}>{t("curate.group.primary")}</span>
+              <span className={page.badge}>{t("curate.group.primary")}</span>
             ) : (
-              <Button kind="secondary" size="sm" disabled={merge.isPending} onClick={() => { setPrimaryId(m.id); closeForm(); }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={merge.isPending}
+                onClick={() => {
+                  setPrimaryId(m.id);
+                  closeForm();
+                }}
+              >
                 {t("curate.group.makePrimary")}
               </Button>
             )}
-            <Button kind="secondary" size="sm" disabled={merge.isPending} onClick={() => remove(m.id)}>
+            <Button variant="secondary" size="sm" disabled={merge.isPending} onClick={() => remove(m.id)}>
               {t("curate.group.remove")}
             </Button>
           </div>
@@ -125,37 +142,36 @@ export function MergeGroup({
 
       {form ? (
         <div>
-          {drafting && <div style={page.muted}>{t("curate.group.drafting")}</div>}
+          {drafting && <div className={page.muted}>{t("curate.group.drafting")}</div>}
           {(draft?.fallback || draftFailed) && (
-            <div role="status" style={s.notice}>
+            <div role="status" className={s.notice}>
               {t("curate.group.fallback")}
             </div>
           )}
           <MemoryForm value={form} onChange={setForm} repoId={repoId} agentOptions={agentOptions} skillOptions={skillOptions} />
-          <div style={page.muted}>{t("curate.group.hint")}</div>
+          <div className={page.muted}>{t("curate.group.hint")}</div>
           {error && (
-            <div role="alert" style={s.error}>
+            <div role="alert" className={s.error}>
               {error}
             </div>
           )}
-          <div style={page.rowEnd}>
-            <Button kind="secondary" size="sm" onClick={closeForm} disabled={merge.isPending}>
+          <div className={page.rowEnd}>
+            <Button variant="secondary" size="sm" onClick={closeForm} disabled={merge.isPending}>
               {t("curate.action.cancel")}
             </Button>
             <Button
-              kind="primary"
               size="sm"
-              loading={merge.isPending}
-              disabled={drafting || !isMemoryFormValid(form)}
+              disabled={merge.isPending || drafting || !isMemoryFormValid(form)}
               onClick={() => apply(form)}
             >
+              {merge.isPending && <Icon.Loader className="animate-spin" aria-hidden />}
               {t("curate.group.apply")}
             </Button>
           </div>
         </div>
       ) : (
-        <div style={page.rowEnd}>
-          <Button kind="primary" size="sm" onClick={openForm}>
+        <div className={page.rowEnd}>
+          <Button size="sm" onClick={openForm}>
             {t("curate.group.merge")}
           </Button>
         </div>

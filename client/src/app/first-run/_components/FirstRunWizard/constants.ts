@@ -10,3 +10,15 @@ export const KEY_URLS: Record<ConnTestProvider, string> = {
   openrouter: "https://openrouter.ai/settings/keys",
   github: "https://github.com/settings/personal-access-tokens/new",
 };
+
+/** Class strings shared by the step bodies (KeyStep / RepoStep). */
+export const STEP = {
+  title: "text-3xl font-bold tracking-[-0.02em]",
+  body: "mt-2 mb-6 text-base leading-normal text-muted-foreground",
+  actions: "mt-6 flex items-center gap-3",
+  link: "text-sm text-brand-text no-underline",
+  note: "-mt-3 inline-flex items-center gap-1.5 text-xs text-subtle-foreground",
+  result: "mt-4 flex items-center gap-2.5 rounded-lg border px-3.5 py-3 text-sm text-muted-foreground",
+  resultOk: "border-ok/25 bg-ok-bg",
+  resultFail: "border-crit/25 bg-crit-bg",
+} as const;

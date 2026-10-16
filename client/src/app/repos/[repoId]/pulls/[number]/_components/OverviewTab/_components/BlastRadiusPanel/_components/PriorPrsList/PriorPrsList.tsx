@@ -11,9 +11,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Avatar, Badge, EmptyState, Icon, MonoLink } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { MonoLink } from "@/components/mono-link";
+import { UserAvatar } from "@/components/user-avatar";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { usePrHistory } from "@/lib/hooks/reviews";
-import { s } from "./styles";
 
 export function PriorPrsList({
   prId,
@@ -29,7 +33,7 @@ export function PriorPrsList({
   const toggle = () => setExpanded((e) => !e);
 
   return (
-    <div style={s.wrap}>
+    <div className="overflow-hidden rounded-[7px] border border-border">
       <div
         role="button"
         tabIndex={0}
@@ -41,49 +45,54 @@ export function PriorPrsList({
             toggle();
           }
         }}
-        style={s.header(expanded)}
+        className={cn("flex cursor-pointer items-center gap-2 px-3 py-2.25 text-foreground", expanded ? "bg-surface" : "bg-transparent")}
       >
-        <Icon.History size={14} aria-hidden style={s.headerIcon} />
-        <span style={s.headerLabel}>{t("history.label")}</span>
+        <Icon.History size={14} aria-hidden className="shrink-0 text-subtle-foreground" />
+        <span className="text-ui font-semibold">{t("history.label")}</span>
         {/* Only shown once the count is actually known — a `?? 0` fallback
            here would flash a misleading "(0)" while still loading. */}
-        {data && <Badge color="var(--text-secondary)">{data.history.length}</Badge>}
-        <Icon.ChevronDown size={15} aria-hidden style={s.chevron(expanded)} />
+        {data && <Badge variant="neutral">{data.history.length}</Badge>}
+        <Icon.ChevronDown
+          size={15}
+          aria-hidden
+          className={cn("ml-auto shrink-0 text-subtle-foreground transition-transform duration-150", expanded && "rotate-180")}
+        />
       </div>
 
       {expanded && (
-        <div style={s.body}>
+        <div className="border-t border-border py-1">
           {isLoading ? null : !data ? (
-            <div style={s.bodyPad}>
+            <div className="px-3.5 py-2">
               <EmptyState icon="GitPullRequest" title={t("history.unavailable")} body={t("history.unavailableHint")} />
             </div>
           ) : data.history.length === 0 ? (
-            <div style={s.placeholderHint}>{t("history.empty")}</div>
+            <div className="px-3.5 py-2.5 text-sm text-subtle-foreground">{t("history.empty")}</div>
           ) : (
             data.history.map((item, i) => {
               const last = i === data.history.length - 1;
               return (
-                <div key={item.pr_number} style={s.item(last)}>
-                  <div style={s.timeline} aria-hidden>
-                    <span style={s.timelineDot} />
-                    {!last && <span style={s.timelineLine} />}
+                // min-w-0: free-form titles/paths must be able to shrink and wrap (client/INSIGHTS.md).
+                <div key={item.pr_number} className={cn("flex min-w-0 gap-3 px-3.5 py-2.5", !last && "border-b border-border")}>
+                  <div className="flex flex-col items-center pt-0.75" aria-hidden>
+                    <span className="box-content size-2 rounded-full border-2 border-elevated bg-subtle-foreground" />
+                    {!last && <span className="mt-0.5 w-px flex-1 bg-border" />}
                   </div>
-                  <div style={s.itemBody}>
-                    <div style={s.itemTitleRow}>
-                      <span className="mono" style={s.itemNumber}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="mono text-xs text-brand-text">
                         #{item.pr_number}
                       </span>
-                      <span style={s.itemTitle}>{item.title}</span>
+                      <span className="min-w-0 text-sm font-semibold text-foreground wrap-anywhere break-words">{item.title}</span>
                     </div>
-                    <div style={s.itemMeta}>
-                      <Avatar name={item.author} size={15} />
+                    <div className="mt-1 mb-1.5 flex items-center gap-2 text-[11.5px] text-subtle-foreground">
+                      <UserAvatar name={item.author} size={15} />
                       {item.author} · {t("history.merged", { date: new Date(item.merged_at) })}
                     </div>
-                    <div style={s.itemNotes}>{item.notes}</div>
+                    <div className="text-ui leading-normal text-muted-foreground">{item.notes}</div>
                     {item.files_overlap.length > 0 && (
-                      <div style={s.fileList}>
+                      <div className="mt-1.5 flex flex-col gap-1">
                         {item.files_overlap.map((path) => (
-                          <div key={path} style={s.fileRow}>
+                          <div key={path} className="min-w-0">
                             {/* No line number in the contract — defaults to 1,
                                same idiom as CommitHistoryPanel's `file.line ?? 1`. */}
                             <MonoLink wrap onClick={() => onNavigateToFile(path, 1)}>

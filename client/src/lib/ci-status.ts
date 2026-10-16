@@ -1,14 +1,17 @@
-/** Badge colors for a CI run status (shared by the CI tab and the CI Runs page). */
-export function ciStatusTone(status: string | null | undefined): { color: string; bg: string } {
+/** Badge variant (`ui/badge`) + status-dot class per CI run status. */
+export function ciStatusBadge(status: string | null | undefined): {
+  variant: "ok" | "crit" | "brand" | "neutral";
+  dot: string;
+} {
   switch (status) {
     case "succeeded":
-      return { color: "var(--ok)", bg: "var(--ok-bg)" };
+      return { variant: "ok", dot: "bg-ok" };
     case "failed":
-      return { color: "var(--crit)", bg: "var(--crit-bg)" };
+      return { variant: "crit", dot: "bg-crit" };
     case "running":
-      return { color: "var(--accent-text)", bg: "var(--accent-bg)" };
+      return { variant: "brand", dot: "bg-brand-text" };
     default:
-      return { color: "var(--text-secondary)", bg: "var(--bg-hover)" };
+      return { variant: "neutral", dot: "bg-muted-foreground" };
   }
 }
 

@@ -1,9 +1,14 @@
 /* WindowControls — desktop-only caption buttons driving the preload bridge. */
 import React from "react";
 import { describe, it, expect, afterEach } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import { WindowControls } from "./WindowControls";
 import { installFakeBridge, removeFakeBridge } from "@/test/fake-desktop-bridge";
+import { IntlWrapper } from "@/test/intl";
+import shell from "../../../messages/en/shell.json";
+
+const render = (ui: React.ReactElement) =>
+  rtlRender(ui, { wrapper: ({ children }) => <IntlWrapper messages={{ shell }}>{children}</IntlWrapper> });
 
 afterEach(() => {
   cleanup();

@@ -9,6 +9,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { RunSummary, FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import common from "../../../../../../../../messages/en/common.json";
 import { githubBlobUrl } from "@/lib/utils";
 import { RunHistory } from "./RunHistory";
 
@@ -46,7 +47,7 @@ function renderRuns(
   },
 ) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
       <RunHistory runs={runs} onOpenTrace={() => {}} {...extra} />
     </NextIntlClientProvider>,
   );

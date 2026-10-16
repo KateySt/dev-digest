@@ -11,11 +11,12 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon, MonoLink } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { MonoLink } from "@/components/mono-link";
+import { cn } from "@/lib/utils";
 import { useRisks } from "@/lib/hooks/reviews";
 import { parseFileRef } from "@/components/diff-viewer";
 import { KIND_ICON, KIND_COLOR, type RiskKind } from "./constants";
-import { s } from "./styles";
 
 export function RiskAreasList({
   prId,
@@ -41,11 +42,15 @@ export function RiskAreasList({
 
   const risks = data?.risks ?? [];
   if (risks.length === 0) {
-    return <div style={s.placeholderHint}>{t("noRisks")}</div>;
+    return (
+      <div className="rounded-lg border border-border bg-elevated px-4 py-3.25 text-sm text-subtle-foreground">
+        {t("noRisks")}
+      </div>
+    );
   }
 
   return (
-    <div style={s.wrap}>
+    <div className="flex flex-col gap-2">
       {risks.map((risk, i) => {
         const kind = (risk.kind in KIND_ICON ? risk.kind : "other") as RiskKind;
         const color = KIND_COLOR[kind];
@@ -67,15 +72,19 @@ export function RiskAreasList({
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") toggle(key);
               }}
-              style={s.card(isOpen, color)}
+              className={cn(
+                "flex cursor-pointer items-center gap-2.5 rounded-lg border border-l-3 bg-elevated px-3 py-2.5",
+                isOpen ? color.border : "border-border",
+              )}
             >
-              <span style={s.iconBox(color)}>
-                <IconComp size={14} />
+              <span className={cn("grid size-6.5 shrink-0 place-items-center rounded-[7px] bg-muted", color.text)}>
+                <IconComp size={14} aria-hidden />
               </span>
-              <span style={s.cardBody}>
-                <span style={s.cardTitle}>{risk.title}</span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="text-sm font-semibold text-foreground">{risk.title}</span>
                 {firstRef && (
-                  <span style={s.cardRef}>
+                  // A file ref has no spaces; let it break inside the card instead of overflowing.
+                  <span className="min-w-0 text-xs text-brand-text wrap-anywhere break-words">
                     {firstTarget ? (
                       <MonoLink
                         onClick={(e?: React.MouseEvent) => {
@@ -91,17 +100,22 @@ export function RiskAreasList({
                   </span>
                 )}
               </span>
-              <Icon.ChevronDown size={14} style={s.chevron(isOpen)} />
+              <Icon.ChevronDown
+                size={14}
+                aria-hidden
+                className={cn("shrink-0 text-subtle-foreground transition-transform duration-150", isOpen && "rotate-180")}
+              />
             </div>
 
             {isOpen && (
-              <div style={s.detail}>
-                <p style={s.detailText}>{risk.explanation}</p>
-                <div style={s.detailRefs}>
+              <div className="mt-1 flex flex-col gap-2 rounded-lg border border-border bg-surface px-3.5 py-3">
+                <p className="m-0 text-sm leading-[1.55] text-muted-foreground">{risk.explanation}</p>
+                <div className="flex flex-wrap gap-3">
                   {risk.file_refs.map((ref, ri) => {
                     const target = parseFileRef(ref);
                     return (
-                      <div key={ri} style={s.detailRefItem}>
+                      // The row wraps between refs; each long ref still needs room to break within itself.
+                      <div key={ri} className="max-w-full min-w-0 wrap-anywhere break-words">
                         <MonoLink
                           onClick={target ? () => onNavigateToFile(target.path, target.line) : undefined}
                         >

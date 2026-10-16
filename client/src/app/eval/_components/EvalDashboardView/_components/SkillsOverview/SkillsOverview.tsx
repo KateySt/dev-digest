@@ -3,14 +3,20 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Badge, Button, EmptyState, ErrorState, Icon, Skeleton, Sparkline } from "@devdigest/ui";
+import { Sparkline } from "@/components/charts";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { EvalDashboardSkill, SkillEvalDashboardRun, SkillType } from "@devdigest/shared";
 import { MetricBar, MetricValue, RunStatusChip } from "@/components/eval-metrics";
 import { useEvalSkillsDashboard, useRunAllSkills } from "@/lib/hooks/eval-dashboard";
 import { useSkills } from "@/lib/hooks/skills";
 import { METRICS, formatRanAt, runVersion } from "@/lib/eval";
-import { SKILL_TYPE_COLOR } from "@/lib/skill-constants";
-import { s } from "../../styles";
+import { SKILL_TYPE_BADGE } from "@/lib/skill-constants";
+import { cn } from "@/lib/utils";
+import { C } from "../../constants";
 
 const SHORT_LABEL = { recall: "recall", precision: "precision", citation_accuracy: "citation" } as const;
 
@@ -30,57 +36,53 @@ export function SkillsOverview() {
 
   return (
     <>
-      <div style={s.header}>
-        <div style={s.headerText}>
-          <h1 style={s.h1}>{t("title")}</h1>
-          <p style={s.subtitle}>{t("skills.subtitle")}</p>
+      <div className={C.header}>
+        <div className={C.headerText}>
+          <h1 className={C.h1}>{t("title")}</h1>
+          <p className={C.subtitle}>{t("skills.subtitle")}</p>
         </div>
-        <Button
-          kind="primary"
-          icon="Play"
-          onClick={() => runAll.mutate()}
-          disabled={runAll.isPending || anyRunning || !eligible}
-        >
+        <Button onClick={() => runAll.mutate()} disabled={runAll.isPending || anyRunning || !eligible}>
+          <Icon.Play aria-hidden />
           {runAll.isPending ? t("skills.runAllStarting") : t("skills.runAll")}
         </Button>
       </div>
       {runAll.data && (
-        <div role="status" style={s.notice}>
+        <div role="status" className={C.notice}>
           {t("skills.runAllResult", { started: runAll.data.started.length, skipped: runAll.data.skipped.length })}
         </div>
       )}
 
       {isLoading && (
         <>
-          <Skeleton height={90} />
-          <Skeleton height={160} />
+          <Skeleton className="h-22.5 w-full" />
+          <Skeleton className="h-40 w-full" />
         </>
       )}
       {isError && <ErrorState body={t("loadFailed")} onRetry={() => refetch()} />}
 
       {data && (
         <>
-          <h2 style={s.sectionLabel}>
-            <Icon.Sparkles size={14} />
+          <h2 className={C.sectionLabel}>
+            <Icon.Sparkles size={14} aria-hidden />
             {t("skills.title")}
           </h2>
           {data.skills.length === 0 ? (
             <EmptyState icon="FlaskConical" title={t("title")} body={t("skills.noSkills")} />
           ) : (
-            <div style={s.agentList}>
+            <div className={C.list}>
               {data.skills.map((sk) => (
                 <SkillRow key={sk.skill_id} skill={sk} type={typeById.get(sk.skill_id)} />
               ))}
             </div>
           )}
 
-          <h2 style={s.sectionLabel}>
-            <Icon.History size={14} />
+          <h2 className={C.sectionLabel}>
+            <Icon.History size={14} aria-hidden />
             {t("skills.recentTitle")}
           </h2>
-          <div style={s.tableWrap}>
+          <div className={C.tableWrap}>
             {data.recent_runs.length === 0 ? (
-              <div style={s.muted}>{t("skills.recentEmpty")}</div>
+              <div className={C.muted}>{t("skills.recentEmpty")}</div>
             ) : (
               <RecentRunsTable runs={data.recent_runs} />
             )}
@@ -99,20 +101,20 @@ function SkillRow({ skill, type }: { skill: EvalDashboardSkill; type: SkillType 
   const version = run ? runVersion(run) : null;
 
   return (
-    <Link href={`/eval/skills/${skill.skill_id}`} style={s.agentCard} aria-label={t("skills.open", { name: skill.skill_name })}>
-      <span style={s.iconTile}>
-        <Icon.Sparkles size={18} />
+    <Link href={`/eval/skills/${skill.skill_id}`} className={C.card} aria-label={t("skills.open", { name: skill.skill_name })}>
+      <span className={C.iconTile}>
+        <Icon.Sparkles size={18} aria-hidden />
       </span>
-      <div style={s.agentMain}>
-        <div style={s.agentTitleRow}>
-          <span className="mono" style={s.agentName}>
+      <div className={C.main}>
+        <div className={C.titleRow}>
+          <span className={cn("mono", C.name)}>
             {skill.skill_name}
           </span>
-          {type && <Badge color={SKILL_TYPE_COLOR[type]}>{ts(`listItem.type.${type}`)}</Badge>}
+          {type && <Badge variant={SKILL_TYPE_BADGE[type]}>{ts(`listItem.type.${type}`)}</Badge>}
         </div>
-        <div style={s.agentMeta}>
+        <div className={C.meta}>
           {skill.running_run ? (
-            <span style={s.runningNote}>
+            <span className={C.runningNote}>
               {t("skills.running", { done: skill.running_run.cases_done, total: skill.running_run.cases_total })}
             </span>
           ) : skill.cases_total === 0 ? (
@@ -130,19 +132,19 @@ function SkillRow({ skill, type }: { skill: EvalDashboardSkill; type: SkillType 
         </div>
       </div>
       {sparkData.length > 0 && (
-        <span style={s.sparkWrap}>
+        <span className={C.sparkWrap}>
           <Sparkline data={sparkData} color="var(--accent)" w={84} h={28} />
         </span>
       )}
-      <div style={s.metrics}>
+      <div className={C.metrics}>
         {METRICS.map((m) => (
-          <div key={m.key} style={s.metric}>
-            <span style={s.metricLabel}>{t(`agents.${SHORT_LABEL[m.key]}`)}</span>
-            <MetricValue value={run?.[m.key] ?? null} color={m.color} size={22} />
+          <div key={m.key} className={C.metric}>
+            <span className={C.metricLabel}>{t(`agents.${SHORT_LABEL[m.key]}`)}</span>
+            <MetricValue value={run?.[m.key] ?? null} metric={m.key} size={22} />
           </div>
         ))}
       </div>
-      <Icon.ChevronRight size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+      <Icon.ChevronRight size={16} className={C.chevron} aria-hidden />
     </Link>
   );
 }
@@ -151,11 +153,11 @@ function RecentRunsTable({ runs }: { runs: SkillEvalDashboardRun[] }) {
   const t = useTranslations("evalDashboard");
   const cols = ["skill", "ranAt", "version", "recall", "precision", "citation", "pass"] as const;
   return (
-    <table style={s.table}>
+    <table className={C.table}>
       <thead>
         <tr>
           {cols.map((c) => (
-            <th key={c} scope="col" style={s.th}>
+            <th key={c} scope="col" className={C.th}>
               {t(`skills.columns.${c}`)}
             </th>
           ))}
@@ -164,21 +166,21 @@ function RecentRunsTable({ runs }: { runs: SkillEvalDashboardRun[] }) {
       <tbody>
         {runs.map((r) => (
           <tr key={r.id}>
-            <td className="mono" style={{ ...s.td, ...s.tdAgent }}>
+            <td className={cn("mono", C.td, C.tdName)}>
               {r.skill_name}
             </td>
-            <td className="mono" style={s.td}>
+            <td className={cn("mono", C.td)}>
               {formatRanAt(r.started_at)}
             </td>
-            <td className="mono" style={{ ...s.td, color: "var(--accent)" }}>
+            <td className={cn("mono", C.td, C.tdVersion)}>
               v{runVersion(r) ?? "?"}
             </td>
             {METRICS.map((m) => (
-              <td key={m.key} style={s.td}>
-                <MetricBar value={r[m.key]} color={m.color} barWidth={72} />
+              <td key={m.key} className={C.td}>
+                <MetricBar value={r[m.key]} metric={m.key} barWidth={72} />
               </td>
             ))}
-            <td className="tnum" style={{ ...s.td, fontWeight: 700, color: "var(--text-primary)" }}>
+            <td className={cn("tnum", C.td, C.tdPass)}>
               {r.status === "completed" ? `${r.passed_count}/${r.evaluated_count}` : <RunStatusChip status={r.status} />}
             </td>
           </tr>

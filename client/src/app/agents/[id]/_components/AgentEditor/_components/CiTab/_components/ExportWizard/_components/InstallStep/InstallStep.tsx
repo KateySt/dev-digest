@@ -2,10 +2,17 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { CI_BRANCH, DOCS_URL, PR_TITLE } from "../../constants";
 import type { InstallMethod } from "../../helpers";
-import { s } from "./styles";
+
+const card = (selected: boolean) =>
+  cn(
+    "flex w-full min-w-0 cursor-pointer flex-col gap-1.5 rounded-xl border px-4 py-3.5 text-left text-foreground",
+    selected ? "border-primary bg-brand-bg" : "border-border bg-surface hover:bg-accent",
+  );
 
 /** Step 4 - choose how to install: open a PR, or download a zip. The actual
  *  request is fired by the wizard footer's Install button. */
@@ -31,13 +38,13 @@ export function InstallStep({
 
   if (prUrl) {
     return (
-      <div style={s.done}>
-        <div style={s.doneTitle}>
-          <Icon.CheckCircle size={18} style={s.doneIcon} />
+      <div className="flex flex-col items-start gap-2">
+        <div className="flex items-center gap-2 text-md font-bold">
+          <Icon.CheckCircle size={18} className="text-ok" aria-hidden />
           {t("exportWizard.installStep.doneTitle")}
         </div>
-        <div style={s.doneBody}>{t("exportWizard.installStep.doneBody", { repo })}</div>
-        <a href={prUrl} target="_blank" rel="noopener noreferrer" style={s.link}>
+        <div className="text-sm text-muted-foreground wrap-anywhere">{t("exportWizard.installStep.doneBody", { repo })}</div>
+        <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text">
           {t("exportWizard.installStep.viewPr")} →
         </a>
       </div>
@@ -46,22 +53,22 @@ export function InstallStep({
 
   return (
     <>
-      <div role="radiogroup" style={s.options}>
+      <div role="radiogroup" className="flex flex-col gap-2.5">
         <button
           type="button"
           role="radio"
           aria-checked={method === "pr"}
           onClick={() => onMethod("pr")}
-          style={s.card(method === "pr")}
+          className={card(method === "pr")}
         >
-          <div style={s.cardTop}>
-            <Icon.GitPullRequest size={15} style={s.cardIcon} />
-            <span style={s.cardTitle}>{t("exportWizard.installStep.prTitle")}</span>
-            <Badge color="var(--accent-text)" bg="var(--accent-bg)">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Icon.GitPullRequest size={15} className="shrink-0 text-brand-text" aria-hidden />
+            <span className="min-w-0 flex-1 text-base font-semibold">{t("exportWizard.installStep.prTitle")}</span>
+            <Badge variant="brand">
               {t("exportWizard.recommended")}
             </Badge>
           </div>
-          <div style={s.cardBody}>
+          <div className="text-sm leading-normal text-muted-foreground wrap-anywhere">
             {t("exportWizard.installStep.prBody", {
               repo,
               branch: CI_BRANCH,
@@ -76,26 +83,26 @@ export function InstallStep({
           role="radio"
           aria-checked={method === "zip"}
           onClick={() => onMethod("zip")}
-          style={s.card(method === "zip")}
+          className={card(method === "zip")}
         >
-          <div style={s.cardTop}>
-            <Icon.Copy size={15} style={s.cardIcon} />
-            <span style={s.cardTitle}>{t("exportWizard.installStep.zipTitle")}</span>
-            <span style={s.cardHint}>{t("exportWizard.installStep.zipHint")}</span>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Icon.Copy size={15} className="shrink-0 text-brand-text" aria-hidden />
+            <span className="min-w-0 flex-1 text-base font-semibold">{t("exportWizard.installStep.zipTitle")}</span>
+            <span className="text-xs text-subtle-foreground">{t("exportWizard.installStep.zipHint")}</span>
           </div>
         </button>
       </div>
 
       {error && (
-        <div style={s.error} role="alert">
+        <div role="alert" className="text-sm text-crit wrap-anywhere">
           {error}
         </div>
       )}
-      {zipDone && <div style={s.ok}>{t("exportWizard.installStep.zipDone")}</div>}
+      {zipDone && <div className="text-sm text-ok">{t("exportWizard.installStep.zipDone")}</div>}
 
-      <div style={s.help}>
+      <div className="text-center text-ui text-subtle-foreground">
         {t("exportWizard.installStep.helpLead")}{" "}
-        <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" style={s.link}>
+        <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="text-brand-text">
           {t("exportWizard.installStep.helpLink")} →
         </a>
       </div>
