@@ -27,24 +27,20 @@ export function CurateDrawer({
   onOpenMemory: (id: string) => void;
 }) {
   const t = useTranslations("memory.curate");
-  const { mutate: runScan, data, error, isPending } = useCurateScan();
+  // The drawer is only mounted by the Curate click, so the scan is still click-triggered.
+  const { data: scanned, error, isFetching, refetch } = useCurateScan(repoId);
   // Proposals the user already applied or skipped, keyed `g:<primary>` / `s:<memory>`.
   const [handled, setHandled] = React.useState<ReadonlySet<string>>(new Set());
   const [conflict, setConflict] = React.useState(false);
 
-  const scan = React.useCallback(() => {
+  const scan = () => {
     setHandled(new Set());
     setConflict(false);
-    runScan({ repoId });
-  }, [runScan, repoId]);
+    void refetch();
+  };
 
-  // The drawer is only mounted by the Curate click, so this is still click-triggered.
-  const started = React.useRef(false);
-  React.useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    scan();
-  }, [scan]);
+  // While (re-)scanning show progress, not the previous snapshot.
+  const data = isFetching ? undefined : scanned;
 
   const done = (key: string) => setHandled((cur) => new Set(cur).add(key));
   const groups = data?.groups.filter((g) => !handled.has(`g:${g.primary_id}`)) ?? [];
@@ -106,10 +102,10 @@ export function CurateDrawer({
             </>
           )}
         </div>
-      ) : error ? (
+      ) : error && !isFetching ? (
         <ErrorState title={t("scanError")} onRetry={scan} />
       ) : (
-        <div style={s.center} aria-busy={isPending}>
+        <div style={s.center} aria-busy={isFetching}>
           <span>{t("scanning")}</span>
           <Skeleton height={120} />
         </div>

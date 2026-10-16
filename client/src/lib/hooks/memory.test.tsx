@@ -115,15 +115,24 @@ import { useCurateMerge, useCurateScan, useKeepMemory } from "./memory";
 const MEMORY_ID = "00000000-0000-4000-8000-000000000001";
 
 describe("useCurateScan", () => {
-  it("posts the repo to the scan endpoint and caches nothing", async () => {
+  it("posts the repo to the scan endpoint once and drops the snapshot on unmount", async () => {
     const api = mockFetch([post("/memories/curate/scan", () => ({ groups: [], stale: [], totals: { groups: 0, stale: 0 }, mode: "text" }))]);
     const { qc, wrapper } = setup();
-    const { result } = renderHook(() => useCurateScan(), { wrapper });
-    await act(async () => {
-      await result.current.mutateAsync({ repoId: MEMORY_ID });
-    });
+    const { result, unmount } = renderHook(() => useCurateScan(MEMORY_ID), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.calls).toHaveLength(1);
     expect(api.calls[0]!.body).toEqual({ repo_id: MEMORY_ID });
-    expect(qc.getQueryCache().getAll()).toHaveLength(0);
+    unmount();
+    await waitFor(() => expect(qc.getQueryCache().getAll()).toHaveLength(0));
+  });
+
+  it("is not re-scanned by the memory invalidations a merge or Keep triggers (AC-C21)", async () => {
+    const api = mockFetch([post("/memories/curate/scan", () => ({ groups: [], stale: [], totals: { groups: 0, stale: 0 }, mode: "text" }))]);
+    const { qc, wrapper } = setup();
+    const { result } = renderHook(() => useCurateScan(null), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await act(() => qc.invalidateQueries({ queryKey: ["memories"] }));
+    expect(api.calls).toHaveLength(1);
   });
 });
 
