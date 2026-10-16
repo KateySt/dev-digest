@@ -1,5 +1,5 @@
 import type { ConventionCandidate } from '@devdigest/shared';
-import type { ConventionRow } from './repository.js';
+import type { ConventionRow, ConventionWithSkill } from './repository.js';
 
 /**
  * Pure helpers for the conventions module — DB row ⇄ DTO mapping and the
@@ -7,7 +7,7 @@ import type { ConventionRow } from './repository.js';
  */
 
 /** Map a persisted convention row to the public `ConventionCandidate` DTO. */
-export function toConventionDto(row: ConventionRow): ConventionCandidate {
+export function toConventionDto(row: ConventionWithSkill): ConventionCandidate {
   return {
     id: row.id,
     category: row.category,
@@ -18,7 +18,32 @@ export function toConventionDto(row: ConventionRow): ConventionCandidate {
     evidence_line: row.evidenceLine,
     confidence: row.confidence ?? 0,
     status: row.status,
+    skill: row.skill ? { id: row.skill.id, name: row.skill.name, repo_id: row.skill.repoId } : null,
   };
+}
+
+/**
+ * Which of the requested ids can NOT go into a new skill
+ * (SPEC-2026-10-16-convention-skills AC-4/AC-5). `missing`: not found in the
+ * workspace, or belongs to another repo (reported as not found, so a caller
+ * can't probe other repos). `unavailable`: found but not accepted, or already
+ * linked to a skill. Used both for the unlocked pre-check and the re-check
+ * under `FOR UPDATE`.
+ */
+export function unavailableIds(
+  rows: Pick<ConventionRow, 'id' | 'repoId' | 'status' | 'skillId'>[],
+  ids: string[],
+  repoId: string,
+): { missing: string[]; unavailable: string[] } {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const missing: string[] = [];
+  const unavailable: string[] = [];
+  for (const id of ids) {
+    const row = byId.get(id);
+    if (!row || row.repoId !== repoId) missing.push(id);
+    else if (row.status !== 'accepted' || row.skillId !== null) unavailable.push(id);
+  }
+  return { missing, unavailable };
 }
 
 /** Collapse runs of whitespace so formatting differences (indentation,

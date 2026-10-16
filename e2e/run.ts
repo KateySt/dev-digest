@@ -39,6 +39,8 @@ const RESULTS_DIR = join(HERE, "test-results");
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const BIN = process.env.AGENT_BROWSER_BIN ?? "agent-browser";
 const STEP_TIMEOUT = Number(process.env.E2E_STEP_TIMEOUT ?? 60_000);
+/** Optional substring filter on flow file names, e.g. E2E_ONLY=12-convention. */
+const ONLY = process.env.E2E_ONLY;
 
 /** Run one agent-browser command; resolve with its stdout, reject on non-zero exit. */
 async function ab(args: string[]): Promise<string> {
@@ -52,7 +54,7 @@ async function ab(args: string[]): Promise<string> {
 
 function loadFlows(): { file: string; flow: Flow }[] {
   return readdirSync(SPECS_DIR)
-    .filter((f) => f.endsWith(".flow.json"))
+    .filter((f) => f.endsWith(".flow.json") && (!ONLY || f.includes(ONLY)))
     .sort()
     .map((file) => ({
       file,

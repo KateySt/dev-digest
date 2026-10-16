@@ -2,22 +2,32 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Card, PercentProgress, Textarea } from "@devdigest/ui";
+import { Badge, Button, Card, Checkbox, PercentProgress, Textarea } from "@devdigest/ui";
 import type { ConventionCandidate } from "@devdigest/shared";
 import { CONVENTION_CATEGORY_COLOR } from "../../constants";
 import { s } from "./styles";
 
+/** One convention candidate. A "ready" card gets a selection checkbox
+ *  (`selected` + `onToggleSelected`); a card already used in a skill shows
+ *  Unlink instead of Accept/Reject (SPEC-2026-10-16-convention-skills AC-20). */
 export function ConventionCard({
   candidate,
   onAccept,
   onReject,
+  onUnlink,
   onSaveRule,
+  selected,
+  onToggleSelected,
   busy,
 }: {
   candidate: ConventionCandidate;
   onAccept: () => void;
   onReject: () => void;
+  onUnlink?: () => void;
   onSaveRule: (rule: string) => void;
+  /** Present only on selectable ("ready") cards. */
+  selected?: boolean;
+  onToggleSelected?: () => void;
   busy?: boolean;
 }) {
   const t = useTranslations("conventions");
@@ -36,16 +46,39 @@ export function ConventionCard({
 
   const isAccepted = candidate.status === "accepted";
   const isRejected = candidate.status === "rejected";
+  const isUsed = candidate.skill !== null;
 
   return (
     <Card style={s.card(candidate.status)}>
       <div style={s.header}>
+        {onToggleSelected && (
+          <Checkbox
+            checked={!!selected}
+            onChange={onToggleSelected}
+            label={<span style={s.srOnly}>{t("selection.select", { rule: candidate.rule })}</span>}
+          />
+        )}
         {editing ? (
           <Textarea value={draft} onChange={setDraft} rows={2} />
         ) : (
           <div style={s.title}>{candidate.rule}</div>
         )}
-        {!editing && (
+        {!editing && isUsed && onUnlink && (
+          <div style={s.actions}>
+            <Button
+              kind="secondary"
+              size="sm"
+              icon="X"
+              onClick={onUnlink}
+              disabled={busy}
+              title={t("card.unlinkHint")}
+              aria-label={`${t("card.unlink")}: ${candidate.rule}`}
+            >
+              {t("card.unlink")}
+            </Button>
+          </div>
+        )}
+        {!editing && !isUsed && (
           <div style={s.actions}>
             <Button
               kind={isAccepted ? "primary" : "secondary"}
@@ -53,10 +86,17 @@ export function ConventionCard({
               icon={isAccepted ? "Check" : undefined}
               onClick={onAccept}
               disabled={busy || isAccepted}
+              aria-label={`${isAccepted ? t("card.accepted") : t("card.accept")}: ${candidate.rule}`}
             >
               {isAccepted ? t("card.accepted") : t("card.accept")}
             </Button>
-            <Button kind="secondary" size="sm" onClick={onReject} disabled={busy || isRejected}>
+            <Button
+              kind="secondary"
+              size="sm"
+              onClick={onReject}
+              disabled={busy || isRejected}
+              aria-label={`${t("card.reject")}: ${candidate.rule}`}
+            >
               {t("card.reject")}
             </Button>
           </div>

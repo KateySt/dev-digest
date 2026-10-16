@@ -445,6 +445,44 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
   // ---- deterministic eval demo data (Security Reviewer) ----
   await seedEvalData(db, { workspaceId, agentId: agentIds.get('Security Reviewer')!, prId: pr!.id });
 
+  // ---- convention candidates for the demo repo ----
+  // Real extraction needs a clone + an LLM; these give the Conventions page
+  // (and e2e flow 12, SPEC-2026-10-16-convention-skills) deterministic data.
+  // Inserted only while the repo has no candidates, so a re-seed never
+  // duplicates them or touches the user's own scans.
+  const [anyConvention] = await db
+    .select({ id: t.conventions.id })
+    .from(t.conventions)
+    .where(eq(t.conventions.repoId, repoId))
+    .limit(1);
+  if (!anyConvention) {
+    await db.insert(t.conventions).values(
+      [
+        {
+          category: 'errors' as const,
+          rule: 'Route handlers throw typed AppError subclasses instead of returning error objects',
+          evidencePath: 'src/routes/charges.ts',
+          evidenceSnippet: "throw new NotFoundError('Charge not found');",
+          evidenceLine: 42,
+        },
+        {
+          category: 'naming' as const,
+          rule: 'Config keys are camelCase and read once from a single config module',
+          evidencePath: 'src/config.ts',
+          evidenceSnippet: 'port: 3000,',
+          evidenceLine: 10,
+        },
+        {
+          category: 'testing' as const,
+          rule: 'Every route file has a colocated *.test.ts covering its error paths',
+          evidencePath: 'src/routes/charges.test.ts',
+          evidenceSnippet: "it('returns 404 for an unknown charge'",
+          evidenceLine: 18,
+        },
+      ].map((c) => ({ ...c, workspaceId, repoId, confidence: 0.86, status: 'pending' as const })),
+    );
+  }
+
   return { workspaceId, userId };
 }
 

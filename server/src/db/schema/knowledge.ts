@@ -107,10 +107,16 @@ export const conventions = pgTable(
     status: text('status', { enum: ['pending', 'accepted', 'rejected'] })
       .notNull()
       .default('pending'),
+    // SPEC-2026-10-16-convention-skills: the skill this convention was merged
+    // into. Null = still unused. SET NULL so deleting the skill returns the
+    // convention to "ready" (still accepted) instead of deleting it.
+    skillId: uuid('skill_id').references(() => skills.id, { onDelete: 'set null' }),
     createdAt: now(),
   },
   (t) => ({
     repoCreatedIdx: index('conventions_repo_created_idx').on(t.repoId, t.createdAt),
+    // Manual index: Postgres does not auto-index FK columns.
+    skillIdx: index('conventions_skill_idx').on(t.skillId),
     categoryCk: check(
       'conventions_category_ck',
       sql`${t.category} = ANY (ARRAY['naming', 'structure', 'errors', 'testing', 'imports', 'typing', 'api', 'general'])`,

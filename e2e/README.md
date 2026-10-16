@@ -81,7 +81,8 @@ cd e2e && npm install && npm test
 Env knobs:
 
 - Runner: `E2E_BASE_URL`, `AGENT_BROWSER_BIN` (default `agent-browser`),
-  `E2E_STEP_TIMEOUT` (ms, default 60000).
+  `E2E_STEP_TIMEOUT` (ms, default 60000), `E2E_ONLY` (run only flows whose file
+  name contains this substring, e.g. `E2E_ONLY=12-convention`).
 - Hermetic stack (`scripts/e2e.sh`): `E2E_PG_PORT` (5433), `E2E_API_PORT` (3101),
   `E2E_WEB_PORT` (3100), `E2E_PG_CONTAINER` (`devdigest-e2e-postgres`),
   `E2E_PG_IMAGE` (`pgvector/pgvector:pg16`).

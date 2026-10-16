@@ -33,4 +33,13 @@ spec-creator → spec (WHAT/WHY) → implementation-planner → plan (HOW) → i
 - **Status lifecycle:** `draft` → `approved` → `implemented`
 - **Language:** specs are written in English (aligned with the rest of the repo docs).
 
+## Index
+
+| Spec | Feature |
+|------|---------|
+| [`2026-06-30-project-context.md`](./2026-06-30-project-context.md) | Project Context |
+| [`2026-10-12-memory.md`](./2026-10-12-memory.md) | Memory |
+| [`2026-10-12-memory-curation.md`](./2026-10-12-memory-curation.md) | Memory curation (manual Curate action) |
+| [`2026-10-16-convention-skills.md`](./2026-10-16-convention-skills.md) | Skills from Conventions: checkbox selection instead of status juggling, `conventions.skill_id` link, project/global scope at creation — **implemented** (plan: `docs/plans/2026-10-16-convention-skills-plan.md`) |
+
 A spec that replaces an earlier decision links it via the `Supersedes:` header line.

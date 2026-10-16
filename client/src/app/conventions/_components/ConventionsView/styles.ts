@@ -16,7 +16,12 @@ export const s = {
   } satisfies CSSProperties,
   toolbarLeft: { display: "flex", alignItems: "center", gap: 12 } satisfies CSSProperties,
   candidateCount: { fontSize: 13, color: "var(--text-muted)" } satisfies CSSProperties,
-  deselectAll: {
+  section: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 } satisfies CSSProperties,
+  sectionHeader: { display: "flex", alignItems: "center", gap: 12 } satisfies CSSProperties,
+  sectionActions: { display: "flex", gap: 12, marginLeft: "auto" } satisfies CSSProperties,
+  sectionHint: { fontSize: 13, color: "var(--text-secondary)", margin: 0 } satisfies CSSProperties,
+  h2: { fontSize: 15, fontWeight: 600, margin: 0 } satisfies CSSProperties,
+  linkButton: {
     fontSize: 13,
     color: "var(--text-secondary)",
     background: "none",

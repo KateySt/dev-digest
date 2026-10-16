@@ -17,3 +17,4 @@ how to run them. New journeys get the next number, prefixed like the rest.
 | `09-skill-evals.flow.json` | Create a skill eval case, then open the per-skill dashboard and compare the seeded v1 / v2 skill runs (deltas + skill-text diff; needs migration 0021 and the seeded `pr-quality-rubric` skill) |
 | `10-memory.flow.json` | Learn from the seeded Security Reviewer finding, save it, follow the "Learned" link to the Memory page (needs migrations 0026–0027; fresh DB with no memories) |
 | `11-memory-curation.flow.json` | Make two duplicate memories, click Curate, edit the merged text and apply the one merge; the other memory is archived with "Merged into" (needs migration 0028; runs after `10-memory`, whose memory it reuses) |
+| `12-convention-skills.flow.json` | Accept the three seeded convention candidates, build a project skill from two of them and a global skill from the third; statuses never change (needs migration 0029 and the seeded candidates) |

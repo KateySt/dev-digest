@@ -10,6 +10,14 @@ export const s = {
     fontSize: 13,
     marginBottom: 16,
   } satisfies CSSProperties,
+  error: {
+    padding: "10px 14px",
+    borderRadius: 8,
+    border: "1px solid var(--crit)",
+    color: "var(--crit)",
+    fontSize: 13,
+    marginBottom: 16,
+  } satisfies CSSProperties,
   form: { display: "flex", flexDirection: "column", gap: 14, padding: "20px 24px" } satisfies CSSProperties,
   footer: { display: "flex", justifyContent: "flex-end", gap: 10 } satisfies CSSProperties,
 } as const;

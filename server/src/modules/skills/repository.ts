@@ -131,9 +131,10 @@ export class SkillsRepository {
     return rows.length > 0;
   }
 
-  /** Insert a skill AND record version 1 in skill_versions. */
-  async insert(values: InsertSkill): Promise<SkillRow> {
-    const [row] = await this.db
+  /** Insert a skill AND record version 1 in skill_versions. Pass a
+   *  transaction's `tx` as `executor` to make both writes part of it. */
+  async insert(values: InsertSkill, executor: DbExecutor = this.db): Promise<SkillRow> {
+    const [row] = await executor
       .insert(t.skills)
       .values({
         workspaceId: values.workspaceId,
@@ -153,7 +154,7 @@ export class SkillsRepository {
         sourcePath: values.sourcePath ?? null,
       })
       .returning();
-    await this.snapshotVersion(row!.id, INITIAL_SKILL_VERSION, row!.body);
+    await this.snapshotVersion(row!.id, INITIAL_SKILL_VERSION, row!.body, executor);
     return row!;
   }
 
@@ -190,8 +191,13 @@ export class SkillsRepository {
     return row;
   }
 
-  private async snapshotVersion(skillId: string, version: number, body: string): Promise<void> {
-    await this.db
+  private async snapshotVersion(
+    skillId: string,
+    version: number,
+    body: string,
+    executor: DbExecutor = this.db,
+  ): Promise<void> {
+    await executor
       .insert(t.skillVersions)
       .values({ skillId, version, body })
       .onConflictDoNothing();

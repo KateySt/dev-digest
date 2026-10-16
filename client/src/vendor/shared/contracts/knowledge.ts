@@ -438,8 +438,37 @@ export const ConventionCandidate = z.object({
   evidence_line: z.number().int().nullish(),
   confidence: z.number().min(0).max(1),
   status: ConventionStatus,
+  /** The skill this convention was merged into (SPEC-2026-10-16-convention-skills),
+   *  or null while it is still unused. `repo_id` is the skill's current scope. */
+  skill: z
+    .object({ id: z.string(), name: z.string(), repo_id: z.string().nullable() })
+    .nullable(),
 });
 export type ConventionCandidate = z.infer<typeof ConventionCandidate>;
+
+/** Body of `POST /repos/:id/conventions/skill` — one skill from a selection of
+ *  accepted, unused conventions. `scope: 'repo'` binds the skill to the route's
+ *  repo; `'global'` leaves `repo_id` null. */
+export const CreateSkillFromConventionsInput = z.object({
+  convention_ids: z
+    .array(z.string().uuid())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, 'convention_ids must be unique'),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  type: SkillType,
+  body: z.string().min(1),
+  enabled: z.boolean().optional(),
+  scope: z.enum(['repo', 'global']),
+});
+export type CreateSkillFromConventionsInput = z.infer<typeof CreateSkillFromConventionsInput>;
+
+export const CreateSkillFromConventionsResult = z.object({
+  skill: Skill,
+  conventions: z.array(ConventionCandidate),
+});
+export type CreateSkillFromConventionsResult = z.infer<typeof CreateSkillFromConventionsResult>;
 
 // ---- Agents ----
 // 'openrouter' routes through the OpenAI-compatible API (OpenAIProvider with a
