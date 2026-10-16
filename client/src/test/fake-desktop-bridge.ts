@@ -1,11 +1,12 @@
 /* Test helper: a fake preload bridge installed on window.devdigestDesktop. */
 import { vi } from "vitest";
-import type { DesktopBridge, DesktopPrefs } from "@/lib/desktop";
+import type { DesktopBridge, DesktopPrefs, DesktopPrLink } from "@/lib/desktop";
 
 export function installFakeBridge(platform = "win32") {
   let maximizedListener: ((m: boolean) => void) | null = null;
   let navigateListener: ((href: string) => void) | null = null;
   const prefs: DesktopPrefs = { closeToTray: true };
+  let openPrListener: ((pr: DesktopPrLink) => void) | null = null;
   const bridge: DesktopBridge = {
     platform,
     window: {
@@ -29,6 +30,10 @@ export function installFakeBridge(platform = "win32") {
         navigateListener = cb;
         return () => (navigateListener = null);
       }),
+      onOpenPr: vi.fn((cb: (pr: DesktopPrLink) => void) => {
+        openPrListener = cb;
+        return () => (openPrListener = null);
+      }),
       checkForUpdates: vi.fn(async () => {}),
       openReleases: vi.fn(async () => {}),
       openLogsFolder: vi.fn(async () => {}),
@@ -40,6 +45,7 @@ export function installFakeBridge(platform = "win32") {
     bridge,
     emitMaximized: (m: boolean) => maximizedListener?.(m),
     emitNavigate: (href: string) => navigateListener?.(href),
+    emitOpenPr: (pr: DesktopPrLink) => openPrListener?.(pr),
   };
 }
 

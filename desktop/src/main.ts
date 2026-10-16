@@ -12,6 +12,7 @@ import { isOwnOrigin, openExternalSafe } from './validate';
 import { getPrefs, loadPrefs, updatePrefs } from './prefs';
 import { createTray } from './tray';
 import { attachTaskbar } from './taskbar';
+import { deepLinkFromArgv, handleDeepLink, registerProtocol, setDeepLinkTarget } from './deep-link';
 import { initTheme, windowBackground } from './theme';
 import { attachContextMenu } from './context-menu';
 
@@ -32,7 +33,19 @@ if (!app.requestSingleInstanceLock()) {
   // A second launch would fight over the ports and PGlite's single-process data dir.
   app.quit();
 } else {
-  app.on('second-instance', () => showWindow());
+  // A link clicked while we run (Windows/Linux) starts a second instance carrying it.
+  app.on('second-instance', (_event, argv) => {
+    handleDeepLink(deepLinkFromArgv(argv));
+    showWindow();
+  });
+  // macOS delivers links as an event — it can fire before `ready`, so it's registered here.
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleDeepLink(url);
+    if (app.isReady()) showWindow();
+  });
+  // Cold start from a link (Windows/Linux): it is on our own command line.
+  handleDeepLink(deepLinkFromArgv(process.argv));
   app.whenReady().then(boot).catch((err) => fatal('DevDigest failed to start', err));
 }
 
@@ -42,6 +55,7 @@ async function boot(): Promise<void> {
   if (process.platform === 'win32') app.setAppUserModelId('dev.devdigest.app');
   loadPrefs();
   initTheme();
+  registerProtocol();
   buildMenu();
   registerIpc();
   const splash = createSplash();
@@ -120,6 +134,8 @@ function createWindow(): void {
     showTrayHintOnce();
   });
   mainWindow.on('closed', () => (mainWindow = undefined));
+  const win = mainWindow;
+  win.webContents.once('did-finish-load', () => setDeepLinkTarget(win));
   void mainWindow.loadURL(WEB_URL);
 }
 

@@ -10,6 +10,13 @@ export interface DesktopPrefs {
   closeToTray: boolean;
 }
 
+/** A `devdigest://pr?url=…` link, already validated by the main process. */
+export interface DesktopPrLink {
+  owner: string;
+  repo: string;
+  number: number;
+}
+
 export interface DesktopBridge {
   platform: string;
   window: {
@@ -33,6 +40,8 @@ export interface DesktopBridge {
     setPrefs(p: Partial<DesktopPrefs>): Promise<DesktopPrefs>;
     /** A clicked OS notification asks the studio to open a route. Returns the unsubscribe function. */
     onNavigate(cb: (href: string) => void): () => void;
+    /** A `devdigest://pr` link asks the studio to open a GitHub PR. Returns the unsubscribe function. */
+    onOpenPr(cb: (pr: DesktopPrLink) => void): () => void;
     checkForUpdates(): Promise<void>;
     openReleases(): Promise<void>;
     openLogsFolder(): Promise<void>;

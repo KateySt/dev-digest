@@ -126,5 +126,8 @@
     "maximize": "Maximize window",
     "restore": "Restore window",
     "close": "Close window"
+  },
+  "deepLink": {
+    "repoNotAdded": "{repo} isn't added to DevDigest yet. Add the repository, then open the link again."
   }
 }

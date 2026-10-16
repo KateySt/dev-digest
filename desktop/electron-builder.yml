@@ -23,6 +23,12 @@ extraResources:
     to: icons
 afterPack: scripts/after-pack.cjs
 
+# devdigest:// links (src/deep-link.ts): NSIS writes the registry keys,
+# macOS gets CFBundleURLTypes in Info.plist.
+protocols:
+  - name: DevDigest
+    schemes: [devdigest]
+
 win:
   target:
     - target: nsis
