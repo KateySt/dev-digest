@@ -150,6 +150,8 @@
     "desktopHint": "Show a Windows / macOS notification when a long operation finishes and DevDigest isn't the focused window.",
     "soundLabel": "Sound",
     "soundHint": "Play the system notification sound with them.",
+    "trayLabel": "Keep running in the tray",
+    "trayHint": "Closing the window hides DevDigest to the system tray, so running reviews finish and notifications still arrive. Quit from the tray menu.",
     "browserNote": "System notifications are available in the DevDigest desktop app."
   },
   "appearance": {

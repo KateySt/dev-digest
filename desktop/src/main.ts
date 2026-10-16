@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, Notification } from 'electron';
 import log from 'electron-log/main';
 import { join } from 'node:path';
 import { API_PORT, API_URL, GIT_DOWNLOAD_URL, WEB_PORT, WEB_URL, dataPaths } from './config';
@@ -9,7 +9,8 @@ import { forwardMaximizeState, registerIpc } from './ipc';
 import { initUpdates } from './updater';
 import { createSplash, setSplashStatus } from './splash';
 import { isOwnOrigin, openExternalSafe } from './validate';
-import { loadPrefs } from './prefs';
+import { getPrefs, loadPrefs, updatePrefs } from './prefs';
+import { createTray } from './tray';
 import { initTheme, windowBackground } from './theme';
 import { attachContextMenu } from './context-menu';
 
@@ -24,16 +25,13 @@ let api: Child | undefined;
 let web: Child | undefined;
 let mainWindow: BrowserWindow | undefined;
 let quitting = false;
+let trayHint: Notification | undefined;
 
 if (!app.requestSingleInstanceLock()) {
   // A second launch would fight over the ports and PGlite's single-process data dir.
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
-  });
+  app.on('second-instance', () => showWindow());
   app.whenReady().then(boot).catch((err) => fatal('DevDigest failed to start', err));
 }
 
@@ -67,6 +65,7 @@ async function boot(): Promise<void> {
   ]);
 
   createWindow();
+  createTray(showWindow);
   splash.destroy();
   initUpdates();
 }
@@ -112,8 +111,42 @@ function createWindow(): void {
   mainWindow.webContents.on('will-redirect', (event, url) => {
     if (!isOwnOrigin(url)) event.preventDefault();
   });
+  mainWindow.on('close', (event) => {
+    if (quitting || !closesToTray()) return;
+    event.preventDefault();
+    mainWindow?.hide();
+    showTrayHintOnce();
+  });
   mainWindow.on('closed', () => (mainWindow = undefined));
   void mainWindow.loadURL(WEB_URL);
+}
+
+/** Bring the window back from the tray, the taskbar or behind other windows. */
+function showWindow(): void {
+  if (!mainWindow) {
+    if (web && !quitting) createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+/** Windows/Linux only — on macOS closing the window already keeps the app in the Dock. */
+function closesToTray(): boolean {
+  return process.platform !== 'darwin' && getPrefs().closeToTray;
+}
+
+/** First close-to-tray: tell the user the app is still running, once. */
+function showTrayHintOnce(): void {
+  if (getPrefs().trayHintShown || !Notification.isSupported()) return;
+  updatePrefs({ trayHintShown: true });
+  // Held in a module variable: Windows can GC a toast before it is shown/clicked.
+  trayHint = new Notification({
+    title: 'DevDigest is still running',
+    body: 'It keeps working in the system tray. Quit from the tray menu, or turn this off in Settings → Notifications.',
+  });
+  trayHint.show();
 }
 
 function watchCrash(child: Child): void {

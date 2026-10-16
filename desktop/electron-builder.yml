@@ -18,6 +18,9 @@ extraResources:
     to: server
   - from: resources/web
     to: web
+  # Tray + taskbar-overlay PNGs, loaded at runtime from resources/icons.
+  - from: build/icons
+    to: icons
 afterPack: scripts/after-pack.cjs
 
 win:

@@ -3,7 +3,7 @@ import { RELEASES_URL, dataPaths } from './config';
 import { checkForUpdates } from './updater';
 import { clampInt, isOwnOrigin, isStudioRoute, oneOf } from './validate';
 import { setActivity } from './activity';
-import { THEME_SOURCES } from './prefs';
+import { THEME_SOURCES, getPrefs, updatePrefs } from './prefs';
 import { setThemeSource } from './theme';
 
 /**
@@ -77,6 +77,13 @@ export function registerIpc(): void {
     if (oneOf(arg, THEME_SOURCES)) setThemeSource(win, arg);
   });
   handle('app:notify', showNotification);
+  // Only the user-facing prefs cross the bridge (not themeSource/trayHintShown).
+  handle('app:get-prefs', () => ({ closeToTray: getPrefs().closeToTray }));
+  handle('app:set-prefs', (_win, arg) => {
+    const p = (arg ?? {}) as Record<string, unknown>;
+    if (typeof p.closeToTray === 'boolean') updatePrefs({ closeToTray: p.closeToTray });
+    return { closeToTray: getPrefs().closeToTray };
+  });
   handle('app:set-activity', (_win, arg) => {
     const a = (arg ?? {}) as Record<string, unknown>;
     setActivity({ running: clampInt(a.running, 0, 999), unread: clampInt(a.unread, 0, 999) });

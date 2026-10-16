@@ -3,7 +3,12 @@
    useDesktop() returns null and every desktop-only control renders nothing. */
 "use client";
 
-import { useSyncExternalStore } from "react";
+import React, { useSyncExternalStore } from "react";
+
+export interface DesktopPrefs {
+  /** Windows/Linux: closing the window keeps DevDigest running in the tray. */
+  closeToTray: boolean;
+}
 
 export interface DesktopBridge {
   platform: string;
@@ -23,6 +28,9 @@ export interface DesktopBridge {
     notify(n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean>;
     /** Running jobs + unread count → taskbar progress, unread badge, tray status. */
     setActivity(a: { running: number; unread: number }): Promise<void>;
+    /** Shell settings kept by the main process (desktop-prefs.json). */
+    getPrefs(): Promise<DesktopPrefs>;
+    setPrefs(p: Partial<DesktopPrefs>): Promise<DesktopPrefs>;
     /** A clicked OS notification asks the studio to open a route. Returns the unsubscribe function. */
     onNavigate(cb: (href: string) => void): () => void;
     checkForUpdates(): Promise<void>;
@@ -50,4 +58,33 @@ export function useDesktop(): DesktopBridge | null {
     () => window.devdigestDesktop ?? null,
     () => null,
   );
+}
+
+/**
+ * The main process's shell prefs, or null until loaded / in a browser. Not
+ * server data — the bridge is the source of truth, so a local mirror is fine;
+ * `update` applies optimistically and settles on what main saved.
+ */
+export function useDesktopPrefs(): [DesktopPrefs | null, (p: Partial<DesktopPrefs>) => void] {
+  const desktop = useDesktop();
+  const [prefs, setPrefs] = React.useState<DesktopPrefs | null>(null);
+
+  React.useEffect(() => {
+    if (!desktop) return;
+    let live = true;
+    void desktop.app.getPrefs().then((p) => live && setPrefs(p));
+    return () => {
+      live = false;
+    };
+  }, [desktop]);
+
+  const update = React.useCallback(
+    (patch: Partial<DesktopPrefs>) => {
+      if (!desktop) return;
+      setPrefs((prev) => (prev ? { ...prev, ...patch } : prev));
+      void desktop.app.setPrefs(patch).then(setPrefs);
+    },
+    [desktop],
+  );
+  return [prefs, update];
 }
