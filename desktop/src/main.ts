@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log/main';
 import { join } from 'node:path';
 import { API_PORT, API_URL, GIT_DOWNLOAD_URL, WEB_PORT, WEB_URL, dataPaths } from './config';
@@ -8,6 +8,7 @@ import { buildMenu } from './menu';
 import { forwardMaximizeState, registerIpc } from './ipc';
 import { initUpdates } from './updater';
 import { createSplash, setSplashStatus } from './splash';
+import { isOwnOrigin, openExternalSafe } from './validate';
 
 // `pnpm start` keeps its DB/logs apart from the installed app's.
 if (!app.isPackaged) {
@@ -91,16 +92,19 @@ function createWindow(): void {
   mainWindow.setMenuBarVisibility(false);
   forwardMaximizeState(mainWindow);
   mainWindow.once('ready-to-show', () => mainWindow?.show());
-  // Links to GitHub PRs, docs, etc. open in the default browser, not in the app.
+  // Links to GitHub PRs, docs, etc. open in the default browser (https only),
+  // never in the app; the window itself never leaves the studio's origin.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url) && !url.startsWith(WEB_URL)) void shell.openExternal(url);
+    if (!isOwnOrigin(url)) openExternalSafe(url);
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(WEB_URL)) {
-      event.preventDefault();
-      void shell.openExternal(url);
-    }
+    if (isOwnOrigin(url)) return;
+    event.preventDefault();
+    openExternalSafe(url);
+  });
+  mainWindow.webContents.on('will-redirect', (event, url) => {
+    if (!isOwnOrigin(url)) event.preventDefault();
   });
   mainWindow.on('closed', () => (mainWindow = undefined));
   void mainWindow.loadURL(WEB_URL);
@@ -121,7 +125,7 @@ async function warnNoGit(): Promise<void> {
     message: 'Git was not found',
     detail: 'DevDigest needs Git to clone and review repositories. Install it, then restart DevDigest.',
   });
-  if (response === 0) void shell.openExternal(GIT_DOWNLOAD_URL);
+  if (response === 0) openExternalSafe(GIT_DOWNLOAD_URL);
 }
 
 function fatal(message: string, err?: unknown): void {

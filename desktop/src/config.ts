@@ -8,6 +8,8 @@ export const API_PORT = 43101;
 export const HOST = '127.0.0.1';
 export const WEB_URL = `http://${HOST}:${WEB_PORT}`;
 export const API_URL = `http://${HOST}:${API_PORT}`;
+/** Compare against this with `new URL(x).origin`, never a string prefix. */
+export const WEB_ORIGIN = new URL(WEB_URL).origin;
 
 export const GITHUB_OWNER = 'KateySt';
 export const GITHUB_REPO = 'dev-digest';

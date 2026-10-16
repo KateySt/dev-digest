@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Notification, shell, type IpcMainInvokeEvent } from 'electron';
-import { RELEASES_URL, WEB_URL, dataPaths } from './config';
+import { RELEASES_URL, dataPaths } from './config';
 import { checkForUpdates } from './updater';
+import { isOwnOrigin, isStudioRoute } from './validate';
 
 /**
  * Main-process side of the preload bridge (preload.ts — keep channel names in
@@ -8,7 +9,8 @@ import { checkForUpdates } from './updater';
  * showing the studio, so a navigated-away or foreign frame can't drive them.
  */
 function ownWindow(e: IpcMainInvokeEvent): BrowserWindow | null {
-  if (!e.senderFrame?.url.startsWith(WEB_URL)) return null;
+  // Exact origin compare — a prefix check passes `http://127.0.0.1:43100@evil.com`.
+  if (!e.senderFrame || !isOwnOrigin(e.senderFrame.url)) return null;
   return BrowserWindow.fromWebContents(e.sender);
 }
 
@@ -43,7 +45,7 @@ function showNotification(win: BrowserWindow, arg: unknown): boolean {
   const title = clip(req.title, 200);
   if (!title || !Notification.isSupported()) return false;
   if (win.isFocused() && !win.isMinimized()) return false;
-  const href = typeof req.href === 'string' && /^\/(?!\/)/.test(req.href) ? req.href : null;
+  const href = isStudioRoute(req.href) ? req.href : null;
 
   const toast = new Notification({ title, body: clip(req.body, 500), silent: req.silent === true });
   shown.add(toast);
