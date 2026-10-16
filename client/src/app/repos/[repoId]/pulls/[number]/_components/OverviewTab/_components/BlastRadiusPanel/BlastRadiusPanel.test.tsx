@@ -119,7 +119,7 @@ describe("BlastRadiusPanel", () => {
     expect(screen.getByText("symbols")).toBeInTheDocument();
     expect(screen.getByText("callers")).toBeInTheDocument();
     expect(screen.getByText("endpoints")).toBeInTheDocument();
-    expect(screen.getByText("cron/jobs")).toBeInTheDocument();
+    expect(screen.getByText("cron")).toBeInTheDocument();
   });
 
   it("renders the caller count as plain text, not a Badge pill", () => {
@@ -134,31 +134,39 @@ describe("BlastRadiusPanel", () => {
     expect(callerCountEl.style.background).toBe("");
   });
 
-  it("gives endpoint and cron chips distinct, queryable pill styling", () => {
+  it("gives endpoint and cron chips distinct tinted styling", () => {
     useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
     renderPanel();
 
-    fireEvent.click(screen.getByText("computeTotal()"));
+    // The first symbol with callers starts expanded, so its chips are visible.
     const endpointChip = screen.getByText("POST /checkout").closest("span");
     const cronChip = screen.getByText("nightly-reconcile").closest("span");
 
-    expect(endpointChip).not.toBeNull();
-    expect(cronChip).not.toBeNull();
-    // Both are filled pill chips (not the old uniform gray fill) with
-    // different tinted backgrounds from each other.
     expect(endpointChip?.style.background).toBe("var(--accent-bg)");
     expect(cronChip?.style.background).toBe("var(--warn-bg)");
-    expect(endpointChip?.style.background).not.toBe(cronChip?.style.background);
   });
 
-  it("defaults to the tree view and lets expanding a symbol jump to a caller via file:line", () => {
+  it("expands the first symbol with callers by default and collapses it on click", () => {
+    useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
+    renderPanel();
+
+    const row = screen.getByText("computeTotal()").closest('[role="button"]');
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("src/routes/checkout.ts:42")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("computeTotal()"));
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("src/routes/checkout.ts:42")).not.toBeInTheDocument();
+  });
+
+  it("defaults to the tree view and jumps to a caller via file:line", () => {
     useBlastMock.mockReturnValue({ data: radius(), isLoading: false });
     const { onNavigateToFile } = renderPanel();
 
-    fireEvent.click(screen.getByText("computeTotal()"));
-    const link = screen.getByText("src/routes/checkout.ts:42 — checkout");
-    fireEvent.click(link);
+    expect(screen.getByRole("button", { name: "Tree" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Graph" })).toHaveAttribute("aria-pressed", "false");
 
+    fireEvent.click(screen.getByText("src/routes/checkout.ts:42"));
     expect(onNavigateToFile).toHaveBeenCalledWith("src/routes/checkout.ts", 42);
   });
 

@@ -3,13 +3,14 @@
     "symbols": "symbols",
     "callers": "callers",
     "endpoints": "endpoints",
-    "crons": "cron/jobs"
+    "crons": "cron"
   },
   "view": {
-    "tree": "tree",
-    "graph": "graph"
+    "tree": "Tree",
+    "graph": "Graph",
+    "ariaLabel": "Blast radius view"
   },
-  "callerCount": "{count} callers",
+  "callerCount": "{count, plural, one {# caller} other {# callers}}",
   "noDownstream": "{count} changed symbol(s), no downstream callers found.",
   "graph": {
     "empty": "No downstream callers to graph.",
@@ -25,6 +26,7 @@
     "label": "Prior PRs touching these files",
     "empty": "No prior PRs touched these files.",
     "unavailable": "Prior PRs not available yet.",
-    "unavailableHint": "Couldn't load prior PRs touching these files."
+    "unavailableHint": "Couldn't load prior PRs touching these files.",
+    "merged": "merged {date, date, medium}"
   }
 }

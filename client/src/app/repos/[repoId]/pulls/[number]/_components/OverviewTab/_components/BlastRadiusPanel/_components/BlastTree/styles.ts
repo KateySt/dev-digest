@@ -1,94 +1,88 @@
 import type { CSSProperties } from "react";
 
+// Horizontal offset of the caller tree's guide line inside `detail`.
+const GUIDE_X = 8;
+
 export const s = {
   wrap: {
     display: "flex",
     flexDirection: "column",
-    gap: 6,
+    gap: 2,
   } satisfies CSSProperties,
-  symbolRow: (interactive: boolean): CSSProperties => ({
+  // Flat row (no border/box) — an open group gets the --bg-hover tint so the
+  // expanded symbol reads as the "selected" header of its caller list.
+  symbolRow: (interactive: boolean, open: boolean): CSSProperties => ({
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    padding: "8px 10px",
-    borderRadius: 7,
-    background: "var(--bg-surface)",
-    border: "1px solid var(--border)",
+    gap: 6,
+    padding: "5px 6px",
+    borderRadius: 6,
+    background: open ? "var(--bg-hover)" : "transparent",
     cursor: interactive ? "pointer" : "default",
     opacity: interactive ? 1 : 0.65,
   }),
-  // Reserves the chevron's own width on every row (even non-expandable ones,
-  // where nothing renders inside it) so the code icon/name/file columns line
-  // up across rows regardless of whether a chevron is present.
   chevronSlot: {
-    width: 14,
+    width: 13,
     display: "inline-flex",
     justifyContent: "center",
     flexShrink: 0,
   } satisfies CSSProperties,
   chevron: (open: boolean): CSSProperties => ({
     color: "var(--text-muted)",
-    transform: open ? "rotate(180deg)" : "none",
-    transition: "transform .15s",
-    flexShrink: 0,
+    transform: open ? "rotate(90deg)" : "none",
+    transition: "transform .12s",
   }),
   codeIcon: {
-    color: "var(--text-muted)",
+    color: "var(--accent)",
     flexShrink: 0,
   } satisfies CSSProperties,
   symbolName: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: 600,
     color: "var(--text-primary)",
-  } satisfies CSSProperties,
-  symbolFile: {
-    fontSize: 12,
-    color: "var(--text-muted)",
-    flex: 1,
-    minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  } satisfies CSSProperties,
-  // Plain indented area (no box/background) — a left guideline rule plus a
-  // per-caller connector icon (see callerItem) reads as a tree branch rather
-  // than a bordered card nested inside another bordered card.
-  detail: {
-    marginLeft: 24,
-    marginTop: 2,
-    paddingLeft: 12,
-    borderLeft: "1px solid var(--border)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-  } satisfies CSSProperties,
-  callerList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  } satisfies CSSProperties,
-  // A caller line (`file:line — name`) has no spaces, so a plain flex item
-  // won't wrap it — the browser treats it as one unbreakable "word" and lets
-  // it run past the panel edge instead. minWidth: 0 lets the flex item
-  // actually shrink; overflowWrap/wordBreak give it somewhere to break.
-  callerItem: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 6,
     minWidth: 0,
     overflowWrap: "anywhere",
-    wordBreak: "break-word",
   } satisfies CSSProperties,
-  callerConnector: {
-    color: "var(--text-muted)",
-    flexShrink: 0,
-    marginTop: 3,
-  } satisfies CSSProperties,
-  // Plain muted text, not a filled Badge pill — matches the stat row's
-  // plain-text style elsewhere in this panel rather than looking like an
-  // interactive/emphasized chip.
   callerCount: {
-    fontSize: 12,
+    fontSize: 11,
+    color: "var(--text-muted)",
+    marginLeft: "auto",
+    flexShrink: 0,
+  } satisfies CSSProperties,
+  detail: {
+    padding: "4px 0 8px 14px",
+  } satisfies CSSProperties,
+  // A `file:line` string has no spaces, so the browser treats it as one
+  // unbreakable "word" — minWidth: 0 on the row plus MonoLink's `wrap` give
+  // it somewhere to break (see client/INSIGHTS.md's unbreakable file:line
+  // entry).
+  callerRow: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    padding: "3px 0",
+    paddingLeft: 18,
+    fontSize: 12.5,
+    minWidth: 0,
+  } satisfies CSSProperties,
+  guideV: (last: boolean): CSSProperties => ({
+    position: "absolute",
+    left: GUIDE_X,
+    top: 0,
+    bottom: last ? "50%" : 0,
+    width: 1,
+    background: "var(--border-strong)",
+  }),
+  guideH: {
+    position: "absolute",
+    left: GUIDE_X,
+    top: "50%",
+    width: 8,
+    height: 1,
+    background: "var(--border-strong)",
+  } satisfies CSSProperties,
+  callerIcon: {
     color: "var(--text-muted)",
     flexShrink: 0,
   } satisfies CSSProperties,
@@ -96,24 +90,18 @@ export const s = {
     display: "flex",
     flexWrap: "wrap",
     gap: 6,
+    padding: "8px 0 2px 18px",
   } satisfies CSSProperties,
-  // Filled pill chip overrides for Badge's default gray look, applied via
-  // Badge's own `bg`/`color`/`style` props (Badge itself is
-  // vendored/do-not-touch) — tinted background instead of the earlier
-  // transparent+border outline. `whiteSpace: "normal"` + overflowWrap/
-  // wordBreak/minWidth: 0 override Badge's hardcoded `white-space: nowrap` —
-  // see client/INSIGHTS.md's unbreakable file:line entry; without this a
-  // long endpoint path or cron name runs past the chip's edge instead of
-  // wrapping.
-  endpointBadge: {
-    borderRadius: 999,
-    whiteSpace: "normal",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-    minWidth: 0,
+  cronRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 6,
+    padding: "6px 0 2px 18px",
   } satisfies CSSProperties,
-  cronBadge: {
-    borderRadius: 999,
+  // Badge (vendored, do-not-touch) hardcodes `white-space: nowrap`; override
+  // it via its `style` prop so a long endpoint path / cron name wraps inside
+  // the chip instead of running past the panel edge.
+  chip: {
     whiteSpace: "normal",
     overflowWrap: "anywhere",
     wordBreak: "break-word",

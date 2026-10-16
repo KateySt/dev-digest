@@ -2,66 +2,89 @@ import type { CSSProperties } from "react";
 
 export const s = {
   wrap: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
+    border: "1px solid var(--border)",
+    borderRadius: 7,
+    overflow: "hidden",
   } satisfies CSSProperties,
-  header: {
+  header: (open: boolean): CSSProperties => ({
     display: "flex",
     alignItems: "center",
     gap: 8,
+    padding: "9px 12px",
     cursor: "pointer",
     color: "var(--text-primary)",
-  } satisfies CSSProperties,
+    background: open ? "var(--bg-surface)" : "transparent",
+  }),
   headerIcon: {
     color: "var(--text-muted)",
     flexShrink: 0,
   } satisfies CSSProperties,
   headerLabel: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: 600,
   } satisfies CSSProperties,
-  spacer: {
-    flex: 1,
-  } satisfies CSSProperties,
   chevron: (open: boolean): CSSProperties => ({
+    marginLeft: "auto",
     color: "var(--text-muted)",
     transform: open ? "rotate(180deg)" : "none",
     transition: "transform .15s",
     flexShrink: 0,
   }),
   body: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
+    borderTop: "1px solid var(--border)",
+    padding: "4px 0",
+  } satisfies CSSProperties,
+  bodyPad: {
+    padding: "8px 14px",
   } satisfies CSSProperties,
   placeholderHint: {
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    background: "var(--bg-elevated)",
-    padding: "13px 16px",
+    padding: "10px 14px",
     fontSize: 13,
     color: "var(--text-muted)",
   } satisfies CSSProperties,
-  list: {
+  item: (last: boolean): CSSProperties => ({
     display: "flex",
-    flexDirection: "column",
-    gap: 8,
-  } satisfies CSSProperties,
-  item: {
-    border: "1px solid var(--border)",
-    borderRadius: 7,
-    background: "var(--bg-surface)",
-    padding: "10px 12px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    // A PR title is free-form text with no guaranteed spaces (long
-    // identifiers, paths pasted into a title, …) — same overflow bug as the
-    // mono file:line strings elsewhere in this panel family (see
-    // client/INSIGHTS.md's "unbreakable mono file:line string" entry, three
-    // prior occurrences). minWidth: 0 lets this flex item actually shrink.
+    gap: 12,
+    padding: "10px 14px",
+    borderBottom: last ? "none" : "1px solid var(--border)",
+    // A PR title / path is free-form text with no guaranteed spaces —
+    // minWidth: 0 lets this flex item actually shrink (see client/INSIGHTS.md's
+    // "unbreakable mono file:line string" entry).
     minWidth: 0,
+  }),
+  timeline: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    paddingTop: 3,
+  } satisfies CSSProperties,
+  timelineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 99,
+    background: "var(--text-muted)",
+    border: "2px solid var(--bg-elevated)",
+    boxSizing: "content-box",
+  } satisfies CSSProperties,
+  timelineLine: {
+    width: 1,
+    flex: 1,
+    background: "var(--border)",
+    marginTop: 2,
+  } satisfies CSSProperties,
+  itemBody: {
+    flex: 1,
+    minWidth: 0,
+  } satisfies CSSProperties,
+  itemTitleRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  } satisfies CSSProperties,
+  itemNumber: {
+    fontSize: 12,
+    color: "var(--accent-text)",
   } satisfies CSSProperties,
   itemTitle: {
     fontSize: 13,
@@ -72,25 +95,25 @@ export const s = {
     minWidth: 0,
   } satisfies CSSProperties,
   itemMeta: {
-    fontSize: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    margin: "4px 0 6px",
+    fontSize: 11.5,
     color: "var(--text-muted)",
   } satisfies CSSProperties,
   itemNotes: {
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 1.5,
     color: "var(--text-secondary)",
   } satisfies CSSProperties,
   fileList: {
     display: "flex",
     flexDirection: "column",
     gap: 4,
-    marginTop: 4,
+    marginTop: 6,
   } satisfies CSSProperties,
-  // A `file/path.ts` string has no spaces, so the browser treats it as one
-  // unbreakable "word" — give each row its own wrap room (same fix as
-  // BlastTree's `callerItem` / CommitHistoryPanel's file rows).
   fileRow: {
     minWidth: 0,
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
   } satisfies CSSProperties,
 } as const;
