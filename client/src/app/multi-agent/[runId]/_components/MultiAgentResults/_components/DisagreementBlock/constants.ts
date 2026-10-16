@@ -1,12 +1,13 @@
 import type { ConflictTake } from "@devdigest/shared";
 
-export const VERDICT_COLOR: Record<string, string> = {
-  CRITICAL: "var(--crit)",
-  WARNING: "var(--warn)",
-  SUGGESTION: "var(--sugg)",
+/** Text colour of a flagged (severity) verdict. */
+export const VERDICT_CLASS: Record<string, string> = {
+  CRITICAL: "text-crit",
+  WARNING: "text-warn",
+  SUGGESTION: "text-sugg",
 };
 
-export const NEUTRAL_VERDICT_COLOR = "var(--text-muted)";
+export const NEUTRAL_VERDICT_CLASS = "text-subtle-foreground";
 
 export type NonSeverityVerdict = Exclude<ConflictTake["verdict"], "CRITICAL" | "WARNING" | "SUGGESTION">;
 

@@ -7,9 +7,14 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon, IconBtn, Card, Avatar, Markdown, Textarea, Button } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Markdown } from "@/components/markdown";
+import { UserAvatar } from "@/components/user-avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { PrReviewComment } from "@/lib/types";
-import { cs, type DiffCommentApi } from "../comments";
+import { type DiffCommentApi } from "../comments";
+import { COMMENT_BODY, COMMENT_CARD, COMMENT_HEAD, COMMENT_META, COMMENT_USER, COMPOSER_ACTIONS } from "../constants";
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -48,53 +53,69 @@ export function CommentCard({ c, commenting }: { c: PrReviewComment; commenting?
   };
 
   return (
-    <Card>
-      <div style={cs.headRow}>
-        <Avatar name={c.user} size={20} />
-        <span style={cs.user}>{c.user}</span>
-        <span style={cs.time}>{formatWhen(c.created_at)}</span>
-        <span style={{ flex: 1 }} />
+    <div className={COMMENT_CARD}>
+      <div className={COMMENT_HEAD}>
+        <UserAvatar name={c.user} size={20} />
+        <span className={COMMENT_USER}>{c.user}</span>
+        <span className={COMMENT_META}>{formatWhen(c.created_at)}</span>
+        <span className="flex-1" />
         {commenting && !editing && (
           <>
-            <IconBtn icon="Edit" label={t("diffViewer.editLabel")} size={24} onClick={startEdit} />
-            <IconBtn icon="Trash" label={t("diffViewer.deleteLabel")} size={24} danger onClick={() => void remove()} />
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("diffViewer.editLabel")}
+              title={t("diffViewer.editLabel")}
+              onClick={startEdit}
+            >
+              <Icon.Edit aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="hover:text-crit"
+              aria-label={t("diffViewer.deleteLabel")}
+              title={t("diffViewer.deleteLabel")}
+              onClick={() => void remove()}
+            >
+              <Icon.Trash aria-hidden />
+            </Button>
           </>
         )}
-        <a href={c.html_url} target="_blank" rel="noopener noreferrer" style={cs.ghLink}>
-          <Icon.ExternalLink size={12} />
+        <a
+          href={c.html_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-subtle-foreground no-underline"
+        >
+          <Icon.ExternalLink size={12} aria-hidden />
           {t("diffViewer.viewOnGitHub")}
         </a>
       </div>
       {editing ? (
         <div
-          style={cs.composer}
+          className="flex flex-col gap-1"
           onKeyDown={(e) => {
             if (e.key === "Escape") setEditing(false);
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void save();
           }}
         >
-          <Textarea value={text} onChange={setText} rows={3} />
-          <div style={cs.composerActions}>
-            <Button
-              kind="primary"
-              size="sm"
-              icon="Check"
-              loading={commenting?.updating}
-              disabled={commenting?.updating || !text.trim()}
-              onClick={() => void save()}
-            >
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} />
+          <div className={COMPOSER_ACTIONS}>
+            <Button size="sm" disabled={commenting?.updating || !text.trim()} onClick={() => void save()}>
+              {commenting?.updating ? <Icon.Loader className="animate-spin" aria-hidden /> : <Icon.Check aria-hidden />}
               {t("diffViewer.save")}
             </Button>
-            <Button kind="ghost" size="sm" onClick={() => setEditing(false)} disabled={commenting?.updating}>
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={commenting?.updating}>
               {t("diffViewer.cancel")}
             </Button>
           </div>
         </div>
       ) : (
-        <div style={cs.mdBody}>
+        <div className={COMMENT_BODY}>
           <Markdown>{c.body}</Markdown>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

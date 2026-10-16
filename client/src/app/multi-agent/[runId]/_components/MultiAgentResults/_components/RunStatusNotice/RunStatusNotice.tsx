@@ -5,11 +5,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Skeleton } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { AgentColumn } from "@devdigest/shared";
 import { ELAPSED_TICK_MS } from "../../constants";
 import { elapsedSeconds, startedAtMs } from "../../helpers";
-import { s } from "./styles";
 
 export interface RunStatusNoticeProps {
   column: AgentColumn;
@@ -18,6 +20,11 @@ export interface RunStatusNoticeProps {
   cancelling?: boolean;
   onCancel: (runId: string) => void;
 }
+
+const WRAP = "min-w-0 break-words wrap-anywhere";
+const ROOT = "flex min-w-0 flex-col gap-2.5";
+const ROW = "flex min-w-0 flex-wrap items-center gap-2";
+const LABEL = cn("text-sm font-semibold text-foreground", WRAP);
 
 function useNowWhile(active: boolean): number {
   const [now, setNow] = React.useState(() => Date.now());
@@ -37,13 +44,13 @@ export function RunStatusNotice({ column, fallbackStartIso, cancelling, onCancel
 
   const cancel = (
     <Button
-      kind="ghost"
+      variant="outline"
       size="sm"
-      icon="X"
       disabled={cancelling}
       aria-label={t("cancelAgent", { agent: column.agent_name })}
       onClick={() => onCancel(column.run_id)}
     >
+      <Icon.X aria-hidden />
       {t("cancel")}
     </Button>
   );
@@ -51,9 +58,9 @@ export function RunStatusNotice({ column, fallbackStartIso, cancelling, onCancel
   switch (column.status) {
     case "queued":
       return (
-        <div style={s.root}>
-          <div style={s.row}>
-            <span style={s.label}>
+        <div className={ROOT}>
+          <div className={ROW}>
+            <span className={LABEL}>
               {column.queue_position != null ? t("queued", { position: column.queue_position }) : "—"}
             </span>
             {cancel}
@@ -62,31 +69,31 @@ export function RunStatusNotice({ column, fallbackStartIso, cancelling, onCancel
       );
     case "running":
       return (
-        <div style={s.root}>
-          <div style={s.row}>
-            <span style={s.label} role="status">
+        <div className={ROOT}>
+          <div className={ROW}>
+            <span className={LABEL} role="status">
               {t("running", { elapsed: elapsedSeconds(startedAtMs(column, fallbackStartIso), now) })}
             </span>
             {cancel}
           </div>
-          <div style={s.skeletons} aria-hidden="true" data-testid="column-skeleton">
-            <Skeleton height={44} />
-            <Skeleton height={44} />
-            <Skeleton height={44} />
+          <div className="flex flex-col gap-2" aria-hidden="true" data-testid="column-skeleton">
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
           </div>
         </div>
       );
     case "failed":
       return (
-        <div style={s.root}>
-          <span style={s.label}>{t("failed")}</span>
-          <span style={s.error}>{column.error ? t("failedReason", { message: column.error }) : "—"}</span>
+        <div className={ROOT}>
+          <span className={LABEL}>{t("failed")}</span>
+          <span className={cn("text-ui text-crit", WRAP)}>{column.error ? t("failedReason", { message: column.error }) : "—"}</span>
         </div>
       );
     case "cancelled":
       return (
-        <div style={s.root}>
-          <span style={s.label}>{t("cancelled")}</span>
+        <div className={ROOT}>
+          <span className={LABEL}>{t("cancelled")}</span>
         </div>
       );
     default:

@@ -2,11 +2,20 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Icon, IconBtn } from "@devdigest/ui";
 import type { EvalCaseListItem } from "@devdigest/shared";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { caseChip, summarizeCase } from "../helpers";
 import { useCaseSummaryText } from "../useCaseSummaryText";
-import { s } from "../styles";
+
+const WRAP = "min-w-0 break-words wrap-anywhere";
+
+/** Kind badge tone: blue must-find, amber must-not-flag. */
+const KIND_TONE: Record<EvalCaseListItem["kind"], string> = {
+  must_find: "border-primary text-primary",
+  must_not_flag: "border-warn text-warn",
+};
 
 /** One eval case: status icon (pass / fail / never run / errored), bold mono
  *  name, kind badge (blue must-find / amber must-not-flag, seed tooltip for
@@ -31,59 +40,99 @@ export function CaseRow({
   const run = c.last_run;
   const summary = summarizeCase(c.kind, c.expected_output, run);
   const chip = caseChip(c.kind, c.expected_output);
-  const kindColor = c.kind === "must_find" ? "var(--accent)" : "var(--warn)";
   const seedTip = c.source === "manual" ? undefined : t(`evalsTab.seed.${c.source}`);
 
   const statusKey = !run ? "never" : run.status === "errored" ? "errored" : run.pass ? "pass" : "fail";
   const StatusIcon = {
-    pass: <Icon.CheckCircle size={18} style={{ color: "var(--ok)" }} />,
-    fail: <Icon.XCircle size={18} style={{ color: "var(--crit)" }} />,
-    errored: <Icon.AlertTriangle size={18} style={{ color: "var(--warn)" }} />,
-    never: <Icon.Dot size={18} style={{ color: "var(--text-muted)" }} />,
+    pass: <Icon.CheckCircle size={18} className="text-ok" aria-hidden />,
+    fail: <Icon.XCircle size={18} className="text-crit" aria-hidden />,
+    errored: <Icon.AlertTriangle size={18} className="text-warn" aria-hidden />,
+    never: <Icon.Dot size={18} className="text-subtle-foreground" aria-hidden />,
   }[statusKey];
 
   const summaryText = summaryToText(summary);
 
   return (
-    <div style={s.row}>
-      <span style={s.rowIcon} role="img" aria-label={t(`evalsTab.status.${statusKey}`)}>
+    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-2.5">
+      <span
+        className="grid w-5 shrink-0 place-items-center"
+        role="img"
+        aria-label={t(`evalsTab.status.${statusKey}`)}
+        data-status={statusKey}
+      >
         {StatusIcon}
       </span>
-      <div style={s.rowMain}>
-        <div style={s.rowTitleLine}>
-          <span className="mono" style={s.rowName} onClick={onEdit}>
+      {/* min-w-0 + wrapping so long names / file:line summaries never push the row wider (client/INSIGHTS.md 2026-09-24). */}
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className={cn("mono cursor-pointer text-base font-bold", WRAP)} onClick={onEdit}>
             {c.name}
           </span>
-          <span style={s.kindBadge(kindColor)} title={seedTip}>
+          <span
+            data-kind={c.kind}
+            className={cn(
+              "shrink-0 rounded-sm border px-1.5 py-px text-[10.5px] font-bold tracking-[0.05em] whitespace-nowrap uppercase",
+              KIND_TONE[c.kind],
+            )}
+            title={seedTip}
+          >
             {t(`evalsTab.kind.${c.kind}`)}
           </span>
         </div>
-        <div className="mono" style={s.rowSummary}>
-          {summaryText}
-        </div>
+        <div className={cn("mono mt-0.5 text-ui text-subtle-foreground", WRAP)}>{summaryText}</div>
       </div>
-      {chip && <span style={s.rowChip}>{chip.kind === "empty" ? t("evalsTab.assertEmpty") : chip.text}</span>}
-      <div style={s.rowActions}>
+      {chip && (
+        <span className="shrink-0 rounded-[5px] bg-muted px-2.25 py-0.75 text-xs whitespace-nowrap text-subtle-foreground">
+          {chip.kind === "empty" ? t("evalsTab.assertEmpty") : chip.text}
+        </span>
+      )}
+      <div className="flex shrink-0 gap-0.5">
         {runDisabledReason ? (
           <>
             <Button
-              kind="tertiary"
-              size="sm"
-              icon="Play"
+              variant="ghost"
+              size="icon-sm"
               aria-label={t("evalsTab.run")}
               title={runDisabledReason}
               aria-describedby={reasonId}
               disabled
-            />
-            <span id={reasonId} style={s.srOnly}>
+            >
+              <Icon.Play aria-hidden />
+            </Button>
+            <span id={reasonId} className="sr-only">
               {runDisabledReason}
             </span>
           </>
         ) : (
-          <IconBtn icon="Play" label={t("evalsTab.run")} onClick={onRun} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("evalsTab.run")}
+            title={t("evalsTab.run")}
+            onClick={onRun}
+          >
+            <Icon.Play aria-hidden />
+          </Button>
         )}
-        <IconBtn icon="Edit" label={t("evalsTab.edit")} onClick={onEdit} />
-        <IconBtn icon="Trash" label={t("evalsTab.delete")} danger onClick={onDelete} />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("evalsTab.edit")}
+          title={t("evalsTab.edit")}
+          onClick={onEdit}
+        >
+          <Icon.Edit aria-hidden />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="hover:text-crit"
+          aria-label={t("evalsTab.delete")}
+          title={t("evalsTab.delete")}
+          onClick={onDelete}
+        >
+          <Icon.Trash aria-hidden />
+        </Button>
       </div>
     </div>
   );

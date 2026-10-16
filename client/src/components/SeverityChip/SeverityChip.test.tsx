@@ -31,8 +31,8 @@ describe("SeverityChip", () => {
       <SeverityChip sev={Severity.enum.CRITICAL} count={3} />,
     );
     // The dots row is the last child of the outer column div.
-    // Faded dots have opacity:0.2 — count should be 12-3=9.
-    const fadedDots = container.querySelectorAll('[style*="opacity: 0.2"]');
+    // Faded dots are the data-slot="empty" slots — count should be 12-3=9.
+    const fadedDots = container.querySelectorAll('[data-slot="empty"]');
     expect(fadedDots).toHaveLength(9);
   });
 
@@ -40,7 +40,7 @@ describe("SeverityChip", () => {
     const { container } = render(
       <SeverityChip sev={Severity.enum.WARNING} count={12} />,
     );
-    const fadedDots = container.querySelectorAll('[style*="opacity: 0.2"]');
+    const fadedDots = container.querySelectorAll('[data-slot="empty"]');
     expect(fadedDots).toHaveLength(0);
   });
 
@@ -51,8 +51,8 @@ describe("SeverityChip", () => {
     const { container: c12 } = render(
       <SeverityChip sev={Severity.enum.SUGGESTION} count={12} />,
     );
-    const faded15 = c15.querySelectorAll('[style*="opacity: 0.2"]');
-    const faded12 = c12.querySelectorAll('[style*="opacity: 0.2"]');
+    const faded15 = c15.querySelectorAll('[data-slot="empty"]');
+    const faded12 = c12.querySelectorAll('[data-slot="empty"]');
     expect(faded15).toHaveLength(0);
     expect(faded12).toHaveLength(0);
   });

@@ -4,7 +4,16 @@ import React from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Dropdown, EmptyState, ErrorState, Icon, Skeleton } from "@devdigest/ui";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { EvalRange } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
 import { type TrendPoint } from "@/components/eval-metrics";
@@ -13,8 +22,12 @@ import { notify } from "@/lib/contexts";
 import { useAgent, useAgents } from "@/lib/hooks/agents";
 import { useAgentEvalRuns, useEvalSuiteRun, useStartAgentEvalRun } from "@/lib/hooks/eval-runs";
 import { RANGE_OPTIONS, parseRange } from "@/lib/eval";
+import { cn } from "@/lib/utils";
 import { CompareRunsModal } from "./_components/CompareRunsModal";
-import { s } from "./styles";
+
+/** Long unbroken strings wrap (client/INSIGHTS.md 2026-09-24). */
+const WRAP = "min-w-0 break-words wrap-anywhere";
+const CHIP = cn("mono rounded-md border border-border-strong px-2.25 py-0.5 text-ui text-muted-foreground", WRAP);
 
 /** Per-agent eval dashboard (`/eval/[agentId]?range=`): regression banner,
  *  metric cards + sparklines (latest finished run vs. previous, independent of
@@ -85,63 +98,75 @@ export function AgentEvalDashboard() {
 
   return (
     <AppShell crumb={crumb}>
-      <div style={s.page}>
-        <Link href="/eval" style={s.back}>
-          <Icon.ChevronLeft size={14} />
+      <div className="mx-auto max-w-[1100px] px-8 pt-6 pb-11">
+        <Link
+          href="/eval"
+          className="mb-3.5 inline-flex items-center gap-1.5 text-[13.5px] text-muted-foreground no-underline"
+        >
+          <Icon.ChevronLeft size={14} aria-hidden />
           {t("header.back")}
         </Link>
 
-        <div style={s.header}>
-          <div style={s.headerText}>
-            <div style={s.titleRow}>
-              <h1 style={s.h1}>{agent?.name ?? "…"}</h1>
+        <div className="mb-4.5 flex flex-wrap items-start gap-4">
+          <div className="min-w-[260px] flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className={cn("text-5xl font-bold tracking-[-0.02em]", WRAP)}>{agent?.name ?? "…"}</h1>
               {agent && (
-                <span className="mono" style={s.chip}>
+                <span className={CHIP}>
                   {agent.model}
                 </span>
               )}
               {agent && (
-                <span className="mono" style={s.chip} title={t("header.currentVersion")}>
+                <span className={CHIP} title={t("header.currentVersion")}>
                   v{agent.version}
                 </span>
               )}
             </div>
             {data && (
-              <p style={s.subtitle}>{t("header.subtitle", { runs: data.runs.length, cases: data.cases_total })}</p>
+              <p className="mt-1.5 text-base text-muted-foreground">{t("header.subtitle", { runs: data.runs.length, cases: data.cases_total })}</p>
             )}
           </div>
-          <div style={s.controls}>
-            <Dropdown
-              width={240}
-              align="right"
-              trigger={
-                <Button kind="secondary" icon="Cpu" iconRight="ChevronDown" aria-label={t("header.agentPicker")}>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" aria-label={t("header.agentPicker")}>
+                  <Icon.Cpu aria-hidden />
                   {agent?.name ?? t("page.agentFallback")}
+                  <Icon.ChevronDown aria-hidden />
                 </Button>
-              }
-              items={(agents ?? []).map((a) => ({
-                label: a.name,
-                icon: "Cpu" as const,
-                onClick: () => router.push(`/eval/${a.id}?range=${range}`),
-              }))}
-            />
-            <Dropdown
-              width={160}
-              align="right"
-              trigger={
-                <Button kind="secondary" icon="Calendar" aria-label={t("header.rangeLabel")}>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                {(agents ?? []).map((a) => (
+                  <DropdownMenuItem key={a.id} onSelect={() => router.push(`/eval/${a.id}?range=${range}`)}>
+                    <Icon.Cpu aria-hidden />
+                    {a.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" aria-label={t("header.rangeLabel")}>
+                  <Icon.Calendar aria-hidden />
                   {t(`ranges.${range}`)}
                 </Button>
-              }
-              items={RANGE_OPTIONS.map((r) => ({ label: t(`ranges.${r}`), onClick: () => setRange(r) }))}
-            />
-            <Button kind="primary" icon="Play" onClick={handleRun} disabled={running}>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {RANGE_OPTIONS.map((r) => (
+                  <DropdownMenuItem key={r} onSelect={() => setRange(r)}>
+                    {t(`ranges.${r}`)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={handleRun} disabled={running}>
+              <Icon.Play aria-hidden />
               {runLabel}
             </Button>
           </div>
         </div>
 
-        {runs.isLoading && <Skeleton height={260} />}
+        {runs.isLoading && <Skeleton className="h-65 w-full" />}
         {runs.isError && <ErrorState body={t("compare.loadFailed")} onRetry={() => runs.refetch()} />}
 
         {data?.alert && <RegressionBanner alert={data.alert} />}
@@ -162,32 +187,31 @@ export function AgentEvalDashboard() {
 
             <TrendPanel points={trend} />
 
-            <div style={s.runsHead}>
-              <span style={s.sectionLabel}>
-                <Icon.History size={14} />
+            <div className="mb-3 flex items-center gap-3">
+              <span className="flex items-center gap-2 text-xs font-bold tracking-[0.07em] text-subtle-foreground uppercase">
+                <Icon.History size={14} aria-hidden />
                 {t("runs.title")}
               </span>
-              {selectedIds.length > 0 && <span style={s.selectedNote}>{tm("runs.selected", { count: selectedIds.length })}</span>}
-              <span style={s.compareBtn} title={canCompare ? undefined : tm("runs.compareHint")}>
+              {selectedIds.length > 0 && <span className="text-sm text-subtle-foreground">{tm("runs.selected", { count: selectedIds.length })}</span>}
+              <span className="ml-auto" title={canCompare ? undefined : tm("runs.compareHint")}>
                 <Button
-                  kind="primary"
-                  icon="Link"
                   disabled={!canCompare}
                   aria-describedby={canCompare ? undefined : "compare-hint"}
                   onClick={() => setCompare([selectedIds[0]!, selectedIds[1]!])}
                 >
+                  <Icon.Link aria-hidden />
                   {tm("runs.compare")}
                 </Button>
                 {!canCompare && (
-                  <span id="compare-hint" style={s.srOnly}>
+                  <span id="compare-hint" className="sr-only">
                     {tm("runs.compareHint")}
                   </span>
                 )}
               </span>
             </div>
-            <div style={s.tableWrap}>
+            <div className="overflow-x-auto rounded-xl border border-border bg-elevated">
               {data.runs.length === 0 ? (
-                <div style={s.muted}>{tm("runs.emptyRange")}</div>
+                <div className="px-3 py-4.5 text-[13.5px] text-subtle-foreground">{tm("runs.emptyRange")}</div>
               ) : (
                 <RunsTable runs={data.runs} selected={selectedIds} onToggle={toggle} />
               )}

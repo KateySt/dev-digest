@@ -23,9 +23,10 @@
     { "cmd": ["find", "role", "button", "click", "--name", "Dismiss", "--exact"], "label": "dismiss the success toast (it overlaps the modal footer)" },
     { "cmd": ["find", "role", "checkbox", "click", "--name", "Every route file has a colocated"], "label": "select the remaining convention" },
     { "cmd": ["find", "role", "button", "click", "--name", "Create skill (1)"], "label": "open the modal again" },
-    { "cmd": ["find", "text", "This project (acme/payments-api)", "click"], "label": "open the scope select" },
-    { "cmd": ["find", "text", "Global (all projects)", "click"], "label": "choose Global" },
+    { "cmd": ["find", "role", "combobox", "click", "--name", "Scope"], "label": "open the scope select (a Radix Select: its hidden native <option>s duplicate the text, so target the trigger by role)" },
+    { "cmd": ["find", "role", "option", "click", "--name", "Global (all projects)"], "label": "choose Global" },
     { "cmd": ["wait", "--text", "Applies to reviews of every project."], "label": "the hint explains the global scope" },
+    { "cmd": ["wait", "--fn", "document.getAnimations().every((a) => a.effect?.getTiming().iterations === Infinity)"], "label": "the scope select finished closing (a click mid-animation is a no-op)" },
     { "cmd": ["find", "role", "button", "click", "--name", "Create skill", "--exact"], "label": "create the global skill" },
     { "cmd": ["wait", "--text", "0 ready · 3 used in skills"], "label": "every accepted convention is now used, none changed status" }
   ]

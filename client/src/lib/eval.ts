@@ -62,14 +62,6 @@ export function formatPointDelta(d: PointDelta): string {
   return `${arrow}${d.points}pt`;
 }
 
-/** Delta colour: rise green, drop red, flat muted. `invert` flips it for cost
- *  (a rise is bad). */
-export function deltaColor(direction: DeltaDirection, invert = false): string {
-  if (direction === "flat") return "var(--text-muted)";
-  const good = invert ? direction === "down" : direction === "up";
-  return good ? "var(--ok)" : "var(--crit)";
-}
-
 /** Dollar delta for cost cards: "+$0.02" / "-$0.01". */
 export function formatCostDelta(delta: number): string {
   const abs = Math.abs(delta).toFixed(2);

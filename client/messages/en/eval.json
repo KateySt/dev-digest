@@ -150,7 +150,8 @@
       "running": "A run is already in progress.",
       "noCases": "Add an eval case first."
     },
-    "runFailed": "The run could not be started."
+    "runFailed": "The run could not be started.",
+    "confirmDelete": "Delete eval case \"{name}\"? This cannot be undone."
   },
   "page": {
     "crumbSkillsLab": "Skills Lab",

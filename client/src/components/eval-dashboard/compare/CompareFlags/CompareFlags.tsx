@@ -2,7 +2,10 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { s } from "../../styles";
+import { cn } from "@/lib/utils";
+import { WRAP } from "../../constants";
+
+const FLAG = cn("rounded-md border border-warn px-2.5 py-0.75 text-ui text-warn", WRAP);
 
 /** "case sets differ (X vs Y)" / "N cases edited between runs" — renders
  *  nothing when the runs are directly comparable. */
@@ -16,13 +19,13 @@ export function CompareFlags({
   const t = useTranslations("evalMetrics");
   if (!caseSetsDiffer && editedCases <= 0) return null;
   return (
-    <div style={s.flags}>
+    <div className="flex flex-wrap gap-2.5">
       {caseSetsDiffer && (
-        <span style={s.flag}>
+        <span className={FLAG}>
           {t("compare.caseSetsDiffer", { old: caseSetsDiffer.old_count, new: caseSetsDiffer.new_count })}
         </span>
       )}
-      {editedCases > 0 && <span style={s.flag}>{t("compare.editedCases", { count: editedCases })}</span>}
+      {editedCases > 0 && <span className={FLAG}>{t("compare.editedCases", { count: editedCases })}</span>}
     </div>
   );
 }

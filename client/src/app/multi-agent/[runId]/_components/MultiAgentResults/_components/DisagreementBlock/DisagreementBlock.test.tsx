@@ -93,7 +93,7 @@ describe("DisagreementBlock", () => {
     const long = "src/" + "very-long-segment/".repeat(10) + "file.ts";
     setup([{ ...ROWS[0]!, file: long, title: "<b>bold</b>" }]);
     const loc = screen.getByText(`${long}:28`);
-    expect(loc).toHaveStyle({ overflowWrap: "anywhere", minWidth: "0" });
+    expect(loc).toHaveClass("wrap-anywhere", "min-w-0");
     expect(screen.getByText("<b>bold</b>")).toBeInTheDocument();
   });
 });

@@ -8,6 +8,25 @@ README, delete the entry instead of letting it go stale.
 ## Format
 
 ```
+### 2026-10-16 — Radix-based shadcn primitives need pointer events in tests, and a disabled Button swallows its tooltip
+
+Learned while moving the client to Tailwind + shadcn/ui. Radix
+`DropdownMenu` and `Select` triggers open on `pointerdown`, not `click`, so
+`fireEvent.click(trigger)` in an RTL test does nothing. Use `openMenu(trigger)`
+from `@/test/radix`, then click the item (`role="menuitem"` / `"option"`);
+`src/test/setup.ts` polyfills `PointerEvent` for jsdom. Radix `Checkbox` and
+`Switch` are buttons — assert `aria-checked` / `toBeChecked()`, not
+`.checked`. `Dialog`/`Sheet` restore focus to the opener asynchronously —
+wrap that assertion in `waitFor`. Tests that build their own
+`NextIntlClientProvider` must include the `common` namespace (shared UI
+labels such as the dialog close button), or use `IntlWrapper` from
+`@/test/intl`.
+
+shadcn's `Button` has `disabled:pointer-events-none`, so a `title` on a
+disabled button never shows. Put the reason somewhere a screen reader and a
+hover can both reach (an `aria-describedby` hint, or a wrapping element that
+carries the `title`).
+
 ### YYYY-MM-DD — short title
 What happened / what we learned, and why it matters for future work here.
 ```
@@ -70,7 +89,7 @@ ref and detail refs) before the pattern was recognized and generalized.
 
 A `file:line` (or `file:line — name`) string has no spaces, so the browser
 treats it as one unbreakable "word". Neither `Badge`'s hardcoded
-`white-space: nowrap` (vendor/ui, fine for short pill labels like
+`whitespace-nowrap` (fine for short pill labels like
 "CRITICAL", wrong for a full sentence) nor a plain flex child's default
 `min-width: auto` will let it wrap — it just runs past the container edge
 instead, often past the actual page edge since these panels sit in a
@@ -80,23 +99,22 @@ truncates on overflow, it doesn't create a wrap opportunity, and a `1fr`
 grid track's minimum width is its content's max-content size — so the
 "ellipsis" box just grows the whole column instead of clipping.
 
-Fix, applied per call site (three so far): give the text's own box
-`overflowWrap: "anywhere"` + `wordBreak: "break-word"` + `minWidth: 0`. For a
-`display: flex` **row** where items wrap between each other (`RiskAreasList`'s
-`detailRefs`), each individual item still needs its own wrap room — wrap it
-in a small `<div style={...}>` around the `MonoLink`, don't rely on the
-row's own `flexWrap: "wrap"` (that only wraps *between* items, not *within*
-one long one). For the surrounding CSS Grid (`OverviewTab`'s two-column
-layout), a bare `1fr` track also needs to become `minmax(0, 1fr)` or the
+Fix, applied per call site: give the text's own box `wrap-anywhere
+break-words min-w-0`. For a `flex flex-wrap` **row** where items wrap between
+each other (`RiskAreasList`'s `detailRefs`), each individual item still needs
+its own wrap room — wrap it in a small `<span className="wrap-anywhere">`
+around the `MonoLink` (or use `<MonoLink wrap>`), don't rely on the row's own
+`flex-wrap` (that only wraps *between* items, not *within* one long one). For the surrounding CSS Grid (`OverviewTab`'s two-column
+layout), a bare `1fr` track also needs to become `minmax(0,1fr)` (e.g.
+`grid-cols-[minmax(0,1fr)_minmax(0,1fr)]`) or the
 track itself expands to the unbroken content's width before any child-level
 fix gets a chance to apply.
 
 **Not fixed at the primitive level.** `MonoLink`/the `.mono` class are used
 elsewhere (diff viewer, code snippets) where `nowrap` + horizontal scroll is
 the *correct* behavior, so this was intentionally left as a per-usage
-override via `Badge`'s existing `style` prop / a wrapping `div`, not a
-vendor/ui change. If a fourth call site needs this, consider a named
-opt-in variant (e.g. `<MonoLink wrap>`) instead of a fifth copy-paste.
+override via `className` on `Badge` / a wrapping element, not a primitive
+change. `MonoLink` now has the opt-in `wrap` prop for exactly this.
 
 Decision, caught by the user comparing the live app to the design mockups:
 `RunHistory`'s findings-count `FindingsTooltip` trigger initially reused this
@@ -155,22 +173,9 @@ state param, and call `onOpenChange` directly in the event-handler body (not
 inside `setOpen(...)`) gated on the ref. Keeps the handler stable across
 renders without piggybacking side effects on a state updater.
 
-### 2026-09-15 — `src/vendor/ui` and `src/vendor/shared` are hand-maintained, not synced from anywhere
-
-Context: root CLAUDE.md marks `client/src/vendor/ui` and `*/src/vendor/shared`
-"do-not-touch — check the owning package before editing," which reads like
-there's a separate source-of-truth repo. There isn't one in this codebase —
-no sync script exists (checked `scripts/`, `client/README.md`), and
-`src/vendor/shared` on both sides of the tree are confirmed byte-identical
-hand-duplicated files. Adding a genuinely new, additive primitive (e.g. a
-`HoverPopover` alongside the existing hand-rolled `Dropdown`/`MonoLink`) is
-safe — just match the existing style (inline `style` objects, `var(--token)`
-CSS custom properties, no new npm dependency) and export it from the
-directory's `index.ts` barrel like everything else there.
-
 ### 2026-09-15 — editing a barrel `index.ts` with a narrow `old_string` can silently drop unrelated exports
 
-Mistake: an `Edit` on `src/vendor/ui/primitives/index.ts` targeting one
+Mistake: an `Edit` on a primitives barrel `index.ts` (since removed) targeting one
 export line (`export { MonoLink } from "./MonoLink";` → itself + a new
 export) replaced the *entire file* down to just the new lines, silently
 breaking every other primitive's export (`SeverityBadge`, `CategoryTag`,

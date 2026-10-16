@@ -8,9 +8,11 @@ dashboard screens.)
 
 - **Stack:** Next.js 15 (App Router), React 19, TanStack Query, `next-intl`
   (messages in `messages/<locale>/*.json`), `recharts`, `mermaid`,
-  `react-markdown`. UI primitives are vendored under `src/vendor/ui`
-  (`@devdigest/ui`) and shared Zod contracts under `src/vendor/shared`
-  (`@devdigest/shared`).
+  `react-markdown`. Styling is Tailwind CSS v4 (configured in
+  `src/app/globals.css`) with shadcn/ui primitives in `src/components/ui`;
+  shared Zod contracts are vendored under `src/vendor/shared`
+  (`@devdigest/shared`). Settings → Appearance switches theme (dark/light),
+  palette (Classic/Stone) and accent colour.
 - **API base:** `NEXT_PUBLIC_API_BASE` (default `http://localhost:3001`), used by
   `src/lib/api.ts`. Every data hook lives in `src/lib/hooks/*`.
 - **Run:** `pnpm dev` (`:3000`). **Test:** `pnpm test` (vitest + jsdom, fetch

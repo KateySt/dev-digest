@@ -8,7 +8,6 @@ import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { summarizeCase, useCaseSummaryText } from "@/components/eval-cases";
-import { METRIC_COLOR } from "@/lib/eval";
 import { OUTCOME_TEXT } from "./constants";
 
 const HINT = "text-ui text-subtle-foreground";
@@ -31,9 +30,9 @@ export function DraftResults({
   const caseById = new Map(cases.map((c) => [c.id, c]));
 
   const metrics = [
-    { key: "recall", label: te("evalsTab.tiles.recall"), value: draft.recall, color: METRIC_COLOR.recall },
-    { key: "precision", label: te("evalsTab.tiles.precision"), value: draft.precision, color: METRIC_COLOR.precision },
-    { key: "citation", label: te("evalsTab.tiles.citation"), value: draft.citation_accuracy, color: METRIC_COLOR.citation_accuracy },
+    { key: "recall", label: te("evalsTab.tiles.recall"), value: draft.recall, metric: "recall" as const },
+    { key: "precision", label: te("evalsTab.tiles.precision"), value: draft.precision, metric: "precision" as const },
+    { key: "citation", label: te("evalsTab.tiles.citation"), value: draft.citation_accuracy, metric: "citation_accuracy" as const },
   ];
 
   return (
@@ -58,7 +57,7 @@ export function DraftResults({
           {metrics.map((m) => (
             <div key={m.key} className="flex items-baseline gap-2">
               <span className="text-2xs font-bold tracking-[0.05em] text-subtle-foreground uppercase">{m.label}</span>
-              <MetricValue value={m.value} color={m.color} size={18} />
+              <MetricValue value={m.value} metric={m.metric} size={18} />
             </div>
           ))}
         </div>

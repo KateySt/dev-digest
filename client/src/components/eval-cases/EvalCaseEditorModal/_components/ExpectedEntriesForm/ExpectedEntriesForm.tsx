@@ -2,23 +2,22 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Icon, IconBtn, TextInput } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { EvalCaseKind, FindingCategory, Severity } from "@devdigest/shared";
 import type { ParsedDiffFile } from "@/lib/eval";
-import {
-  CATEGORIES,
-  SEVERITIES,
-  emptyEntry,
-  entryErrors,
-  entryWarning,
-  type EntryDraft,
-} from "../../entries";
-import { s } from "../../styles";
+import { CATEGORIES, SEVERITIES, emptyEntry, entryErrors, entryWarning, type EntryDraft } from "../../entries";
 
 /** Structured editor for a case's expected output: a list of expected findings
  *  (must find) or forbidden locations (must not flag) with add / remove. Line
  *  fields are validated inline (positive integers, start ≤ end); a file or
  *  range missing from the pasted diff shows a non-blocking warning. */
+/** Native selects (tests and keyboard users drive them like plain form fields). */
+const NATIVE_SELECT = "rounded-[7px] border border-border-strong bg-elevated px-2 py-2.25 text-sm text-foreground";
+const FIELD_ERROR = "text-xs wrap-anywhere text-crit";
+
 export function ExpectedEntriesForm({
   kind,
   entries,
@@ -37,9 +36,11 @@ export function ExpectedEntriesForm({
   const patch = (i: number, p: Partial<EntryDraft>) => onChange(entries.map((e, j) => (j === i ? { ...e, ...p } : e)));
 
   return (
-    <div style={s.entries}>
+    <div className="flex min-w-0 flex-col gap-2.5">
       {entries.length === 0 && (
-        <div style={s.entriesEmpty}>{mustFind ? t("caseEditor.emptyMustFind") : t("caseEditor.emptyMustNotFlag")}</div>
+        <div className="text-ui wrap-anywhere text-subtle-foreground">
+          {mustFind ? t("caseEditor.emptyMustFind") : t("caseEditor.emptyMustNotFlag")}
+        </div>
       )}
 
       {entries.map((e, i) => {
@@ -47,52 +48,62 @@ export function ExpectedEntriesForm({
         const warning = entryWarning(e, diff, diffFiles);
         const n = i + 1;
         return (
-          <div key={i} role="group" aria-label={t("caseEditor.entryLabel", { index: n })} style={s.entry}>
-            <div style={s.entryTop}>
-              <div style={s.entryFile}>
-                <TextInput
-                  mono
+          <div
+            key={i}
+            role="group"
+            aria-label={t("caseEditor.entryLabel", { index: n })}
+            className="flex min-w-0 flex-col gap-2 rounded-lg border border-border p-2.5"
+          >
+            {/* minmax(0, 1fr) file column + fixed line columns: a long path wraps/clips inside its own track. */}
+            <div className="grid grid-cols-[minmax(0,1fr)_72px_72px_auto] items-center gap-2">
+              <div className="min-w-0">
+                <Input
+                  className="mono"
                   value={e.file}
-                  onChange={(v) => patch(i, { file: v })}
+                  onChange={(ev) => patch(i, { file: ev.target.value })}
                   placeholder="src/example.ts"
                   aria-label={t("caseEditor.fileField")}
                 />
               </div>
-              <div style={s.lineField(err.start || err.range)}>
-                <TextInput
-                  mono
+              <div className="min-w-0">
+                <Input
+                  className="mono"
                   value={e.start}
-                  onChange={(v) => patch(i, { start: v })}
+                  onChange={(ev) => patch(i, { start: ev.target.value })}
                   inputMode="numeric"
                   aria-label={t("caseEditor.startLine")}
                   aria-invalid={err.start || err.range}
                 />
               </div>
-              <div style={s.lineField(err.end || err.range)}>
-                <TextInput
-                  mono
+              <div className="min-w-0">
+                <Input
+                  className="mono"
                   value={e.end}
-                  onChange={(v) => patch(i, { end: v })}
+                  onChange={(ev) => patch(i, { end: ev.target.value })}
                   inputMode="numeric"
                   aria-label={t("caseEditor.endLine")}
                   aria-invalid={err.end || err.range}
                 />
               </div>
-              <IconBtn
-                icon="Trash"
-                label={t("caseEditor.removeEntry", { index: n })}
-                danger
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="hover:text-crit"
+                aria-label={t("caseEditor.removeEntry", { index: n })}
+                title={t("caseEditor.removeEntry", { index: n })}
                 onClick={() => onChange(entries.filter((_, j) => j !== i))}
-              />
+              >
+                <Icon.Trash aria-hidden />
+              </Button>
             </div>
 
             {mustFind && (
-              <div style={s.entryMeta}>
+              <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2">
                 <select
                   aria-label={t("caseEditor.severityField")}
                   value={e.severity}
                   onChange={(ev) => patch(i, { severity: ev.target.value as Severity })}
-                  style={s.nativeSelect}
+                  className={NATIVE_SELECT}
                 >
                   {SEVERITIES.map((v) => (
                     <option key={v} value={v}>
@@ -104,7 +115,7 @@ export function ExpectedEntriesForm({
                   aria-label={t("caseEditor.categoryField")}
                   value={e.category}
                   onChange={(ev) => patch(i, { category: ev.target.value as FindingCategory })}
-                  style={s.nativeSelect}
+                  className={NATIVE_SELECT}
                 >
                   {CATEGORIES.map((v) => (
                     <option key={v} value={v}>
@@ -112,10 +123,10 @@ export function ExpectedEntriesForm({
                     </option>
                   ))}
                 </select>
-                <div style={s.entryTitle}>
-                  <TextInput
+                <div className="min-w-0">
+                  <Input
                     value={e.title}
-                    onChange={(v) => patch(i, { title: v })}
+                    onChange={(ev) => patch(i, { title: ev.target.value })}
                     placeholder={t("caseEditor.titleFieldPlaceholder")}
                     aria-label={t("caseEditor.titleField")}
                   />
@@ -124,18 +135,21 @@ export function ExpectedEntriesForm({
             )}
 
             {(err.start || err.end) && (
-              <div role="alert" style={s.fieldError}>
+              <div role="alert" className={FIELD_ERROR}>
                 {t("caseEditor.invalidLine")}
               </div>
             )}
             {err.range && (
-              <div role="alert" style={s.fieldError}>
+              <div role="alert" className={FIELD_ERROR}>
                 {t("caseEditor.invalidRange")}
               </div>
             )}
             {warning && (
-              <div role="status" style={s.entryWarning}>
-                <Icon.AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div
+                role="status"
+                className="flex min-w-0 items-start gap-1.5 text-xs break-words wrap-anywhere text-warn"
+              >
+                <Icon.AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden />
                 <span>{warning === "file" ? t("caseEditor.warnFile") : t("caseEditor.warnLines")}</span>
               </div>
             )}
@@ -144,7 +158,8 @@ export function ExpectedEntriesForm({
       })}
 
       <div>
-        <Button kind="ghost" size="sm" icon="Plus" onClick={() => onChange([...entries, emptyEntry()])}>
+        <Button variant="outline" size="sm" onClick={() => onChange([...entries, emptyEntry()])}>
+          <Icon.Plus aria-hidden />
           {mustFind ? t("caseEditor.addFinding") : t("caseEditor.addLocation")}
         </Button>
       </div>

@@ -5,13 +5,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Markdown } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Markdown } from "@/components/markdown";
+import { Button } from "@/components/ui/button";
 import type { MemoryInput, StaleCandidate } from "@devdigest/shared";
 import { MemoryForm, isMemoryFormValid, type LinkOption } from "@/components/memory-form";
 import { useDeleteMemory, useKeepMemory, useUpdateMemory } from "@/lib/hooks/memory";
 import { memoryToInput } from "@/app/memory/_components/MemoryView/helpers";
-import { s as page } from "@/app/memory/_components/MemoryView/styles";
-import { s } from "../../styles";
+import { MEMORY_CLASSES as page } from "@/app/memory/_components/MemoryView/constants";
+import { CURATE_CLASSES as s } from "../../constants";
 
 export function StaleItem({
   candidate,
@@ -36,10 +38,10 @@ export function StaleItem({
   const busy = update.isPending || keep.isPending || del.isPending;
 
   return (
-    <article style={s.item}>
-      <div style={page.chipRow}>
+    <article className={s.item}>
+      <div className={page.chipRow}>
         {candidate.reasons.map((r) => (
-          <span key={r} style={page.warnBadge}>
+          <span key={r} className={page.warnBadge}>
             {t(`reason.${r}`)}
           </span>
         ))}
@@ -54,41 +56,41 @@ export function StaleItem({
             agentOptions={agentOptions}
             skillOptions={skillOptions}
           />
-          <div style={page.rowEnd}>
-            <Button kind="secondary" size="sm" onClick={() => setDraft(null)} disabled={update.isPending}>
+          <div className={page.rowEnd}>
+            <Button variant="secondary" size="sm" onClick={() => setDraft(null)} disabled={update.isPending}>
               {t("action.cancel")}
             </Button>
             <Button
-              kind="primary"
               size="sm"
-              loading={update.isPending}
-              disabled={!isMemoryFormValid(draft)}
+              disabled={update.isPending || !isMemoryFormValid(draft)}
               onClick={() => update.mutate({ id: m.id, patch: draft }, { onSuccess: onDone })}
             >
+              {update.isPending && <Icon.Loader className="animate-spin" aria-hidden />}
               {t("action.save")}
             </Button>
           </div>
         </div>
       ) : (
-        <div style={page.content}>
+        <div className={page.content}>
           <Markdown>{m.content}</Markdown>
         </div>
       )}
 
       {confirming && (
-        <div role="alertdialog" style={page.confirm}>
+        <div role="alertdialog" className={page.confirm}>
           <div>{t("action.confirmDelete")}</div>
-          <div style={page.rowEnd}>
-            <Button kind="secondary" size="sm" onClick={() => setConfirming(false)} disabled={del.isPending}>
+          <div className={page.rowEnd}>
+            <Button variant="secondary" size="sm" onClick={() => setConfirming(false)} disabled={del.isPending}>
               {t("action.cancel")}
             </Button>
             <Button
-              kind="danger"
+              variant="destructive"
               size="sm"
-              loading={del.isPending}
+              disabled={del.isPending}
               aria-label={t("action.confirmDeleteAction")}
               onClick={() => del.mutate(m.id, { onSuccess: onDone })}
             >
+              {del.isPending && <Icon.Loader className="animate-spin" aria-hidden />}
               {t("action.delete")}
             </Button>
           </div>
@@ -96,22 +98,22 @@ export function StaleItem({
       )}
 
       {!draft && !confirming && (
-        <div style={page.rowEnd}>
+        <div className={page.rowEnd}>
           <Button
-            kind="secondary"
+            variant="secondary"
             size="sm"
             disabled={busy}
             onClick={() => update.mutate({ id: m.id, patch: { archived: true } }, { onSuccess: onDone })}
           >
             {t("action.archive")}
           </Button>
-          <Button kind="secondary" size="sm" disabled={busy} onClick={() => keep.mutate(m.id, { onSuccess: onDone })}>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => keep.mutate(m.id, { onSuccess: onDone })}>
             {t("action.keep")}
           </Button>
-          <Button kind="secondary" size="sm" disabled={busy} onClick={() => setDraft(memoryToInput(m))}>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => setDraft(memoryToInput(m))}>
             {t("action.edit")}
           </Button>
-          <Button kind="danger" size="sm" disabled={busy} onClick={() => setConfirming(true)}>
+          <Button variant="destructive" size="sm" disabled={busy} onClick={() => setConfirming(true)}>
             {t("action.delete")}
           </Button>
         </div>

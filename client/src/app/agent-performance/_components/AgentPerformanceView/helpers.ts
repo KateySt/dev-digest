@@ -1,5 +1,5 @@
 import type { AgentPerfRow, PerfCostSegment } from "@devdigest/shared";
-import type { DonutSegment } from "@devdigest/ui";
+import type { DonutSegment } from "@/components/charts";
 import { SEGMENT_COLORS, type SortKey } from "./constants";
 
 /** Assign a cycling color to each cost segment — the contract's

@@ -17,6 +17,7 @@ vi.mock("@/lib/hooks/reviews", () => ({
 
 import { ApiError } from "@/lib/api";
 import { ToastProvider } from "@/lib/contexts";
+import { openMenu } from "@/test/radix";
 import { RunReviewDropdown } from "./RunReviewDropdown";
 
 afterEach(() => {
@@ -41,7 +42,7 @@ describe("RunReviewDropdown (smoke)", () => {
 
 describe("RunReviewDropdown: 409 review_in_progress", () => {
   const runAll = () => {
-    fireEvent.click(screen.getByText("Run Review"));
+    openMenu(screen.getByText("Run Review").closest("button")!);
     fireEvent.click(screen.getByText("Run all enabled agents"));
   };
 

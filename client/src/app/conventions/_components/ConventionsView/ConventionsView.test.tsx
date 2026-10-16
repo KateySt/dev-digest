@@ -8,8 +8,7 @@ import { apiError, get, mockFetch, post, renderApp } from "@/test/eval-utils";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 // CodeMirror needs layout APIs jsdom lacks; the body editor is not under test.
-vi.mock("@devdigest/ui", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@devdigest/ui")>()),
+vi.mock("@/components/code-field", () => ({
   CodeField: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <textarea aria-label="Skill body" value={value} onChange={(e) => onChange(e.target.value)} />
   ),

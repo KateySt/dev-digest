@@ -1,42 +1,29 @@
 import React from "react";
-import { Icon, SEV } from "@devdigest/ui";
 import type { Severity } from "@devdigest/shared";
+import { Icon } from "@/components/icon";
+import { SEVERITY_STYLE } from "@/components/severity";
+import { cn } from "@/lib/utils";
 
 const TOTAL_SLOTS = 12;
-const SLOT_W = 1; // dot size px
-const GAP = 1;   // gap between slots px
 
 /** Always 12 slots: first `count` slots merge into a solid segment,
- *  remaining (12 - count) render as faded separate dots. */
-function SeverityDots({ count, color }: { count: number; color: string }) {
+ *  remaining (12 - count) render as faded separate dots. Slots are 1px with
+ *  a 1px gap; the solid segment fills its gaps with the same colour. */
+function SeverityDots({ count, fill }: { count: number; fill: string }) {
   const filled = Math.min(count, TOTAL_SLOTS);
   const empty = TOTAL_SLOTS - filled;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: GAP }}>
+    <div className="flex items-center gap-px">
       {filled > 0 && (
-        <div
-          style={{
-            height: 1,
-            borderRadius: 0.5,
-            background: color,
-            width: filled * SLOT_W + Math.max(0, filled - 1) * GAP,
-            flexShrink: 0,
-          }}
-        />
+        <div data-slot="filled" className={cn("flex h-px shrink-0 gap-px rounded-[0.5px]", fill)}>
+          {Array.from({ length: filled }).map((_, i) => (
+            <span key={i} className="w-px" />
+          ))}
+        </div>
       )}
       {Array.from({ length: empty }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            width: SLOT_W,
-            height: SLOT_W,
-            borderRadius: 0,
-            background: color,
-            opacity: 0.2,
-            flexShrink: 0,
-          }}
-        />
+        <div key={i} data-slot="empty" className={cn("size-px shrink-0 opacity-20", fill)} />
       ))}
     </div>
   );
@@ -45,33 +32,16 @@ function SeverityDots({ count, color }: { count: number; color: string }) {
 export function SeverityChip({ sev, count }: { sev: Severity; count: number }) {
   if (count <= 0) return null;
 
-  const meta = SEV[sev];
+  const meta = SEVERITY_STYLE[sev];
   const SIcon = Icon[meta.icon];
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "stretch",
-        gap: 4,
-        minWidth: 28,
-      }}
-    >
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 3,
-          fontSize: 11.5,
-          fontWeight: 600,
-          color: meta.c,
-        }}
-      >
-        <SIcon size={12} style={{ flexShrink: 0 }} />
+    <div className="flex min-w-7 flex-col items-stretch gap-1">
+      <span className={cn("inline-flex items-center gap-0.75 text-[11.5px] font-semibold", meta.text)}>
+        <SIcon size={12} className="shrink-0" aria-hidden />
         <span className="tnum">{count}</span>
       </span>
-      <SeverityDots count={count} color={meta.c} />
+      <SeverityDots count={count} fill={meta.fill} />
     </div>
   );
 }

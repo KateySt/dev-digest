@@ -2,12 +2,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Icon, TextInput } from "@devdigest/ui";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { useSettings, useUpdateSettings } from "@/lib/hooks";
 import { useCatalogTest } from "@/lib/hooks/skills";
 import { ApiError } from "@/lib/api";
 import { SectionTitle } from "../SectionTitle";
-import { s } from "./styles";
 
 /**
  * Settings → Catalog (SPEC-07 client spec AC-29 – AC-36). The catalog repo
@@ -20,6 +23,7 @@ export function SettingsCatalog() {
   const { data: settings } = useSettings();
   const update = useUpdateSettings();
   const test = useCatalogTest();
+  const repoId = React.useId();
 
   const stored = settings?.community_catalog_repo ?? "";
   const resolvedDefault = settings?.community_catalog_repo_default ?? "";
@@ -53,25 +57,32 @@ export function SettingsCatalog() {
   };
 
   return (
-    <div style={s.wrap}>
+    <div className="max-w-[640px]">
       <SectionTitle title={t("catalog.title")} body={t("catalog.body")} />
       <FormField
         label={t("catalog.repoLabel")}
         hint={!hasOverride ? t("catalog.usingDefault", { value: resolvedDefault }) : undefined}
+        htmlFor={repoId}
       >
-        <TextInput value={value} onChange={setValue} placeholder={t("catalog.repoPlaceholder")} mono />
+        <Input
+          id={repoId}
+          className="mono"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={t("catalog.repoPlaceholder")}
+        />
       </FormField>
-      <div style={s.actions}>
-        <Button kind="primary" onClick={save} disabled={!dirty || update.isPending}>
+      <div className="mt-1 flex gap-2.5">
+        <Button onClick={save} disabled={!dirty || update.isPending}>
           {update.isPending ? t("catalog.saving") : t("catalog.save")}
         </Button>
-        <Button kind="secondary" onClick={runTest} disabled={test.isPending}>
+        <Button variant="secondary" onClick={runTest} disabled={test.isPending}>
           {test.isPending ? t("catalog.testing") : t("catalog.test")}
         </Button>
       </div>
       {result && (
-        <div style={s.result(result.ok)}>
-          {result.ok ? <Icon.CheckCircle size={13} /> : <Icon.XCircle size={13} />}
+        <div className={cn("mt-3 inline-flex items-center gap-2 text-sm font-semibold", result.ok ? "text-ok" : "text-crit")}>
+          {result.ok ? <Icon.CheckCircle size={13} aria-hidden /> : <Icon.XCircle size={13} aria-hidden />}
           {result.message}
         </div>
       )}

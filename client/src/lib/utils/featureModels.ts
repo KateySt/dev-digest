@@ -7,7 +7,7 @@ import type { FeatureModelDef } from "@devdigest/shared";
  * the client can only import TYPES from the vendored shared package — importing
  * a runtime VALUE pulls `vendor/shared/index.ts` into the webpack bundle, whose
  * `./contracts/*.js` re-exports Next's webpack can't resolve. So we mirror the
- * registry here (same pattern as the vendored `vendor/shared` / `vendor/ui`).
+ * registry here (same pattern as the vendored `vendor/shared`).
  * Keep this in sync with the shared registry.
  */
 export const FEATURE_MODELS: FeatureModelDef[] = [

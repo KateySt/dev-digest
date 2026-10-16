@@ -48,7 +48,7 @@ describe("SettingsNotifications", () => {
     await waitFor(() =>
       expect(screen.getByRole("switch", { name: /System notifications/ })).toHaveAttribute("aria-checked", "false"),
     );
-    expect(screen.getByRole("switch", { name: /Sound/ }).closest("label")).toHaveStyle({ pointerEvents: "none" });
+    expect(screen.getByRole("switch", { name: /Sound/ })).toBeDisabled();
     expect(screen.getByText(/available in the DevDigest desktop app/)).toBeInTheDocument(); // browser: no bridge
   });
 });

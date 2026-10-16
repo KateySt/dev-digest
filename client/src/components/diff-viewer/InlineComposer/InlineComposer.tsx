@@ -4,8 +4,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Textarea, Button } from "@devdigest/ui";
-import { cs, type DiffCommentApi } from "../comments";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { type DiffCommentApi } from "../comments";
+import { COMPOSER_ACTIONS, RAIL } from "../constants";
 
 export function InlineComposer({
   commenting,
@@ -43,7 +46,7 @@ export function InlineComposer({
   };
   return (
     <div
-      style={cs.thread}
+      className={RAIL}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
         if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submit();
@@ -51,25 +54,19 @@ export function InlineComposer({
     >
       <Textarea
         value={text}
-        onChange={setText}
+        onChange={(e) => setText(e.target.value)}
         rows={3}
         placeholder={t("diffViewer.commentPlaceholder")}
       />
-      <div style={cs.composerActions}>
-        <Button
-          kind="primary"
-          size="sm"
-          icon="MessageSquare"
-          loading={commenting.posting}
-          disabled={commenting.posting || !text.trim()}
-          onClick={() => void submit()}
-        >
+      <div className={COMPOSER_ACTIONS}>
+        <Button size="sm" disabled={commenting.posting || !text.trim()} onClick={() => void submit()}>
+          {commenting.posting ? <Icon.Loader className="animate-spin" aria-hidden /> : <Icon.MessageSquare aria-hidden />}
           {t("diffViewer.post")}
         </Button>
-        <Button kind="ghost" size="sm" onClick={onClose} disabled={commenting.posting}>
+        <Button variant="outline" size="sm" onClick={onClose} disabled={commenting.posting}>
           {t("diffViewer.cancel")}
         </Button>
-        <span style={cs.hint}>{t("diffViewer.postedToGitHub")}</span>
+        <span className="text-[11.5px] text-subtle-foreground">{t("diffViewer.postedToGitHub")}</span>
       </div>
     </div>
   );

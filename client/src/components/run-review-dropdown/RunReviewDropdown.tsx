@@ -8,12 +8,23 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Dropdown, type DropdownItemDef } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAgents } from "@/lib/hooks/agents";
 import { ApiError } from "@/lib/api";
 import { notify } from "@/lib/contexts";
 import { useRunReview } from "@/lib/hooks/reviews";
-import { DROPDOWN_WIDTH } from "./constants";
+import { cn } from "@/lib/utils";
+
+const BUTTON_SIZE = { sm: "sm", md: "default", lg: "lg" } as const;
 
 export function RunReviewDropdown({
   prId,
@@ -66,61 +77,67 @@ export function RunReviewDropdown({
     }
   };
 
-  // List EVERY agent (not just enabled) so they're always visible; a specific
-  // agent can be run regardless of its enabled flag. "Run all" still targets
-  // only enabled agents.
-  const agentItems: DropdownItemDef[] = all.length
-    ? all.map((a) => ({
-        label: a.name,
-        icon: "Cpu" as const,
-        hint: a.enabled ? a.model : `${a.model} · disabled`,
-        onClick: () => kick({ agentId: a.id }),
-      }))
-    : [{ label: "No agents yet — create one", icon: "Plus", muted: true, onClick: () => router.push("/agents") }];
-
-  const items: DropdownItemDef[] = [
-    // Merged/closed PRs can still be reviewed (informational only); lead with a
-    // muted, non-actionable warning so the intent is clear.
-    ...(warnMerged
-      ? [
-          { label: t("runReview.mergedWarning"), icon: "AlertTriangle" as const, muted: true },
-          { divider: true } as DropdownItemDef,
-        ]
-      : []),
-    {
-      label: t("runReview.runAll"),
-      icon: "Play",
-      ...(hasEnabled ? {} : { muted: true }),
-      onClick: () => kick({ all: true }),
-    },
-    { divider: true },
-    ...agentItems,
-    { divider: true },
-    { label: t("runReview.configureAgents"), icon: "Settings", muted: true, onClick: () => router.push("/agents") },
-  ];
-
   return (
-    <Dropdown
-      width={DROPDOWN_WIDTH}
-      align="right"
-      items={items}
-      trigger={
-        <span
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={kind === "primary" ? "default" : "secondary"}
+          size={BUTTON_SIZE[size]}
+          disabled={run.isPending}
+          aria-label={ariaLabel}
           title={warnMerged ? t("runReview.mergedTooltip") : undefined}
-          style={warnMerged ? { opacity: 0.6 } : undefined}
+          className={cn(warnMerged && "opacity-60")}
         >
-          <Button
-            kind={kind}
-            size={size}
-            iconRight="ChevronDown"
-            icon="Sparkles"
-            loading={run.isPending}
-            aria-label={ariaLabel}
-          >
-            {run.isPending ? t("runReview.running") : t("runReview.runReview")}
-          </Button>
-        </span>
-      }
-    />
+          {run.isPending ? <Icon.Loader className="animate-spin" aria-hidden /> : <Icon.Sparkles aria-hidden />}
+          {run.isPending ? t("runReview.running") : t("runReview.runReview")}
+          <Icon.ChevronDown aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-62.5">
+        {/* Merged/closed PRs can still be reviewed (informational only); lead
+            with a muted, non-actionable warning so the intent is clear. */}
+        {warnMerged && (
+          <>
+            <DropdownMenuLabel className="flex items-center gap-2 font-normal text-muted-foreground">
+              <Icon.AlertTriangle size={14} aria-hidden />
+              {t("runReview.mergedWarning")}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem
+          className={cn(!hasEnabled && "text-muted-foreground")}
+          onSelect={() => kick({ all: true })}
+        >
+          <Icon.Play aria-hidden />
+          {t("runReview.runAll")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* List EVERY agent (not just enabled) so they're always visible; a
+            specific agent can be run regardless of its enabled flag. "Run all"
+            still targets only enabled agents. */}
+        {all.length ? (
+          all.map((a) => (
+            <DropdownMenuItem key={a.id} onSelect={() => kick({ agentId: a.id })}>
+              <Icon.Cpu aria-hidden />
+              <span className="min-w-0 flex-1 truncate">{a.name}</span>
+              <span className="mono ml-auto text-2xs text-subtle-foreground">
+                {a.enabled ? a.model : t("runReview.agentDisabled", { model: a.model })}
+              </span>
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <DropdownMenuItem className="text-muted-foreground" onSelect={() => router.push("/agents")}>
+            <Icon.Plus aria-hidden />
+            {t("runReview.noAgents")}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-muted-foreground" onSelect={() => router.push("/agents")}>
+          <Icon.Settings aria-hidden />
+          {t("runReview.configureAgents")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

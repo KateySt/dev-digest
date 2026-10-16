@@ -22,9 +22,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@devdigest/shared": ["./src/vendor/shared/index.ts"],
-      "@devdigest/shared/*": ["./src/vendor/shared/*"],
-      "@devdigest/ui": ["./src/vendor/ui/index.ts"],
-      "@devdigest/ui/*": ["./src/vendor/ui/*"]
+      "@devdigest/shared/*": ["./src/vendor/shared/*"]
     },
     "noEmit": true,
     "allowJs": true,

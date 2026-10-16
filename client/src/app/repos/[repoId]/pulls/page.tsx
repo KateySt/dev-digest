@@ -159,17 +159,35 @@ export default function PullsPage() {
           onRefresh={() => refresh.mutate(repoId)}
           refreshing={refresh.isPending}
         />
-        <div
-          className={cn(
-            "grid gap-3.5 border-b border-border bg-surface px-5 py-2.5 text-xs font-bold tracking-[0.06em] text-subtle-foreground uppercase",
-            GRID_COLS,
-          )}
-        >
-          {COLUMN_KEYS.map((key, i) => (
-            <div key={key} className={i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left"}>
-              {t(`list.columns.${key}`)}
+        {/* Only the header and the rows scroll sideways (the grid keeps a
+            150px title column); loading/error/empty states stay at the
+            card's visible width. */}
+        <div className="overflow-x-auto">
+          <div className="w-full min-w-fit">
+            <div
+              className={cn(
+                "grid gap-3.5 border-b border-border bg-surface px-5 py-2.5 text-xs font-bold tracking-[0.06em] text-subtle-foreground uppercase",
+                GRID_COLS,
+              )}
+            >
+              {COLUMN_KEYS.map((key, i) => (
+                <div key={key} className={i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left"}>
+                  {t(`list.columns.${key}`)}
+                </div>
+              ))}
             </div>
-          ))}
+            {!isLoading &&
+              !isError &&
+              filtered.map((pr) => (
+                <PRRow
+                  key={pr.number}
+                  pr={pr}
+                  repoId={repoId}
+                  repoFullName={activeRepo?.full_name}
+                  showRiskTooltip={sort === "highest_risk"}
+                />
+              ))}
+          </div>
         </div>
 
         {isLoading ? (
@@ -188,23 +206,9 @@ export default function PullsPage() {
           <EmptyState
             icon="GitPullRequest"
             title={t("list.emptyTitle")}
-            body={
-              status === "all"
-                ? t("list.emptyAllBody")
-                : t("list.emptyStatusBody", { status })
-            }
+            body={status === "all" ? t("list.emptyAllBody") : t("list.emptyStatusBody", { status })}
           />
-        ) : (
-          filtered.map((pr) => (
-            <PRRow
-              key={pr.number}
-              pr={pr}
-              repoId={repoId}
-              repoFullName={activeRepo?.full_name}
-              showRiskTooltip={sort === "highest_risk"}
-            />
-          ))
-        )}
+        ) : null}
       </div>
     </AppShell>
   );

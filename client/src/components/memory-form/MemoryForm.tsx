@@ -5,7 +5,6 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Checkbox, FormField, Textarea } from "@devdigest/ui";
 import {
   MEMORY_CONTENT_MAX, MEMORY_MAX_GLOBS,
   type MemoryInput,
@@ -14,7 +13,25 @@ import {
   type MemorySource,
   type MemorySummary,
 } from "@devdigest/shared";
-import { s } from "./styles";
+import { FormField } from "@/components/form-field";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+const ERROR = "mt-1.5 text-ui text-crit";
+const SEGMENT = "flex flex-wrap gap-1.5";
+const GROUP_LABEL = "mt-1.5 text-2xs font-semibold tracking-[0.4px] text-subtle-foreground uppercase";
+
+/** Checkbox with its visible label (the label names the checkbox). */
+function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+      <Checkbox checked={checked} onCheckedChange={(v) => onChange(v === true)} />
+      {label}
+    </label>
+  );
+}
 
 const KINDS: MemoryKind[] = ["learning", "fact", "convention", "decision", "preference"];
 
@@ -75,13 +92,13 @@ export function MemoryForm({
   return (
     <div>
       {similar && similar.length > 0 && (
-        <div style={s.similarBox}>
-          <div style={s.similarTitle}>{t("form.similarTitle")}</div>
+        <div className="mb-5 flex flex-col gap-2.5 rounded-lg border border-warn p-3">
+          <div className="text-sm font-semibold text-warn">{t("form.similarTitle")}</div>
           {similar.map((m) => (
-            <div key={m.id} style={s.similarRow}>
-              <span style={s.similarText}>{m.content}</span>
+            <div key={m.id} className="flex items-start gap-2.5">
+              <span className="min-w-0 flex-1 text-sm text-muted-foreground wrap-anywhere">{m.content}</span>
               {onMerge && (
-                <Button kind="secondary" size="sm" disabled={mergePending} onClick={() => onMerge(m.id)}>
+                <Button variant="secondary" size="sm" disabled={mergePending} onClick={() => onMerge(m.id)}>
                   {t("form.merge")}
                 </Button>
               )}
@@ -94,19 +111,19 @@ export function MemoryForm({
         label={t("form.content")}
         hint={t("form.contentHint")}
         right={
-          <span style={s.counter(tooLong)}>
+          <span className={cn("text-xs", tooLong ? "text-crit" : "text-subtle-foreground")}>
             {t("form.contentCount", { count: value.content.trim().length, max: MEMORY_CONTENT_MAX })}
           </span>
         }
       >
-        <Textarea value={value.content} onChange={(content) => set({ content })} rows={4} />
-        {tooLong && <div style={s.error}>{t("form.contentTooLong", { max: MEMORY_CONTENT_MAX })}</div>}
+        <Textarea value={value.content} onChange={(e) => set({ content: e.target.value })} rows={4} />
+        {tooLong && <div className={ERROR}>{t("form.contentTooLong", { max: MEMORY_CONTENT_MAX })}</div>}
       </FormField>
 
       <FormField label={t("form.kind")}>
-        <div style={s.segment}>
+        <div className={SEGMENT}>
           {KINDS.map((k) => (
-            <Button key={k} kind="secondary" size="sm" active={value.kind === k} aria-pressed={value.kind === k} onClick={() => set({ kind: k })}>
+            <Button key={k} variant="outline" size="sm" data-active={value.kind === k} aria-pressed={value.kind === k} onClick={() => set({ kind: k })}>
               {t(`kind.${k}`)}
             </Button>
           ))}
@@ -114,11 +131,11 @@ export function MemoryForm({
       </FormField>
 
       <FormField label={t("form.scope")}>
-        <div style={s.segment}>
+        <div className={SEGMENT}>
           <Button
-            kind="secondary"
+            variant="outline"
             size="sm"
-            active={value.scope === "repo"}
+            data-active={value.scope === "repo"}
             aria-pressed={value.scope === "repo"}
             disabled={!repoId}
             title={repoLabel ?? undefined}
@@ -127,9 +144,9 @@ export function MemoryForm({
             {t("form.scopeRepo")}
           </Button>
           <Button
-            kind="secondary"
+            variant="outline"
             size="sm"
-            active={value.scope === "global"}
+            data-active={value.scope === "global"}
             aria-pressed={value.scope === "global"}
             onClick={() => set({ scope: "global", repo_id: null })}
           >
@@ -139,26 +156,26 @@ export function MemoryForm({
       </FormField>
 
       <FormField label={t("form.links")}>
-        <div style={s.linkGroup}>
-          <Checkbox
+        <div className="flex flex-col gap-2">
+          <CheckRow
             checked={value.applies_to_all_agents}
             onChange={(v) => set({ applies_to_all_agents: v })}
             label={t("form.allAgents")}
           />
           {!value.applies_to_all_agents && (
             <>
-              {agentOptions.length > 0 && <div style={s.linkGroupLabel}>{t("form.agents")}</div>}
+              {agentOptions.length > 0 && <div className={GROUP_LABEL}>{t("form.agents")}</div>}
               {agentOptions.map((a) => (
-                <Checkbox
+                <CheckRow
                   key={a.id}
                   checked={hasLink(value.links, "agent", a.id)}
                   onChange={() => toggleLink("agent", a.id)}
                   label={a.name}
                 />
               ))}
-              {skillOptions.length > 0 && <div style={s.linkGroupLabel}>{t("form.skills")}</div>}
+              {skillOptions.length > 0 && <div className={GROUP_LABEL}>{t("form.skills")}</div>}
               {skillOptions.map((sk) => (
-                <Checkbox
+                <CheckRow
                   key={sk.id}
                   checked={hasLink(value.links, "skill", sk.id)}
                   onChange={() => toggleLink("skill", sk.id)}
@@ -167,19 +184,19 @@ export function MemoryForm({
               ))}
             </>
           )}
-          {noTarget && <div style={s.error}>{t("form.noLinks")}</div>}
+          {noTarget && <div className={ERROR}>{t("form.noLinks")}</div>}
         </div>
       </FormField>
 
       <FormField label={t("form.globs")} hint={t("form.globsHint")}>
-        <GlobsInput globs={value.path_globs} onChange={(path_globs) => set({ path_globs })} label={t("form.globs")} />
+        <GlobsInput globs={value.path_globs} onChange={(path_globs) => set({ path_globs })} label={t("form.globs")} placeholder={t("form.globsPlaceholder")} />
         {value.path_globs.length > MEMORY_MAX_GLOBS && (
-          <div style={s.error}>{t("form.tooManyGlobs", { max: MEMORY_MAX_GLOBS })}</div>
+          <div className={ERROR}>{t("form.tooManyGlobs", { max: MEMORY_MAX_GLOBS })}</div>
         )}
       </FormField>
 
       {readOnlySource && (
-        <div style={s.source}>
+        <div className="text-ui text-subtle-foreground">
           {t("form.source")}:{" "}
           {readOnlySource.pr != null ? t("form.sourcePr", { pr: readOnlySource.pr }) : null} {readOnlySource.context}
         </div>
@@ -190,15 +207,25 @@ export function MemoryForm({
 
 /** One glob per line. Keeps the raw text locally so blank lines / trailing
  *  spaces don't fight the cursor; the parsed list goes to the parent. */
-function GlobsInput({ globs, onChange, label }: { globs: string[]; onChange: (g: string[]) => void; label: string }) {
+function GlobsInput({
+  globs,
+  onChange,
+  label,
+  placeholder,
+}: {
+  globs: string[];
+  onChange: (g: string[]) => void;
+  label: string;
+  placeholder: string;
+}) {
   const [text, setText] = React.useState(() => globs.join("\n"));
   return (
-    <textarea
+    <Textarea
       aria-label={label}
       className="mono"
       rows={2}
       value={text}
-      placeholder="src/middleware/**"
+      placeholder={placeholder}
       onChange={(e) => {
         setText(e.target.value);
         onChange(
@@ -208,7 +235,6 @@ function GlobsInput({ globs, onChange, label }: { globs: string[]; onChange: (g:
             .filter(Boolean),
         );
       }}
-      style={s.textarea}
     />
   );
 }

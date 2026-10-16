@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { Button } from "@devdigest/ui";
-import { s } from "../../styles";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { WRAP } from "../../constants";
 
 /** Inline "Promote vN?" confirmation shown in the compare modal's footer. All
  *  copy is passed in (so agent and skill promote can word it differently); an
@@ -32,19 +34,24 @@ export function PromoteConfirm({
   onCancel: () => void;
 }) {
   return (
-    <div role="alertdialog" aria-label={title} style={s.confirm}>
+    <div
+      role="alertdialog"
+      aria-label={title}
+      className={cn("mt-3.5 rounded-lg border border-warn px-3.5 py-3 text-sm text-muted-foreground", WRAP)}
+    >
       <strong>{title}</strong>
-      <p style={{ margin: "6px 0 10px" }}>{body}</p>
+      <p className="mt-1.5 mb-2.5">{body}</p>
       {error && (
-        <p role="alert" style={s.error}>
+        <p role="alert" className={cn("text-sm text-crit", WRAP)}>
           {error}
         </p>
       )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <Button kind="primary" size="sm" onClick={onConfirm} loading={pending} disabled={blocked}>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={onConfirm} disabled={pending || blocked}>
+          {pending && <Icon.Loader className="animate-spin" aria-hidden />}
           {pending ? pendingLabel : confirmLabel}
         </Button>
-        <Button kind="ghost" size="sm" onClick={onCancel} disabled={pending}>
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={pending}>
           {cancelLabel}
         </Button>
       </div>

@@ -6,12 +6,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Drawer, EmptyState, ErrorState, Skeleton } from "@devdigest/ui";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { LinkOption } from "@/components/memory-form";
 import { useCurateScan } from "@/lib/hooks/memory";
 import { MergeGroup } from "./_components/merge-group";
 import { StaleItem } from "./_components/stale-item";
-import { s } from "./styles";
+import { CURATE_CLASSES } from "./constants";
 
 export function CurateDrawer({
   repoId,
@@ -51,69 +54,77 @@ export function CurateDrawer({
   const stale = data?.stale.filter((c) => !handled.has(`s:${c.memory.id}`)) ?? [];
 
   return (
-    <Drawer width={760} title={t("title")} subtitle={t("subtitle")} onClose={onClose}>
-      {data ? (
-        <div style={s.body}>
-          {conflict && (
-            <div role="status" style={s.notice}>
-              <span>{t("conflict")}</span>
-              <Button kind="secondary" size="sm" onClick={scan}>
-                {t("rescan")}
-              </Button>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-[760px] sm:max-w-[94%]">
+        <SheetHeader>
+          <SheetTitle>{t("title")}</SheetTitle>
+          <SheetDescription>{t("subtitle")}</SheetDescription>
+        </SheetHeader>
+        <SheetBody>
+          {data ? (
+            <div className="flex flex-col gap-5.5 px-0.5 py-1">
+              {conflict && (
+                <div role="status" className={CURATE_CLASSES.notice}>
+                  <span>{t("conflict")}</span>
+                  <Button variant="secondary" size="sm" onClick={scan}>
+                    {t("rescan")}
+                  </Button>
+                </div>
+              )}
+              {data.groups.length === 0 && data.stale.length === 0 ? (
+                <EmptyState icon="Brain" title={t("clean")} body={t("cleanBody")} />
+              ) : (
+                <>
+                  <section className="flex flex-col gap-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="m-0 text-base font-semibold">{t("duplicates", { count: groups.length })}</h3>
+                      {data.totals.groups > data.groups.length && (
+                        <span>{t("showing", { shown: data.groups.length, total: data.totals.groups })}</span>
+                      )}
+                    </div>
+                    {groups.map((g) => (
+                      <MergeGroup
+                        key={g.primary_id}
+                        group={g}
+                        repoId={repoId}
+                        agentOptions={agentOptions}
+                        skillOptions={skillOptions}
+                        onDone={() => done(`g:${g.primary_id}`)}
+                        onConflict={() => setConflict(true)}
+                      />
+                    ))}
+                  </section>
+                  <section className="flex flex-col gap-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="m-0 text-base font-semibold">{t("stale", { count: stale.length })}</h3>
+                      {data.totals.stale > data.stale.length && (
+                        <span>{t("showing", { shown: data.stale.length, total: data.totals.stale })}</span>
+                      )}
+                    </div>
+                    {stale.map((c) => (
+                      <StaleItem
+                        key={c.memory.id}
+                        candidate={c}
+                        repoId={repoId}
+                        agentOptions={agentOptions}
+                        skillOptions={skillOptions}
+                        onDone={() => done(`s:${c.memory.id}`)}
+                      />
+                    ))}
+                  </section>
+                </>
+              )}
+            </div>
+          ) : error ? (
+            <ErrorState title={t("scanError")} onRetry={scan} />
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-10" aria-busy={isPending}>
+              <span>{t("scanning")}</span>
+              <Skeleton className="h-30 w-full" />
             </div>
           )}
-          {data.groups.length === 0 && data.stale.length === 0 ? (
-            <EmptyState icon="Brain" title={t("clean")} body={t("cleanBody")} />
-          ) : (
-            <>
-              <section style={s.section}>
-                <div style={s.sectionHead}>
-                  <h3 style={s.sectionTitle}>{t("duplicates", { count: groups.length })}</h3>
-                  {data.totals.groups > data.groups.length && (
-                    <span>{t("showing", { shown: data.groups.length, total: data.totals.groups })}</span>
-                  )}
-                </div>
-                {groups.map((g) => (
-                  <MergeGroup
-                    key={g.primary_id}
-                    group={g}
-                    repoId={repoId}
-                    agentOptions={agentOptions}
-                    skillOptions={skillOptions}
-                    onDone={() => done(`g:${g.primary_id}`)}
-                    onConflict={() => setConflict(true)}
-                  />
-                ))}
-              </section>
-              <section style={s.section}>
-                <div style={s.sectionHead}>
-                  <h3 style={s.sectionTitle}>{t("stale", { count: stale.length })}</h3>
-                  {data.totals.stale > data.stale.length && (
-                    <span>{t("showing", { shown: data.stale.length, total: data.totals.stale })}</span>
-                  )}
-                </div>
-                {stale.map((c) => (
-                  <StaleItem
-                    key={c.memory.id}
-                    candidate={c}
-                    repoId={repoId}
-                    agentOptions={agentOptions}
-                    skillOptions={skillOptions}
-                    onDone={() => done(`s:${c.memory.id}`)}
-                  />
-                ))}
-              </section>
-            </>
-          )}
-        </div>
-      ) : error ? (
-        <ErrorState title={t("scanError")} onRetry={scan} />
-      ) : (
-        <div style={s.center} aria-busy={isPending}>
-          <span>{t("scanning")}</span>
-          <Skeleton height={120} />
-        </div>
-      )}
-    </Drawer>
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
   );
 }

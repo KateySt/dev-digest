@@ -68,11 +68,11 @@ describe("CompareRunsModal: content", () => {
     const recall = card("RECALL");
     expect(within(recall).getByText("60%")).toBeInTheDocument();
     expect(within(recall).getByText("80")).toBeInTheDocument();
-    expect(within(recall).getByText("▲ 20pt").getAttribute("style")).toContain("var(--ok)");
+    expect(within(recall).getByText("▲ 20pt")).toHaveClass("text-ok");
 
     const precision = card("PRECISION");
     expect(within(precision).getByText("90%")).toBeInTheDocument();
-    expect(within(precision).getByText("▼ 20pt").getAttribute("style")).toContain("var(--crit)");
+    expect(within(precision).getByText("▼ 20pt")).toHaveClass("text-crit");
 
     const citation = card("CITATION ACCURACY");
     expect(within(citation).getByText("0pt")).toBeInTheDocument();
@@ -81,14 +81,14 @@ describe("CompareRunsModal: content", () => {
     expect(within(cost).getByText("$0.1")).toBeInTheDocument(); // old
     expect(within(cost).getByText("$0.25")).toBeInTheDocument(); // new
     const costDelta = within(cost).getByText(/▲ \$0\.15/);
-    expect(costDelta.getAttribute("style")).toContain("var(--crit)"); // rise is bad
+    expect(costDelta).toHaveClass("text-crit"); // rise is bad
   });
 
   it("C-32: a cost drop is green", async () => {
     setup(compare({ deltas: { recall: 0, precision: 0, citation_accuracy: 0, cost_usd: -0.05 } }));
     await screen.findByText("Compare runs · v1 → v2");
     const costDelta = within(screen.getByText("COST").parentElement as HTMLElement).getByText(/▼ \$0\.05/);
-    expect(costDelta.getAttribute("style")).toContain("var(--ok)");
+    expect(costDelta).toHaveClass("text-ok");
   });
 
   it("C-33: shows a line diff of the system prompts (added lines +, removed lines −, unchanged lines plain) as plain text, and model + skills before → after", async () => {

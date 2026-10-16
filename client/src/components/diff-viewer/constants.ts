@@ -39,11 +39,28 @@ export const ROLE_DESCRIPTION_KEYS: Record<SmartDiffRole, string> = {
 };
 
 /** i18n key (under `prReview.diffFindings`) for each severity's inline label
- *  (deliberately NOT the same copy as `SEV[severity].label` in
- *  `@devdigest/ui` — that's "Critical/Warning/Suggestion", this is the
+ *  (deliberately NOT the same copy as `common.severity.*` — that's "Critical/Warning/Suggestion", this is the
  *  reviewer-facing "blocker/warning/suggestion" wording). */
 export const SEVERITY_LABEL_KEYS: Record<Severity, string> = {
   CRITICAL: "severityBlocker",
   WARNING: "severityWarning",
   SUGGESTION: "severitySuggestion",
 };
+
+/* ---- shared class strings ---- */
+
+/** Indented rail for threads/composer/findings, aligned under the code (past
+ *  the 58px gutter). */
+export const RAIL = "mt-1.5 mr-3.5 mb-2 ml-14.5 flex flex-col gap-2";
+/** Rail variant for inline findings (tighter stack). */
+export const FINDING_BLOCK = "mt-1.5 mr-3.5 mb-2 ml-14.5 flex flex-col gap-1";
+export const SEVERITY_LABEL = "text-2xs font-bold tracking-[0.06em] uppercase";
+/** Review-comment card chrome (CommentCard, RiskAnnotationCard). */
+export const COMMENT_CARD = "rounded-lg border border-border bg-elevated p-(--card-pad)";
+export const COMMENT_HEAD = "mb-1.5 flex items-center gap-2";
+export const COMMENT_USER = "text-sm font-semibold text-foreground";
+export const COMMENT_META = "text-[11.5px] text-subtle-foreground";
+export const COMMENT_BODY = "text-sm leading-[19px] break-words text-muted-foreground";
+export const COMPOSER_ACTIONS = "mt-2 flex items-center gap-2";
+/** Expand/collapse chevron; add `rotate-90` when open. */
+export const CHEVRON = "text-subtle-foreground transition-transform duration-120";

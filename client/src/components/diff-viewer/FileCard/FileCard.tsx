@@ -5,9 +5,11 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Icon, Badge, SEV } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { SEVERITY_STYLE } from "@/components/severity";
+import { cn } from "@/lib/utils";
 import type { PrFile, Severity } from "@/lib/types";
-import { AUTO_EXPAND_MAX_LINES } from "../constants";
+import { AUTO_EXPAND_MAX_LINES, CHEVRON, FINDING_BLOCK, SEVERITY_LABEL, SEVERITY_LABEL_KEYS } from "../constants";
 import { parsePatch, type Line } from "../helpers";
 import {
   buildThreads,
@@ -17,7 +19,6 @@ import {
   type DiffCommentApi,
 } from "../comments";
 import { findingsForPath, partitionFindings, type DiffFindingApi } from "../findings";
-import { s, chevronFor } from "../styles";
 import { CodeLine } from "../CodeLine";
 import { OutdatedComments } from "../OutdatedComments";
 import type { RiskAnnotationsByFile } from "../RiskAnnotationCard";
@@ -112,37 +113,38 @@ export function FileCard({
   const worst = worstSeverity(fileFindings);
 
   return (
-    <div style={s.fileCard}>
-      <div onClick={() => setOpen((o) => !o)} style={s.fileHeader}>
-        <Icon.ChevronRight size={13} style={chevronFor(open)} />
-        <Icon.FileText size={14} style={s.fileIcon} />
-        <span className="mono" style={s.filePath}>
-          {file.path}
-        </span>
-        <span className="mono tnum" style={s.fileStat}>
-          <span style={s.addText}>+{file.additions}</span>{" "}
-          <span style={s.delText}>−{file.deletions}</span>
+    <div className="overflow-hidden rounded-[7px] border border-border bg-elevated">
+      <div onClick={() => setOpen((o) => !o)} className="flex cursor-pointer items-center gap-2.5 px-3 py-2.5">
+        <Icon.ChevronRight size={13} className={cn(CHEVRON, open && "rotate-90")} aria-hidden />
+        <Icon.FileText size={14} className="text-subtle-foreground" aria-hidden />
+        <span className="mono min-w-0 flex-1 truncate text-sm font-medium">{file.path}</span>
+        <span className="mono tnum text-xs">
+          <span className="text-code-add-text">+{file.additions}</span>{" "}
+          <span className="text-code-del-text">−{file.deletions}</span>
         </span>
         {worst && (
-          <span title={`${fileFindings.length} finding(s), worst severity ${worst}`}>
-            <Badge dot color={SEV[worst].c} bg="transparent" style={{ padding: 0 }}>
-              {fileFindings.length}
-            </Badge>
+          <span
+            title={tFindings("diffFindings.fileSummary", {
+              count: fileFindings.length,
+              severity: tFindings(`diffFindings.${SEVERITY_LABEL_KEYS[worst]}`),
+            })}
+            className={cn("inline-flex items-center gap-1.5 text-xs font-medium", SEVERITY_STYLE[worst].text)}
+          >
+            <span aria-hidden className={cn("size-1.5 rounded-full", SEVERITY_STYLE[worst].fill)} />
+            {fileFindings.length}
           </span>
         )}
         {commentCount > 0 && (
-          <span
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text-muted)" }}
-          >
-            <Icon.MessageSquare size={12} />
+          <span className="inline-flex items-center gap-1 text-xs text-subtle-foreground">
+            <Icon.MessageSquare size={12} aria-hidden />
             {commentCount}
           </span>
         )}
       </div>
       {open && (
-        <div style={s.fileBody}>
+        <div className="border-t border-border bg-surface py-2">
           {lines.length === 0 ? (
-            <div style={s.noDiff}>{t("diffViewer.noDiffText")}</div>
+            <div className="px-4.5 py-3.5 text-center text-sm text-subtle-foreground">{t("diffViewer.noDiffText")}</div>
           ) : (
             lines.map((ln, i) => {
               const isTargetLine = isTargetFile && targetLine != null && ln.newNo === targetLine;
@@ -166,14 +168,14 @@ export function FileCard({
             <OutdatedComments threads={outdated} commenting={commenting} />
           )}
           {findings && findings.showFindings && unanchoredFindings.length > 0 && (
-            <div style={s.groupBody /* reuse simple stack spacing */}>
-              <div style={{ ...s.groupHeader, cursor: "default", padding: "8px 14px 0 58px" }}>
-                <span style={s.findingSeverityLabel}>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2.5 pt-2 pr-3.5 pl-14.5">
+                <span className={SEVERITY_LABEL}>
                   {tFindings("diffFindings.unanchored", { count: unanchoredFindings.length })}
                 </span>
               </div>
               {unanchoredFindings.map((f) => (
-                <div key={f.id} style={s.findingBlock}>
+                <div key={f.id} className={FINDING_BLOCK}>
                   {findings.renderFinding(f)}
                 </div>
               ))}

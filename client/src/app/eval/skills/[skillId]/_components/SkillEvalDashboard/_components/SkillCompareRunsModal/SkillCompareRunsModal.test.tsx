@@ -54,24 +54,24 @@ describe("SkillCompareRunsModal: content", () => {
     const recall = card("RECALL");
     expect(within(recall).getByText("60%")).toBeInTheDocument();
     expect(within(recall).getByText("80")).toBeInTheDocument();
-    expect(within(recall).getByText("▲ 20pt").getAttribute("style")).toContain("var(--ok)");
+    expect(within(recall).getByText("▲ 20pt")).toHaveClass("text-ok");
 
     const precision = card("PRECISION");
     expect(within(precision).getByText("90%")).toBeInTheDocument();
-    expect(within(precision).getByText("▼ 20pt").getAttribute("style")).toContain("var(--crit)");
+    expect(within(precision).getByText("▼ 20pt")).toHaveClass("text-crit");
 
     expect(within(card("CITATION ACCURACY")).getByText("0pt")).toBeInTheDocument();
 
     const cost = card("COST");
     expect(within(cost).getByText("$0.1")).toBeInTheDocument();
     expect(within(cost).getByText("$0.25")).toBeInTheDocument();
-    expect(within(cost).getByText(/▲ \$0\.15/).getAttribute("style")).toContain("var(--crit)");
+    expect(within(cost).getByText(/▲ \$0\.15/)).toHaveClass("text-crit");
   });
 
   it("SK-25: a cost drop is green", async () => {
     setup(compare({ deltas: { recall: 0, precision: 0, citation_accuracy: 0, cost_usd: -0.05 } }));
     await screen.findByText("Compare runs · v1 → v2");
-    expect(within(screen.getByText("COST").parentElement as HTMLElement).getByText(/▼ \$0\.05/).getAttribute("style")).toContain("var(--ok)");
+    expect(within(screen.getByText("COST").parentElement as HTMLElement).getByText(/▼ \$0\.05/)).toHaveClass("text-ok");
   });
 
   it("SK-26: shows a line diff of the two skill texts as plain TEXT (a literal <b> never becomes markup)", async () => {

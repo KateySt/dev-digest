@@ -4,8 +4,10 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@devdigest/ui";
-import { type CommentThread, type DiffCommentApi, cs } from "../comments";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { type CommentThread, type DiffCommentApi } from "../comments";
+import { RAIL } from "../constants";
 import { CommentCard } from "../CommentCard";
 import { InlineComposer } from "../InlineComposer";
 
@@ -21,7 +23,7 @@ export function CommentThreadView({
   const t = useTranslations("shell");
   const [replying, setReplying] = React.useState(false);
   return (
-    <div style={cs.thread}>
+    <div className={RAIL}>
       {thread.comments.map((c) => (
         <CommentCard key={c.id} c={c} commenting={commenting} />
       ))}
@@ -37,12 +39,8 @@ export function CommentThreadView({
           />
         ) : (
           <div>
-            <Button
-              kind="ghost"
-              size="sm"
-              icon="CornerDownRight"
-              onClick={() => setReplying(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setReplying(true)}>
+              <Icon.CornerDownRight aria-hidden />
               {t("diffViewer.reply")}
             </Button>
           </div>

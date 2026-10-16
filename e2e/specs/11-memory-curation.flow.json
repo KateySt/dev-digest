@@ -46,7 +46,7 @@
       "cmd": [
         "find",
         "role",
-        "button",
+        "tab",
         "click",
         "--name",
         "Agent runs"

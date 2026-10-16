@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { screen, cleanup, fireEvent, within, act } from "@testing-library/react";
 import type { AgentEvalRuns } from "@devdigest/shared";
 import { agent, get, mockFetch, renderApp, suiteRun } from "@/test/eval-utils";
+import { openMenu } from "@/test/radix";
 
 const nav = vi.hoisted(() => ({
   push: vi.fn(),
@@ -101,8 +102,8 @@ describe("AgentEvalDashboard: header", () => {
   it("C-23: the agent picker switches to another agent's dashboard", async () => {
     setup();
     await screen.findByRole("heading", { level: 1, name: "Security Reviewer" });
-    fireEvent.click(screen.getByRole("button", { name: "Switch agent" }));
-    fireEvent.click(await screen.findByRole("button", { name: /Perf Reviewer/ }));
+    openMenu(screen.getByRole("button", { name: "Switch agent" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Perf Reviewer/ }));
     expect(nav.push).toHaveBeenCalledWith("/eval/ag2?range=30d");
   });
 });
@@ -111,8 +112,8 @@ describe("AgentEvalDashboard: range", () => {
   it("C-24: picking a range updates ?range= and the server is asked for that range", async () => {
     setup();
     await screen.findByRole("heading", { level: 1, name: "Security Reviewer" });
-    fireEvent.click(screen.getByRole("button", { name: "Date range" }));
-    fireEvent.click(await screen.findByRole("button", { name: "7 days" }));
+    openMenu(screen.getByRole("button", { name: "Date range" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "7 days" }));
     expect(nav.replace).toHaveBeenCalledWith("/eval/ag1?range=7d");
   });
 

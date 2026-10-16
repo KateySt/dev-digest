@@ -25,8 +25,10 @@ export const SIZE_CLASS: Record<string, string> = {
 
 /** Grid columns shared by the header row and every PR row. SPEC-05
  *  C-AC-11/31 appends a fixed-width "actions" column for the permanent
- *  per-row Run Review dropdown, keeping header and rows aligned. */
-export const GRID_COLS = "grid-cols-[1fr_132px_92px_60px_108px_118px_72px_78px_140px]";
+ *  per-row Run Review dropdown, keeping header and rows aligned. The title
+ *  column never shrinks below 150px (author below 100px) — on a narrower
+ *  window the table scrolls sideways instead of collapsing the title. */
+export const GRID_COLS = "grid-cols-[minmax(150px,1fr)_minmax(100px,132px)_92px_60px_108px_118px_72px_78px_140px]";
 
 /** Line-count thresholds for the S/M/L size bucket. */
 export const SIZE_SMALL_MAX = 100;

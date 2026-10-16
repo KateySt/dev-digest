@@ -25,7 +25,9 @@
     "testing": "Testing…",
     "testFailed": "Test failed",
     "configured": "Configured",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "showKey": "Show key",
+    "hideKey": "Hide key"
   },
   "catalog": {
     "title": "Catalog",

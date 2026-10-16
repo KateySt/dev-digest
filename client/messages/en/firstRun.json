@@ -39,6 +39,11 @@
     "add": "Add repository",
     "adding": "Cloning…",
     "skip": "Skip for now",
-    "failed": "Could not add repository"
-  }
+    "failed": "Could not add repository",
+    "placeholder": "https://github.com/owner/repo"
+  },
+  "brand": "DevDigest",
+  "showKey": "Show key",
+  "hideKey": "Hide key",
+  "stepsLabel": "Setup progress"
 }

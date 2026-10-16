@@ -9,10 +9,6 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 2026-06-22 — `var(--ok)` is the correct CSS token for green/success icon color (used for check marks, approved verdict, "reviewed" status). Do NOT use `var(--success)` or `var(--green)` — those don't exist. Confirmed across settings, verdict banner, and PR list constants. ref: client/src/app/repos/[repoId]/pulls/[number]/_components/VerdictBanner/constants.ts:1
 
-2026-06-22 — `Button` from `@devdigest/ui` auto-replaces the `icon` prop with a spinning `RefreshCw` when `loading=true`. Adding `icon="RefreshCw"` explicitly on a loading button is redundant — the component handles it. The spin animation runs via `ddspin 1s linear infinite` on the icon element. ref: client/src/vendor/ui/primitives/Button.tsx:24
-
-2026-06-17 — `SEV[sev].c` from `@devdigest/ui` returns a hex string (e.g. `#ef4444`), NOT a CSS variable. Appending `"22"` / `"55"` gives valid 8-digit hex with ~13%/33% alpha — safe for `background` and `border` derivation. Do NOT use this trick with `var(--crit)` / `var(--warn)` style tokens (those are CSS vars and will produce invalid values). ref: client/src/app/repos/[repoId]/pulls/styles.ts:50
-
 2026-06-17 — Shared display components for PR list cells live in `client/src/components/`. Pure display, no fetching. Accept `value | null | undefined`, render `–` for absent data. Pattern: `({ cost }: { cost?: number | null }) => cost && cost > 0 ? "$X.XXX" : "–"`. ref: client/src/components/RunCostBadge/RunCostBadge.tsx:1
 
 2026-06-17 — Lazy-enable TanStack Query by passing `undefined` instead of a boolean flag: `usePrReviews(anchorRect && totalFindings > 0 ? pr.id : undefined)`. When `prId` is `undefined`, `enabled: !!prId` is false — no fetch fires. Query enables automatically when the condition becomes truthy. No conditional hook call needed. ref: client/src/app/repos/[repoId]/pulls/_components/PRRow/PRRow.tsx:28
@@ -35,9 +31,9 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 2026-06-18 — `SeverityChip` with "N dots total" (render exactly N circles) is visually wrong — it gives no sense of scale. The correct model is always 12 slots: first `min(count, 12)` render as a single merged solid segment (height=2px), the remaining (12-N) render as faded separate dots. Width of merged segment = `N * SLOT_W + (N-1) * GAP`. ref: client/src/components/SeverityChip/SeverityChip.tsx:1
 
-2026-06-17 — `Icon.AlertCircle` does not exist in `@devdigest/ui` — runtime error "Element type is invalid: expected a string... but got undefined". Never guess icon names; check existing usages (`grep -oh "Icon\.[A-Za-z]*"`) to find what's available. ref: client/src/app/repos/[repoId]/pulls/_components/FindingsPopover/FindingsPopover.tsx:56
+2026-06-17 — `Icon.AlertCircle` does not exist in the icon registry (`@/components/icon`) — runtime error "Element type is invalid: expected a string... but got undefined". Never guess icon names; check existing usages (`grep -oh "Icon\.[A-Za-z]*"`) to find what's available. ref: client/src/components/icon/icons.tsx
 
-2026-06-30 — `BookOpen` is NOT in the `@devdigest/ui` icon registry (`client/src/vendor/ui/icons.tsx`). Attempting to use `icon: "BookOpen" as const` for a tab causes a TypeScript error on `IconName`. For a "context/documents" tab the correct substitute is `"FileText"` which IS registered. Always cross-check `icons.tsx` exports before choosing a tab icon. ref: client/src/vendor/ui/icons.tsx:167
+2026-06-30 — `BookOpen` is NOT in the icon registry (`client/src/components/icon/icons.tsx`). Attempting to use `icon: "BookOpen" as const` for a tab causes a TypeScript error on `IconName`. For a "context/documents" tab the correct substitute is `"FileText"` which IS registered. Always cross-check `icons.tsx` exports before choosing a tab icon. ref: client/src/components/icon/icons.tsx
 
 ## Codebase Patterns
 

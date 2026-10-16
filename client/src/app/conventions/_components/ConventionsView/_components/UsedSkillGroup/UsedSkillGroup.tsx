@@ -3,10 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Badge } from "@devdigest/ui";
 import type { ConventionCandidate } from "@devdigest/shared";
+import { Badge } from "@/components/ui/badge";
 import type { LinkedSkill } from "../../helpers";
-import { s } from "./styles";
 
 /** "Used in skills" group: the skill a set of conventions was merged into —
  *  name links to the skill, badge shows its current scope — with the
@@ -22,17 +21,21 @@ export function UsedSkillGroup({
 }) {
   const t = useTranslations("conventions");
   return (
-    <section style={s.group} aria-label={skill.name}>
-      <div style={s.header}>
-        <Link href={`/skills?skill=${encodeURIComponent(skill.id)}`} style={s.name} aria-label={t("used.openSkill", { name: skill.name })}>
+    <section className="flex flex-col gap-2.5" aria-label={skill.name}>
+      <div className="flex items-center gap-2.5">
+        <Link
+          href={`/skills?skill=${encodeURIComponent(skill.id)}`}
+          className="text-base font-semibold text-foreground underline"
+          aria-label={t("used.openSkill", { name: skill.name })}
+        >
           {skill.name}
         </Link>
-        <Badge color={skill.repo_id ? "var(--accent)" : "var(--text-secondary)"}>
+        <Badge variant={skill.repo_id ? "brand" : "neutral"}>
           {skill.repo_id ? t("used.scopeProject") : t("used.scopeGlobal")}
         </Badge>
-        <span style={s.count}>{t("used.conventionCount", { count: items.length })}</span>
+        <span className="text-xs text-subtle-foreground">{t("used.conventionCount", { count: items.length })}</span>
       </div>
-      <div style={s.list}>{items.map(renderItem)}</div>
+      <div className="flex flex-col gap-3.5">{items.map(renderItem)}</div>
     </section>
   );
 }

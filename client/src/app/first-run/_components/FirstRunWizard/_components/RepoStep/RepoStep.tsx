@@ -5,10 +5,14 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, FormField, Icon, TextInput } from "@devdigest/ui";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { useAddRepo } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
-import { stepStyles } from "../../styles";
+import { STEP } from "../../constants";
 
 export function RepoStep({ onBack }: { onBack: () => void }) {
   const t = useTranslations("firstRun");
@@ -29,17 +33,17 @@ export function RepoStep({ onBack }: { onBack: () => void }) {
 
   return (
     <div>
-      <h1 style={stepStyles.title}>{t("repo.title")}</h1>
-      <p style={stepStyles.body}>{t("repo.body")}</p>
+      <h1 className={STEP.title}>{t("repo.title")}</h1>
+      <p className={STEP.body}>{t("repo.body")}</p>
 
       <FormField label={t("repo.label")} hint={t("repo.hint")}>
-        <TextInput
+        <Input
+          className="mono"
           value={url}
-          onChange={setUrl}
-          mono
+          onChange={(e) => setUrl(e.target.value)}
           autoFocus
           aria-label={t("repo.label")}
-          placeholder="https://github.com/owner/repo"
+          placeholder={t("repo.placeholder")}
           onKeyDown={(e) => {
             if (e.key === "Enter") submit();
           }}
@@ -47,21 +51,22 @@ export function RepoStep({ onBack }: { onBack: () => void }) {
       </FormField>
 
       {error && (
-        <div role="alert" style={stepStyles.result(false)}>
-          <Icon.XCircle size={16} style={{ color: "var(--crit)" }} />
+        <div role="alert" className={cn(STEP.result, STEP.resultFail)}>
+          <Icon.XCircle size={16} className="text-crit" aria-hidden />
           <span>{error}</span>
         </div>
       )}
 
-      <div style={stepStyles.actions}>
-        <Button kind="ghost" size="md" onClick={onBack}>
+      <div className={STEP.actions}>
+        <Button variant="outline" onClick={onBack}>
           {t("back")}
         </Button>
-        <div style={stepStyles.spacer} />
-        <Button kind="tertiary" size="md" onClick={() => router.replace("/")}>
+        <div className="flex-1" />
+        <Button variant="ghost" onClick={() => router.replace("/")}>
           {t("repo.skip")}
         </Button>
-        <Button kind="primary" size="md" icon="Plus" onClick={submit} disabled={!url.trim() || isPending}>
+        <Button onClick={submit} disabled={!url.trim() || isPending}>
+          <Icon.Plus aria-hidden />
           {isPending ? t("repo.adding") : t("repo.add")}
         </Button>
       </div>

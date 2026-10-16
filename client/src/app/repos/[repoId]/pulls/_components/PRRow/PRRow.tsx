@@ -5,11 +5,10 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-// HoverPopover moves to shadcn HoverCard with the src/components slice.
-import { HoverPopover } from "@devdigest/ui";
 import { Icon } from "@/components/icon";
 import { CircularScore } from "@/components/circular-score";
 import { UserAvatar } from "@/components/user-avatar";
+import { HoverPopover } from "@/components/hover-popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { RunCostBadge } from "@/components/run-cost-badge";
@@ -107,7 +106,7 @@ export function PRRow({
                 {size} · {lines}
               </Badge>
             }
-            width={220}
+            className="w-55"
           >
             <div className="flex flex-col gap-1.5 px-3 py-2.5 text-ui text-muted-foreground">
               <div>{t("list.riskTooltip.diffSize", { lines })}</div>

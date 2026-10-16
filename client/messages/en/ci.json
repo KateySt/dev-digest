@@ -17,7 +17,8 @@
       "allAgents": "All agents",
       "allRepos": "All repos",
       "allStatuses": "All statuses",
-      "allSources": "All sources"
+      "allSources": "All sources",
+      "periodLabel": "Period"
     },
     "table": {
       "timestamp": "Timestamp",

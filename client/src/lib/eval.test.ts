@@ -6,7 +6,6 @@ import {
   actualCount,
   caseLocations,
   collapseDiff,
-  deltaColor,
   formatCostDelta,
   formatLocation,
   formatPercent,
@@ -53,15 +52,6 @@ describe("percent / point-delta formatting (C-10, C-11, C-32)", () => {
     expect(formatPointDelta({ points: 4, direction: "up" })).toBe("▲ 4pt");
     expect(formatPointDelta({ points: 2, direction: "down" })).toBe("▼ 2pt");
     expect(formatPointDelta({ points: 0, direction: "flat" })).toBe("0pt");
-  });
-
-  it("deltaColor: rise green, drop red, flat muted; invert flips it (cost)", () => {
-    expect(deltaColor("up")).toBe("var(--ok)");
-    expect(deltaColor("down")).toBe("var(--crit)");
-    expect(deltaColor("flat")).toBe("var(--text-muted)");
-    expect(deltaColor("up", true)).toBe("var(--crit)"); // cost rise is red
-    expect(deltaColor("down", true)).toBe("var(--ok)");
-    expect(deltaColor("flat", true)).toBe("var(--text-muted)");
   });
 
   it("formatCostDelta signs the dollar amount", () => {

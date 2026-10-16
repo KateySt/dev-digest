@@ -1,58 +1,53 @@
 /* Showcase.tsx — renders every design-system component for visual verification.
-   Used by the /showcase route (both themes) and by the smoke tests.
+   Used by the smoke tests (both themes).
    Dev-only page: labels are intentionally not internationalized. */
 "use client";
 
 import React from "react";
+import { AutoTriggerStatus } from "@/components/auto-trigger-status";
+import { BarRow, Donut, LineChart, MetricCard, Sparkline } from "@/components/charts";
+import { CircularScore } from "@/components/circular-score";
+import { CodeField } from "@/components/code-field";
+import { Combobox } from "@/components/combobox";
+import { ConfidenceNum } from "@/components/confidence-num";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { FilterChip } from "@/components/filter-chip";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { LiveLogStream } from "@/components/live-log-stream";
+import { Markdown } from "@/components/markdown";
+import { MonoLink } from "@/components/mono-link";
+import { PageTabs } from "@/components/page-tabs";
+import { SectionLabel } from "@/components/section-label";
+import { SelectField } from "@/components/select-field";
+import { CategoryTag, SeverityBadge } from "@/components/severity";
+import { UserAvatar } from "@/components/user-avatar";
+import { WizardSteps } from "@/components/wizard-steps";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Button,
-  IconBtn,
-  Badge,
-  SeverityBadge,
-  CategoryTag,
-  Chip,
-  Avatar,
-  ConfidenceNum,
-  MonoLink,
-  ProgressBar,
-  PercentProgress,
-  CircularScore,
-  Toggle,
-  Kbd,
-  SectionLabel,
-  Card,
-  EmptyState,
-  ErrorState,
-  Skeleton,
-  Markdown,
-  Drawer,
-  Modal,
-  Tabs,
-  Dropdown,
-  FormField,
-  TextInput,
-  Select,
-  SearchableSelect,
-  Textarea,
-  CodeField,
-  Checkbox,
-  Sparkline,
-  LineChart,
-  Donut,
-  BarRow,
-  MetricCard,
-  LiveLogStream,
-  ExportWizardSteps,
-  AutoTriggerStatus,
-} from "@devdigest/ui";
-import { s } from "./styles";
-import { SEVERITIES, CATEGORIES, MODEL_OPTIONS } from "./constants";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
+import { Progress } from "@/components/ui/progress";
+import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { CATEGORIES, MODEL_OPTIONS, SEVERITIES } from "./constants";
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section style={s.group}>
+    <section className="mb-8">
       <SectionLabel>{title}</SectionLabel>
-      <div style={s.groupRow}>{children}</div>
+      <div className="flex flex-wrap items-center gap-3.5">{children}</div>
     </section>
   );
 }
@@ -68,26 +63,34 @@ export function Gallery() {
   const [code, setCode] = React.useState("# Rubric\n\nEvaluate for **correctness** and _security_.\n");
 
   return (
-    <div style={s.gallery}>
+    <div className="bg-background p-8 text-foreground">
       <Group title="Buttons">
-        <Button kind="primary" icon="Sparkles">
+        <Button>
+          <Icon.Sparkles aria-hidden />
           Primary
         </Button>
-        <Button kind="secondary">Secondary</Button>
-        <Button kind="tertiary" active>
+        <Button variant="secondary">Secondary</Button>
+        <Button variant="ghost" data-active>
           Tertiary
         </Button>
-        <Button kind="ghost" icon="Filter">
+        <Button variant="outline">
+          <Icon.Filter aria-hidden />
           Ghost
         </Button>
-        <Button kind="danger" icon="Trash">
+        <Button variant="destructive">
+          <Icon.Trash aria-hidden />
           Danger
         </Button>
-        <Button kind="primary" size="sm" iconRight="ChevronDown">
+        <Button size="sm">
           Small
+          <Icon.ChevronDown aria-hidden />
         </Button>
-        <IconBtn icon="RefreshCw" label="Refresh" />
-        <IconBtn icon="Bell" label="Notifications" active />
+        <Button variant="ghost" size="icon" aria-label="Refresh" title="Refresh">
+          <Icon.RefreshCw aria-hidden />
+        </Button>
+        <Button variant="ghost" size="icon" data-active aria-label="Notifications" title="Notifications">
+          <Icon.Bell aria-hidden />
+        </Button>
       </Group>
 
       <Group title="Badges & Severity (icon + label, WCAG AA)">
@@ -97,8 +100,12 @@ export function Gallery() {
         {SEVERITIES.map((sev) => (
           <SeverityBadge key={`${sev}-compact`} severity={sev} count={3} compact />
         ))}
-        <Badge icon="GitBranch">branch</Badge>
-        <Badge dot color="var(--ok)" bg="transparent">
+        <Badge variant="neutral">
+          <Icon.GitBranch aria-hidden />
+          branch
+        </Badge>
+        <Badge variant="ok" className="bg-transparent">
+          <span aria-hidden className="size-1.5 rounded-full bg-ok" />
           synced
         </Badge>
         {CATEGORIES.map((c) => (
@@ -107,79 +114,91 @@ export function Gallery() {
       </Group>
 
       <Group title="Chips, Avatars, Confidence, MonoLink, Kbd">
-        <Chip active icon="Check">
+        <FilterChip active icon="Check">
           Active
-        </Chip>
-        <Chip icon="Plus" count={4}>
+        </FilterChip>
+        <FilterChip icon="Plus" count={4}>
           Add
-        </Chip>
-        <Avatar name="Ada Lovelace" />
-        <Avatar name="you" size={28} />
+        </FilterChip>
+        <UserAvatar name="Ada Lovelace" />
+        <UserAvatar name="you" size={28} />
         <ConfidenceNum value={0.91} />
         <ConfidenceNum value={0.6} />
         <MonoLink>src/config.ts:12</MonoLink>
         <Kbd>⌘K</Kbd>
-        <Toggle on={toggle} onChange={setToggle} />
+        <Switch checked={toggle} onCheckedChange={setToggle} aria-label="Toggle" />
       </Group>
 
       <Group title="Progress & Score">
-        <div style={s.w200}>
-          <ProgressBar value={64} />
-        </div>
-        <div style={s.w220}>
-          <PercentProgress value={42} label="Embedding chunks" />
+        <div className="w-50">
+          <Progress value={64} className="h-1.5 bg-accent" aria-label="Progress" />
         </div>
         <CircularScore score={82} />
         <CircularScore score={48} size={36} stroke={3.5} />
       </Group>
 
       <Group title="Cards & States">
-        <Card style={s.w240}>
-          <div style={s.cardTitle}>Card title</div>
-          <div style={s.cardBody}>Elevated surface.</div>
-        </Card>
-        <div style={s.w280}>
+        <div className="w-60 rounded-lg border border-border bg-elevated p-(--card-pad)">
+          <div className="font-semibold">Card title</div>
+          <div className="mt-1.25 text-base text-muted-foreground">Elevated surface.</div>
+        </div>
+        <div className="w-70">
           <EmptyState icon="GitPullRequest" title="No pull requests" body="Refresh to sync from GitHub." cta="Add repo" />
         </div>
-        <div style={s.w300}>
+        <div className="w-75">
           <ErrorState title="Engine unreachable" body="Is the API running on :3001?" onRetry={() => {}} />
         </div>
-        <div style={s.skeletonStack}>
-          <Skeleton height={16} />
-          <Skeleton height={16} width="70%" />
-          <Skeleton height={40} />
+        <div className="flex w-50 flex-col gap-2.5">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-[70%]" />
+          <Skeleton className="h-10 w-full" />
         </div>
       </Group>
 
       <Group title="Markdown">
-        <div style={s.w420}>
+        <div className="w-105">
           <Markdown>{"A finding with **bold**, `inline code`, and a [link](https://example.com).\n\n- one\n- two"}</Markdown>
         </div>
       </Group>
 
       <Group title="Form controls (real, controlled)">
-        <div style={s.w280}>
-          <FormField label="API key" hint="Stored locally." required>
-            <TextInput value={text} onChange={setText} mono placeholder="sk-…" />
+        <div className="w-70">
+          <FormField label="API key" hint="Stored locally." required htmlFor="showcase-key">
+            <Input
+              id="showcase-key"
+              className="mono"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="sk-…"
+            />
           </FormField>
         </div>
-        <div style={s.w220}>
+        <div className="w-55">
           <FormField label="Model">
-            <Select value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
+            <SelectField value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} ariaLabel="Model" />
           </FormField>
         </div>
-        <div style={s.w220}>
+        <div className="w-55">
           <FormField label="Model (searchable)">
-            <SearchableSelect value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
+            <Combobox value={sel} onChange={setSel} options={[...MODEL_OPTIONS]} />
           </FormField>
         </div>
-        <div style={s.w280}>
-          <FormField label="Notes">
-            <Textarea value={text} onChange={setText} placeholder="Free text…" rows={3} />
+        <div className="w-70">
+          <FormField label="Notes" htmlFor="showcase-notes">
+            <Textarea
+              id="showcase-notes"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Free text…"
+              rows={3}
+            />
           </FormField>
         </div>
-        <Checkbox checked={check} onChange={setCheck} label="On new PR" />
-        <div style={s.w420}>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={check} onCheckedChange={(v) => setCheck(v === true)} />
+          On new PR
+        </label>
+        <div className="w-105">
           <FormField label="Skill body">
             <CodeField value={code} onChange={setCode} filename="pr-quality-rubric.md" dirty minHeight={140} />
           </FormField>
@@ -187,11 +206,10 @@ export function Gallery() {
       </Group>
 
       <Group title="Tabs / Dropdown / Overlays">
-        <div style={s.w360}>
-          <Tabs
+        <div className="w-90">
+          <PageTabs
             value={tab}
             onChange={setTab}
-            pad="0"
             tabs={[
               { key: "a", label: "Config", icon: "Settings" },
               { key: "b", label: "Skills", icon: "Sparkles", count: 3 },
@@ -199,25 +217,36 @@ export function Gallery() {
             ]}
           />
         </div>
-        <Dropdown
-          trigger={<Button kind="secondary" iconRight="ChevronDown">Menu</Button>}
-          items={[
-            { label: "Run all", icon: "Play" },
-            { divider: true },
-            { label: "Configure…", icon: "Settings", muted: true },
-          ]}
-        />
-        <Button kind="ghost" onClick={() => setDrawer(true)}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary">
+              Menu
+              <Icon.ChevronDown aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem>
+              <Icon.Play aria-hidden />
+              Run all
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-muted-foreground">
+              <Icon.Settings aria-hidden />
+              Configure…
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button variant="outline" onClick={() => setDrawer(true)}>
           Open Drawer
         </Button>
-        <Button kind="ghost" onClick={() => setModal(true)}>
+        <Button variant="outline" onClick={() => setModal(true)}>
           Open Modal
         </Button>
       </Group>
 
-      <Group title="Charts (Recharts)">
+      <Group title="Charts">
         <Sparkline data={[3, 5, 2, 8, 6, 9, 7]} />
-        <div style={s.w360}>
+        <div className="w-90">
           <LineChart
             series={[
               { name: "recall", color: "var(--accent)", data: [0.7, 0.74, 0.8, 0.78, 0.85, 0.9] },
@@ -232,17 +261,17 @@ export function Gallery() {
             { label: "anthropic", value: 2.1, color: "var(--ok)" },
           ]}
         />
-        <div style={s.w320}>
+        <div className="w-80">
           <BarRow label="security-agent" value={42} max={60} suffix="42" />
           <BarRow label="perf-agent" value={28} max={60} color="var(--ok)" suffix="28" />
         </div>
-        <div style={s.w200}>
+        <div className="w-50">
           <MetricCard label="ACCEPT RATE" value="68" suffix="%" delta={0.04} trend={[0.6, 0.62, 0.65, 0.68]} />
         </div>
       </Group>
 
       <Group title="Shared (LiveLog / Wizard steps / Auto-trigger)">
-        <div style={s.w460}>
+        <div className="w-115">
           <LiveLogStream
             height={120}
             log={[
@@ -253,24 +282,33 @@ export function Gallery() {
             ]}
           />
         </div>
-        <div style={s.w460}>
-          <ExportWizardSteps step={1} labels={["Target", "Preview", "Configure", "Install"]} />
+        <div className="w-115">
+          <WizardSteps step={1} labels={["Target", "Preview", "Configure", "Install"]} />
         </div>
         <AutoTriggerStatus on />
         <AutoTriggerStatus on={false} />
       </Group>
 
-      {drawer && (
-        <Drawer title="Example Drawer" subtitle="720px wide" onClose={() => setDrawer(false)}>
-          <p style={s.drawerBody}>Drawer body content.</p>
-        </Drawer>
-      )}
-      {modal && (
-        <Modal onClose={() => setModal(false)} width={480}>
-          <Modal.Header title="Example Modal" subtitle="centered" onClose={() => setModal(false)} />
-          <div style={s.modalBody}>Modal body content.</div>
-        </Modal>
-      )}
+      <Sheet open={drawer} onOpenChange={setDrawer}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Example Drawer</SheetTitle>
+            <SheetDescription>720px wide</SheetDescription>
+          </SheetHeader>
+          <SheetBody>
+            <p className="text-muted-foreground">Drawer body content.</p>
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
+      <Dialog open={modal} onOpenChange={setModal}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Example Modal</DialogTitle>
+            <DialogDescription>centered</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="p-6">Modal body content.</DialogBody>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

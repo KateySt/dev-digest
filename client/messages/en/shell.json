@@ -51,7 +51,8 @@
     "delete": "Delete",
     "deleteLabel": "Delete comment",
     "deleting": "Deleting…",
-    "deleteConfirm": "Delete this comment from GitHub? This can't be undone."
+    "deleteConfirm": "Delete this comment from GitHub? This can't be undone.",
+    "addComment": "Add a comment on this line"
   },
   "brand": "DevDigest",
   "navSection": {

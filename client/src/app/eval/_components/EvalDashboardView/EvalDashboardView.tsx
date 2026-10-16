@@ -3,11 +3,10 @@
 import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tabs } from "@devdigest/ui";
+import { PageTabs } from "@/components/page-tabs";
 import { AppShell } from "@/components/app-shell";
 import { AgentsOverview } from "./_components/AgentsOverview";
 import { SkillsOverview } from "./_components/SkillsOverview";
-import { s } from "./styles";
 
 const TAB_KEYS = ["agents", "skills"] as const;
 
@@ -29,9 +28,9 @@ export function EvalDashboardView() {
 
   return (
     <AppShell crumb={[{ label: t("page.crumbSkillsLab") }, { label: t("page.crumbEvalDashboard") }]}>
-      <div style={s.page}>
-        <div style={s.tabsWrap} aria-label={t("tabs.label")}>
-          <Tabs tabs={tabs} value={tab} onChange={select} pad="0" />
+      <div className="mx-auto max-w-[1100px] px-8 pt-6 pb-11">
+        <div className="mb-5" aria-label={t("tabs.label")}>
+          <PageTabs tabs={tabs} value={tab} onChange={select} />
         </div>
         {tab === "skills" ? <SkillsOverview /> : <AgentsOverview />}
       </div>

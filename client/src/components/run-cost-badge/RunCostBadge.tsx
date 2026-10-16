@@ -9,6 +9,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 
 export function formatRunCost(costUsd: number): string {
   if (costUsd >= 1) return `$${costUsd.toFixed(2)}`;
@@ -47,8 +48,7 @@ export function RunCostBadge({
   );
   return (
     <span
-      className="mono"
-      style={{ fontSize: 12, color: parts.length > 0 ? "var(--text-secondary)" : "var(--text-muted)" }}
+      className={cn("mono text-xs", parts.length > 0 ? "text-muted-foreground" : "text-subtle-foreground")}
     >
       {parts.length > 0 ? parts.join(" · ") : "—"}
     </span>

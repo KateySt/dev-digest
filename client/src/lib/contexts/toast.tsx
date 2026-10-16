@@ -4,6 +4,8 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -38,11 +40,36 @@ export const notify = {
   info: (m: string) => activePusher?.(m, "info"),
 };
 
-const COLORS: Record<ToastKind, { bg: string; border: string; icon: string }> = {
-  success: { bg: "var(--ok-bg, #052e1c)", border: "var(--ok)", icon: "✓" },
-  error: { bg: "var(--crit-bg, #2e0a0a)", border: "var(--crit)", icon: "✕" },
-  info: { bg: "var(--bg-elevated)", border: "var(--border-strong)", icon: "ℹ" },
+/** Card tint, border and glyph colour per toast kind. */
+const KIND: Record<ToastKind, { card: string; glyph: string; icon: string }> = {
+  success: { card: "border-ok bg-ok-bg", glyph: "text-ok", icon: "✓" },
+  error: { card: "border-crit bg-crit-bg", glyph: "text-crit", icon: "✕" },
+  info: { card: "border-border-strong bg-elevated", glyph: "text-border-strong", icon: "ℹ" },
 };
+
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+  const t = useTranslations("common.toast");
+  const k = KIND[toast.kind];
+  return (
+    <div
+      className={cn(
+        "flex animate-dd-toast-in items-center gap-3 rounded-[9px] border px-4 py-3 text-base text-foreground shadow-[0_6px_24px_rgba(0,0,0,0.3)]",
+        k.card,
+      )}
+    >
+      <span className={cn("font-bold", k.glyph)}>{k.icon}</span>
+      <span className="flex-1">{toast.message}</span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="cursor-pointer border-none bg-transparent text-lg text-subtle-foreground"
+        aria-label={t("dismiss")}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<Toast[]>([]);
@@ -76,51 +103,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastCtx.Provider value={api}>
       {children}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 20,
-          right: 20,
-          zIndex: 1000,
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          maxWidth: 380,
-        }}
-        role="status"
+      <div className="fixed right-5 bottom-5 z-1000 flex max-w-95 flex-col gap-2.5" role="status"
         aria-live="polite"
       >
-        {items.map((t) => {
-          const c = COLORS[t.kind];
-          return (
-            <div
-              key={t.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 16px",
-                borderRadius: 9,
-                background: c.bg,
-                border: `1px solid ${c.border}`,
-                color: "var(--text-primary)",
-                fontSize: 14,
-                boxShadow: "0 6px 24px rgba(0,0,0,0.3)",
-                animation: "ddToastIn .16s ease-out",
-              }}
-            >
-              <span style={{ color: c.border, fontWeight: 700 }}>{c.icon}</span>
-              <span style={{ flex: 1 }}>{t.message}</span>
-              <button
-                onClick={() => setItems((prev) => prev.filter((x) => x.id !== t.id))}
-                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 16 }}
-                aria-label="Dismiss"
-              >
-                ×
-              </button>
-            </div>
-          );
-        })}
+        {items.map((t) => (
+          <ToastItem key={t.id} toast={t} onDismiss={() => setItems((prev) => prev.filter((x) => x.id !== t.id))} />
+        ))}
       </div>
     </ToastCtx.Provider>
   );

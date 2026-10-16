@@ -2,14 +2,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { FormField, SearchableSelect, Icon } from "@devdigest/ui";
-import { useSettings, useUpdateSettings } from "../../../../../../../lib/hooks";
-import { useProviderModels } from "../../../../../../../lib/hooks/agents";
-import { toModelOptions } from "../../../../../../../lib/utils/modelLabel";
-import { FEATURE_MODELS } from "../../../../../../../lib/utils/featureModels";
-import type { FeatureModelChoice, FeatureModelId } from "../../../../../../../lib/types";
+import { Combobox } from "@/components/combobox";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { useSettings, useUpdateSettings } from "@/lib/hooks";
+import { useProviderModels } from "@/lib/hooks/agents";
+import { toModelOptions } from "@/lib/utils/modelLabel";
+import { FEATURE_MODELS } from "@/lib/utils/featureModels";
+import type { FeatureModelChoice, FeatureModelId } from "@/lib/types";
 import { SectionTitle } from "../SectionTitle";
-import { s } from "./styles";
 
 /**
  * Settings → Feature Models. One picker per system LLM feature; the model list +
@@ -33,7 +34,7 @@ export function SettingsModels() {
     });
 
   return (
-    <div style={s.wrap}>
+    <div className="max-w-[640px]">
       <SectionTitle title={t("models.title")} body={t("models.body")} />
 
       {FEATURE_MODELS.map((f) => {
@@ -45,29 +46,30 @@ export function SettingsModels() {
           ? baseOptions
           : [current, ...baseOptions];
         return (
-          <div key={f.id} style={s.row}>
+          <div key={f.id} className="mb-4.5">
             <FormField
               label={
                 <>
                   {f.label}
-                  {isDefault && <span style={s.defaultTag}>{t("models.usingDefault")}</span>}
+                  {isDefault && <span className="ml-2 text-xs font-medium text-subtle-foreground">{t("models.usingDefault")}</span>}
                 </>
               }
               hint={f.description}
             >
-              <SearchableSelect
+              <Combobox
                 value={current}
                 onChange={(m) => setModel(f.id, m)}
                 options={options}
                 placeholder={t("models.search")}
+                ariaLabel={f.label}
               />
             </FormField>
           </div>
         );
       })}
 
-      <div style={s.note}>
-        <Icon.Info size={15} style={s.noteIcon} />
+      <div className="mt-2 flex gap-2.5 rounded-lg border border-border bg-surface px-4 py-3 text-sm leading-normal text-subtle-foreground">
+        <Icon.Info size={15} className="mt-px shrink-0" aria-hidden />
         <span>{noModels ? t("models.noKeyNote") : t("models.liveNote")}</span>
       </div>
     </div>

@@ -6,7 +6,7 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { EmptyState } from "@devdigest/ui";
+import { EmptyState } from "@/components/empty-state";
 import { useTranslations } from "next-intl";
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";

@@ -2,13 +2,16 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, ErrorState, Skeleton } from "@devdigest/ui";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { EvalCaseListItem, EvalOwnerKind } from "@devdigest/shared";
 import { useDeleteEvalCase, useEvalCases, useRunEvalCase } from "@/lib/hooks/eval-cases";
 import { countPassing } from "@/lib/eval";
+import { cn } from "@/lib/utils";
 import { CaseRow } from "../CaseRow";
 import { EvalCaseEditorModal } from "../EvalCaseEditorModal";
-import { s } from "../styles";
 
 /** The "Run all evals" button, described by the owner-specific caller so this
  *  list never needs to know whether it belongs to an agent or a skill. */
@@ -24,6 +27,8 @@ export interface RunAllControl {
  *  the case rows with per-row Run / Edit / Delete, the empty state, and the
  *  Case Editor modal. Owner-agnostic: the caller supplies the run-all control
  *  and the (optional) reason per-row Run is disabled. */
+const CHIP = "shrink-0 rounded-[5px] bg-muted px-2.25 py-0.5 text-xs font-semibold";
+
 export function EvalCaseList({
   ownerKind,
   ownerId,
@@ -60,45 +65,48 @@ export function EvalCaseList({
         />
       )}
 
-      <div style={s.header}>
-        <div style={s.sectionTitle}>{t("evalsTab.casesHeading")}</div>
+      <div className="mb-3 flex flex-wrap items-center gap-2.5">
+        <div className="text-lg font-bold">{t("evalsTab.casesHeading")}</div>
         {withResult > 0 && (
-          <span style={s.chip(passing === withResult ? "var(--ok)" : "var(--warn)")}>
+          <span className={cn(CHIP, passing === withResult ? "text-ok" : "text-warn")}>
             {t("evalsTab.passingChip", { passing, withResult })}
           </span>
         )}
-        <span style={s.chip("var(--text-muted)")}>{t("evalsTab.totalChip", { count: caseList.length })}</span>
-        <div style={s.headerActions}>
+        <span className={cn(CHIP, "text-subtle-foreground")}>
+          {t("evalsTab.totalChip", { count: caseList.length })}
+        </span>
+        <div className="ml-auto flex shrink-0 gap-2">
           <Button
-            kind="secondary"
+            variant="secondary"
             size="sm"
-            icon="Play"
             onClick={runAll.onClick}
             disabled={runAll.disabled}
             title={runAllReason}
             aria-describedby={runAllReason ? reasonId : undefined}
           >
+            <Icon.Play aria-hidden />
             {runAll.label}
           </Button>
           {runAllReason && (
-            <span id={reasonId} style={s.srOnly}>
+            <span id={reasonId} className="sr-only">
               {runAllReason}
             </span>
           )}
-          <Button kind="primary" size="sm" icon="Plus" onClick={() => setEditing("new")}>
+          <Button size="sm" onClick={() => setEditing("new")}>
+            <Icon.Plus aria-hidden />
             {t("evalsTab.newCaseButton")}
           </Button>
         </div>
       </div>
 
-      {isLoading && <Skeleton height={120} />}
+      {isLoading && <Skeleton className="h-30 w-full" />}
       {isError && <ErrorState body={t("dashboard.loading")} onRetry={() => refetch()} />}
       {!isLoading && !isError && caseList.length === 0 && (
         <EmptyState icon="FlaskConical" title={t("evalsTab.casesHeading")} body={t("evalsTab.emptyCases")} />
       )}
 
       {caseList.length > 0 && (
-        <div style={s.list}>
+        <div className="flex flex-col gap-2">
           {caseList.map((c) => (
             <CaseRow
               key={c.id}
@@ -107,7 +115,7 @@ export function EvalCaseList({
               onRun={() => runCase.mutate({ id: c.id, ownerKind, ownerId })}
               onEdit={() => setEditing(c)}
               onDelete={() => {
-                if (window.confirm(`Delete eval case "${c.name}"? This cannot be undone.`)) {
+                if (window.confirm(t("evalsTab.confirmDelete", { name: c.name }))) {
                   deleteCase.mutate({ id: c.id, ownerKind, ownerId });
                 }
               }}
