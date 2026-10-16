@@ -72,12 +72,13 @@
     {
       "cmd": [
         "find",
-        "nth",
-        "0",
-        "button:has-text('Learn')",
-        "click"
+        "role",
+        "button",
+        "click",
+        "--name",
+        "Learn"
       ],
-      "label": "open Learn on the agentless run's first finding (two Learn buttons are on screen)"
+      "label": "open Learn on the agentless run's first finding (the agentless run comes first in the DOM, so the first Learn button is its own)"
     },
     {
       "cmd": [
@@ -201,6 +202,14 @@
         "Duplicates (1)"
       ],
       "label": "one duplicate group is proposed"
+    },
+    {
+      "cmd": [
+        "wait",
+        "--fn",
+        "document.getAnimations().every((a) => a.effect?.getTiming().iterations === Infinity)"
+      ],
+      "label": "the drawer finished sliding in (a click mid-slide lands where the button was)"
     },
     {
       "cmd": [
