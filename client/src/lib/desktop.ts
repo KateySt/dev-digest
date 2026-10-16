@@ -21,6 +21,8 @@ export interface DesktopBridge {
     setThemeSource(mode: "dark" | "light" | "system"): Promise<void>;
     /** OS notification — shown only while the window is unfocused; resolves true if shown. */
     notify(n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean>;
+    /** Running jobs + unread count → taskbar progress, unread badge, tray status. */
+    setActivity(a: { running: number; unread: number }): Promise<void>;
     /** A clicked OS notification asks the studio to open a route. Returns the unsubscribe function. */
     onNavigate(cb: (href: string) => void): () => void;
     checkForUpdates(): Promise<void>;

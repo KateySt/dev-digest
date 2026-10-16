@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain, Notification, shell, type IpcMainInvokeEvent } from 'electron';
 import { RELEASES_URL, dataPaths } from './config';
 import { checkForUpdates } from './updater';
-import { isOwnOrigin, isStudioRoute, oneOf } from './validate';
+import { clampInt, isOwnOrigin, isStudioRoute, oneOf } from './validate';
+import { setActivity } from './activity';
 import { THEME_SOURCES } from './prefs';
 import { setThemeSource } from './theme';
 
@@ -76,6 +77,10 @@ export function registerIpc(): void {
     if (oneOf(arg, THEME_SOURCES)) setThemeSource(win, arg);
   });
   handle('app:notify', showNotification);
+  handle('app:set-activity', (_win, arg) => {
+    const a = (arg ?? {}) as Record<string, unknown>;
+    setActivity({ running: clampInt(a.running, 0, 999), unread: clampInt(a.unread, 0, 999) });
+  });
   handle('app:check-for-updates', () => checkForUpdates(true));
   handle('app:open-releases', () => shell.openExternal(RELEASES_URL));
   handle('app:open-logs', () => shell.openPath(dataPaths().logs));

@@ -25,6 +25,8 @@ const bridge = {
     /** OS notification (only shown while the window is unfocused); resolves true if shown. */
     notify: (n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean> =>
       ipcRenderer.invoke('app:notify', n),
+    /** Running jobs + unread count → taskbar progress, unread badge, tray status. */
+    setActivity: (a: { running: number; unread: number }): Promise<void> => ipcRenderer.invoke('app:set-activity', a),
     /** A clicked OS notification asks the studio to open a route; returns the unsubscribe function. */
     onNavigate(cb: (href: string) => void): () => void {
       const listener = (_e: IpcRendererEvent, href: string) => cb(href);

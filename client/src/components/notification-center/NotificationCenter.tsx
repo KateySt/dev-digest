@@ -3,7 +3,8 @@
    Click a row to open its result (marks it read); hover to toggle read or
    remove; header/footer for "mark all read" and "clear all". Kept fresh by
    the notifications SSE stream; in the desktop app each new one also becomes
-   an OS notification (useDesktopNotifier). */
+   an OS notification (useDesktopNotifier), and what is running feeds the
+   taskbar/tray (useDesktopActivity). */
 "use client";
 
 import React from "react";
@@ -14,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import {
   useClearNotifications,
+  useInvalidateActivity,
   useMarkAllNotificationsRead,
   useNotifications,
   useNotificationStream,
@@ -22,6 +24,7 @@ import {
   type AppNotification,
 } from "@/lib/hooks";
 import { NotificationItem } from "./NotificationItem";
+import { useDesktopActivity } from "./useDesktopActivity";
 import { useDesktopNotifier } from "./useDesktopNotifier";
 
 export function NotificationCenter({ onNotification }: { onNotification?: (n: AppNotification) => void }) {
@@ -34,7 +37,10 @@ export function NotificationCenter({ onNotification }: { onNotification?: (n: Ap
   const { mutate: remove } = useRemoveNotification();
   const { mutate: clear } = useClearNotifications();
   const notifyDesktop = useDesktopNotifier();
+  const invalidateActivity = useInvalidateActivity();
+  useDesktopActivity();
   useNotificationStream((n) => {
+    void invalidateActivity();
     notifyDesktop(n);
     onNotification?.(n);
   });
