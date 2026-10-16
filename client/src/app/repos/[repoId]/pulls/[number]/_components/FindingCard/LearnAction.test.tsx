@@ -57,6 +57,18 @@ describe("LearnAction", () => {
     expect(screen.getByRole("button", { name: "learning" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("shows the draft under StrictMode's double mount (next dev), requesting it once", async () => {
+    const api = routes(draft());
+    renderApp(
+      <React.StrictMode>
+        <LearnAction f={F} />
+      </React.StrictMode>,
+    );
+    await openModal();
+    expect(await screen.findByDisplayValue("Debug flags are config-driven here — do not flag them.")).toBeTruthy();
+    expect(api.calls.filter((c) => c.path === "/findings/f1/learn/draft")).toHaveLength(1);
+  });
+
   it("Save posts finding_id with the edited draft", async () => {
     const api = routes(draft());
     renderApp(<LearnAction f={F} />);

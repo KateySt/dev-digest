@@ -14,6 +14,23 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-16 — Never fire a `mutate()` from a mount effect: StrictMode strands the result
+
+`next dev` runs with `reactStrictMode: true`, so a component mounted by a
+click gets mount → fake unmount → remount. A `useMutation` whose `mutate()` ran
+in the first effect loses its result: the fake unmount unsubscribes the
+`MutationObserver`, which detaches it from the in-flight mutation, and the
+remount never re-attaches. A `useRef` "once" guard then blocks a retry, so the
+UI stays pending forever (the Learn modal sat on "Drafting…" and the Curate
+drawer on "Scanning memory…"; e2e flows 10/11). A component that has to fetch
+on mount should use `useQuery` (dedupes the double mount), with `gcTime: 0` /
+`staleTime: Infinity` if the result must not outlive the component — see
+`useLearnDraft` / `useCurateScan` in `src/lib/hooks/memory.ts`. jsdom tests only
+catch this if the component is mounted by a click inside `<React.StrictMode>`;
+rendering it directly in StrictMode passes even with the bug.
+
+---
+
 ### 2026-10-07 — TanStack v5: `onMutate` runs a microtask after `mutate()`, so same-tick optimistic mutations read stale cache
 
 Two optimistic mutations fired in the same tick (e.g. rapid attach/detach

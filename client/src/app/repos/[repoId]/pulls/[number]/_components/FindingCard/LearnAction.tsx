@@ -38,14 +38,7 @@ export function LearnAction({ f }: { f: FindingRecord }) {
 
 function LearnDialog({ f, onClose }: { f: FindingRecord; onClose: () => void }) {
   const t = useTranslations("memory");
-  const { mutate: requestDraft, data, isPending, error } = useLearnDraft();
-  const requested = React.useRef(false);
-  React.useEffect(() => {
-    // Once per open (StrictMode double-invokes effects in dev).
-    if (requested.current) return;
-    requested.current = true;
-    requestDraft(f.id);
-  }, [f.id, requestDraft]);
+  const { data, isPending, error } = useLearnDraft(f.id);
 
   const editing = !!data?.existing_memory_id;
   return (
