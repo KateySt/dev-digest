@@ -19,6 +19,7 @@ export function installFakeBridge(platform = "win32") {
     },
     app: {
       getVersion: vi.fn(async () => "0.1.1"),
+      setThemeSource: vi.fn(async () => {}),
       notify: vi.fn(async () => true),
       onNavigate: vi.fn((cb: (href: string) => void) => {
         navigateListener = cb;

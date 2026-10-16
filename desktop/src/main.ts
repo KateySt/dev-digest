@@ -9,6 +9,8 @@ import { forwardMaximizeState, registerIpc } from './ipc';
 import { initUpdates } from './updater';
 import { createSplash, setSplashStatus } from './splash';
 import { isOwnOrigin, openExternalSafe } from './validate';
+import { loadPrefs } from './prefs';
+import { initTheme, windowBackground } from './theme';
 
 // `pnpm start` keeps its DB/logs apart from the installed app's.
 if (!app.isPackaged) {
@@ -38,6 +40,8 @@ async function boot(): Promise<void> {
   // Windows drops toasts from an installed app unless they carry its AppUserModelID
   // (electron-builder's appId). No-op elsewhere.
   if (process.platform === 'win32') app.setAppUserModelId('dev.devdigest.app');
+  loadPrefs();
+  initTheme();
   buildMenu();
   registerIpc();
   const splash = createSplash();
@@ -74,7 +78,7 @@ function createWindow(): void {
     minHeight: 640,
     title: 'DevDigest',
     show: false,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: windowBackground(),
     // Custom title bar: the studio's top bar is the window's title bar (drag
     // region + its own window controls, via the preload bridge). macOS keeps
     // its native traffic lights, centred in the 52px top bar.

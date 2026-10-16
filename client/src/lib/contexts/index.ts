@@ -5,9 +5,10 @@ export {
   useTheme,
   themeNoFlashScript,
   THEME_MODES,
+  THEME_PREFS,
   THEME_PALETTES,
   THEME_ACCENTS,
 } from "./theme";
-export type { Theme, ThemePalette, ThemeAccent } from "./theme";
+export type { Theme, ThemePref, ThemePalette, ThemeAccent } from "./theme";
 export { ToastProvider, useToast, notify } from "./toast";
 export { Providers } from "./providers";

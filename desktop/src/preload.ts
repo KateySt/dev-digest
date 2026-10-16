@@ -20,6 +20,8 @@ const bridge = {
   },
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+    /** Native menus, dialogs and the window background follow the studio's mode. */
+    setThemeSource: (mode: 'dark' | 'light' | 'system'): Promise<void> => ipcRenderer.invoke('app:set-theme-source', mode),
     /** OS notification (only shown while the window is unfocused); resolves true if shown. */
     notify: (n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean> =>
       ipcRenderer.invoke('app:notify', n),

@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, Notification, shell, type IpcMainInvokeEvent } from 'electron';
 import { RELEASES_URL, dataPaths } from './config';
 import { checkForUpdates } from './updater';
-import { isOwnOrigin, isStudioRoute } from './validate';
+import { isOwnOrigin, isStudioRoute, oneOf } from './validate';
+import { THEME_SOURCES } from './prefs';
+import { setThemeSource } from './theme';
 
 /**
  * Main-process side of the preload bridge (preload.ts — keep channel names in
@@ -70,6 +72,9 @@ export function registerIpc(): void {
   handle('window:is-maximized', (win) => win.isMaximized());
 
   handle('app:version', () => app.getVersion());
+  handle('app:set-theme-source', (win, arg) => {
+    if (oneOf(arg, THEME_SOURCES)) setThemeSource(win, arg);
+  });
   handle('app:notify', showNotification);
   handle('app:check-for-updates', () => checkForUpdates(true));
   handle('app:open-releases', () => shell.openExternal(RELEASES_URL));
