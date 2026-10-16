@@ -11,6 +11,7 @@ import { createSplash, setSplashStatus } from './splash';
 import { isOwnOrigin, openExternalSafe } from './validate';
 import { loadPrefs } from './prefs';
 import { initTheme, windowBackground } from './theme';
+import { attachContextMenu } from './context-menu';
 
 // `pnpm start` keeps its DB/logs apart from the installed app's.
 if (!app.isPackaged) {
@@ -95,6 +96,7 @@ function createWindow(): void {
   // itself (just hidden) keeps its accelerators — copy/paste, reload, devtools.
   mainWindow.setMenuBarVisibility(false);
   forwardMaximizeState(mainWindow);
+  attachContextMenu(mainWindow);
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   // Links to GitHub PRs, docs, etc. open in the default browser (https only),
   // never in the app; the window itself never leaves the studio's origin.
