@@ -20,7 +20,7 @@
     { "cmd": ["wait", "--text", "4 cases"], "label": "total case chip now shows 4" },
     { "cmd": ["open", "{BASE}/eval?tab=skills"], "label": "open the /eval Skills tab" },
     { "cmd": ["wait", "--url", "tab=skills"], "label": "Skills tab is active in the URL" },
-    { "cmd": ["wait", "--text", "Recent eval runs · all skills"], "label": "the cross-skill recent runs table is shown" },
+    { "cmd": ["wait", "--text", "RECENT EVAL RUNS · ALL SKILLS"], "label": "the cross-skill recent runs table is shown (heading is CSS-uppercased; wait --text reads innerText)" },
     { "cmd": ["wait", "--text", "Run all skills"], "label": "the Run all skills button is shown" },
     { "cmd": ["find", "role", "link", "click", "--name", "Open pr-quality-rubric eval dashboard"], "label": "open the skill's per-skill dashboard" },
     { "cmd": ["wait", "--url", "/eval/skills/"], "label": "per-skill dashboard route reached" },

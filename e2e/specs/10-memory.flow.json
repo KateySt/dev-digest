@@ -9,8 +9,8 @@
     { "cmd": ["wait", "--load", "networkidle"], "label": "PR detail data settles" },
     { "cmd": ["find", "role", "tab", "click", "--name", "Agent runs"], "label": "switch to the Agent runs tab" },
     { "cmd": ["wait", "--url", "tab=findings"], "label": "findings tab is active in the URL" },
-    { "cmd": ["find", "text", "2 findings", "click"], "label": "collapse the agentless run so only one set of finding actions is on screen" },
-    { "cmd": ["find", "text", "1 finding", "click"], "label": "expand the seeded Security Reviewer run" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Agent request changes"], "label": "collapse the agentless run so only one set of finding actions is on screen (its header reads 'Agent request changes …')" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Security Reviewer request changes"], "label": "expand the seeded Security Reviewer run" },
     { "cmd": ["wait", "--text", "SSRF: webhook target URL is fetched without an allowlist"], "label": "the agent's finding is visible" },
     { "cmd": ["find", "role", "button", "click", "--name", "Learn"], "label": "open the Learn modal" },
     { "cmd": ["wait", "--text", "Learn from this finding"], "label": "the Learn modal is open" },
@@ -20,7 +20,7 @@
     { "cmd": ["find", "role", "link", "click", "--name", "Learned"], "label": "follow the Learned link" },
     { "cmd": ["wait", "--url", "/memory?id="], "label": "Memory page with the memory preselected" },
     { "cmd": ["wait", "--text", "1 entry"], "label": "the new memory is listed" },
-    { "cmd": ["wait", "--text", "Source contexts"], "label": "the detail panel shows the memory's provenance" },
+    { "cmd": ["wait", "--text", "SOURCE CONTEXTS"], "label": "the detail panel shows the memory's provenance (heading is CSS-uppercased; wait --text reads innerText)" },
     { "cmd": ["wait", "--text", "PR #482"], "label": "provenance names the PR it was learned from" }
   ]
 }

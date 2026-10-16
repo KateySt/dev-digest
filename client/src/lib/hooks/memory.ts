@@ -82,10 +82,18 @@ export function useSimilarMemories(content: string, repoId: string | null) {
   });
 }
 
-/** POST /findings/:id/learn/draft — user-triggered, never cached. */
-export function useLearnDraft() {
-  return useMutation({
-    mutationFn: (findingId: string) => api.post<LearnDraftResponse>(`/findings/${findingId}/learn/draft`),
+/** POST /findings/:id/learn/draft — fetched once per Learn-dialog open, never cached.
+ *  A query, not a mutation fired from an effect: under StrictMode the effect's
+ *  fake unmount detaches a MutationObserver from its in-flight mutation, so the
+ *  dialog stayed on "Drafting…" forever. A query dedupes the double mount and
+ *  `gcTime: 0` drops the draft when the dialog closes (it persists nothing). */
+export function useLearnDraft(findingId: string) {
+  return useQuery({
+    queryKey: ["learn-draft", findingId],
+    queryFn: () => api.post<LearnDraftResponse>(`/findings/${findingId}/learn/draft`),
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
   });
 }
 
@@ -151,12 +159,18 @@ export function useDeleteMemory() {
 // ---- Curation (SPEC-2026-10-12-memory-curation) ------------------------------
 // Everything here runs only from an explicit click; nothing polls or auto-scans.
 
-/** Dry-run scan. A mutation, not a query: it runs on the Curate click and its
- *  result is a snapshot the review drawer works through — never cached. */
-export function useCurateScan() {
-  return useMutation({
-    mutationFn: ({ repoId }: { repoId: string | null }) =>
-      api.post<CurateScanResponse>("/memories/curate/scan", repoId ? { repo_id: repoId } : {}),
+/** Dry-run scan, run when the drawer mounts (only the Curate click mounts it);
+ *  "Re-scan" is `refetch()`. Its result is a snapshot the drawer works through:
+ *  `staleTime: Infinity` + a key outside the `["memories"]` prefix mean no
+ *  invalidation re-scans it (AC-C21), and `gcTime: 0` drops it on close. A query
+ *  rather than a mutation fired from an effect — see `useLearnDraft`. */
+export function useCurateScan(repoId: string | null) {
+  return useQuery({
+    queryKey: ["curate-scan", repoId],
+    queryFn: () => api.post<CurateScanResponse>("/memories/curate/scan", repoId ? { repo_id: repoId } : {}),
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
   });
 }
 

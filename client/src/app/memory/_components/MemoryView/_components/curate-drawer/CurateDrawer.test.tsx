@@ -40,6 +40,28 @@ describe("CurateDrawer", () => {
     expect(api.calls[0]!.body).toEqual({ repo_id: "r1" });
   });
 
+  it("shows the scan result under StrictMode's double mount (next dev), scanning once", async () => {
+    const api = mockFetch([post("/memories/curate/scan", () => scanOf())]);
+    // Mounted by a click, as the Curate button does — StrictMode's fake unmount
+    // then hits a drawer whose scan is already in flight.
+    function Opener() {
+      const [open, setOpen] = React.useState(false);
+      return open ? (
+        <CurateDrawer repoId="r1" agentOptions={[]} skillOptions={[]} onClose={vi.fn()} onOpenMemory={vi.fn()} />
+      ) : (
+        <button onClick={() => setOpen(true)}>Curate</button>
+      );
+    }
+    renderApp(
+      <React.StrictMode>
+        <Opener />
+      </React.StrictMode>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Curate" }));
+    expect(await screen.findByText("Duplicates (1)")).toBeTruthy();
+    expect(api.calls.filter((c) => c.path === "/memories/curate/scan")).toHaveLength(1);
+  });
+
   it('CurateDrawer shows "Memory looks clean" when scan is empty', async () => {
     mockFetch([post("/memories/curate/scan", () => scanOf({ groups: [], stale: [], totals: { groups: 0, stale: 0 } }))]);
     render();
