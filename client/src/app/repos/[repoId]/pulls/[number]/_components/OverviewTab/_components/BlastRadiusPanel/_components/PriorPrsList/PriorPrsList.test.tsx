@@ -75,8 +75,9 @@ describe("PriorPrsList", () => {
 
     fireEvent.click(screen.getByRole("button"));
 
-    expect(screen.getByText("#12 Refactor billing computation")).toBeInTheDocument();
-    expect(screen.getByText(/marisa\.koch/)).toBeInTheDocument();
+    expect(screen.getByText("#12")).toBeInTheDocument();
+    expect(screen.getByText("Refactor billing computation")).toBeInTheDocument();
+    expect(screen.getByText(/marisa\.koch · merged/)).toBeInTheDocument();
     expect(screen.getByText("shares 2 files with this PR")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "src/billing.ts" }));
@@ -89,7 +90,7 @@ describe("PriorPrsList", () => {
     renderList();
 
     fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
-    expect(screen.getByText("#12 Refactor billing computation")).toBeInTheDocument();
+    expect(screen.getByText("Refactor billing computation")).toBeInTheDocument();
   });
 
   it("shows the empty hint when expanded with a confirmed-empty history", () => {

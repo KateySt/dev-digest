@@ -4,11 +4,10 @@ export const s = {
   wrap: {
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 10,
   } satisfies CSSProperties,
-  // Stats and the Tree/Graph toggle share one row (space-between) rather than
-  // stacking as two rows — matches a single breadcrumb-style header bar
-  // instead of a stat line followed by a separate toggle line.
+  // Stats and the Tree/Graph toggle share one row — stats on the left, the
+  // segmented toggle pushed right.
   headerRow: {
     display: "flex",
     alignItems: "center",
@@ -19,18 +18,18 @@ export const s = {
   statRow: {
     display: "flex",
     flexWrap: "wrap",
+    alignItems: "center",
     gap: 16,
   } satisfies CSSProperties,
   stat: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: "var(--text-secondary)",
     display: "inline-flex",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
   } satisfies CSSProperties,
   statValue: {
-    fontSize: 14,
-    fontWeight: 700,
+    fontWeight: 650,
     color: "var(--text-primary)",
   } satisfies CSSProperties,
   // Leading icon per stat (symbols/callers/endpoints/crons) — decorative only,
@@ -40,11 +39,26 @@ export const s = {
     color: "var(--text-muted)",
     flexShrink: 0,
   } satisfies CSSProperties,
-  toggleRow: {
+  segmented: {
     display: "flex",
-    gap: 8,
+    gap: 2,
+    marginLeft: "auto",
+    padding: 2,
+    background: "var(--bg-surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 7,
     flexShrink: 0,
   } satisfies CSSProperties,
+  segment: (active: boolean): CSSProperties => ({
+    padding: "3px 10px",
+    fontSize: 11.5,
+    fontWeight: 600,
+    borderRadius: 5,
+    border: "none",
+    cursor: "pointer",
+    background: active ? "var(--bg-elevated)" : "transparent",
+    color: active ? "var(--text-primary)" : "var(--text-muted)",
+  }),
   placeholderHint: {
     border: "1px solid var(--border)",
     borderRadius: 8,

@@ -19,6 +19,7 @@ import type {
   SkillEvalSuiteRun,
   SkillEvalSuiteRunDetail,
 } from "@devdigest/shared";
+import conventionsMessages from "../../messages/en/conventions.json";
 import evalMessages from "../../messages/en/eval.json";
 import evalAgentMessages from "../../messages/en/evalAgent.json";
 import evalDashboardMessages from "../../messages/en/evalDashboard.json";
@@ -31,6 +32,7 @@ import shellMessages from "../../messages/en/shell.json";
 import skillsMessages from "../../messages/en/skills.json";
 
 export const ALL_MESSAGES = {
+  conventions: conventionsMessages,
   eval: evalMessages,
   evalAgent: evalAgentMessages,
   evalDashboard: evalDashboardMessages,

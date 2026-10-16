@@ -3,17 +3,32 @@
     "symbols": "symbols",
     "callers": "callers",
     "endpoints": "endpoints",
-    "crons": "cron/jobs"
+    "crons": "cron"
   },
   "view": {
-    "tree": "tree",
-    "graph": "graph"
+    "tree": "Tree",
+    "graph": "Graph",
+    "ariaLabel": "Blast radius view"
   },
-  "callerCount": "{count} callers",
+  "callerCount": "{count, plural, one {# caller} other {# callers}}",
   "noDownstream": "{count} changed symbol(s), no downstream callers found.",
   "graph": {
     "empty": "No downstream callers to graph.",
-    "ariaLabel": "Blast radius graph"
+    "ariaLabel": "Blast radius graph",
+    "a11y": {
+      "nodeDefault": "Press enter or space to select a node. Press delete to remove it and escape to cancel.",
+      "nodeKeyboardDisabled": "Press enter or space to select a node. You can then use the arrow keys to move the node around. Press delete to remove it and escape to cancel.",
+      "nodeMoved": "Moved selected node {direction}. New position, x: {x}, y: {y}",
+      "edgeDefault": "Press enter or space to select an edge. You can then press delete to remove it or escape to cancel.",
+      "controls": "Control panel",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fitView": "Fit view",
+      "interactive": "Toggle interactivity",
+      "minimap": "Mini map",
+      "handle": "Handle",
+      "edge": "Edge from {source} to {target}"
+    }
   },
   "legend": {
     "symbol": "changed symbol",
@@ -25,6 +40,7 @@
     "label": "Prior PRs touching these files",
     "empty": "No prior PRs touched these files.",
     "unavailable": "Prior PRs not available yet.",
-    "unavailableHint": "Couldn't load prior PRs touching these files."
+    "unavailableHint": "Couldn't load prior PRs touching these files.",
+    "merged": "merged {date, date, medium}"
   }
 }

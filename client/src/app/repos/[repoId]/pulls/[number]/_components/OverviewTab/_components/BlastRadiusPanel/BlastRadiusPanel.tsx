@@ -16,7 +16,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Card, Chip, EmptyState, Icon, SectionLabel } from "@devdigest/ui";
+import { Card, EmptyState, Icon, SectionLabel } from "@devdigest/ui";
 import { useBlast } from "@/lib/hooks/reviews";
 import { BlastTree } from "./_components/BlastTree";
 import { BlastGraph } from "./_components/BlastGraph";
@@ -24,6 +24,8 @@ import { PriorPrsList } from "./_components/PriorPrsList";
 import { s } from "./styles";
 
 type BlastView = "tree" | "graph";
+
+const VIEWS: BlastView[] = ["tree", "graph"];
 
 export function BlastRadiusPanel({
   prId,
@@ -41,7 +43,7 @@ export function BlastRadiusPanel({
   // sibling above the Card (that was the pre-Group-B layout) — so the
   // "BLAST RADIUS" header stays visible no matter which blast state below it
   // is showing, and independent of whether Prior-PRs has loaded yet.
-  const header = <SectionLabel icon="GitBranch">{tb("block.blast")}</SectionLabel>;
+  const header = <SectionLabel icon="Workflow">{tb("block.blast")}</SectionLabel>;
 
   // "No data yet" (still loading) vs "confirmed empty" must stay distinct —
   // `useBlast` returns `data: undefined` both while loading AND on failure,
@@ -67,29 +69,49 @@ export function BlastRadiusPanel({
             <div style={s.statRow}>
               <span style={s.stat}>
                 <Icon.Code size={13} aria-hidden style={s.statIcon} />
-                <span style={s.statValue}>{data.changed_symbols.length}</span> {t("stat.symbols")}
+                <b className="tnum" style={s.statValue}>
+                  {data.changed_symbols.length}
+                </b>
+                {t("stat.symbols")}
               </span>
               <span style={s.stat}>
                 <Icon.CornerDownRight size={13} aria-hidden style={s.statIcon} />
-                <span style={s.statValue}>{callerCount}</span> {t("stat.callers")}
+                <b className="tnum" style={s.statValue}>
+                  {callerCount}
+                </b>
+                {t("stat.callers")}
               </span>
               <span style={s.stat}>
                 <Icon.Globe size={13} aria-hidden style={s.statIcon} />
-                <span style={s.statValue}>{endpointCount}</span> {t("stat.endpoints")}
+                <b className="tnum" style={s.statValue}>
+                  {endpointCount}
+                </b>
+                {t("stat.endpoints")}
               </span>
               <span style={s.stat}>
                 <Icon.Clock size={13} aria-hidden style={s.statIcon} />
-                <span style={s.statValue}>{cronCount}</span> {t("stat.crons")}
+                <b className="tnum" style={s.statValue}>
+                  {cronCount}
+                </b>
+                {t("stat.crons")}
               </span>
             </div>
 
-            <div style={s.toggleRow}>
-              <Chip active={view === "tree"} onClick={() => setView("tree")}>
-                {t("view.tree")}
-              </Chip>
-              <Chip active={view === "graph"} onClick={() => setView("graph")}>
-                {t("view.graph")}
-              </Chip>
+            {/* Segmented Tree | Graph control — one bordered track with the
+               active segment raised onto --bg-elevated (the mockup's look),
+               rather than two free-standing Chips. */}
+            <div role="group" aria-label={t("view.ariaLabel")} style={s.segmented}>
+              {VIEWS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  style={s.segment(view === v)}
+                >
+                  {t(`view.${v}`)}
+                </button>
+              ))}
             </div>
           </div>
 

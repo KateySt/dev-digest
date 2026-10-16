@@ -1,11 +1,13 @@
-/* BlastTree — expandable row per changed symbol → its callers as file:line
-   MonoLinks (wired to onNavigateToFile) plus endpoint/cron chips for that
-   symbol, following RiskAreasList.tsx's card+detail-panel pattern. Caller
-   refs are structured `{file, line}` fields off `BlastCaller` (not
-   "path:12-18" strings), so `parseFileRef` is NOT used here — that helper is
-   only for `Risk.file_refs`. A symbol with zero callers renders as a static,
-   non-expandable row (nothing to expand into, by construction of
-   `toBlastRadius` — see server/src/modules/blast/helpers.ts). */
+/* BlastTree — one collapsible group per changed symbol: a header row
+   (chevron, code icon, `name()` in mono, "N callers" right-aligned) that
+   expands into a guide-lined list of caller `file:line` MonoLinks (wired to
+   onNavigateToFile), followed by the endpoint (blue) and cron (amber) chips
+   that symbol reaches. Caller refs are structured `{file, line}` fields off
+   `BlastCaller` (not "path:12-18" strings), so `parseFileRef` is NOT used
+   here — that helper is only for `Risk.file_refs`. A symbol with zero callers
+   renders as a static, non-expandable row (nothing to expand into, by
+   construction of `toBlastRadius` — see server/src/modules/blast/helpers.ts).
+   The first expandable symbol starts open, the rest collapsed. */
 "use client";
 
 import React from "react";
@@ -22,9 +24,15 @@ export function BlastTree({
   onNavigateToFile: (path: string, line: number) => void;
 }) {
   const t = useTranslations("blast");
-  const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
-
   const impactBySymbol = new Map(radius.downstream.map((d) => [d.symbol, d]));
+  const keyOf = (i: number) => `${radius.changed_symbols[i]?.file}:${radius.changed_symbols[i]?.name}:${i}`;
+
+  const [expanded, setExpanded] = React.useState<Set<string>>(() => {
+    const first = radius.changed_symbols.findIndex(
+      (sym) => (impactBySymbol.get(sym.name)?.callers.length ?? 0) > 0,
+    );
+    return new Set(first >= 0 ? [keyOf(first)] : []);
+  });
 
   const toggle = (key: string) => {
     setExpanded((prev) => {
@@ -38,82 +46,86 @@ export function BlastTree({
   return (
     <div style={s.wrap}>
       {radius.changed_symbols.map((symbol, i) => {
-        const key = `${symbol.file}:${symbol.name}:${i}`;
+        const key = keyOf(i);
         const impact = impactBySymbol.get(symbol.name);
         const callers = impact?.callers ?? [];
+        const endpoints = impact?.endpoints_affected ?? [];
+        const crons = impact?.crons_affected ?? [];
         const hasCallers = callers.length > 0;
         const isOpen = hasCallers && expanded.has(key);
+        const hasChips = endpoints.length > 0 || crons.length > 0;
 
         return (
           <div key={key}>
             <div
               role={hasCallers ? "button" : undefined}
               tabIndex={hasCallers ? 0 : undefined}
+              aria-expanded={hasCallers ? isOpen : undefined}
+              title={symbol.file}
               onClick={hasCallers ? () => toggle(key) : undefined}
               onKeyDown={
                 hasCallers
                   ? (e) => {
-                      if (e.key === "Enter" || e.key === " ") toggle(key);
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggle(key);
+                      }
                     }
                   : undefined
               }
-              style={s.symbolRow(hasCallers)}
+              style={s.symbolRow(hasCallers, isOpen)}
             >
-              {/* Fixed-width slot reserves the chevron's horizontal space even
-                 on rows with no callers, so the code icon/name/file columns
-                 stay aligned across rows regardless of whether a chevron
-                 renders. */}
+              {/* Fixed-width slot reserves the chevron's space even on rows
+                 with no callers, so names stay aligned across rows. */}
               <span style={s.chevronSlot}>
-                {hasCallers && <Icon.ChevronDown size={14} style={s.chevron(isOpen)} />}
+                {hasCallers && <Icon.ChevronRight size={13} aria-hidden style={s.chevron(isOpen)} />}
               </span>
               <Icon.Code size={13} aria-hidden style={s.codeIcon} />
-              <span style={s.symbolName}>
+              <span className="mono" style={s.symbolName}>
                 {symbol.name}
                 {(symbol.kind === "function" || symbol.kind === "method") && "()"}
-              </span>
-              <span className="mono" style={s.symbolFile}>
-                {symbol.file}
               </span>
               <span style={s.callerCount}>{t("callerCount", { count: callers.length })}</span>
             </div>
 
             {isOpen && (
               <div style={s.detail}>
-                <div style={s.callerList}>
-                  {callers.map((caller, ci) => (
-                    <div key={ci} style={s.callerItem}>
-                      <Icon.CornerDownRight size={12} aria-hidden style={s.callerConnector} />
-                      <MonoLink onClick={() => onNavigateToFile(caller.file, caller.line)}>
-                        {caller.file}:{caller.line} — {caller.name}
+                {callers.map((caller, ci) => {
+                  // The vertical guide stops at this row's midpoint when it's
+                  // the last tree row (no chip rows follow) — an "└" elbow.
+                  const last = ci === callers.length - 1 && !hasChips;
+                  return (
+                    <div key={ci} style={s.callerRow} title={caller.name}>
+                      <span aria-hidden style={s.guideV(last)} />
+                      <span aria-hidden style={s.guideH} />
+                      <Icon.CornerDownRight size={13} aria-hidden style={s.callerIcon} />
+                      <MonoLink wrap onClick={() => onNavigateToFile(caller.file, caller.line)}>
+                        {caller.file}:{caller.line}
                       </MonoLink>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
 
-                {((impact?.endpoints_affected.length ?? 0) > 0 ||
-                  (impact?.crons_affected.length ?? 0) > 0) && (
+                {endpoints.length > 0 && (
                   <div style={s.chipRow}>
-                    {/* Outline styling (transparent bg, colored border/text)
-                       differentiates endpoint (blue) from cron (orange) chips
-                       — both used the same uniform gray Badge fill before.
-                       Badge's own `style` prop also overrides its hardcoded
-                       `white-space: nowrap`, which otherwise runs a long
-                       endpoint path/cron name past the chip's edge instead of
-                       wrapping (see client/INSIGHTS.md's unbreakable
-                       file:line entry — same fix). */}
-                    {impact?.endpoints_affected.map((ep) => (
+                    {endpoints.map((ep) => (
                       <Badge
                         key={ep}
+                        mono
                         icon="Globe"
                         color="var(--accent-text)"
                         bg="var(--accent-bg)"
-                        style={s.endpointBadge}
+                        style={s.chip}
                       >
                         {ep}
                       </Badge>
                     ))}
-                    {impact?.crons_affected.map((cron) => (
-                      <Badge key={cron} icon="Clock" color="var(--warn)" bg="var(--warn-bg)" style={s.cronBadge}>
+                  </div>
+                )}
+                {crons.length > 0 && (
+                  <div style={s.cronRow}>
+                    {crons.map((cron) => (
+                      <Badge key={cron} mono icon="Clock" color="var(--warn)" bg="var(--warn-bg)" style={s.chip}>
                         {cron}
                       </Badge>
                     ))}

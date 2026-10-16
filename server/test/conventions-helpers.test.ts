@@ -4,10 +4,11 @@ import {
   evidenceExistsInSource,
   normalizeForMatch,
   toConventionDto,
+  unavailableIds,
 } from '../src/modules/conventions/helpers.js';
-import type { ConventionRow } from '../src/modules/conventions/repository.js';
+import type { ConventionWithSkill } from '../src/modules/conventions/repository.js';
 
-const ROW: ConventionRow = {
+const ROW: ConventionWithSkill = {
   id: 'c1',
   workspaceId: 'ws1',
   repoId: 'r1',
@@ -19,7 +20,9 @@ const ROW: ConventionRow = {
   evidenceLine: 23,
   confidence: 0.91,
   status: 'pending',
+  skillId: null,
   createdAt: new Date('2026-01-01T00:00:00Z'),
+  skill: null,
 };
 
 describe('toConventionDto', () => {
@@ -34,7 +37,18 @@ describe('toConventionDto', () => {
       evidence_line: 23,
       confidence: 0.91,
       status: 'pending',
+      skill: null,
     });
+  });
+
+  it('maps the linked skill (SPEC-2026-10-16-convention-skills AC-1)', () => {
+    const dto = toConventionDto({
+      ...ROW,
+      status: 'accepted',
+      skillId: 's1',
+      skill: { id: 's1', name: 'API errors', repoId: null },
+    });
+    expect(dto.skill).toEqual({ id: 's1', name: 'API errors', repo_id: null });
   });
 
   it('defaults null evidence/confidence fields to empty/zero', () => {
@@ -42,6 +56,26 @@ describe('toConventionDto', () => {
     expect(dto.evidence_path).toBe('');
     expect(dto.evidence_snippet).toBe('');
     expect(dto.confidence).toBe(0);
+  });
+});
+
+describe('unavailableIds', () => {
+  const row = (id: string, over: Partial<ConventionWithSkill> = {}) => ({ ...ROW, id, status: 'accepted' as const, ...over });
+
+  it('accepts accepted, unlinked rows of the repo', () => {
+    expect(unavailableIds([row('a'), row('b')], ['a', 'b'], 'r1')).toEqual({ missing: [], unavailable: [] });
+  });
+
+  it('reports unknown ids and other-repo rows as missing', () => {
+    expect(unavailableIds([row('a'), row('b', { repoId: 'r2' })], ['a', 'b', 'zz'], 'r1')).toEqual({
+      missing: ['b', 'zz'],
+      unavailable: [],
+    });
+  });
+
+  it('reports pending, rejected and already linked rows as unavailable', () => {
+    const rows = [row('p', { status: 'pending' }), row('x', { status: 'rejected' }), row('l', { skillId: 's1' })];
+    expect(unavailableIds(rows, ['p', 'x', 'l'], 'r1')).toEqual({ missing: [], unavailable: ['p', 'x', 'l'] });
   });
 });
 

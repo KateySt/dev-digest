@@ -1,0 +1,1 @@
+export { UsedSkillGroup } from "./UsedSkillGroup";

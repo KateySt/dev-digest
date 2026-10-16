@@ -1,6 +1,6 @@
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import type { ConventionCategory, ConventionStatus } from '@devdigest/shared';
-import type { Db } from '../../db/client.js';
+import type { Db, DbExecutor } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 
 /**
@@ -10,6 +10,11 @@ import * as t from '../../db/schema.js';
  */
 
 export type ConventionRow = typeof t.conventions.$inferSelect;
+
+/** A convention plus the skill it was merged into (left join; null = unused). */
+export type ConventionWithSkill = ConventionRow & {
+  skill: { id: string; name: string; repoId: string | null } | null;
+};
 
 export interface InsertConvention {
   workspaceId: string;
@@ -26,19 +31,65 @@ export interface InsertConvention {
 export class ConventionsRepository {
   constructor(private db: Db) {}
 
-  async list(workspaceId: string, repoId: string): Promise<ConventionRow[]> {
-    return this.db
-      .select()
-      .from(t.conventions)
-      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.repoId, repoId)));
+  async list(workspaceId: string, repoId: string): Promise<ConventionWithSkill[]> {
+    return this.selectWithSkill(
+      and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.repoId, repoId)),
+    );
   }
 
-  async getById(workspaceId: string, id: string): Promise<ConventionRow | undefined> {
-    const [row] = await this.db
+  async getById(workspaceId: string, id: string): Promise<ConventionWithSkill | undefined> {
+    const [row] = await this.selectWithSkill(
+      and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.id, id)),
+    );
+    return row;
+  }
+
+  /** Rows for the given ids within the workspace (any repo), optionally
+   *  locked `FOR UPDATE` inside the caller's transaction. Used by the
+   *  create-skill-from-conventions availability check (AC-5/AC-6). */
+  async getManyForSkill(
+    workspaceId: string,
+    ids: string[],
+    executor: DbExecutor = this.db,
+    lock = false,
+  ): Promise<ConventionRow[]> {
+    const q = executor
       .select()
       .from(t.conventions)
-      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.id, id)));
-    return row;
+      .where(and(eq(t.conventions.workspaceId, workspaceId), inArray(t.conventions.id, ids)));
+    return lock ? q.for('update') : q;
+  }
+
+  /** Link the given conventions to a skill. Caller has already checked (under
+   *  lock) that each is accepted, unlinked, and in the right repo. */
+  async linkToSkill(ids: string[], skillId: string, executor: DbExecutor = this.db): Promise<void> {
+    await executor.update(t.conventions).set({ skillId }).where(inArray(t.conventions.id, ids));
+  }
+
+  async unlink(workspaceId: string, id: string): Promise<boolean> {
+    const rows = await this.db
+      .update(t.conventions)
+      .set({ skillId: null })
+      .where(and(eq(t.conventions.workspaceId, workspaceId), eq(t.conventions.id, id)))
+      .returning({ id: t.conventions.id });
+    return rows.length > 0;
+  }
+
+  private async selectWithSkill(where: SQL | undefined): Promise<ConventionWithSkill[]> {
+    const rows = await this.db
+      .select({
+        convention: t.conventions,
+        skillId: t.skills.id,
+        skillName: t.skills.name,
+        skillRepoId: t.skills.repoId,
+      })
+      .from(t.conventions)
+      .leftJoin(t.skills, eq(t.skills.id, t.conventions.skillId))
+      .where(where);
+    return rows.map((r) => ({
+      ...r.convention,
+      skill: r.skillId ? { id: r.skillId, name: r.skillName!, repoId: r.skillRepoId } : null,
+    }));
   }
 
   async insertMany(rows: InsertConvention[]): Promise<ConventionRow[]> {

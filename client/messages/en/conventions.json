@@ -20,9 +20,8 @@
       "body": "Add a repo first — Conventions scans a cloned repo for house rules."
     },
     "candidateCount": "{count, plural, one {# candidate} other {# candidates}} · grounded against sampled files",
-    "acceptedCount": "{accepted} of {total} accepted",
-    "deselectAll": "Deselect all",
-    "createSkill": "Create skill"
+    "acceptedCount": "{ready} ready · {used} used in skills",
+    "createSkill": "Create skill ({count})"
   },
   "card": {
     "confidence": "Confidence",
@@ -43,11 +42,13 @@
       "typing": "Typing",
       "api": "API",
       "general": "General"
-    }
+    },
+    "unlink": "Unlink",
+    "unlinkHint": "Return to “Ready” so it can go into another skill. The skill itself is not changed."
   },
   "modal": {
     "title": "Create skill from conventions",
-    "mergedFrom": "Merged from {count, plural, one {# accepted convention} other {# accepted conventions}} in {repo}. Everything below is editable before you save.",
+    "mergedFrom": "Merged from {count, plural, one {# selected convention} other {# selected conventions}} in {repo}. Everything below is editable before you save.",
     "nameLabel": "Name",
     "descriptionLabel": "Description",
     "typeLabel": "Type",
@@ -57,6 +58,37 @@
     "cancel": "Cancel",
     "create": "Create skill",
     "creating": "Creating…",
-    "success": "Created skill \"{name}\""
+    "success": "Created skill \"{name}\" ({scope})",
+    "scope": {
+      "label": "Scope",
+      "project": "This project ({repo})",
+      "global": "Global (all projects)",
+      "hintProject": "Applies only to reviews of {repo}. Deleted if the repo is removed.",
+      "hintGlobal": "Applies to reviews of every project."
+    },
+    "successScopeProject": "project",
+    "successScopeGlobal": "global",
+    "unavailable": "Some selected conventions were already used or changed. The list was refreshed — check your selection and try again."
+  },
+  "sections": {
+    "ready": "Ready for a skill",
+    "readyHint": "Accepted and not used yet. Tick the ones to merge into the next skill.",
+    "toReview": "To review",
+    "used": "Used in skills",
+    "rejected": "Rejected ({count})",
+    "showRejected": "Show",
+    "hideRejected": "Hide"
+  },
+  "selection": {
+    "select": "Select “{rule}”",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "count": "{count, plural, one {# selected} other {# selected}}"
+  },
+  "used": {
+    "openSkill": "Open skill {name}",
+    "scopeProject": "Project",
+    "scopeGlobal": "Global",
+    "conventionCount": "{count, plural, one {# convention} other {# conventions}}"
   }
 }

@@ -12,6 +12,15 @@ export const s = {
     opacity: status === "rejected" ? 0.65 : 1,
   }),
   header: { display: "flex", alignItems: "flex-start", gap: 12 } satisfies CSSProperties,
+  // Visually hidden but read by screen readers — names the selection checkbox.
+  srOnly: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    overflow: "hidden",
+    clip: "rect(0 0 0 0)",
+    whiteSpace: "nowrap",
+  } satisfies CSSProperties,
   title: { flex: 1, fontSize: 15, fontWeight: 600, lineHeight: 1.4 } satisfies CSSProperties,
   actions: { display: "flex", gap: 8, flexShrink: 0 } satisfies CSSProperties,
   metaRow: { display: "flex", alignItems: "center", gap: 8 } satisfies CSSProperties,

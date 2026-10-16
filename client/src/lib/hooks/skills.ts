@@ -103,6 +103,9 @@ export function useDeleteSkill() {
     onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ["skills"] });
       qc.removeQueries({ queryKey: ["skill", id] });
+      // Conventions linked to the deleted skill return to "ready" server-side
+      // (ON DELETE SET NULL, SPEC-2026-10-16-convention-skills AC-10).
+      qc.invalidateQueries({ queryKey: ["conventions"] });
     },
   });
 }

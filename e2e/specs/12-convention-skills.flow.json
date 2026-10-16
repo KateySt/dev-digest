@@ -1,0 +1,32 @@
+{
+  "name": "Build two skills from one repo's conventions by selection",
+  "description": "SPEC-2026-10-16-convention-skills AC-21. Uses the three pending convention candidates the seed adds to acme/payments-api (needs migration 0029). Accept all three, tick two and create a project-scoped skill: those two move to 'Used in skills' without any status change. Then tick the remaining one and create a global skill. The skill content scan runs without a model key in the hermetic stack (scan_status 'error' — the skill is still created), so the flow asserts only the page state. Creates two skills.",
+  "steps": [
+    { "cmd": ["open", "{BASE}/"], "label": "load the app root" },
+    { "cmd": ["wait", "--url", "/pulls"], "label": "land on the PR list (active repo is set)" },
+    { "cmd": ["open", "{BASE}/conventions"], "label": "open the Conventions page" },
+    { "cmd": ["wait", "--text", "To review"], "label": "the seeded candidates are listed for review" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Accept: Route handlers throw typed AppError"], "label": "accept the error-handling candidate" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "the list refreshes" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Accept: Config keys are camelCase"], "label": "accept the naming candidate" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "the list refreshes" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Accept: Every route file has a colocated"], "label": "accept the testing candidate" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "the list refreshes" },
+    { "cmd": ["wait", "--text", "3 ready · 0 used in skills"], "label": "all three are ready for a skill" },
+    { "cmd": ["find", "role", "checkbox", "click", "--name", "Route handlers throw typed AppError"], "label": "select the error-handling convention" },
+    { "cmd": ["find", "role", "checkbox", "click", "--name", "Config keys are camelCase"], "label": "select the naming convention" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Create skill (2)"], "label": "open the modal with the two selected conventions" },
+    { "cmd": ["wait", "--text", "This project (acme/payments-api)"], "label": "the scope defaults to this project" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Create skill", "--exact"], "label": "create the project-scoped skill" },
+    { "cmd": ["wait", "--text", "1 ready · 2 used in skills"], "label": "the two conventions moved to Used in skills" },
+    { "cmd": ["wait", "--text", "Used in skills"], "label": "the Used in skills section is shown" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Dismiss", "--exact"], "label": "dismiss the success toast (it overlaps the modal footer)" },
+    { "cmd": ["find", "role", "checkbox", "click", "--name", "Every route file has a colocated"], "label": "select the remaining convention" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Create skill (1)"], "label": "open the modal again" },
+    { "cmd": ["find", "text", "This project (acme/payments-api)", "click"], "label": "open the scope select" },
+    { "cmd": ["find", "text", "Global (all projects)", "click"], "label": "choose Global" },
+    { "cmd": ["wait", "--text", "Applies to reviews of every project."], "label": "the hint explains the global scope" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Create skill", "--exact"], "label": "create the global skill" },
+    { "cmd": ["wait", "--text", "0 ready · 3 used in skills"], "label": "every accepted convention is now used, none changed status" }
+  ]
+}

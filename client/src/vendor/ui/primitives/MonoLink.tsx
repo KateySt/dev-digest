@@ -31,7 +31,8 @@ export function MonoLink({
     color: h ? "var(--accent-text)" : "var(--text-secondary)",
     textDecoration: h ? "underline" : "none",
     textUnderlineOffset: 2,
-    ...(wrap ? { overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0 } : {}),
+    // A <button> centers its text by default — wrapped lines must stay left-aligned.
+    ...(wrap ? { overflowWrap: "anywhere", wordBreak: "break-word", minWidth: 0, textAlign: "left" } : {}),
   };
 
   if (href) {

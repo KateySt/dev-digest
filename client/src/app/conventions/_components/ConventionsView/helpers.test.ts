@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ConventionCandidate } from "@devdigest/shared";
-import { acceptedCandidates, buildSkillBody, buildSkillDescription, buildSkillName } from "./helpers";
+import { buildSkillBody, buildSkillDescription, buildSkillName, groupConventions, pruneSelection } from "./helpers";
 
 function candidate(overrides: Partial<ConventionCandidate>): ConventionCandidate {
   return {
@@ -13,18 +13,44 @@ function candidate(overrides: Partial<ConventionCandidate>): ConventionCandidate
     evidence_line: null,
     confidence: 0.91,
     status: "pending",
+    skill: null,
     ...overrides,
   };
 }
 
-describe("acceptedCandidates", () => {
-  it("keeps only candidates with status accepted", () => {
+describe("groupConventions", () => {
+  it("splits into ready / to review / used-by-skill / rejected (AC-13)", () => {
+    const skillA = { id: "sA", name: "API errors", repo_id: "r1" };
+    const skillB = { id: "sB", name: "Naming", repo_id: null };
     const list = [
       candidate({ id: "a", status: "accepted" }),
-      candidate({ id: "b", status: "pending" }),
-      candidate({ id: "c", status: "rejected" }),
+      candidate({ id: "p", status: "pending" }),
+      candidate({ id: "x", status: "rejected" }),
+      candidate({ id: "u1", status: "accepted", skill: skillA }),
+      candidate({ id: "u2", status: "accepted", skill: skillB }),
+      candidate({ id: "u3", status: "accepted", skill: skillA }),
     ];
-    expect(acceptedCandidates(list).map((c) => c.id)).toEqual(["a"]);
+    const g = groupConventions(list);
+    expect(g.ready.map((c) => c.id)).toEqual(["a"]);
+    expect(g.toReview.map((c) => c.id)).toEqual(["p"]);
+    expect(g.rejected.map((c) => c.id)).toEqual(["x"]);
+    expect(g.used.map((u) => [u.skill.id, u.items.map((c) => c.id)])).toEqual([
+      ["sA", ["u1", "u3"]],
+      ["sB", ["u2"]],
+    ]);
+  });
+});
+
+describe("pruneSelection", () => {
+  const ready = [candidate({ id: "a", status: "accepted" }), candidate({ id: "b", status: "accepted" })];
+
+  it("returns the same Set when every id is still ready", () => {
+    const sel = new Set(["a"]);
+    expect(pruneSelection(sel, ready)).toBe(sel);
+  });
+
+  it("drops ids that are no longer ready", () => {
+    expect([...pruneSelection(new Set(["a", "gone"]), ready)]).toEqual(["a"]);
   });
 });
 

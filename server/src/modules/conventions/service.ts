@@ -1,9 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { ConventionCategory, type ConventionCandidate, type ConventionStatus } from '@devdigest/shared';
+import {
+  ConventionCategory,
+  type ConventionCandidate,
+  type ConventionStatus,
+  type CreateSkillFromConventionsInput,
+  type CreateSkillFromConventionsResult,
+} from '@devdigest/shared';
 import type { Container } from '../../platform/container.js';
-import { NotFoundError } from '../../platform/errors.js';
+import { ConflictError, NotFoundError } from '../../platform/errors.js';
 import { RepoRepository } from '../repos/repository.js';
 import { resolveFeatureModel } from '../settings/feature-models.js';
 import { ConventionsRepository } from './repository.js';
@@ -14,7 +20,7 @@ import {
   MAX_CANDIDATES,
   MAX_FILE_CHARS,
 } from './constants.js';
-import { clampEvidenceLine, evidenceExistsInSource, toConventionDto } from './helpers.js';
+import { clampEvidenceLine, evidenceExistsInSource, toConventionDto, unavailableIds } from './helpers.js';
 import { EXTRACTION_SYSTEM_PROMPT } from './prompts.js';
 
 /**
@@ -61,13 +67,88 @@ export class ConventionsService {
   }
 
   async setStatus(workspaceId: string, id: string, status: ConventionStatus): Promise<ConventionCandidate> {
-    const row = await this.repo.setStatus(workspaceId, id, status);
-    if (!row) throw new NotFoundError('Convention candidate not found');
-    return toConventionDto(row);
+    const existing = await this.repo.getById(workspaceId, id);
+    if (!existing) throw new NotFoundError('Convention candidate not found');
+    // AC-9: a convention used in a skill stays accepted until it is unlinked.
+    if (existing.skillId !== null && status !== 'accepted') {
+      throw new ConflictError(
+        'Convention is used in a skill; unlink it first',
+        { skill_id: existing.skillId },
+        'convention_in_use',
+      );
+    }
+    await this.repo.setStatus(workspaceId, id, status);
+    return this.get(workspaceId, id);
   }
 
   async updateRule(workspaceId: string, id: string, rule: string): Promise<ConventionCandidate> {
     const row = await this.repo.updateRule(workspaceId, id, rule.trim());
+    if (!row) throw new NotFoundError('Convention candidate not found');
+    return this.get(workspaceId, id);
+  }
+
+  /** AC-8: detach a convention from its skill → back to "ready". */
+  async unlink(workspaceId: string, id: string): Promise<ConventionCandidate> {
+    if (!(await this.repo.unlink(workspaceId, id))) throw new NotFoundError('Convention candidate not found');
+    return this.get(workspaceId, id);
+  }
+
+  /**
+   * Create one skill from a selection of accepted, unused conventions and link
+   * them to it (SPEC-2026-10-16-convention-skills AC-2…AC-7).
+   *
+   * Order matters: an unlocked pre-check fails fast; the skill scan (an LLM
+   * call) runs next, OUTSIDE any transaction; only then one short transaction
+   * locks the rows, re-checks them (a concurrent request may have taken them
+   * meanwhile — AC-6), inserts the skill and links the conventions.
+   */
+  async createSkill(
+    workspaceId: string,
+    repoId: string,
+    input: CreateSkillFromConventionsInput,
+  ): Promise<CreateSkillFromConventionsResult> {
+    const ids = input.convention_ids;
+    this.assertAvailable(await this.repo.getManyForSkill(workspaceId, ids), ids, repoId);
+
+    const skills = this.container.skillsService;
+    const prepared = await skills.prepareCreate(workspaceId, {
+      name: input.name,
+      description: input.description,
+      type: input.type,
+      body: input.body,
+      enabled: input.enabled,
+      source: 'extracted',
+      repoId: input.scope === 'repo' ? repoId : undefined,
+    });
+
+    const skill = await this.container.db.transaction(async (tx) => {
+      this.assertAvailable(await this.repo.getManyForSkill(workspaceId, ids, tx, true), ids, repoId);
+      const created = await skills.insertPrepared(prepared, tx);
+      await this.repo.linkToSkill(ids, created.id, tx);
+      return created;
+    });
+
+    return { skill, conventions: await this.list(workspaceId, repoId) };
+  }
+
+  private assertAvailable(
+    rows: Parameters<typeof unavailableIds>[0],
+    ids: string[],
+    repoId: string,
+  ): void {
+    const { missing, unavailable } = unavailableIds(rows, ids, repoId);
+    if (missing.length > 0) throw new NotFoundError('Convention candidate not found');
+    if (unavailable.length > 0) {
+      throw new ConflictError(
+        'Some conventions are not accepted or are already used in a skill',
+        { ids: unavailable },
+        'convention_unavailable',
+      );
+    }
+  }
+
+  private async get(workspaceId: string, id: string): Promise<ConventionCandidate> {
+    const row = await this.repo.getById(workspaceId, id);
     if (!row) throw new NotFoundError('Convention candidate not found');
     return toConventionDto(row);
   }

@@ -6,7 +6,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Background, Controls, ReactFlow } from "@xyflow/react";
+import { Background, Controls, ReactFlow, type AriaLabelConfig } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { BlastRadius } from "@devdigest/shared";
 import { buildGraphModel } from "./helpers";
@@ -15,7 +15,37 @@ import { s } from "./styles";
 
 export function BlastGraph({ radius }: { radius: BlastRadius }) {
   const t = useTranslations("blast");
-  const { nodes, edges } = React.useMemo(() => buildGraphModel(radius), [radius]);
+  const model = React.useMemo(() => buildGraphModel(radius), [radius]);
+  const { nodes } = model;
+  // Without an explicit `ariaLabel`, React Flow labels each edge with its own
+  // built-in English "Edge from <id> to <id>" — name the edge from i18n using
+  // the node labels instead of internal ids.
+  const edges = React.useMemo(() => {
+    const labelById = new Map(model.nodes.map((n) => [n.id, String(n.data.label)]));
+    return model.edges.map((e) => ({
+      ...e,
+      ariaLabel: t("graph.a11y.edge", {
+        source: labelById.get(e.source) ?? e.source,
+        target: labelById.get(e.target) ?? e.target,
+      }),
+    }));
+  }, [model, t]);
+  // React Flow ships English defaults for every control label and a11y hint;
+  // pass all of them from i18n so no library-built-in text reaches the UI.
+  const ariaLabelConfig: AriaLabelConfig = {
+    "node.a11yDescription.default": t("graph.a11y.nodeDefault"),
+    "node.a11yDescription.keyboardDisabled": t("graph.a11y.nodeKeyboardDisabled"),
+    "node.a11yDescription.ariaLiveMessage": ({ direction, x, y }) =>
+      t("graph.a11y.nodeMoved", { direction, x, y }),
+    "edge.a11yDescription.default": t("graph.a11y.edgeDefault"),
+    "controls.ariaLabel": t("graph.a11y.controls"),
+    "controls.zoomIn.ariaLabel": t("graph.a11y.zoomIn"),
+    "controls.zoomOut.ariaLabel": t("graph.a11y.zoomOut"),
+    "controls.fitView.ariaLabel": t("graph.a11y.fitView"),
+    "controls.interactive.ariaLabel": t("graph.a11y.interactive"),
+    "minimap.ariaLabel": t("graph.a11y.minimap"),
+    "handle.ariaLabel": t("graph.a11y.handle"),
+  };
 
   if (nodes.length === 0) {
     return <div style={s.empty}>{t("graph.empty")}</div>;
@@ -24,7 +54,17 @@ export function BlastGraph({ radius }: { radius: BlastRadius }) {
   return (
     <div style={s.wrapOuter}>
       <div style={s.wrap} aria-label={t("graph.ariaLabel")}>
-        <ReactFlow nodes={nodes} edges={edges} fitView nodesDraggable={false} nodesConnectable={false}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          ariaLabelConfig={ariaLabelConfig}
+          // The attribution link is fixed library text ("React Flow") that
+          // can't be passed in, so it's hidden (allowed by its MIT license).
+          proOptions={{ hideAttribution: true }}
+          fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+        >
           <Background />
           <Controls showInteractive={false} style={s.controls} />
         </ReactFlow>

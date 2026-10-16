@@ -14,7 +14,8 @@ import type {
 import { SkillScanFinding as SkillScanFindingSchema } from '@devdigest/shared';
 import { wrapUntrusted } from '@devdigest/reviewer-core';
 import * as t from '../../db/schema.js';
-import { SkillsRepository } from './repository.js';
+import { SkillsRepository, type InsertSkill } from './repository.js';
+import type { DbExecutor } from '../../db/client.js';
 import {
   computeSkillStats,
   computeSkillUsageSummaries,
@@ -167,6 +168,17 @@ export class SkillsService {
   }
 
   async create(workspaceId: string, input: CreateSkillInput): Promise<Skill> {
+    return this.insertPrepared(await this.prepareCreate(workspaceId, input));
+  }
+
+  /**
+   * Everything `create` does before the insert: repo ownership check, name
+   * derivation and the content scan (an LLM call). Split out so a caller that
+   * must insert inside its own transaction (conventions → skill,
+   * SPEC-2026-10-16-convention-skills AC-7) can run the scan first, outside
+   * any transaction, then call `insertPrepared(values, tx)`.
+   */
+  async prepareCreate(workspaceId: string, input: CreateSkillInput): Promise<InsertSkill> {
     // AC-49: a supplied repo_id must belong to the caller's workspace — same
     // check and message as update/import. Runs before the scan so nothing is
     // persisted on rejection.
@@ -176,7 +188,7 @@ export class SkillsService {
     const name = input.name?.trim() || nameFromMarkdown(input.body, 'Untitled skill');
     const scan = await this.scanBody(workspaceId, input.body);
     const enabled = isScanBlocking(scan.status, scan.findings) ? false : input.enabled;
-    const row = await this.repo.insert({
+    return {
       workspaceId,
       name,
       description: input.description ?? '',
@@ -188,8 +200,12 @@ export class SkillsService {
       scanFindings: scan.findings,
       scannedAt: new Date(),
       repoId: input.repoId ?? null,
-    });
-    return toSkillDto(row);
+    };
+  }
+
+  /** Insert values from `prepareCreate`; pass a transaction's `tx` to join it. */
+  async insertPrepared(values: InsertSkill, executor?: DbExecutor): Promise<Skill> {
+    return toSkillDto(await this.repo.insert(values, executor));
   }
 
   async update(workspaceId: string, id: string, patch: UpdateSkillInput): Promise<Skill | undefined> {

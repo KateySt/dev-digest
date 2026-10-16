@@ -13,6 +13,7 @@ function convention(overrides: Partial<ConventionCandidate> = {}): ConventionCan
     evidence_line: 12,
     confidence: 0.8,
     status: 'pending',
+    skill: null,
     ...overrides,
   };
 }
