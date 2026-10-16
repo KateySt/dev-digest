@@ -13,7 +13,8 @@
     },
     "scope": {
       "all": "All projects",
-      "global": "Global only"
+      "global": "Global only",
+      "label": "Project scope"
     },
     "empty": {
       "title": "No skills yet",
@@ -53,7 +54,8 @@
     "bodyPlaceholder": "# Rule\nDescribe the rule…",
     "importing": "Importing…",
     "import": "Import skill",
-    "success": "Imported \"{name}\" (stored as untrusted data)."
+    "success": "Imported \"{name}\" (stored as untrusted data).",
+    "fileLabel": "File"
   },
   "url": {
     "label": "Skill URL",
@@ -151,7 +153,8 @@
       "hint": "Global skills apply everywhere. Scoping to a project hides it from other projects' filtered lists and deletes it if that project is removed.",
       "global": "Global (all projects)",
       "reassignError": "Could not change this skill's project. Please try again."
-    }
+    },
+    "deleteConfirm": "Delete skill \"{name}\"? This cannot be undone."
   },
   "previewTab": {
     "title": "Preview",

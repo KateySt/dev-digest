@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../messages/en/common.json";
 import { ToastProvider } from "@/lib/contexts";
 
 const SKILL: Skill = {
@@ -67,7 +68,7 @@ afterEach(cleanup);
 
 function renderWithIntl(tab: string, onTab: (t: string) => void = () => {}) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
       <ToastProvider>
         <SkillEditor skillId="sk1" tab={tab} onTab={onTab} onClosed={() => {}} />
       </ToastProvider>

@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../../../messages/en/common.json";
 import { ToastProvider } from "@/lib/contexts";
 
 const importMutate = vi.fn();
@@ -36,7 +37,7 @@ afterEach(cleanup);
 
 function renderTab() {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
       <ToastProvider>
         <CommunityImportTab />
       </ToastProvider>

@@ -24,7 +24,9 @@
     "sidebarTitle": "Navigation",
     "sidebarDescription": "App navigation.",
     "commandPaletteTitle": "Command palette",
-    "commandPaletteDescription": "Search for a command to run…"
+    "commandPaletteDescription": "Search for a command to run…",
+    "noMatches": "No matches",
+    "searchPlaceholder": "Search…"
   },
   "severity": {
     "CRITICAL": "Critical",

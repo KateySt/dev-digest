@@ -2,14 +2,20 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, ErrorState, MetricCard, BarRow, Skeleton, EmptyState } from "@devdigest/ui";
+import { BarRow, MetricCard } from "@/components/charts";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent, Severity } from "@devdigest/shared";
-import { useAgentStats, useAgentRuns } from "../../../../../../../lib/hooks/agent-performance";
-import { RunCostBadge, formatRunCost, formatTokens } from "../../../../../../../components/run-cost-badge";
+import { useAgentStats, useAgentRuns } from "@/lib/hooks/agent-performance";
+import { RunCostBadge, formatRunCost, formatTokens } from "@/components/run-cost-badge";
 import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
 import { SEVERITY_COLOR, SEVERITY_ORDER, DEFAULT_RUNS_LIMIT } from "./constants";
 import { formatSeconds, formatTimestamp } from "./helpers";
-import { s } from "./styles";
+
+const TH =
+  "border-b border-border px-2.5 pb-2 text-left text-2xs font-semibold tracking-[0.03em] text-subtle-foreground uppercase";
+const TD = "border-b border-border p-2.5 text-sm text-muted-foreground";
 
 /** Stats tab — per-agent aggregates (Total runs / Avg cost / Avg duration /
  *  Accept rate), findings by severity, and a run-history table with a
@@ -22,14 +28,14 @@ export function StatsTab({ agent }: { agent: Agent }) {
 
   if (isLoading) {
     return (
-      <div style={s.wrap}>
-        <div style={s.tileRow}>
-          <Skeleton height={90} />
-          <Skeleton height={90} />
-          <Skeleton height={90} />
-          <Skeleton height={90} />
+      <div className="flex max-w-[900px] flex-col gap-7">
+        <div className="flex gap-3.5">
+          <Skeleton className="h-22.5 flex-1" />
+          <Skeleton className="h-22.5 flex-1" />
+          <Skeleton className="h-22.5 flex-1" />
+          <Skeleton className="h-22.5 flex-1" />
         </div>
-        <Skeleton height={160} />
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
@@ -47,8 +53,8 @@ export function StatsTab({ agent }: { agent: Agent }) {
   const traceRun = runs?.find((r) => r.run_id === traceRunId);
 
   return (
-    <div style={s.wrap}>
-      <div style={s.tileRow}>
+    <div className="flex max-w-[900px] flex-col gap-7">
+      <div className="flex gap-3.5">
         <MetricCard label={t("stats.tiles.totalRuns")} value={stats.runs} trend={trend} />
         <MetricCard
           label={t("stats.tiles.avgCost")}
@@ -66,9 +72,9 @@ export function StatsTab({ agent }: { agent: Agent }) {
       </div>
 
       <div>
-        <div style={s.sectionTitle}>{t("stats.findingsBySeverity")}</div>
+        <div className="mb-3 text-base font-bold">{t("stats.findingsBySeverity")}</div>
         {stats.findings_total === 0 ? (
-          <div style={s.emptyNote}>{t("stats.noFindings")}</div>
+          <div className="text-sm text-subtle-foreground">{t("stats.noFindings")}</div>
         ) : (
           SEVERITY_ORDER.map((sev: Severity) => (
             <BarRow
@@ -84,40 +90,44 @@ export function StatsTab({ agent }: { agent: Agent }) {
       </div>
 
       <div>
-        <div style={s.sectionTitle}>{t("stats.runHistory")}</div>
-        <table style={s.table}>
+        <div className="mb-3 text-base font-bold">{t("stats.runHistory")}</div>
+        <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th style={s.th}>{t("stats.table.timestamp")}</th>
-              <th style={s.th}>{t("stats.table.pr")}</th>
-              <th style={s.th}>{t("stats.table.tokens")}</th>
-              <th style={s.th}>{t("stats.table.cost")}</th>
-              <th style={s.th}>{t("stats.table.findings")}</th>
-              <th style={s.th}>{t("stats.table.source")}</th>
-              <th style={s.th} />
+              <th className={TH}>{t("stats.table.timestamp")}</th>
+              <th className={TH}>{t("stats.table.pr")}</th>
+              <th className={TH}>{t("stats.table.tokens")}</th>
+              <th className={TH}>{t("stats.table.cost")}</th>
+              <th className={TH}>{t("stats.table.findings")}</th>
+              <th className={TH}>{t("stats.table.source")}</th>
+              <th className={TH} />
             </tr>
           </thead>
           <tbody>
             {(runs ?? []).map((run) => (
               <tr key={run.run_id}>
-                <td style={s.td}>{formatTimestamp(run.ran_at)}</td>
-                <td style={s.td}>{run.pr_number != null ? `#${run.pr_number}` : "—"}</td>
-                <td className="mono" style={s.td}>
+                <td className={TD}>{formatTimestamp(run.ran_at)}</td>
+                <td className={TD}>{run.pr_number != null ? `#${run.pr_number}` : "—"}</td>
+                <td className={`mono ${TD}`}>
                   {run.tokens_in != null && run.tokens_out != null
                     ? `${formatTokens(run.tokens_in)}→${formatTokens(run.tokens_out)}`
                     : "—"}
                 </td>
-                <td style={s.td}>
+                <td className={TD}>
                   <RunCostBadge costUsd={run.cost_usd} variant="compact" />
                 </td>
-                <td style={s.td}>{run.findings_count ?? "—"}</td>
-                <td style={s.td}>
-                  <Badge color="var(--text-secondary)" mono>
+                <td className={TD}>{run.findings_count ?? "—"}</td>
+                <td className={TD}>
+                  <Badge variant="neutral" className="mono">
                     {run.status ?? "—"}
                   </Badge>
                 </td>
-                <td style={s.td}>
-                  <button style={s.viewTraceBtn} onClick={() => setTraceRunId(run.run_id)}>
+                <td className={TD}>
+                  <button
+                    type="button"
+                    className="cursor-pointer border-none bg-transparent p-0 text-ui text-primary hover:underline"
+                    onClick={() => setTraceRunId(run.run_id)}
+                  >
                     {t("stats.viewTrace")}
                   </button>
                 </td>

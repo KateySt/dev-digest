@@ -5,16 +5,28 @@
 
 import React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Button, Dropdown, ErrorState, Skeleton, Icon, Badge } from "@devdigest/ui";
-import { AppShell } from "../../../components/app-shell";
+import { useTranslations } from "next-intl";
+import { AppShell } from "@/components/app-shell";
+import { ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AgentCard } from "../_components/AgentCard";
 import { AgentEditor } from "./_components/AgentEditor";
-import { useAgents, useAgent, useUpdateAgent } from "../../../lib/hooks/agents";
-import { ApiError } from "../../../lib/api";
+import { useAgents, useAgent, useUpdateAgent } from "@/lib/hooks/agents";
+import { ApiError } from "@/lib/api";
 
 const VALID_TABS = ["config", "skills", "context", "evals", "stats", "ci"];
 
 export default function AgentEditorPage() {
+  const t = useTranslations("agents");
   const params = useParams<{ id: string }>();
   const search = useSearchParams();
   const router = useRouter();
@@ -25,16 +37,16 @@ export default function AgentEditorPage() {
   const update = useUpdateAgent();
 
   const tab = VALID_TABS.includes(search.get("tab") ?? "") ? search.get("tab")! : "config";
-  const setTab = (t: string) => {
+  const setTab = (next: string) => {
     const sp = new URLSearchParams(search.toString());
-    sp.set("tab", t);
+    sp.set("tab", next);
     router.replace(`/agents/${id}?${sp.toString()}`);
   };
 
   const crumb = [
-    { label: "Skills Lab" },
-    { label: "Agents", href: "/agents" },
-    { label: agent?.name ?? "Agent" },
+    { label: t("list.breadcrumbLab") },
+    { label: t("list.breadcrumb"), href: "/agents" },
+    { label: agent?.name ?? t("page.fallbackName") },
   ];
 
   if (isError || (!isLoading && !agent)) {
@@ -42,8 +54,8 @@ export default function AgentEditorPage() {
       <AppShell crumb={crumb}>
         <ErrorState
           fullScreen
-          title="Couldn’t load this agent"
-          body={error instanceof ApiError ? error.message : "The agent could not be loaded."}
+          title={t("page.loadErrorTitle")}
+          body={error instanceof ApiError ? error.message : t("page.loadErrorBody")}
           onRetry={() => refetch()}
         />
       </AppShell>
@@ -52,34 +64,29 @@ export default function AgentEditorPage() {
 
   return (
     <AppShell crumb={crumb}>
-      <div style={{ display: "flex", height: "calc(100vh - 52px)" }}>
+      <div className="flex h-[calc(100vh-52px)]">
         {/* left: agent list */}
-        <div
-          style={{
-            width: 280,
-            flexShrink: 0,
-            borderRight: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            background: "var(--bg-surface)",
-          }}
-        >
-          <div style={{ padding: "16px 16px 12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Agents</h1>
-              <Dropdown
-                width={210}
-                align="right"
-                trigger={
-                  <Button kind="primary" size="sm" icon="Plus">
-                    Add
+        <div className="flex w-70 shrink-0 flex-col border-r border-border bg-surface">
+          <div className="px-4 pt-4 pb-3">
+            <div className="mb-3.5 flex items-center gap-2.5">
+              <h1 className="flex-1 text-xl font-bold">{t("list.title")}</h1>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm">
+                    <Icon.Plus aria-hidden />
+                    {t("page.add")}
                   </Button>
-                }
-                items={[{ label: "Create from scratch", icon: "Edit", onClick: () => router.push("/agents") }]}
-              />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52.5">
+                  <DropdownMenuItem onSelect={() => router.push("/agents")}>
+                    <Icon.Edit aria-hidden />
+                    {t("list.createFromScratch")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-          <div style={{ flex: 1, overflow: "auto", padding: "0 12px 12px" }}>
+          <div className="flex-1 overflow-auto px-3 pb-3">
             {(agents ?? []).map((a) => (
               <AgentCard
                 key={a.id}
@@ -97,26 +104,27 @@ export default function AgentEditorPage() {
 
         {/* editor */}
         {isLoading || !agent ? (
-          <div style={{ flex: 1, padding: 28, display: "flex", flexDirection: "column", gap: 16 }}>
-            <Skeleton height={24} width={240} />
-            <Skeleton height={200} />
+          <div className="flex flex-1 flex-col gap-4 p-7">
+            <Skeleton className="h-6 w-60" />
+            <Skeleton className="h-50 w-full" />
           </div>
         ) : (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 28px 0", flexShrink: 0 }}>
-              <Icon.Cpu size={18} style={{ color: "var(--accent)" }} />
-              <h1 style={{ fontSize: 18, fontWeight: 700 }}>{agent.name}</h1>
-              <Badge color="var(--text-secondary)" mono>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center gap-3 px-7 pt-4">
+              <Icon.Cpu size={18} className="text-primary" aria-hidden />
+              <h1 className="text-xl font-bold">{agent.name}</h1>
+              <Badge variant="neutral" className="mono">
                 {agent.provider}/{agent.model}
               </Badge>
-              {!agent.enabled && <Badge color="var(--text-muted)">disabled</Badge>}
-              <div style={{ marginLeft: "auto" }}>
-                <Button kind="secondary" size="sm" icon="GitPullRequest" onClick={() => router.push("/")}>
-                  Run on a PR…
+              {!agent.enabled && <Badge variant="neutral" className="text-subtle-foreground">{t("page.disabled")}</Badge>}
+              <div className="ml-auto">
+                <Button variant="secondary" size="sm" onClick={() => router.push("/")}>
+                  <Icon.GitPullRequest aria-hidden />
+                  {t("page.runOnPr")}
                 </Button>
               </div>
             </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+            <div className="min-h-0 flex-1 overflow-auto">
               <AgentEditor agent={agent} tab={tab} onTab={setTab} />
             </div>
           </div>

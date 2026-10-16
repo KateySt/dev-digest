@@ -3,6 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../messages/en/common.json";
 import { SkillCard } from "./SkillCard";
 
 afterEach(cleanup);
@@ -23,7 +24,7 @@ const SKILL: Skill = {
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
       {ui}
     </NextIntlClientProvider>,
   );
@@ -61,8 +62,9 @@ describe("SkillCard (smoke)", () => {
         },
       ],
     };
-    renderWithIntl(<SkillCard skill={flagged} />);
+    const { container } = renderWithIntl(<SkillCard skill={flagged} />);
     expect(screen.getByText("1 issue found")).toBeInTheDocument();
+    expect(container.querySelector('[data-flagged="true"]')).toBeInTheDocument();
   });
 
   it("does not show the scan-flagged badge for only low/medium findings", () => {

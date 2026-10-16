@@ -2,15 +2,21 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, CodeField, FormField, Select, TextInput, Toggle } from "@devdigest/ui";
 import type { Skill, SkillType } from "@devdigest/shared";
+import { CodeField } from "@/components/code-field";
+import { FormField } from "@/components/form-field";
+import { Icon } from "@/components/icon";
+import { SelectField } from "@/components/select-field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useDeleteSkill, useUpdateSkill } from "@/lib/hooks/skills";
 import { useRepos } from "@/lib/hooks";
 import { useToast } from "@/lib/contexts";
 import { slugify } from "@/lib/slug";
 import { SKILL_TYPES } from "@/lib/skill-constants";
 import { isScanBlocking } from "@/lib/skill-scan";
-import { s } from "./styles";
+import { cn } from "@/lib/utils";
 
 /** Config tab — name/description/type/body + enabled toggle. Save bumps the
  *  skill's version when the body changed (server-side rule); Delete removes
@@ -41,6 +47,7 @@ export function ConfigTab({
   const update = useUpdateSkill();
   const del = useDeleteSkill();
   const { data: repos } = useRepos();
+  const id = React.useId();
 
   const [name, setName] = React.useState(skill.name);
   const [description, setDescription] = React.useState(skill.description);
@@ -67,6 +74,7 @@ export function ConfigTab({
 
   const blocked = isScanBlocking(skill.scan_status, skill.scan_findings);
   const needsOverride = skill.scan_status === "flagged" && !blocked;
+  const enableBlocked = blocked && !skill.enabled;
 
   const toggleEnabled = (enabled: boolean) => {
     if (enabled && blocked) return;
@@ -78,7 +86,7 @@ export function ConfigTab({
   };
 
   const remove = () => {
-    if (!window.confirm(`Delete skill "${skill.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t("preview.deleteConfirm", { name: skill.name }))) return;
     onDeleted();
     del.mutate(skill.id, { onError: () => toast.error(t("preview.deleteError")) });
   };
@@ -101,31 +109,41 @@ export function ConfigTab({
   };
 
   return (
-    <div style={s.wrap}>
-      <FormField label={t("preview.enabled")} hint={blocked && !skill.enabled ? t("preview.enableBlockedHint") : undefined}>
+    <div className="flex max-w-[640px] flex-col gap-3.5">
+      <FormField
+        label={t("preview.enabled")}
+        htmlFor={`${id}-enabled`}
+        hint={enableBlocked ? t("preview.enableBlockedHint") : undefined}
+      >
         <div
-          title={blocked && !skill.enabled ? t("preview.enableBlockedHint") : undefined}
-          style={blocked && !skill.enabled ? { opacity: 0.5, pointerEvents: "none" } : undefined}
+          title={enableBlocked ? t("preview.enableBlockedHint") : undefined}
+          className={cn(enableBlocked && "pointer-events-none opacity-50")}
         >
-          <Toggle on={skill.enabled} onChange={toggleEnabled} size={16} />
+          <Switch id={`${id}-enabled`} checked={skill.enabled} onCheckedChange={toggleEnabled} />
         </div>
       </FormField>
-      <FormField label={t("file.nameLabel")} required>
-        <TextInput value={name} onChange={setName} />
+      <FormField label={t("file.nameLabel")} required htmlFor={`${id}-name`}>
+        <Input id={`${id}-name`} value={name} onChange={(e) => setName(e.target.value)} />
       </FormField>
       <FormField label={t("preview.typeLabel")}>
-        <Select value={type} onChange={(v) => setType(v as SkillType)} options={typeOptions} />
+        <SelectField
+          value={type}
+          onChange={(v) => setType(v as SkillType)}
+          options={typeOptions}
+          ariaLabel={t("preview.typeLabel")}
+        />
       </FormField>
       <FormField label={t("preview.scope.label")} hint={t("preview.scope.hint")}>
-        <Select
+        <SelectField
           value={skill.repo_id ?? GLOBAL_SCOPE}
           onChange={changeScope}
           options={scopeOptions}
           mono={false}
+          ariaLabel={t("preview.scope.label")}
         />
       </FormField>
-      <FormField label={t("preview.descriptionLabel")} hint={t("preview.descriptionHint")}>
-        <TextInput value={description} onChange={setDescription} />
+      <FormField label={t("preview.descriptionLabel")} hint={t("preview.descriptionHint")} htmlFor={`${id}-desc`}>
+        <Input id={`${id}-desc`} value={description} onChange={(e) => setDescription(e.target.value)} />
       </FormField>
       <FormField label={t("preview.bodyLabel")} hint={t("preview.bodyHint")}>
         <CodeField
@@ -136,11 +154,13 @@ export function ConfigTab({
         />
       </FormField>
 
-      <div style={s.actions}>
-        <Button kind="primary" icon="Check" onClick={save} disabled={update.isPending}>
+      <div className="mt-1.5 flex gap-2.5">
+        <Button onClick={save} disabled={update.isPending}>
+          <Icon.Check aria-hidden />
           {t("preview.save")}
         </Button>
-        <Button kind="ghost" icon="Trash" onClick={remove} disabled={del.isPending}>
+        <Button variant="outline" onClick={remove} disabled={del.isPending}>
+          <Icon.Trash aria-hidden />
           {t("preview.delete")}
         </Button>
       </div>

@@ -2,13 +2,16 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Checkbox, Icon, Skeleton } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SKILL_TYPE_BADGE } from "@/lib/skill-constants";
+import { cn } from "@/lib/utils";
 import type { Agent } from "@devdigest/shared";
-import { useAgentSkillLinks, useSetAgentSkills } from "../../../../../../../lib/hooks/agents";
-import { useSkills } from "../../../../../../../lib/hooks/skills";
-import { SKILL_TYPE_COLOR } from "./constants";
+import { useAgentSkillLinks, useSetAgentSkills } from "@/lib/hooks/agents";
+import { useSkills } from "@/lib/hooks/skills";
 import { filterSkills, initialOrder, reorder } from "./helpers";
-import { s } from "./styles";
 
 /** Skills tab — attach/detach/reorder the workspace's skills for this agent.
  *  Order matters: it becomes the order of the assembled `## Skills / rules`
@@ -66,9 +69,9 @@ export function SkillsTab({ agent }: { agent: Agent }) {
 
   if (isLoading || order === null) {
     return (
-      <div style={s.wrap}>
-        <Skeleton height={40} />
-        <Skeleton height={200} />
+      <div className="flex max-w-[760px] flex-col gap-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-50 w-full" />
       </div>
     );
   }
@@ -78,29 +81,30 @@ export function SkillsTab({ agent }: { agent: Agent }) {
   const rows = order.filter((id) => visibleSet.has(id) && byId.has(id));
 
   return (
-    <div style={s.wrap}>
-      <div style={s.header}>
-        <h2 style={s.h2}>{t("skills.title")}</h2>
-        <Badge color="var(--accent)">
+    <div className="max-w-[760px]">
+      <div className="mb-1.5 flex items-center gap-2.5">
+        <h2 className="text-xl font-bold">{t("skills.title")}</h2>
+        <Badge variant="brand">
           {t("skills.enabledCount", { linked: linkedIds.size, total: skills?.length ?? 0 })}
         </Badge>
       </div>
-      <p style={s.hint}>{t("skills.orderHint")}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{t("skills.orderHint")}</p>
 
-      <div style={s.filter}>
-        <Icon.Search size={13} style={s.filterIcon} />
+      <div className="mb-4 flex items-center gap-2.5 rounded-[7px] border border-border bg-surface px-3 py-2">
+        <Icon.Search size={13} className="text-subtle-foreground" aria-hidden />
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={t("skills.filterPlaceholder")}
-          style={s.filterInput}
+          aria-label={t("skills.filterPlaceholder")}
+          className="flex-1 border-none bg-transparent text-sm text-foreground outline-none"
         />
       </div>
 
       {rows.length === 0 ? (
-        <div style={s.empty}>{t("skills.noMatch")}</div>
+        <div className="py-6 text-center text-sm text-subtle-foreground">{t("skills.noMatch")}</div>
       ) : (
-        <div style={s.list}>
+        <div className="flex flex-col gap-1.5">
           {rows.map((id) => {
             const skill = byId.get(id)!;
             const checked = linkedIds.has(id);
@@ -119,14 +123,22 @@ export function SkillsTab({ agent }: { agent: Agent }) {
                   setDragId(null);
                   setOverId(null);
                 }}
-                style={s.row(dragId === id, overId === id && dragId !== id)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border bg-surface px-3 py-2.5",
+                  overId === id && dragId !== id ? "border-primary" : "border-border",
+                  dragId === id && "opacity-50",
+                )}
               >
-                <span style={s.handle}>
-                  <Icon.Menu size={14} />
+                <span className="inline-flex shrink-0 cursor-grab text-subtle-foreground">
+                  <Icon.Menu size={14} aria-hidden />
                 </span>
-                <Checkbox checked={checked} onChange={(v) => toggle(id, v)} />
-                <span style={s.name}>{skill.name}</span>
-                <Badge color={SKILL_TYPE_COLOR[skill.type]}>{skill.type}</Badge>
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(v) => toggle(id, v === true)}
+                  aria-label={skill.name}
+                />
+                <span className="flex-1 text-base font-medium">{skill.name}</span>
+                <Badge variant={SKILL_TYPE_BADGE[skill.type]}>{skill.type}</Badge>
               </div>
             );
           })}

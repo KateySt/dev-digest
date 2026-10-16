@@ -2,17 +2,21 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Drawer, Tabs } from "@devdigest/ui";
+import { PageTabs } from "@/components/page-tabs";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { FileImportTab } from "./_components/FileImportTab";
 import { UrlImportTab } from "./_components/UrlImportTab";
 import { CommunityImportTab } from "./_components/CommunityImportTab";
-import { s } from "./styles";
 
-const TABS = [
-  { key: "file", label: "From file" },
-  { key: "url", label: "From URL" },
-  { key: "community", label: "Community" },
-];
+const TABS = ["file", "url", "community"] as const;
+type AddTab = (typeof TABS)[number];
 
 /**
  * Add Skill drawer — three tabs over three independent import paths. Kept
@@ -25,22 +29,28 @@ export function AddSkillDrawer({
   initialTab = "file",
 }: {
   onClose: () => void;
-  initialTab?: "file" | "url" | "community";
+  initialTab?: AddTab;
 }) {
   const t = useTranslations("skills");
-  const [tab, setTab] = React.useState<"file" | "url" | "community">(initialTab);
-  const tabs = TABS.map((tb) => ({ ...tb, label: t(`drawer.tabs.${tb.key}`) }));
+  const [tab, setTab] = React.useState<AddTab>(initialTab);
+  const tabs = TABS.map((key) => ({ key, label: t(`drawer.tabs.${key}`) }));
 
   return (
-    <Drawer title={t("drawer.title")} subtitle={t("drawer.subtitle")} onClose={onClose}>
-      <div style={s.tabsWrap}>
-        <Tabs tabs={tabs} value={tab} onChange={(k) => setTab(k as typeof tab)} pad="0" />
-      </div>
-      <div style={s.body}>
-        {tab === "file" && <FileImportTab onClose={onClose} />}
-        {tab === "url" && <UrlImportTab onClose={onClose} />}
-        {tab === "community" && <CommunityImportTab />}
-      </div>
-    </Drawer>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-[720px] sm:max-w-[94%]">
+        <SheetHeader>
+          <SheetTitle>{t("drawer.title")}</SheetTitle>
+          <SheetDescription>{t("drawer.subtitle")}</SheetDescription>
+        </SheetHeader>
+        <SheetBody>
+          <PageTabs tabs={tabs} value={tab} onChange={(k) => setTab(k as AddTab)} className="mb-5" />
+          <div className="flex flex-col">
+            {tab === "file" && <FileImportTab onClose={onClose} />}
+            {tab === "url" && <UrlImportTab onClose={onClose} />}
+            {tab === "community" && <CommunityImportTab />}
+          </div>
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../../../messages/en/common.json";
 import type { SkillVersionListItem } from "@/lib/hooks/skills";
 
 const VERSIONS: SkillVersionListItem[] = [
@@ -25,7 +26,7 @@ const SKILL = { id: "sk1", name: "pr-quality-rubric", version: 5, body: "# v5 bo
 
 function renderWithIntl() {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
       <VersionsTab skill={SKILL} />
     </NextIntlClientProvider>,
   );

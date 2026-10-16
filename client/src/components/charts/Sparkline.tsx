@@ -8,6 +8,7 @@ export function Sparkline({
   h = 24,
 }: {
   data: number[];
+  /** Stroke colour (any CSS colour, applied as an SVG attribute). */
   color?: string;
   w?: number;
   h?: number;
@@ -21,7 +22,7 @@ export function Sparkline({
   const d = pts.map((p, i) => (i ? "L" : "M") + p[0]!.toFixed(1) + "," + p[1]!.toFixed(1)).join(" ");
   const last = pts[pts.length - 1]!;
   return (
-    <svg width={w} height={h} style={{ display: "block", overflow: "visible" }}>
+    <svg width={w} height={h} className="block overflow-visible" aria-hidden>
       <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={last[0]} cy={last[1]} r={2} fill={color} />
     </svg>

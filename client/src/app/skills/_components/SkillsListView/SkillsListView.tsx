@@ -3,22 +3,35 @@
 import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Dropdown, EmptyState, ErrorState, Icon, Select, Skeleton } from "@devdigest/ui";
-import { AppShell } from "../../../../components/app-shell";
-import { useSkills, useUpdateSkill } from "../../../../lib/hooks/skills";
-import { useRepos } from "../../../../lib/hooks";
+import { AppShell } from "@/components/app-shell";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { SelectField } from "@/components/select-field";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useSkills, useUpdateSkill } from "@/lib/hooks/skills";
+import { useRepos } from "@/lib/hooks";
 import { useActiveRepo } from "@/lib/contexts";
 import { SkillCard } from "./_components/SkillCard";
 import { SkillEditor } from "./_components/SkillEditor";
 import { VALID_SKILL_TABS } from "./_components/SkillEditor/constants";
 import { AddSkillDrawer } from "./_components/AddSkillDrawer";
+import { SEARCH_BOX, SEARCH_INPUT } from "./constants";
 import { filterSkills } from "./helpers";
-import { s } from "./styles";
 
 /** Scope-switcher sentinel for "every skill, unfiltered" — the server's own
  *  default when `repo_id` is omitted (2026-10-02 amendment, AC-36). Distinct
  *  from the reserved `"none"` literal, which means global-only (AC-37). */
 const ALL_PROJECTS = "__all__";
+
+const GRID = "grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5";
 
 export function SkillsListView() {
   const t = useTranslations("skills");
@@ -74,45 +87,61 @@ export function SkillsListView() {
   return (
     <AppShell crumb={[{ label: t("page.crumbLab") }, { label: t("page.crumbSkills") }]}>
       {addingTab && <AddSkillDrawer initialTab={addingTab} onClose={() => setAddingTab(null)} />}
-      <div style={s.page}>
-        <div style={s.left}>
-          <div style={s.header}>
-            <div style={s.headerText}>
-              <h1 style={s.h1}>{t("page.heading")}</h1>
+      <div className="flex h-[calc(100vh-52px)]">
+        <div className="min-w-0 flex-1 overflow-auto px-7 pt-6 pb-11">
+          <div className="mb-5 flex items-center gap-3.5">
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("page.heading")}</h1>
             </div>
-            <div style={s.scopeSwitcher}>
-              <Select value={scope ?? "none"} onChange={setManualScope} options={scopeOptions} mono={false} />
+            <div className="w-[190px] shrink-0">
+              <SelectField
+                value={scope ?? "none"}
+                onChange={setManualScope}
+                options={scopeOptions}
+                mono={false}
+                ariaLabel={t("page.scope.label")}
+              />
             </div>
-            <div style={s.search}>
-              <Icon.Search size={13} style={s.searchIcon} />
+            <div className={cn(SEARCH_BOX, "w-[200px]")}>
+              <Icon.Search size={13} className="shrink-0 text-subtle-foreground" aria-hidden />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("page.searchPlaceholder")}
-                style={s.searchInput}
+                aria-label={t("page.searchPlaceholder")}
+                className={SEARCH_INPUT}
               />
             </div>
-            <Dropdown
-              width={220}
-              align="right"
-              trigger={
-                <Button kind="primary" size="sm" icon="Plus" iconRight="ChevronDown">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  <Icon.Plus aria-hidden />
                   {t("page.addSkill")}
+                  <Icon.ChevronDown aria-hidden />
                 </Button>
-              }
-              items={[
-                { label: t("page.menu.fromFile"), icon: "Upload", onClick: () => setAddingTab("file") },
-                { label: t("page.menu.fromUrl"), icon: "Link", onClick: () => setAddingTab("url") },
-                { label: t("page.menu.community"), icon: "Search", onClick: () => setAddingTab("community") },
-              ]}
-            />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[220px]">
+                <DropdownMenuItem onSelect={() => setAddingTab("file")}>
+                  <Icon.Upload aria-hidden />
+                  {t("page.menu.fromFile")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setAddingTab("url")}>
+                  <Icon.Link aria-hidden />
+                  {t("page.menu.fromUrl")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setAddingTab("community")}>
+                  <Icon.Search aria-hidden />
+                  {t("page.menu.community")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {isLoading && (
-            <div style={s.grid}>
-              <Skeleton height={120} />
-              <Skeleton height={120} />
-              <Skeleton height={120} />
+            <div className={GRID}>
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
+              <Skeleton className="h-[120px] w-full" />
             </div>
           )}
           {isError && <ErrorState body={t("page.loadError")} onRetry={() => refetch()} />}
@@ -126,7 +155,7 @@ export function SkillsListView() {
             />
           )}
           {list.length > 0 && (
-            <div style={s.grid}>
+            <div className={GRID}>
               {list.map((sk) => (
                 <SkillCard
                   key={sk.id}
@@ -141,14 +170,14 @@ export function SkillsListView() {
           )}
         </div>
 
-        <div style={s.right}>
+        <div className="w-[560px] shrink-0 overflow-auto border-l border-border bg-surface p-6">
           {selected ? (
             <SkillEditor skillId={selected} tab={tab} onTab={setTab} onClosed={() => selectSkill(null)} />
           ) : (
-            <div style={s.selectPrompt}>
-              <Icon.Sparkles size={22} />
-              <div style={s.selectPromptTitle}>{t("page.selectPrompt.title")}</div>
-              <div style={s.selectPromptBody}>{t("page.selectPrompt.body")}</div>
+            <div className="flex h-full flex-col items-center justify-center gap-1.5 text-center text-subtle-foreground">
+              <Icon.Sparkles size={22} aria-hidden />
+              <div className="text-md font-semibold text-muted-foreground">{t("page.selectPrompt.title")}</div>
+              <div className="max-w-[220px] text-sm">{t("page.selectPrompt.body")}</div>
             </div>
           )}
         </div>

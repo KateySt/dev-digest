@@ -3,12 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
 import { useAgent } from "@/lib/hooks/agents";
 import { useEvalCases, useEvalStats } from "@/lib/hooks/eval-cases";
 import { useAgentEvalRuns, useEvalSuiteRun, useStartAgentEvalRun } from "@/lib/hooks/eval-runs";
 import { EvalCaseList, MetricTiles, type RunAllControl } from "@/components/eval-cases";
-import { s } from "./styles";
 
 /** Agent Editor's Evals tab — metrics from the agent's latest finished suite
  *  run (with point deltas), then the shared case list. "Run all evals" starts a
@@ -41,20 +40,23 @@ export function EvalsTab({ agentId }: { agentId: string }) {
   };
 
   return (
-    <div style={s.wrap}>
+    <div className="flex max-w-[900px] flex-col gap-6">
       <div>
-        <div style={s.metricsHeader}>
-          <span style={s.metricsLabel}>
-            <Icon.Gauge size={14} />
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex items-center gap-2 text-xs font-bold tracking-[0.06em] text-subtle-foreground uppercase">
+            <Icon.Gauge size={14} aria-hidden />
             {t("evalsTab.metricsLabel")}
           </span>
-          <Link href={`/eval/${agentId}`} className="mono" style={s.dashLink}>
+          <Link
+            href={`/eval/${agentId}`}
+            className="mono ml-auto text-ui text-muted-foreground no-underline hover:text-foreground"
+          >
             {t("evalsTab.viewDashboard")}
           </Link>
         </div>
         <MetricTiles stats={stats} />
-        <div style={s.note}>
-          <Icon.Code size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+        <div className="mt-3 flex items-start gap-2 text-xs text-subtle-foreground">
+          <Icon.Code size={14} className="mt-px shrink-0" aria-hidden />
           <span>{t("evalsTab.scoringNote")}</span>
         </div>
       </div>

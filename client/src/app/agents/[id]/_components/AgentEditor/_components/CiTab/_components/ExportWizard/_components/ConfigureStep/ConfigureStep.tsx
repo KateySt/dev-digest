@@ -2,11 +2,17 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Chip, Icon } from "@devdigest/ui";
+import { FilterChip } from "@/components/filter-chip";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
 import type { CiFailOn, CiPostAs, CiTrigger } from "@devdigest/shared";
 import { ALL_TRIGGERS, EXPECTED_SECRETS, POST_AS_OPTIONS } from "../../constants";
 import { toggleTrigger } from "./helpers";
-import { s } from "./styles";
+
+const LABEL = "mb-2 text-sm font-semibold text-muted-foreground";
+const HINT = "mt-2 text-xs text-subtle-foreground";
+const TH = "border-b border-border px-2.5 pb-1.5 text-left text-2xs font-semibold tracking-[0.03em] text-subtle-foreground uppercase";
+const TD = "border-b border-border px-2.5 py-2.25 align-top text-sm wrap-anywhere";
 
 /** Step 3 - triggers, where results are posted, the secrets the repo needs
  *  (names only: this UI never reads, asks for or shows a secret value) and how
@@ -32,40 +38,41 @@ export function ConfigureStep({
   return (
     <>
       <div>
-        <div style={s.label}>{t("exportWizard.configure.triggerLabel")}</div>
-        <div style={s.chips}>
+        <div className={LABEL}>{t("exportWizard.configure.triggerLabel")}</div>
+        <div className="flex flex-wrap gap-2">
           {ALL_TRIGGERS.map((trigger) => {
             const on = triggers.includes(trigger);
             return (
-              <Chip
+              <FilterChip
                 key={trigger}
                 active={on}
                 {...(on ? { icon: "Check" as const } : {})}
                 onClick={() => onTriggers(toggleTrigger(triggers, trigger))}
               >
                 {t(`exportWizard.configure.trigger${trigger[0]!.toUpperCase()}${trigger.slice(1)}`)}
-              </Chip>
+              </FilterChip>
             );
           })}
         </div>
-        {triggers.length === 0 && <div style={s.hint}>{t("exportWizard.configure.triggerNone")}</div>}
-        {editsDiscarded && <div style={s.hint}>{t("exportWizard.configure.editsDiscarded")}</div>}
+        {triggers.length === 0 && <div className={HINT}>{t("exportWizard.configure.triggerNone")}</div>}
+        {editsDiscarded && <div className={HINT}>{t("exportWizard.configure.editsDiscarded")}</div>}
       </div>
 
       <div>
-        <div style={s.label}>{t("exportWizard.postResultsLabel")}</div>
-        <div role="radiogroup" aria-label={t("exportWizard.postResultsLabel")} style={s.radios}>
+        <div className={LABEL}>{t("exportWizard.postResultsLabel")}</div>
+        <div role="radiogroup" aria-label={t("exportWizard.postResultsLabel")} className="flex flex-col gap-2">
           {POST_AS_OPTIONS.map((o) => (
-            <label key={o.value} style={s.radio}>
+            <label key={o.value} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
+                className="accent-primary"
                 name="ci-post-as"
                 checked={postAs === o.value}
                 onChange={() => onPostAs(o.value)}
               />
               {t(`exportWizard.postAs.${o.labelKey}`)}
               {o.value === "github_review" && (
-                <Badge color="var(--accent-text)" bg="var(--accent-bg)">
+                <Badge variant="brand">
                   {t("exportWizard.recommended")}
                 </Badge>
               )}
@@ -75,27 +82,27 @@ export function ConfigureStep({
       </div>
 
       <div>
-        <div style={s.label}>{t("exportWizard.secrets.title")}</div>
-        <table style={s.table}>
+        <div className={LABEL}>{t("exportWizard.secrets.title")}</div>
+        <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th style={s.th}>{t("exportWizard.secrets.name")}</th>
-              <th style={s.th}>{t("exportWizard.secrets.status")}</th>
+              <th className={TH}>{t("exportWizard.secrets.name")}</th>
+              <th className={TH}>{t("exportWizard.secrets.status")}</th>
             </tr>
           </thead>
           <tbody>
             {EXPECTED_SECRETS.map((name) => (
               <tr key={name}>
-                <td className="mono" style={s.td}>
+                <td className={`mono ${TD}`}>
                   {name}
-                  <div style={s.note}>
+                  <div className="mt-0.5 text-xs text-subtle-foreground">
                     {name === "GITHUB_TOKEN"
                       ? t("exportWizard.secrets.githubNote")
                       : t("exportWizard.secrets.openrouterNote")}
                   </div>
                 </td>
-                <td style={s.td}>
-                  <Badge>{t("exportWizard.secrets.verifyInRepo")}</Badge>
+                <td className={TD}>
+                  <Badge variant="neutral">{t("exportWizard.secrets.verifyInRepo")}</Badge>
                 </td>
               </tr>
             ))}
@@ -103,15 +110,18 @@ export function ConfigureStep({
         </table>
       </div>
 
-      <div style={s.info} role="note">
-        <Icon.Info size={15} style={s.infoIcon} />
+      <div
+        role="note"
+        className="flex items-start gap-2.5 rounded-lg border border-border bg-surface px-3.5 py-3 text-sm leading-normal text-muted-foreground"
+      >
+        <Icon.Info size={15} className="mt-0.5 shrink-0 text-subtle-foreground" aria-hidden />
         <span>
           {t("exportWizard.infoBox.lead")} <strong>{t("exportWizard.infoBox.failOnLabel")}</strong>{" "}
           {t("exportWizard.infoBox.current", { failOn })} {t("exportWizard.infoBox.middle")}{" "}
           <strong>{t("exportWizard.infoBox.requiredCheck")}</strong> {t("exportWizard.infoBox.tail")}
         </span>
       </div>
-      {error && <div style={s.error}>{t("exportWizard.previewError", { message: error })}</div>}
+      {error && <div className="text-sm text-crit wrap-anywhere">{t("exportWizard.previewError", { message: error })}</div>}
     </>
   );
 }

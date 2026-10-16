@@ -37,7 +37,10 @@ export function LineChart({
     return row;
   });
   return (
-    <div style={{ width: "100%", maxWidth: w, height: h }}>
+    <div
+      className="h-(--chart-h) w-full max-w-(--chart-w)"
+      style={{ "--chart-w": `${w}px`, "--chart-h": `${h}px` } as React.CSSProperties}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <RLineChart data={rows} margin={{ top: 14, right: 14, bottom: 8, left: -10 }}>
           <CartesianGrid stroke="var(--border)" vertical={false} />

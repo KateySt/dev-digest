@@ -1,9 +1,8 @@
 "use client";
 
-import { Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
 import type { CommunitySkill } from "@/lib/types";
 import { EntryRow } from "../EntryRow";
-import { s } from "./styles";
 
 export interface CatalogFolder {
   folder: string;
@@ -34,24 +33,24 @@ export function FolderAccordion({
   onTagClick: (tag: string) => void;
 }) {
   return (
-    <div style={s.wrap}>
+    <div className="flex flex-col gap-1.5">
       {folders.map(({ folder, entries }) => {
         const isOpen = expanded.has(folder);
         return (
-          <div key={folder} style={s.folder}>
+          <div key={folder} className="overflow-hidden rounded-lg border border-border">
             <button
               type="button"
               aria-expanded={isOpen}
               onClick={() => onToggle(folder)}
-              style={s.folderHeader}
+              className="flex w-full cursor-pointer items-center gap-2 border-none bg-surface px-3 py-2.25 text-left text-foreground"
             >
-              {isOpen ? <Icon.ChevronDown size={14} /> : <Icon.ChevronRight size={14} />}
-              <Icon.Folder size={14} style={s.folderIcon} />
-              <span style={s.folderName}>{folder}</span>
-              <span style={s.folderCount}>{entries.length}</span>
+              {isOpen ? <Icon.ChevronDown size={14} aria-hidden /> : <Icon.ChevronRight size={14} aria-hidden />}
+              <Icon.Folder size={14} className="text-subtle-foreground" aria-hidden />
+              <span className="flex-1 text-[13.5px] font-semibold">{folder}</span>
+              <span className="rounded-full bg-muted px-2 py-px text-[11.5px] text-subtle-foreground">{entries.length}</span>
             </button>
             {isOpen && (
-              <div style={s.entries}>
+              <div className="flex flex-col gap-1.5 border-t border-border p-2">
                 {entries.map((entry) => (
                   <EntryRow
                     key={entry.path}

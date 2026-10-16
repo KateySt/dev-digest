@@ -3,6 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../../../messages/en/common.json";
 import type { SkillStats } from "@/lib/hooks/skills";
 
 const STATS: SkillStats = {
@@ -32,7 +33,7 @@ const SKILL = { id: "sk1", name: "pr-quality-rubric" } as Skill;
 
 function renderWithIntl() {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
       <StatsTab skill={SKILL} />
     </NextIntlClientProvider>,
   );

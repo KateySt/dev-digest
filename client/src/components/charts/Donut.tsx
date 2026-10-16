@@ -24,7 +24,7 @@ export function Donut({
   valueFormat?: (value: number) => string;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+    <div className="flex items-center gap-5">
       <PieChart width={size} height={size}>
         <Pie
           data={segments}
@@ -44,12 +44,17 @@ export function Donut({
           ))}
         </Pie>
       </PieChart>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="flex flex-col gap-2">
         {segments.map((s, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 2, background: s.color }} />
-            <span style={{ color: "var(--text-secondary)", flex: 1 }}>{s.label}</span>
-            <span className="mono tnum" style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+          <div key={i} className="flex items-center gap-2.5 text-sm">
+            {/* Segment colour is data: passed as --c. */}
+            <span
+              aria-hidden
+              className="size-[9px] rounded-[2px] bg-(--c)"
+              style={{ "--c": s.color } as React.CSSProperties}
+            />
+            <span className="flex-1 text-muted-foreground">{s.label}</span>
+            <span className="mono tnum font-semibold text-foreground">
               {valueFormat ? valueFormat(s.value) : `${valuePrefix}${s.value.toFixed(2)}`}
             </span>
           </div>

@@ -1,4 +1,4 @@
-import type { IconName } from "@devdigest/ui";
+import type { IconName } from "@/components/icon";
 import type { CiPostAs, CiTrigger } from "@devdigest/shared";
 
 export const STEP_KEYS = ["target", "preview", "configure", "install"] as const;

@@ -2,12 +2,13 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button } from "@devdigest/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { CiRun } from "@devdigest/shared";
-import { ciStatusTone, ingestErrorMessage, isKnownCiStatus } from "@/lib/ci-status";
+import { ciStatusBadge, ingestErrorMessage, isKnownCiStatus } from "@/lib/ci-status";
 import { fullRelativeTime } from "@/app/repos/[repoId]/pulls/helpers";
 import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
-import { s } from "./styles";
 
 /** The agent's most recent CI runs. Trace opens the existing run-trace drawer;
  *  a failed ingest shows its error instead (no linked run, no Trace). */
@@ -20,27 +21,31 @@ export function RecentCiRuns({ runs, agentName }: { runs: CiRun[]; agentName: st
   };
 
   return (
-    <div style={s.wrap}>
-      <div style={s.title}>{t("ciTab.recentRuns.title")}</div>
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-semibold text-muted-foreground">{t("ciTab.recentRuns.title")}</div>
       {runs.length === 0 ? (
-        <div style={s.empty}>{t("ciTab.recentRuns.empty")}</div>
+        <div className="text-sm text-subtle-foreground">{t("ciTab.recentRuns.empty")}</div>
       ) : (
-        <div style={s.list}>
+        <div className="flex flex-col gap-1.5">
           {runs.map((run) => {
-            const tone = ciStatusTone(run.status);
+            const tone = ciStatusBadge(run.status);
             return (
-              <div key={run.id} style={s.row}>
-                <Badge color={tone.color} bg={tone.bg} dot>
+              <div
+                key={run.id}
+                className="flex min-w-0 flex-wrap items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2"
+              >
+                <Badge variant={tone.variant}>
+                  <span aria-hidden className={cn("size-1.5 rounded-full", tone.dot)} />
                   {isKnownCiStatus(run.status) ? t(`runs.status.${run.status}`) : (run.status ?? "-")}
                 </Badge>
-                <span className="mono" style={s.pr}>
+                <span className="mono min-w-0 flex-1 text-ui wrap-anywhere">
                   {run.repo ?? "-"}
                   {run.pr_number != null ? ` #${run.pr_number}` : ""}
                 </span>
-                {run.ingest_error && <span style={s.error}>{ingestErrorLabel(run.ingest_error)}</span>}
-                <span style={s.meta}>{run.ran_at ? fullRelativeTime(run.ran_at) : ""}</span>
+                {run.ingest_error && <span className="text-xs text-crit wrap-anywhere">{ingestErrorLabel(run.ingest_error)}</span>}
+                <span className="text-ui whitespace-nowrap text-subtle-foreground">{run.ran_at ? fullRelativeTime(run.ran_at) : ""}</span>
                 {run.agent_run_id && (
-                  <Button size="sm" kind="ghost" onClick={() => setTraceRun(run)}>
+                  <Button size="sm" variant="outline" onClick={() => setTraceRun(run)}>
                     {t("ciTab.recentRuns.trace")}
                   </Button>
                 )}

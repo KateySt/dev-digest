@@ -2,11 +2,15 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Icon } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { CiLintViolation, CiPreview } from "@devdigest/shared";
 import { WORKFLOW_PATH } from "../../constants";
 import { formatBytes, isRunnerFile } from "../../helpers";
-import { s } from "./styles";
+
+/* Paths are unbroken mono strings: every container that can hold one is
+   min-w-0 and wraps anywhere (client INSIGHTS 2026-09-24). */
 
 /** Step 2 - what will be committed. The workflow is editable (server-linted on
  *  Continue); the runner shows metadata only; everything else is read-only. */
@@ -29,20 +33,24 @@ export function PreviewStep({
   return (
     <>
       {preview.warnings.map((w) => (
-        <div key={w} style={s.warning} role="note">
-          <Icon.AlertTriangle size={14} />
-          <span style={s.warningText}>
+        <div
+          key={w}
+          role="note"
+          className="flex items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-ui text-muted-foreground"
+        >
+          <Icon.AlertTriangle size={14} aria-hidden />
+          <span className="min-w-0 wrap-anywhere">
             <strong>{t("exportWizard.modelWarning")}:</strong> {w}
           </span>
         </div>
       ))}
 
       {violations.length > 0 && (
-        <div style={s.lint} role="alert">
-          <div style={s.lintTitle}>{t("exportWizard.lint.title")}</div>
-          <ul style={s.lintList}>
+        <div role="alert" className="rounded-lg border border-crit bg-surface px-3 py-2.5 text-ui">
+          <div className="mb-1.5 font-semibold text-crit">{t("exportWizard.lint.title")}</div>
+          <ul className="m-0 flex list-disc flex-col gap-1 pl-4.5">
             {violations.map((v) => (
-              <li key={`${v.rule}:${v.location}`} className="mono" style={s.lintItem}>
+              <li key={`${v.rule}:${v.location}`} className="mono text-xs wrap-anywhere">
                 {t("exportWizard.lint.violation", { rule: v.rule, location: v.location, message: v.message })}
               </li>
             ))}
@@ -50,61 +58,65 @@ export function PreviewStep({
         </div>
       )}
 
-      <div style={s.split}>
-        <div style={s.listPane}>
-          <div style={s.listLabel}>{t("exportWizard.filesToCreate")}</div>
+      <div className="grid min-w-0 grid-cols-[minmax(0,240px)_minmax(0,1fr)] gap-3">
+        <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-surface p-2.5">
+          <div className="px-1.5 pt-0.5 pb-2 text-2xs font-semibold tracking-[0.03em] text-subtle-foreground">
+            {t("exportWizard.filesToCreate")}
+          </div>
           {preview.files.map((f) => (
             <button
               key={f.path}
               type="button"
-              className="mono"
               onClick={() => setSelected(f.path)}
-              style={s.fileItem(f.path === file?.path)}
               aria-pressed={f.path === file?.path}
+              className={cn(
+                "mono flex w-full min-w-0 cursor-pointer items-start gap-2 rounded-md border-none px-2 py-1.75 text-left text-ui",
+                f.path === file?.path ? "bg-brand-bg text-brand-text" : "bg-transparent text-muted-foreground hover:bg-accent",
+              )}
             >
-              <Icon.FileText size={14} style={s.fileIcon} />
-              <span style={s.filePath}>{f.path}</span>
+              <Icon.FileText size={14} className="mt-0.5 shrink-0" aria-hidden />
+              <span className="min-w-0 wrap-anywhere">{f.path}</span>
             </button>
           ))}
         </div>
 
-        <div style={s.viewer}>
+        <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
           {file && (
             <>
-              <div style={s.viewerHeader}>
-                <span className="mono" style={s.viewerPath} title={file.path}>
+              <div className="flex min-w-0 items-center gap-2.5 border-b border-border px-3 py-2.25">
+                <span className="mono min-w-0 flex-1 truncate text-ui" title={file.path}>
                   {file.path}
                 </span>
                 {isWorkflow && (
-                  <Badge icon="Edit" style={s.editableBadge}>
+                  <Badge variant="neutral" className="shrink-0">
+                    <Icon.Edit aria-hidden />
                     {t("exportWizard.editable")}
                   </Badge>
                 )}
               </div>
               {isRunnerFile(file) && file.metadata ? (
-                <div style={s.runnerBox}>
+                <div className="flex min-w-0 flex-col gap-1.5 p-3 text-sm">
                   <div>
                     {t("exportWizard.runner.summary", {
                       size: formatBytes(file.metadata.size_bytes),
                       version: file.metadata.runner_version,
                     })}
                   </div>
-                  <div className="mono" style={s.hash}>
+                  <div className="mono text-xs text-muted-foreground wrap-anywhere">
                     {t("exportWizard.runner.hash", { hash: file.metadata.sha256 })}
                   </div>
-                  <div style={s.runnerNote}>{t("exportWizard.runner.note")}</div>
+                  <div className="text-xs text-subtle-foreground">{t("exportWizard.runner.note")}</div>
                 </div>
               ) : isWorkflow ? (
                 <textarea
-                  className="mono"
                   aria-label={t("exportWizard.workflowEditorLabel")}
                   value={workflowDraft ?? file.contents}
                   onChange={(e) => onEditWorkflow(e.target.value)}
                   spellCheck={false}
-                  style={s.editor}
+                  className="mono min-h-75 w-full resize-y overflow-auto border-none bg-elevated p-3 text-xs leading-[1.55] whitespace-pre text-foreground outline-none"
                 />
               ) : (
-                <pre className="mono" style={s.pre}>
+                <pre className="mono m-0 max-h-85 min-h-30 overflow-auto bg-elevated p-3 text-xs leading-[1.55] whitespace-pre-wrap wrap-anywhere">
                   {file.contents}
                 </pre>
               )}

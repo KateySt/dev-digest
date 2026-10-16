@@ -3,7 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { EmptyState, ErrorState, Icon, Skeleton, TextInput } from "@devdigest/ui";
+import { EmptyState, ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveRepo } from "@/lib/contexts";
 import { useToast } from "@/lib/contexts";
 import { ApiError } from "@/lib/api";
@@ -17,8 +20,10 @@ import { FolderAccordion } from "./_components/FolderAccordion";
 import { SuggestedGroup } from "./_components/SuggestedGroup";
 import { EntryRow } from "./_components/EntryRow";
 import { groupByFolder } from "./helpers";
-import { s } from "./styles";
-import { s as sForm } from "../../styles";
+import { FORM } from "../../constants";
+
+const LIST = "flex flex-col gap-2 py-1";
+const ACCENT_LINK = "font-semibold text-primary";
 
 /**
  * Community tab (SPEC-07 client spec) — folder accordion over the single
@@ -87,34 +92,40 @@ export function CommunityImportTab() {
   };
 
   return (
-    <div style={sForm.form}>
+    <div className={FORM}>
       <ProjectPicker repos={repos} reposLoaded={reposLoaded} value={effectiveRepoId} onChange={setRepoId} />
 
-      <div style={s.searchRow}>
-        <TextInput
+      <div className="mb-1 flex gap-2">
+        <Input
           value={query}
-          onChange={(v) => {
+          onChange={(e) => {
+            const v = e.target.value;
             setQuery(v);
             if (v.trim()) setActiveTag(null);
           }}
           placeholder={t("community.searchPlaceholder")}
+          aria-label={t("community.searchPlaceholder")}
         />
       </div>
       {activeTag && (
-        <div style={s.activeFilter}>
-          <Icon.Tag size={12} />
+        <div className="mb-2.5 flex items-center gap-2 text-ui text-muted-foreground">
+          <Icon.Tag size={12} aria-hidden />
           <span>{activeTag}</span>
-          <button type="button" style={s.clearFilterBtn} onClick={clearFilter}>
+          <button
+            type="button"
+            className="cursor-pointer border-none bg-transparent p-0 text-ui text-primary"
+            onClick={clearFilter}
+          >
             {t("community.clearFilter")}
           </button>
         </div>
       )}
 
       {isLoading && (
-        <div style={s.loadingWrap}>
-          <Skeleton height={44} />
-          <Skeleton height={44} />
-          <Skeleton height={44} />
+        <div className={LIST}>
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
         </div>
       )}
 
@@ -124,7 +135,7 @@ export function CommunityImportTab() {
           body={
             <>
               <div>{listing?.message ?? t("community.unavailable.fallbackBody")}</div>
-              <Link href="/settings/catalog" style={s.settingsLink}>
+              <Link href="/settings/catalog" className={ACCENT_LINK}>
                 {t("community.unavailable.settingsLink")}
               </Link>
             </>
@@ -150,7 +161,7 @@ export function CommunityImportTab() {
           )}
 
           {filterMode && listing.entries.length > 0 && (
-            <div style={s.loadingWrap}>
+            <div className={LIST}>
               {listing.entries.map((entry) => (
                 <EntryRow
                   key={entry.path}

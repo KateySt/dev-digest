@@ -2,7 +2,17 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Modal } from "@devdigest/ui";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Agent, CiExport, CiPostAs, CiTrigger } from "@devdigest/shared";
 import { ApiError } from "@/lib/api";
 import { useActiveRepo } from "@/lib/contexts";
@@ -24,7 +34,6 @@ import { TargetStep } from "./_components/TargetStep";
 import { PreviewStep } from "./_components/PreviewStep";
 import { ConfigureStep } from "./_components/ConfigureStep";
 import { InstallStep } from "./_components/InstallStep";
-import { s } from "./styles";
 
 export interface ExportWizardProps {
   agent: Agent;
@@ -138,17 +147,17 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
     (state.step === 0 ? isRepo(repo) : state.step === 2 ? state.triggers.length > 0 : true);
 
   return (
-    <Modal width={780} onClose={onClose}>
-      <Modal.Header
-        title={t("exportWizard.title")}
-        subtitle={t("exportWizard.subtitle", { agentName: agent.name })}
-        onClose={onClose}
-      />
-      <div style={s.stepper}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[780px]">
+      <DialogHeader>
+        <DialogTitle>{t("exportWizard.title")}</DialogTitle>
+        <DialogDescription>{t("exportWizard.subtitle", { agentName: agent.name })}</DialogDescription>
+      </DialogHeader>
+      <div className="border-b border-border px-6 pt-4 pb-3.5">
         <WizardStepper step={done ? 4 : state.step} />
       </div>
 
-      <div style={s.body}>
+      <DialogBody className="flex min-w-0 flex-col gap-4 p-6">
         {state.step === 0 && <TargetStep hasRepo={isRepo(repo)} error={state.error} />}
         {state.step === 1 && state.preview && (
           <PreviewStep
@@ -159,7 +168,9 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
           />
         )}
         {state.step === 1 && state.error && state.violations.length === 0 && (
-          <div style={s.error}>{t("exportWizard.previewError", { message: state.error })}</div>
+          <div className="min-w-0 text-sm text-crit wrap-anywhere">
+            {t("exportWizard.previewError", { message: state.error })}
+          </div>
         )}
         {state.step === 2 && (
           <ConfigureStep
@@ -183,14 +194,13 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
             error={installError}
           />
         )}
-      </div>
+      </DialogBody>
 
-      <Modal.Footer>
-        <div style={s.footer}>
+      <DialogFooter className="items-center">
           {done ? (
             <>
-              <div style={s.spacer} />
-              <Button kind="primary" onClick={onClose}>
+              <div className="flex-1" />
+              <Button onClick={onClose}>
                 {t("exportWizard.close")}
               </Button>
             </>
@@ -198,28 +208,31 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
             <>
               {state.step > 0 ? (
                 <Button
-                  kind="ghost"
-                  icon="ChevronLeft"
+                  variant="outline"
                   disabled={installing}
                   onClick={() => dispatch({ type: "setStep", step: state.step - 1 })}
                 >
+                  <Icon.ChevronLeft aria-hidden />
                   {t("exportWizard.back")}
                 </Button>
               ) : null}
-              <div style={s.spacer} />
+              <div className="flex-1" />
               {state.step < 3 ? (
-                <Button kind="primary" iconRight="ArrowRight" disabled={!canContinue} loading={previewing} onClick={next}>
+                <Button disabled={!canContinue} onClick={next}>
+                  {previewing && <Icon.Loader className="animate-spin" aria-hidden />}
                   {t("exportWizard.continue")}
+                  <Icon.ArrowRight aria-hidden />
                 </Button>
               ) : (
-                <Button kind="primary" icon="Check" disabled={installing} onClick={install}>
+                <Button disabled={installing} onClick={install}>
+                  <Icon.Check aria-hidden />
                   {installing ? t("exportWizard.installing") : t("exportWizard.install")}
                 </Button>
               )}
             </>
           )}
-        </div>
-      </Modal.Footer>
-    </Modal>
+      </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

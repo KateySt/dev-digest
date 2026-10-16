@@ -4,6 +4,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../../../messages/en/common.json";
 import { ToastProvider } from "@/lib/contexts";
 
 const updateMutate = vi.fn();
@@ -49,7 +50,7 @@ function Host({ onDeleted }: { onDeleted: () => void }) {
 
 function renderWithIntl(onDeleted: () => void = () => {}) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
       <ToastProvider>
         <Host onDeleted={onDeleted} />
       </ToastProvider>
@@ -103,7 +104,7 @@ describe("ConfigTab", () => {
       ],
     };
     render(
-      <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
         <ToastProvider>
           <ConfigTab skill={flagged} body={flagged.body} onBodyChange={() => {}} onDeleted={() => {}} />
         </ToastProvider>
@@ -130,7 +131,7 @@ describe("ConfigTab", () => {
       ],
     };
     render(
-      <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
         <ToastProvider>
           <ConfigTab skill={flagged} body={flagged.body} onBodyChange={() => {}} onDeleted={() => {}} />
         </ToastProvider>

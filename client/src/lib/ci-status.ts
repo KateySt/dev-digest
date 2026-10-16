@@ -12,6 +12,23 @@ export function ciStatusTone(status: string | null | undefined): { color: string
   }
 }
 
+/** Badge variant (`ui/badge`) + status-dot class per CI run status. */
+export function ciStatusBadge(status: string | null | undefined): {
+  variant: "ok" | "crit" | "brand" | "neutral";
+  dot: string;
+} {
+  switch (status) {
+    case "succeeded":
+      return { variant: "ok", dot: "bg-ok" };
+    case "failed":
+      return { variant: "crit", dot: "bg-crit" };
+    case "running":
+      return { variant: "brand", dot: "bg-brand-text" };
+    default:
+      return { variant: "neutral", dot: "bg-muted-foreground" };
+  }
+}
+
 /** Statuses that have an i18n label under `ci.runs.status.*`. */
 export const KNOWN_CI_STATUSES = ["succeeded", "no_findings", "failed", "running"] as const;
 export function isKnownCiStatus(status: string | null | undefined): status is (typeof KNOWN_CI_STATUSES)[number] {

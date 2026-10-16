@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { FormField, Select } from "@devdigest/ui";
+import { FormField } from "@/components/form-field";
+import { SelectField } from "@/components/select-field";
 import type { Repo } from "@/lib/types";
-import { s } from "./styles";
 
 /**
  * Required, always-visible project picker (client spec AC-17/AC-18). While
@@ -30,9 +30,9 @@ export function ProjectPicker({
 
   if (repos.length === 0) {
     return (
-      <div style={s.zeroRepos}>
+      <div className="mb-4 rounded-lg border border-dashed border-border-strong px-3 py-2.5 text-sm leading-normal text-muted-foreground">
         {t("community.noRepos")}{" "}
-        <Link href="/onboarding" style={s.zeroReposLink}>
+        <Link href="/onboarding" className="font-semibold text-primary">
           {t("community.addRepoLink")}
         </Link>
       </div>
@@ -43,7 +43,13 @@ export function ProjectPicker({
 
   return (
     <FormField label={t("community.projectLabel")}>
-      <Select value={value ?? repos[0]!.id} onChange={onChange} options={options} mono={false} />
+      <SelectField
+        value={value ?? repos[0]!.id}
+        onChange={onChange}
+        options={options}
+        mono={false}
+        ariaLabel={t("community.projectLabel")}
+      />
     </FormField>
   );
 }

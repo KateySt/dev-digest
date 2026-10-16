@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Skill } from "@devdigest/shared";
 import messages from "../../../../../../../../../messages/en/skills.json";
+import common from "../../../../../../../../../messages/en/common.json";
 import { get, mockFetch, post } from "@/test/eval-utils";
 
 vi.mock("@/lib/contexts", async (importOriginal) => ({
@@ -52,7 +53,7 @@ function renderTab() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, skills: messages }}>
         <ContextTab skill={SKILL} />
       </NextIntlClientProvider>
     </QueryClientProvider>,

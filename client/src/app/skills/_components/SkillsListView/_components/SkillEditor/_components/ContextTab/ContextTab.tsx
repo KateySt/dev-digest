@@ -3,9 +3,12 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Badge, ErrorState, Icon, Skeleton } from "@devdigest/ui";
 import type { Skill } from "@devdigest/shared";
 import { ContextDocumentRow } from "@/components/context-document-row";
+import { ErrorState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveRepo } from "@/lib/contexts";
 import {
   useProjectContextDocuments,
@@ -14,7 +17,9 @@ import {
   useSkillContextDocuments,
 } from "@/lib/hooks/project-context";
 import { filterDocuments, initialOrder, reorder, serializedBlock } from "./helpers";
-import { s } from "./styles";
+import { SEARCH_BOX, SEARCH_INPUT } from "../../../../constants";
+
+const EMPTY = "py-6 text-center text-sm text-subtle-foreground";
 
 /** Skill editor's Context tab (C-AC-21, C-AC-22) — same row layout as the
  *  Agent editor's Context tab (shared `ContextDocumentRow`), a "N attached"
@@ -103,9 +108,9 @@ export function ContextTab({ skill }: { skill: Skill }) {
 
   if (isLoading || order === null) {
     return (
-      <div style={s.wrap}>
-        <Skeleton height={40} />
-        <Skeleton height={200} />
+      <div className="max-w-[760px]">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-[200px] w-full" />
       </div>
     );
   }
@@ -116,29 +121,30 @@ export function ContextTab({ skill }: { skill: Skill }) {
   const attachedOrder = order.filter((p) => attachedPaths.has(p));
 
   return (
-    <div style={s.wrap}>
-      <div style={s.header}>
-        <h2 style={s.h2}>{t("context.title")}</h2>
-        <Badge color="var(--accent)">{t("context.attachedBadge", { count: attachedPaths.size })}</Badge>
+    <div className="max-w-[760px]">
+      <div className="mb-1.5 flex items-center gap-2.5">
+        <h2 className="text-xl font-bold">{t("context.title")}</h2>
+        <Badge variant="brand">{t("context.attachedBadge", { count: attachedPaths.size })}</Badge>
       </div>
-      <p style={s.hint}>{t("context.inheritNote")}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{t("context.inheritNote")}</p>
 
-      <div style={s.filter}>
-        <Icon.Search size={13} style={s.filterIcon} />
+      <div className={`${SEARCH_BOX} mb-4`}>
+        <Icon.Search size={13} className="shrink-0 text-subtle-foreground" aria-hidden />
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={t("context.filterPlaceholder")}
-          style={s.filterInput}
+          aria-label={t("context.filterPlaceholder")}
+          className={SEARCH_INPUT}
         />
       </div>
 
       {documents.length === 0 ? (
-        <div style={s.empty}>{t("context.empty")}</div>
+        <div className={EMPTY}>{t("context.empty")}</div>
       ) : rows.length === 0 ? (
-        <div style={s.empty}>{t("context.noMatch")}</div>
+        <div className={EMPTY}>{t("context.noMatch")}</div>
       ) : (
-        <div style={s.list}>
+        <div className="flex flex-col gap-1.5">
           {rows.map((path, i) => {
             const doc = byPath.get(path)!;
             return (
@@ -176,8 +182,10 @@ export function ContextTab({ skill }: { skill: Skill }) {
         </div>
       )}
 
-      <div style={s.serializeLabel}>{t("context.serializesAs")}</div>
-      <pre className="mono" style={s.serializeBox}>
+      <div className="mt-5 mb-1.5 text-2xs font-bold tracking-[0.04em] text-subtle-foreground">
+        {t("context.serializesAs")}
+      </div>
+      <pre className="mono m-0 max-h-[260px] overflow-auto rounded-lg border border-border bg-code-bg px-3.5 py-3 text-xs leading-[1.55] whitespace-pre-wrap wrap-anywhere break-words">
         {serializedBlock(attachedOrder) || "—"}
       </pre>
     </div>
