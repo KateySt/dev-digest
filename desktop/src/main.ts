@@ -11,6 +11,7 @@ import { createSplash, setSplashStatus } from './splash';
 import { isOwnOrigin, openExternalSafe } from './validate';
 import { getPrefs, loadPrefs, updatePrefs } from './prefs';
 import { createTray } from './tray';
+import { attachTaskbar } from './taskbar';
 import { initTheme, windowBackground } from './theme';
 import { attachContextMenu } from './context-menu';
 
@@ -96,6 +97,7 @@ function createWindow(): void {
   mainWindow.setMenuBarVisibility(false);
   forwardMaximizeState(mainWindow);
   attachContextMenu(mainWindow);
+  attachTaskbar(mainWindow);
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   // Links to GitHub PRs, docs, etc. open in the default browser (https only),
   // never in the app; the window itself never leaves the studio's origin.
