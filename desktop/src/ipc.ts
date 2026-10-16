@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, Notification, shell, type IpcMainInvokeEvent } from 'electron';
+import log from 'electron-log/main';
 import { RELEASES_URL, dataPaths } from './config';
 import { checkForUpdates } from './updater';
 import { clampInt, isOwnOrigin, isStudioRoute, oneOf } from './validate';
@@ -54,12 +55,23 @@ function showNotification(win: BrowserWindow, arg: unknown): boolean {
   shown.add(toast);
   const forget = () => shown.delete(toast);
   toast.on('close', forget);
+  // macOS unsigned builds can't post UNNotifications (E3) — the bell still has it.
+  toast.on('failed', (_e, error) => {
+    forget();
+    log.warn('notification failed:', error);
+  });
   toast.on('click', () => {
     forget();
     if (win.isDestroyed()) return;
+    // show() also brings the window back from the tray (close-to-tray hides it).
     if (win.isMinimized()) win.restore();
     win.show();
     win.focus();
+    // Windows' foreground lock can refuse focus(); flash the taskbar button instead.
+    if (!win.isFocused()) {
+      win.flashFrame(true);
+      win.once('focus', () => win.flashFrame(false));
+    }
     if (href) win.webContents.send('app:navigate', href);
   });
   toast.show();
