@@ -1,25 +1,24 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type ShellContext } from "@devdigest/ui";
-import { useTheme } from "../../../lib/contexts/theme";
-import { useActiveRepo } from "../../../lib/contexts/repoContext";
-import { usePulls, useDeleteRepo } from "../../../lib/hooks";
+import { useTheme } from "@/lib/contexts/theme";
+import { useActiveRepo } from "@/lib/contexts/repoContext";
+import { usePulls, useDeleteRepo } from "@/lib/hooks";
 import { AccountMenu } from "@/components/account-menu";
 import { NotificationCenter } from "@/components/notification-center";
 import { WindowControls } from "@/components/window-chrome";
-import { MAC_TRAFFIC_LIGHTS_INSET, useDesktop } from "@/lib/desktop";
+import { useDesktop } from "@/lib/desktop";
 import { activeKeyFor, toShellRepo } from "../helpers";
+import type { ShellContext } from "../types";
 
 interface ShellContextOptions {
   onOpenCommandPalette: () => void;
 }
 
 /**
- * Assembles the `ShellContext` consumed by AppFrame: active nav key, the repo
+ * Assembles the `ShellContext` consumed by the sidebar and top bar: active nav key, the repo
  * list/active repo (mapped to the shell shape), theme, PR count, the repo
  * selection / add / removal actions, the account menu, and — in the desktop
  * app — the title-bar window controls.
@@ -65,9 +64,8 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
 
   return React.useMemo<ShellContext>(
     () => ({
-      Link,
       activeKey: activeKeyFor(pathname),
-      repoId,
+      repoId: repoId ?? null,
       repos: repos.map(toShellRepo),
       activeRepo: activeRepo ? toShellRepo(activeRepo) : null,
       theme,
@@ -83,7 +81,8 @@ export function useShellContext({ onOpenCommandPalette }: ShellContextOptions): 
       account: React.createElement(AccountMenu),
       // Desktop app: the top bar is the window's title bar.
       windowControls: desktop ? React.createElement(WindowControls) : undefined,
-      titlebarInsetLeft: desktop?.platform === "darwin" ? MAC_TRAFFIC_LIGHTS_INSET : undefined,
+      desktop: Boolean(desktop),
+      macTrafficLights: desktop?.platform === "darwin",
     }),
     [
       pathname,

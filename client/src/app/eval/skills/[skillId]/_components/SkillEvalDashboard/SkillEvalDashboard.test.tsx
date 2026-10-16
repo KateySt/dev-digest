@@ -365,7 +365,7 @@ describe("SkillEvalDashboard: empty, running and refused states", () => {
     net.on("POST", "/skills/sk1/eval-runs", () => ({ run_id: "run-9", status: "running", cases_total: 1, is_draft: false }));
     net.on("GET", "/eval-suite-runs/run-9", () => skillRunDetail({ id: "run-9", status: "running", cases_done: 0, cases_total: 1 }));
 
-    const cta = within(screen.getByText("No eval runs yet").closest("div")!.parentElement!).getAllByRole("button", { name: "Run eval" });
+    const cta = within(screen.getByText("No eval runs yet").closest<HTMLElement>('[data-slot="empty"]')!).getAllByRole("button", { name: "Run eval" });
     fireEvent.click(cta[cta.length - 1]!);
     expect(await screen.findByRole("button", { name: "Running 0/1…" })).toBeDisabled();
     expect(net.callsTo("POST", "/skills/sk1/eval-runs")).toHaveLength(1);

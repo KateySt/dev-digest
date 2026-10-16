@@ -81,6 +81,7 @@ import {
   CornerDownRight,
   Minus,
   Square,
+  LoaderCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -166,6 +167,7 @@ export const Icon = {
   CornerDownRight,
   Minus,
   Square,
+  Loader: LoaderCircle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof Icon;

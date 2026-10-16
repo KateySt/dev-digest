@@ -1,14 +1,12 @@
 /* PageShell.tsx — small helpers for route pages: a section container and a
-   feature-placeholder that renders inside the app shell with an EmptyState.
-   Feature agents (A1–A6) replace `FeaturePlaceholder` with their real screen. */
+   feature-placeholder that renders inside the app shell with an EmptyState. */
 "use client";
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { EmptyState, type IconName } from "@devdigest/ui";
-import type { Crumb } from "@devdigest/ui";
-import { AppShell } from "../app-shell";
-import { s } from "./styles";
+import type { IconName } from "@/components/icon";
+import { EmptyState } from "@/components/empty-state";
+import { AppShell, type Crumb } from "../app-shell";
 
 export function PageContainer({
   title,
@@ -22,14 +20,14 @@ export function PageContainer({
   children?: React.ReactNode;
 }) {
   return (
-    <div style={s.container}>
+    <div className="mx-auto max-w-[1200px] px-8 pt-6 pb-11">
       {(title || actions) && (
-        <div style={s.headerRow}>
+        <div className="mb-5 flex items-end gap-4">
           <div>
-            {title && <h1 style={s.h1}>{title}</h1>}
-            {subtitle && <p style={s.subtitle}>{subtitle}</p>}
+            {title && <h1 className="text-4xl font-bold tracking-[-0.02em]">{title}</h1>}
+            {subtitle && <p className="mt-1 text-base text-muted-foreground">{subtitle}</p>}
           </div>
-          {actions && <div style={s.actions}>{actions}</div>}
+          {actions && <div className="ml-auto flex gap-2.5">{actions}</div>}
         </div>
       )}
       {children}
@@ -55,11 +53,7 @@ export function FeaturePlaceholder({
   return (
     <AppShell crumb={crumb}>
       <PageContainer>
-        <EmptyState
-          icon={icon}
-          title={title}
-          body={body ?? t("featurePlaceholder.defaultBody", { owner })}
-        />
+        <EmptyState icon={icon} title={title} body={body ?? t("featurePlaceholder.defaultBody", { owner })} />
       </PageContainer>
     </AppShell>
   );

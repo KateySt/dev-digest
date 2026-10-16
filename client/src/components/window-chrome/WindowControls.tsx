@@ -1,12 +1,14 @@
 /* WindowControls — minimize / maximize-restore / close for the frameless
-   desktop window, drawn in the app's own style. Renders nothing in a browser
+   desktop window, drawn in the app's own style (Windows caption buttons:
+   46px wide, full bar height, close turns red). Renders nothing in a browser
    and on macOS (which keeps its native traffic lights). */
 "use client";
 
 import React from "react";
-import { Icon } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { Icon } from "@/components/icon";
 import { useDesktop } from "@/lib/desktop";
-import { s } from "./styles";
+import { cn } from "@/lib/utils";
 
 function CaptionButton({
   label,
@@ -19,24 +21,24 @@ function CaptionButton({
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  const [hover, setHover] = React.useState(false);
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className="app-no-drag"
       onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={s.button(hover, danger)}
+      className={cn(
+        "app-no-drag grid h-full w-11.5 cursor-default place-items-center rounded-none border-none bg-transparent p-0 text-muted-foreground transition-colors duration-75",
+        danger ? "hover:bg-[#e81123] hover:text-white" : "hover:bg-accent",
+      )}
     >
       {children}
     </button>
   );
 }
 
-export function WindowControls({ height = 52 }: { height?: number }) {
+export function WindowControls({ className }: { className?: string }) {
+  const t = useTranslations("shell.window");
   const desktop = useDesktop();
   const [maximized, setMaximized] = React.useState(false);
 
@@ -54,15 +56,15 @@ export function WindowControls({ height = 52 }: { height?: number }) {
   if (!desktop || desktop.platform === "darwin") return null;
   const { window: win } = desktop;
   return (
-    <div style={s.controls(height)}>
-      <CaptionButton label="Minimize window" onClick={() => void win.minimize()}>
-        <Icon.Minus size={15} strokeWidth={1.5} />
+    <div className={cn("flex h-13 shrink-0 self-stretch", className)}>
+      <CaptionButton label={t("minimize")} onClick={() => void win.minimize()}>
+        <Icon.Minus size={15} strokeWidth={1.5} aria-hidden />
       </CaptionButton>
-      <CaptionButton label={maximized ? "Restore window" : "Maximize window"} onClick={() => void win.toggleMaximize()}>
-        {maximized ? <Icon.Copy size={13} strokeWidth={1.5} /> : <Icon.Square size={12} strokeWidth={1.5} />}
+      <CaptionButton label={maximized ? t("restore") : t("maximize")} onClick={() => void win.toggleMaximize()}>
+        {maximized ? <Icon.Copy size={13} strokeWidth={1.5} aria-hidden /> : <Icon.Square size={12} strokeWidth={1.5} aria-hidden />}
       </CaptionButton>
-      <CaptionButton label="Close window" danger onClick={() => void win.close()}>
-        <Icon.X size={16} strokeWidth={1.5} />
+      <CaptionButton label={t("close")} danger onClick={() => void win.close()}>
+        <Icon.X size={16} strokeWidth={1.5} aria-hidden />
       </CaptionButton>
     </div>
   );
