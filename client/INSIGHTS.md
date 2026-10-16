@@ -33,6 +33,19 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-16 — Inner scroll panes must be `relative`, or `sr-only` text adds a page scrollbar
+
+The PR page scrolls its tab content in an inner `overflow-auto` pane under a
+fixed header. An absolutely positioned descendant (`sr-only` hint in
+`EvalCaseAction`, any `absolute` badge) whose nearest positioned ancestor is
+*outside* that pane resolves against the viewport: the pane doesn't clip it,
+and it stretches the document — a second, global scrollbar appears once the
+content is long. Give every scroll container `relative` (AppShell `<main>`
+and the PR page pane have it). Check with
+`document.documentElement.scrollHeight === innerHeight`.
+
+---
+
 ### 2026-10-16 — Never fire a `mutate()` from a mount effect: StrictMode strands the result
 
 `next dev` runs with `reactStrictMode: true`, so a component mounted by a

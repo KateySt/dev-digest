@@ -32,7 +32,9 @@ export function AppShell({ children, crumb }: { children: React.ReactNode; crumb
       <AppSidebar ctx={ctx} />
       <SidebarInset className="min-w-0">
         <Topbar ctx={ctx} crumb={crumb} />
-        <main className="min-h-0 flex-1 overflow-auto">
+        {/* relative: absolutely positioned content (sr-only text…) must scroll
+            and clip with <main>, not grow the document — see INSIGHTS.md. */}
+        <main className="relative min-h-0 flex-1 overflow-auto">
           <div className="mx-auto h-full w-full max-w-[1600px]">{children}</div>
         </main>
       </SidebarInset>
