@@ -9,7 +9,7 @@ import { useTheme } from "../../../lib/contexts/theme";
 
 /**
  * Builds the command-palette command set: one "Go to …" command per nav item,
- * plus Settings and a theme toggle. Memoized on its inputs.
+ * plus Settings, a theme toggle and Appearance settings. Memoized on its inputs.
  */
 export function useShellCommands(): Command[] {
   const t = useTranslations("shell");
@@ -42,6 +42,13 @@ export function useShellCommands(): Command[] {
       group: t("commandPalette.themeAppearanceGroup"),
       icon: theme === "dark" ? "Sun" : "Moon",
       run: toggle,
+    });
+    navCmds.push({
+      id: "appearance-settings",
+      label: t("commandPalette.appearanceSettings"),
+      group: t("commandPalette.themeAppearanceGroup"),
+      icon: SETTINGS_ITEM.icon,
+      run: () => router.push("/settings/appearance"),
     });
     return navCmds;
   }, [t, router, repoId, theme, toggle]);

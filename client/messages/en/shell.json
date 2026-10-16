@@ -4,6 +4,7 @@
     "goToSettings": "Go to Settings",
     "switchTheme": "Switch to {theme} theme",
     "themeAppearanceGroup": "Appearance",
+    "appearanceSettings": "Appearance settings (palette, accent)…",
     "globalGroup": "GLOBAL"
   },
   "theme": {

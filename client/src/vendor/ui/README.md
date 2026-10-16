@@ -32,7 +32,7 @@ components live as flat files at the root.
 | **Shell** | `shell/` | `AppFrame`, `Sidebar`, `Topbar`, `NavItem`, `RepoSwitcher` — the app frame |
 | **Command palette** | `command-palette/` | `CommandPalette` (Cmd+K), `ShortcutsHelp` (`?`) |
 | **Icons** | `icons.tsx` | `Icon` registry + `IconName` type (single source; not split) |
-| **Nav** | `nav.ts` | `NAV`, `SETTINGS_SECTIONS`, `SHORTCUTS`, `resolveHref()` — route/shortcut config |
+| **Nav** | `nav.ts` | `NAV`, `SHORTCUTS`, `resolveHref()` — route/shortcut config |
 | **Standalone** | `LiveLogStream.tsx`, `ExportWizardSteps.tsx`, `AutoTriggerStatus.tsx` | cross-feature components without a natural layer |
 
 ## Tokens & theming

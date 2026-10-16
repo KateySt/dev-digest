@@ -15,7 +15,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   const messages = await getMessages();
   return (
-    <html lang={locale} data-theme="dark" data-density="regular" suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-theme="dark"
+      data-palette="classic"
+      data-accent="blue"
+      data-density="regular"
+      suppressHydrationWarning
+    >
       <head>
         {/* set theme before paint to avoid FOUC */}
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
