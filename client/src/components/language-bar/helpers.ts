@@ -1,5 +1,3 @@
-import React from "react";
-
 /**
  * GitHub-linguist-ish colors for common languages. Anything not listed falls
  * back to a deterministic grey shade (hashed from the name) so the bar still
@@ -59,62 +57,4 @@ export function languageStats(languages: Record<string, number> | null | undefin
   return Object.entries(languages)
     .sort((a, b) => b[1] - a[1])
     .map(([name, bytes]) => ({ name, pct: (bytes / total) * 100, color: colorFor(name) }));
-}
-
-/** GitHub-style stacked language bar, optionally with a percentage legend below it. */
-export function LanguageBar({
-  languages,
-  height = 6,
-  showLegend = false,
-  maxLegendItems = 5,
-}: {
-  languages: Record<string, number> | null | undefined;
-  height?: number;
-  showLegend?: boolean;
-  maxLegendItems?: number;
-}) {
-  const stats = languageStats(languages);
-  if (stats.length === 0) return null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
-      <div
-        title={stats.map((s) => `${s.name} ${s.pct.toFixed(1)}%`).join(" · ")}
-        style={{
-          display: "flex",
-          width: "100%",
-          height,
-          borderRadius: 99,
-          overflow: "hidden",
-          background: "var(--bg-hover)",
-        }}
-      >
-        {stats.map((s) => (
-          <div
-            key={s.name}
-            style={{ width: `${s.pct}%`, background: s.color }}
-          />
-        ))}
-      </div>
-      {showLegend && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 12, color: "var(--text-secondary)" }}>
-          {stats.slice(0, maxLegendItems).map((s) => (
-            <span key={s.name} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 99,
-                  background: s.color,
-                  display: "inline-block",
-                  flexShrink: 0,
-                }}
-              />
-              {s.name} <span className="mono tnum">{s.pct.toFixed(1)}%</span>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }

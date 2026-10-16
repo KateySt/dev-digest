@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import common from "../../../../../../../../messages/en/common.json";
 import { FindingCard } from "./FindingCard";
 import { buildEvalTargets, evalsHrefFor, existingCaseId } from "./helpers";
 import { apiError, evalCase, finding as makeFinding, mockFetch, post } from "@/test/eval-utils";
@@ -28,7 +29,7 @@ function tree(f: FindingRecord, linkedSkills: React.ComponentProps<typeof Findin
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ common, prReview: messages }}>
         <FindingCard f={f} defaultExpanded onAction={() => {}} agentId={agentId} prId="pr1" linkedSkills={linkedSkills} />
       </NextIntlClientProvider>
     </QueryClientProvider>

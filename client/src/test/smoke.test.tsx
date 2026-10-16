@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { Gallery } from "../components/showcase";
 import { DiffViewer } from "../components/diff-viewer";
 import type { PrFile } from "../lib/types";
+import commonMessages from "../../messages/en/common.json";
 import shellMessages from "../../messages/en/shell.json";
 import prReviewMessages from "../../messages/en/prReview.json";
 
@@ -15,9 +16,11 @@ describe("web smoke (both themes)", () => {
   themes.forEach((theme) => {
     it(`component gallery renders in ${theme}`, () => {
       render(
-        <div data-theme={theme}>
-          <Gallery />
-        </div>
+        <NextIntlClientProvider locale="en" messages={{ common: commonMessages }}>
+          <div data-theme={theme}>
+            <Gallery />
+          </div>
+        </NextIntlClientProvider>
       );
       // a few representative components are present
       expect(screen.getAllByText("Primary").length).toBeGreaterThan(0);
@@ -35,7 +38,7 @@ describe("web smoke (both themes)", () => {
       },
     ];
     render(
-      <NextIntlClientProvider locale="en" messages={{ shell: shellMessages, prReview: prReviewMessages }}>
+      <NextIntlClientProvider locale="en" messages={{ common: commonMessages, shell: shellMessages, prReview: prReviewMessages }}>
         <div data-theme="dark">
           <DiffViewer files={files} />
         </div>
