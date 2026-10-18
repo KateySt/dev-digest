@@ -17,6 +17,11 @@ change is required (see *Inputs and provenance*).
 
 ## Changelog
 
+- 2026-10-18 — during implementation: D-1 Help → Keyboard Shortcuts shows
+  the studio's `?` (display-only) instead of a separate `CmdOrCtrl+/`; D-2
+  back/forward run in the studio (router history) instead of
+  `navigationHistory` in main, so one code path serves menu, keys and mouse
+  buttons; `app:set-keybindings` also carries translated menu `labels`.
 - 2026-10-18 — initial version
 
 ## Problem and user
@@ -317,7 +322,7 @@ Non-goals:
 - [reused: `GET`/`PUT /settings`] `notification_sound` and the theme
   preference, written by the toggle commands through their existing paths.
 - [reused: desktop bridge `getPrefs`/`setPrefs`] `closeToTray`.
-- [new: desktop bridge] `onCommand`, `setKeybindings`, `getGlobalShortcutStatus`
+- [new: desktop bridge] `onCommand`, `setKeybindings`
   (see *Module interactions*).
 - [deterministic: client] Command registry, default bindings, reserved list,
   platform resolution of `Mod`, display labels.
@@ -349,20 +354,20 @@ Non-goals:
 | Bridge method | Channel | Direction | Payload |
 |---|---|---|---|
 | `app.onCommand(cb)` | `app:command` | main → studio, buffered in preload | command id (string) |
-| `app.setKeybindings(b)` | `app:set-keybindings` | studio → main | `{ menu: { [id]: Binding \| null }, global: { [id]: Binding \| null } }` → `{ global: { [id]: "ok" \| "taken" \| "invalid" } }` |
-| `app.getGlobalShortcutStatus()` | `app:global-shortcut-status` | studio → main | → `{ [id]: { binding, active: boolean } }` |
+| `app.setKeybindings(b)` | `app:set-keybindings` | studio → main | `{ menu, global, display: { [id]: Binding \| null }, labels: { [id]: string } }` → `{ global: { [id]: "ok" \| "taken" \| "invalid" } }` |
 
 Desktop obligations (`desktop/`, traced as D-N):
 
 - D-1: The application menu shall include: Settings… (`CmdOrCtrl+,`), a Go
   menu with Command Palette, sections 1–9 (`CmdOrCtrl+1…9`), Back and
   Forward (`Alt+Left`/`Alt+Right` on Windows/Linux, `Cmd+[`/`Cmd+]` on
-  macOS), and Help → Keyboard Shortcuts (`CmdOrCtrl+/`); menu items send
-  `app:command` with the registry id. (verify via: manual check)
-- D-2: Back/Forward shall call `webContents.navigationHistory.goBack()` /
-  `goForward()` in main; Windows `app-command` events `browser-backward` /
-  `browser-forward` (mouse side buttons) shall do the same. (verify via:
-  manual check)
+  macOS), and Help → Keyboard Shortcuts (showing the studio-owned `?`,
+  display-only per D-3); menu items send `app:command` with the registry
+  id. (verify via: manual check)
+- D-2: Back/Forward shall send `app:command desktop.back` / `desktop.forward`,
+  which the studio runs as client-side history navigation; Windows
+  `app-command` events `browser-backward` / `browser-forward` (mouse side
+  buttons) shall send the same commands. (verify via: manual check)
 - D-3: WHERE a command's key is owned by the studio (palette, `?`, sequences,
   findings keys), its menu item shall display the accelerator with
   `registerAccelerator: false`. (verify via: manual check)

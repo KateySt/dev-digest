@@ -44,11 +44,10 @@ export const COMMANDS: CommandDef[] = [
 
   // Desktop app: native menu accelerators, tray, global show/hide
   { id: "desktop.settings", label: { key: "openSettings" }, group: "desktop", scope: "app", owner: "menu", defaults: both("Mod+Comma"), rebindable: true, desktopOnly: true },
-  ...Array.from(
-    { length: 9 },
-    (_, i): CommandDef => ({
+  ...SIDEBAR_ITEMS.slice(0, 9).map(
+    (it, i): CommandDef => ({
       id: `desktop.section.${i + 1}`,
-      label: { key: "goToSection", values: { n: i + 1 } },
+      label: { key: "goToSection", nav: it.key, values: { n: i + 1 } },
       group: "desktop",
       scope: "app",
       owner: "menu",

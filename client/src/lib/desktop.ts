@@ -23,6 +23,8 @@ export interface DesktopKeybindings {
   menu: Record<string, string | null>;
   global: Record<string, string | null>;
   display: Record<string, string | null>;
+  /** Translated menu labels for those commands. */
+  labels?: Record<string, string>;
 }
 export type GlobalShortcutStatus = "ok" | "taken" | "invalid";
 

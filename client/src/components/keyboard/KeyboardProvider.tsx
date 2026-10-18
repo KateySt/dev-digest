@@ -14,6 +14,7 @@ import { isTextInput } from "@/components/app-shell/helpers";
 import { G_NAV_TIMEOUT_MS } from "@/components/app-shell/constants";
 import { chordsForEvent, detectPlatform, isModified, isSingleKey } from "./keys";
 import { commandById, visibleCommands } from "./registry";
+import { useCommandLabel } from "./useCommandLabel";
 import { effectiveBindings, parseStoredKeybindings, patchOverrides } from "./overrides";
 import type { Binding, CommandDef, Overrides, Platform, StoredKeybindings } from "./types";
 
@@ -80,15 +81,22 @@ export function useCommand(id: string, handler: Handler, enabled = true): void {
   }, [register, id, enabled]);
 }
 
-/** Bindings the desktop applies: menu accelerators, global shortcuts, menu display hints. */
-function desktopPayload(commands: CommandDef[], effective: ReadonlyMap<string, Binding | null>) {
+const isMenuDisplay = (c: CommandDef) => c.id === "palette.open" || c.id === "help.show";
+
+/** Bindings the desktop applies: menu accelerators, global shortcuts, menu display hints, labels. */
+function desktopPayload(
+  commands: CommandDef[],
+  effective: ReadonlyMap<string, Binding | null>,
+  label: (c: CommandDef) => string,
+) {
   const pick = (pred: (c: CommandDef) => boolean) =>
     Object.fromEntries(commands.filter(pred).map((c) => [c.id, effective.get(c.id) ?? null]));
   return {
     menu: pick((c) => c.owner === "menu"),
     global: pick((c) => c.owner === "os"),
     // Studio-owned keys the menu only shows (D-3): it must not swallow them.
-    display: pick((c) => c.id === "palette.open" || c.id === "help.show"),
+    display: pick(isMenuDisplay),
+    labels: Object.fromEntries(commands.filter((c) => c.owner === "menu" || isMenuDisplay(c)).map((c) => [c.id, label(c)])),
   };
 }
 
@@ -99,6 +107,7 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => setDetected(detectPlatform()), []);
   const platform: Platform = bridge ? (bridge.platform === "darwin" ? "mac" : "other") : detected;
 
+  const label = useCommandLabel();
   const { data: settings } = useSettings();
   const { save } = useSaveKeybindings();
   const stored: StoredKeybindings = React.useMemo(
@@ -208,11 +217,11 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
   const pushToDesktop = React.useCallback(
     async (eff: ReadonlyMap<string, Binding | null>) => {
       if (!bridge) return { global: {} as Record<string, GlobalShortcutStatus> };
-      const res = await bridge.app.setKeybindings(desktopPayload(commands, eff));
+      const res = await bridge.app.setKeybindings(desktopPayload(commands, eff, label));
       setGlobalStatus(res.global);
       return res;
     },
-    [bridge, commands],
+    [bridge, commands, label],
   );
   React.useEffect(() => {
     void pushToDesktop(effective);

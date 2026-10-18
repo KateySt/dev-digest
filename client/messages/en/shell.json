@@ -141,7 +141,7 @@
       "acceptFinding": "Accept focused finding",
       "dismissFinding": "Dismiss focused finding",
       "openSettings": "Open Settings",
-      "goToSection": "Go to sidebar section {n}",
+      "goToSection": "Go to {label} (sidebar item {n})",
       "goBack": "Go back",
       "goForward": "Go forward",
       "toggleTray": "Toggle “Keep running in the tray”",
