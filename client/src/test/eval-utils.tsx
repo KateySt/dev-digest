@@ -31,6 +31,7 @@ import memoryMessages from "../../messages/en/memory.json";
 import prReviewMessages from "../../messages/en/prReview.json";
 import shellMessages from "../../messages/en/shell.json";
 import skillsMessages from "../../messages/en/skills.json";
+import settingsMessages from "../../messages/en/settings.json";
 
 export const ALL_MESSAGES = {
   common: commonMessages,
@@ -43,6 +44,7 @@ export const ALL_MESSAGES = {
   firstRun: firstRunMessages,
   memory: memoryMessages,
   prReview: prReviewMessages,
+  settings: settingsMessages,
   shell: shellMessages,
   skills: skillsMessages,
 };
