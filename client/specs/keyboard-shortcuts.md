@@ -1,7 +1,7 @@
 # Spec: Keyboard control — command registry, rebindable shortcuts, desktop menu and global Show/Hide
 
 Spec ID: SPEC-11
-Status: draft
+Status: implemented (desktop D-1 – D-9 not yet verified in a running Electron build)
 Supersedes: none
 
 Plan this spec was written from:

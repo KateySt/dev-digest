@@ -29,6 +29,11 @@ window loads the Next.js studio served by a child process.
   use these for every IPC arg / URL instead of ad-hoc checks
 - `src/tray.ts`, `src/taskbar.ts`, `src/activity.ts` — tray, taskbar progress
   and badge, both rendering the activity the studio pushes
+- `src/menu.ts` + `src/keybindings.ts` — native menu commands and the global
+  Show/Hide shortcut (SPEC-11): the studio owns the keyboard registry and
+  sends bindings over `app:set-keybindings`; main re-validates them, builds
+  accelerators, sends `app:command <id>` back. Command ids are duplicated
+  from `client/src/components/keyboard/registry.ts` — keep them in sync
 - `src/deep-link.ts`, `src/theme.ts`, `src/context-menu.ts`, `src/prefs.ts`
   (`desktop-prefs.json`), `src/secrets-key.ts` (safeStorage key for secrets.json)
 - `scripts/stage.mjs` — builds `resources/` (gitignored)

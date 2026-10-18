@@ -14,6 +14,17 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-18 — A registered menu accelerator swallows the key
+
+When a native menu item has an `accelerator`, Electron handles that key
+before the page's `keydown` — the studio never sees it. Keys the studio
+dispatches itself (`Ctrl/⌘+K` palette, `?`) are therefore shown in the menu
+with `registerAccelerator: false`; only commands the menu owns (Settings,
+`Ctrl+1…9`, back/forward) get real accelerators. Never give a menu item a
+plain-letter accelerator: it fires while the user types.
+
+---
+
 ### 2026-10-16 — Main → studio pushes need a buffer in the preload
 
 A deep link is delivered on `did-finish-load`, but React subscribes
