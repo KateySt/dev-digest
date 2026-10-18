@@ -154,7 +154,11 @@ export default function PRDetailPage() {
           onRunsStarted={() => invalidateActiveRuns()}
         />
 
-        <div className="min-h-0 flex-1 overflow-auto">
+        {/* `relative` makes this scroller the containing block of absolutely
+            positioned descendants (e.g. `sr-only` hints in finding cards).
+            Without it they resolve against the viewport, stretch the document
+            and add a second, page-level scrollbar. */}
+        <div className="relative min-h-0 flex-1 overflow-auto">
           <div className="mx-auto flex max-w-[1080px] flex-col gap-6 px-8 pt-6 pb-11">
             {tab === "overview" && (
               <OverviewTab

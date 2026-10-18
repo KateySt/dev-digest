@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SplitPane } from "@/components/split-pane";
 import { cn } from "@/lib/utils";
 import { useSkills, useUpdateSkill } from "@/lib/hooks/skills";
 import { useRepos } from "@/lib/hooks";
@@ -84,104 +85,114 @@ export function SkillsListView() {
 
   const list = filterSkills(skills ?? [], query);
 
+  const listPane = (
+    <div className="h-full overflow-auto px-7 pt-6 pb-11">
+      {/* Wraps instead of overflowing into the divider when the list pane is narrow. */}
+      <div className="mb-5 flex flex-wrap items-center gap-3.5">
+        <div className="min-w-30 flex-1">
+          <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("page.heading")}</h1>
+        </div>
+        <div className="w-[190px] shrink-0">
+          <SelectField
+            value={scope ?? "none"}
+            onChange={setManualScope}
+            options={scopeOptions}
+            mono={false}
+            ariaLabel={t("page.scope.label")}
+          />
+        </div>
+        <div className={cn(SEARCH_BOX, "w-[200px]")}>
+          <Icon.Search size={13} className="shrink-0 text-subtle-foreground" aria-hidden />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("page.searchPlaceholder")}
+            aria-label={t("page.searchPlaceholder")}
+            className={SEARCH_INPUT}
+          />
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm">
+              <Icon.Plus aria-hidden />
+              {t("page.addSkill")}
+              <Icon.ChevronDown aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[220px]">
+            <DropdownMenuItem onSelect={() => setAddingTab("file")}>
+              <Icon.Upload aria-hidden />
+              {t("page.menu.fromFile")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setAddingTab("url")}>
+              <Icon.Link aria-hidden />
+              {t("page.menu.fromUrl")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setAddingTab("community")}>
+              <Icon.Search aria-hidden />
+              {t("page.menu.community")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {isLoading && (
+        <div className={GRID}>
+          <Skeleton className="h-[120px] w-full" />
+          <Skeleton className="h-[120px] w-full" />
+          <Skeleton className="h-[120px] w-full" />
+        </div>
+      )}
+      {isError && <ErrorState body={t("page.loadError")} onRetry={() => refetch()} />}
+      {!isLoading && !isError && list.length === 0 && (
+        <EmptyState
+          icon="Sparkles"
+          title={t("page.empty.title")}
+          body={t("page.empty.body")}
+          cta={t("page.empty.cta")}
+          onCta={() => setAddingTab("file")}
+        />
+      )}
+      {list.length > 0 && (
+        <div className={GRID}>
+          {list.map((sk) => (
+            <SkillCard
+              key={sk.id}
+              skill={sk}
+              active={sk.id === selected}
+              onClick={() => selectSkill(sk.id)}
+              onToggle={(enabled) => update.mutate({ id: sk.id, patch: { enabled } })}
+              repoName={sk.repo_id ? (repoNameById.get(sk.repo_id) ?? null) : null}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const detailPane = selected ? (
+    <SkillEditor skillId={selected} tab={tab} onTab={setTab} onClosed={() => selectSkill(null)} />
+  ) : (
+    <div className="flex h-full flex-col items-center justify-center gap-1.5 text-center text-subtle-foreground">
+      <Icon.Sparkles size={22} aria-hidden />
+      <div className="text-md font-semibold text-muted-foreground">{t("page.selectPrompt.title")}</div>
+      <div className="max-w-[220px] text-sm">{t("page.selectPrompt.body")}</div>
+    </div>
+  );
+
   return (
     <AppShell crumb={[{ label: t("page.crumbLab") }, { label: t("page.crumbSkills") }]}>
       {addingTab && <AddSkillDrawer initialTab={addingTab} onClose={() => setAddingTab(null)} />}
-      <div className="flex h-[calc(100vh-52px)]">
-        <div className="min-w-0 flex-1 overflow-auto px-7 pt-6 pb-11">
-          <div className="mb-5 flex items-center gap-3.5">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("page.heading")}</h1>
-            </div>
-            <div className="w-[190px] shrink-0">
-              <SelectField
-                value={scope ?? "none"}
-                onChange={setManualScope}
-                options={scopeOptions}
-                mono={false}
-                ariaLabel={t("page.scope.label")}
-              />
-            </div>
-            <div className={cn(SEARCH_BOX, "w-[200px]")}>
-              <Icon.Search size={13} className="shrink-0 text-subtle-foreground" aria-hidden />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("page.searchPlaceholder")}
-                aria-label={t("page.searchPlaceholder")}
-                className={SEARCH_INPUT}
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm">
-                  <Icon.Plus aria-hidden />
-                  {t("page.addSkill")}
-                  <Icon.ChevronDown aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[220px]">
-                <DropdownMenuItem onSelect={() => setAddingTab("file")}>
-                  <Icon.Upload aria-hidden />
-                  {t("page.menu.fromFile")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setAddingTab("url")}>
-                  <Icon.Link aria-hidden />
-                  {t("page.menu.fromUrl")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setAddingTab("community")}>
-                  <Icon.Search aria-hidden />
-                  {t("page.menu.community")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {isLoading && (
-            <div className={GRID}>
-              <Skeleton className="h-[120px] w-full" />
-              <Skeleton className="h-[120px] w-full" />
-              <Skeleton className="h-[120px] w-full" />
-            </div>
-          )}
-          {isError && <ErrorState body={t("page.loadError")} onRetry={() => refetch()} />}
-          {!isLoading && !isError && list.length === 0 && (
-            <EmptyState
-              icon="Sparkles"
-              title={t("page.empty.title")}
-              body={t("page.empty.body")}
-              cta={t("page.empty.cta")}
-              onCta={() => setAddingTab("file")}
-            />
-          )}
-          {list.length > 0 && (
-            <div className={GRID}>
-              {list.map((sk) => (
-                <SkillCard
-                  key={sk.id}
-                  skill={sk}
-                  active={sk.id === selected}
-                  onClick={() => selectSkill(sk.id)}
-                  onToggle={(enabled) => update.mutate({ id: sk.id, patch: { enabled } })}
-                  repoName={sk.repo_id ? (repoNameById.get(sk.repo_id) ?? null) : null}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="w-[560px] shrink-0 overflow-auto border-l border-border bg-surface p-6">
-          {selected ? (
-            <SkillEditor skillId={selected} tab={tab} onTab={setTab} onClosed={() => selectSkill(null)} />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-1.5 text-center text-subtle-foreground">
-              <Icon.Sparkles size={22} aria-hidden />
-              <div className="text-md font-semibold text-muted-foreground">{t("page.selectPrompt.title")}</div>
-              <div className="max-w-[220px] text-sm">{t("page.selectPrompt.body")}</div>
-            </div>
-          )}
-        </div>
-      </div>
+      <SplitPane
+        storageKey="dd-split-skills"
+        defaultRightWidth={560}
+        minLeftWidth={340}
+        minRightWidth={420}
+        className="h-[calc(100vh-52px)]"
+        rightClassName="overflow-auto bg-surface p-6"
+        left={listPane}
+        right={detailPane}
+      />
     </AppShell>
   );
 }

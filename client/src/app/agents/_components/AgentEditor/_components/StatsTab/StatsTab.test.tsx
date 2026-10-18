@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Agent, AgentStats, RunSummary } from "@devdigest/shared";
-import messages from "../../../../../../../../messages/en/agents.json";
+import messages from "../../../../../../../messages/en/agents.json";
 
 const STATS: AgentStats = {
   agent_id: "ag1",
@@ -47,7 +47,7 @@ const RUNS: RunSummary[] = [
   },
 ];
 
-vi.mock("../../../../../../../lib/hooks/agent-performance", () => ({
+vi.mock("@/lib/hooks/agent-performance", () => ({
   useAgentStats: () => ({ data: STATS, isLoading: false, isError: false, refetch: vi.fn() }),
   useAgentRuns: () => ({ data: RUNS }),
 }));

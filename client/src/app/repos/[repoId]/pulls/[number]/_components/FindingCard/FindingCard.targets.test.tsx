@@ -112,7 +112,7 @@ describe("FindingCard targets: confirmation (AC-2 per target / SK-35)", () => {
 
     const confirmation = await screen.findByRole("status");
     expect(confirmation).toHaveTextContent("Added to the agent as a must not flag case.");
-    expect(within(confirmation).getByRole("link", { name: "View in the agent's Evals tab" })).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(within(confirmation).getByRole("link", { name: "View in the agent's Evals tab" })).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
   });
 
   it("SK-35: after adding to one target the others stay selectable, and the added one reads 'In eval set'", async () => {
@@ -154,7 +154,7 @@ describe("FindingCard targets: already in an eval set (AC-4 per target / SK-36)"
     mockFetch();
     renderCard({ ...ACCEPTED, eval_cases: [{ case_id: "case-a", target_kind: "agent", target_id: "ag1" }] }, SKILLS);
     fireEvent.click(evalButton());
-    expect(within(picker()).getByRole("link", { name: "In eval set: This agent (default)" })).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(within(picker()).getByRole("link", { name: "In eval set: This agent (default)" })).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
     expect(within(picker()).getAllByRole("button", { name: /^Add to / })).toHaveLength(2);
   });
 
@@ -198,17 +198,17 @@ describe("FindingCard targets: no linked skills / still loading", () => {
     fireEvent.click(evalButton());
     const confirmation = await screen.findByRole("status");
     expect(confirmation).toHaveTextContent("Added to the eval set as a must find case.");
-    expect(within(confirmation).getByRole("link")).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(within(confirmation).getByRole("link")).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
     expect(screen.queryByRole("group", { name: "Add the case to" })).not.toBeInTheDocument();
     expect(net.callsTo("POST", "/findings/f1/eval-case")[0]!.body).toBeUndefined();
     // the button flips to "In eval set"
-    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
   });
 
   it("C-4: with no linked skills a finding that already has a case (legacy eval_case_id) shows 'In eval set' and no create button", () => {
     mockFetch();
     renderCard({ ...ACCEPTED, eval_case_id: "case-1" }, []);
-    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents/ag1?tab=evals");
+    expect(screen.getByRole("link", { name: /in eval set/i })).toHaveAttribute("href", "/agents?agent=ag1&tab=evals");
     expect(screen.queryByRole("button", { name: /turn into eval case/i })).not.toBeInTheDocument();
   });
 
@@ -264,7 +264,7 @@ describe("FindingCard target helpers", () => {
   });
 
   it("evalsHrefFor links an agent to its Evals tab and a skill to the Skills Lab Evals tab", () => {
-    expect(evalsHrefFor({ kind: "agent", id: "ag1" })).toBe("/agents/ag1?tab=evals");
+    expect(evalsHrefFor({ kind: "agent", id: "ag1" })).toBe("/agents?agent=ag1&tab=evals");
     expect(evalsHrefFor({ kind: "skill", id: "sk1" })).toBe("/skills?skill=sk1&tab=evals");
   });
 });

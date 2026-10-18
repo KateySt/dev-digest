@@ -80,7 +80,7 @@ export function StatsTab({ skill }: { skill: Skill }) {
           stats.agents.map((a) => (
             <div key={a.id} className="flex items-center gap-2.5 border-b border-border py-2 text-[13.5px]">
               <span className="flex-1">{a.name}</span>
-              <Link href={`/agents/${a.id}`} className="text-ui text-muted-foreground no-underline">
+              <Link href={`/agents?agent=${a.id}&tab=config`} className="text-ui text-muted-foreground no-underline">
                 {t("stats.openAgent")} <Icon.ExternalLink size={11} aria-hidden className="inline" />
               </Link>
             </div>

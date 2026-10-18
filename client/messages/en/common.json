@@ -82,5 +82,9 @@
   },
   "toast": {
     "dismiss": "Dismiss"
+  },
+  "splitPane": {
+    "resize": "Resize panels",
+    "hint": "Drag to resize · double-click to reset"
   }
 }
