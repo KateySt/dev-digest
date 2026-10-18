@@ -7,6 +7,7 @@ export function installFakeBridge(platform = "win32") {
   let navigateListener: ((href: string) => void) | null = null;
   const prefs: DesktopPrefs = { closeToTray: true };
   let openPrListener: ((pr: DesktopPrLink) => void) | null = null;
+  let commandListener: ((id: string) => void) | null = null;
   const bridge: DesktopBridge = {
     platform,
     window: {
@@ -34,6 +35,13 @@ export function installFakeBridge(platform = "win32") {
         openPrListener = cb;
         return () => (openPrListener = null);
       }),
+      onCommand: vi.fn((cb: (id: string) => void) => {
+        commandListener = cb;
+        return () => (commandListener = null);
+      }),
+      setKeybindings: vi.fn(async (b: { global: Record<string, string | null> }) => ({
+        global: Object.fromEntries(Object.entries(b.global).filter(([, v]) => v).map(([id]) => [id, "ok" as const])),
+      })),
       checkForUpdates: vi.fn(async () => {}),
       openReleases: vi.fn(async () => {}),
       openLogsFolder: vi.fn(async () => {}),
@@ -46,6 +54,7 @@ export function installFakeBridge(platform = "win32") {
     emitMaximized: (m: boolean) => maximizedListener?.(m),
     emitNavigate: (href: string) => navigateListener?.(href),
     emitOpenPr: (pr: DesktopPrLink) => openPrListener?.(pr),
+    emitCommand: (id: string) => commandListener?.(id),
   };
 }
 

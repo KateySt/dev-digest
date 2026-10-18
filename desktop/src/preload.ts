@@ -25,6 +25,7 @@ function bufferedChannel<T>(channel: string) {
 
 const onNavigate = bufferedChannel<string>('app:navigate');
 const onOpenPr = bufferedChannel<{ owner: string; repo: string; number: number }>('app:open-pr');
+const onCommand = bufferedChannel<string>('app:command');
 
 const bridge = {
   platform: process.platform,
@@ -56,6 +57,15 @@ const bridge = {
     onNavigate: (cb: (href: string) => void): (() => void) => onNavigate(cb),
     /** A `devdigest://pr?url=…` link asks the studio to open a GitHub PR; returns the unsubscribe function. */
     onOpenPr: (cb: (pr: { owner: string; repo: string; number: number }) => void): (() => void) => onOpenPr(cb),
+    /** A native menu item / accelerator asks the studio to run a keyboard command (SPEC-11); returns the unsubscribe function. */
+    onCommand: (cb: (id: string) => void): (() => void) => onCommand(cb),
+    /** Apply menu accelerators + global shortcuts; resolves with each global shortcut's status. */
+    setKeybindings: (b: {
+      menu: Record<string, string | null>;
+      global: Record<string, string | null>;
+      display: Record<string, string | null>;
+      labels?: Record<string, string>;
+    }): Promise<{ global: Record<string, 'ok' | 'taken' | 'invalid'> }> => ipcRenderer.invoke('app:set-keybindings', b),
     checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
     openReleases: () => ipcRenderer.invoke('app:open-releases'),
     openLogsFolder: () => ipcRenderer.invoke('app:open-logs'),

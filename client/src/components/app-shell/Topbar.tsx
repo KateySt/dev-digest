@@ -5,12 +5,19 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
+import { BindingKeys, useKeyboard } from "@/components/keyboard";
 import { cn } from "@/lib/utils";
 import type { Crumb, ShellContext } from "./types";
 
 /** Top bar: breadcrumb, command-palette search, theme toggle, notifications,
  *  account, and (desktop app) window controls. Doubles as the window drag area. */
+/** The palette's effective shortcut (⌘K / Ctrl+K, or the user's own; hidden when unbound). */
+function PaletteHint() {
+  const { activeBinding } = useKeyboard();
+  const binding = activeBinding("palette.open");
+  return binding ? <BindingKeys binding={binding} /> : null;
+}
+
 export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[] }) {
   const t = useTranslations("shell.topbar");
   const themeLabel = t("toggleTheme");
@@ -53,7 +60,7 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
         className="ml-auto flex w-[260px] items-center gap-2.5 rounded-[7px] border border-border bg-surface px-3.5 py-2 text-sm text-subtle-foreground transition-colors hover:border-border-strong"
       >
         <span className="flex-1 text-left">{t("search")}</span>
-        <Kbd className="mono border border-border-strong bg-surface">⌘K</Kbd>
+        <PaletteHint />
       </button>
       <Button variant="ghost" size="icon-sm" aria-label={themeLabel} title={themeLabel} onClick={ctx.onToggleTheme}>
         {ctx.theme === "light" ? <Icon.Moon /> : <Icon.Sun />}

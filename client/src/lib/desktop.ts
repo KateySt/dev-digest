@@ -17,6 +17,17 @@ export interface DesktopPrLink {
   number: number;
 }
 
+/** Keybindings the main process applies (SPEC-11): native menu accelerators,
+ *  global shortcuts, and display-only accelerators for studio-owned keys. */
+export interface DesktopKeybindings {
+  menu: Record<string, string | null>;
+  global: Record<string, string | null>;
+  display: Record<string, string | null>;
+  /** Translated menu labels for those commands. */
+  labels?: Record<string, string>;
+}
+export type GlobalShortcutStatus = "ok" | "taken" | "invalid";
+
 export interface DesktopBridge {
   platform: string;
   window: {
@@ -42,6 +53,10 @@ export interface DesktopBridge {
     onNavigate(cb: (href: string) => void): () => void;
     /** A `devdigest://pr` link asks the studio to open a GitHub PR. Returns the unsubscribe function. */
     onOpenPr(cb: (pr: DesktopPrLink) => void): () => void;
+    /** A native menu item / accelerator asks the studio to run a command id. Returns the unsubscribe function. */
+    onCommand(cb: (id: string) => void): () => void;
+    /** Apply bindings in main; resolves with each global shortcut's registration status. */
+    setKeybindings(b: DesktopKeybindings): Promise<{ global: Record<string, GlobalShortcutStatus> }>;
     checkForUpdates(): Promise<void>;
     openReleases(): Promise<void>;
     openLogsFolder(): Promise<void>;
