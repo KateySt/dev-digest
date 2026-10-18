@@ -78,7 +78,12 @@ function showNotification(win: BrowserWindow, arg: unknown): boolean {
   return true;
 }
 
-export function registerIpc(): void {
+export interface IpcDeps {
+  /** Validates and applies keyboard bindings; resolves global-shortcut statuses (SPEC-11 D-4). */
+  setKeybindings: (raw: unknown) => { global: Record<string, string> };
+}
+
+export function registerIpc(deps: IpcDeps): void {
   handle('window:minimize', (win) => win.minimize());
   handle('window:toggle-maximize', (win) => (win.isMaximized() ? win.unmaximize() : win.maximize()));
   handle('window:close', (win) => win.close());
@@ -89,6 +94,8 @@ export function registerIpc(): void {
     if (oneOf(arg, THEME_SOURCES)) setThemeSource(win, arg);
   });
   handle('app:notify', showNotification);
+  // Payload is untrusted: keybindings.ts keeps only known ids + grammar-valid bindings (D-5).
+  handle('app:set-keybindings', (_win, arg) => deps.setKeybindings(arg));
   // Only the user-facing prefs cross the bridge (not themeSource/trayHintShown).
   handle('app:get-prefs', () => ({ closeToTray: getPrefs().closeToTray }));
   handle('app:set-prefs', (_win, arg) => {

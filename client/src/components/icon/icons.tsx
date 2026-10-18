@@ -82,6 +82,7 @@ import {
   Minus,
   Square,
   LoaderCircle,
+  Keyboard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -168,6 +169,7 @@ export const Icon = {
   Minus,
   Square,
   Loader: LoaderCircle,
+  Keyboard,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof Icon;

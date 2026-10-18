@@ -13,7 +13,16 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command";
+import { BindingKeys, useKeyboard } from "@/components/keyboard";
 import type { Command } from "./types";
+
+/** The command's effective key binding, else its static hint. */
+function CommandHint({ command }: { command: Command }) {
+  const { activeBinding } = useKeyboard();
+  const binding = command.commandId ? activeBinding(command.commandId) : null;
+  if (binding) return <BindingKeys binding={binding} className="ml-auto" />;
+  return command.hint ? <CommandShortcut className="mono">{command.hint}</CommandShortcut> : null;
+}
 
 export function CommandPalette({
   open,
@@ -59,7 +68,7 @@ export function CommandPalette({
                 <CommandItem key={c.id} value={`${c.label} ${group}`} onSelect={() => run(c)} className="gap-3 text-base">
                   <I className="text-subtle-foreground" aria-hidden />
                   <span className="flex-1">{c.label}</span>
-                  {c.hint && <CommandShortcut className="mono">{c.hint}</CommandShortcut>}
+                  <CommandHint command={c} />
                 </CommandItem>
               );
             })}

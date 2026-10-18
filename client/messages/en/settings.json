@@ -6,7 +6,9 @@
     "models": "Feature Models",
     "catalog": "Catalog",
     "notifications": "Notifications",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "keyboard": "Keyboard",
+    "desktop": "Desktop app"
   },
   "fallbackBody": "Standard configuration forms for {label} live here (A6 finalizes the full Settings surface).",
   "apiKeys": {
@@ -150,8 +152,6 @@
     "desktopHint": "Show a Windows / macOS notification when a long operation finishes and DevDigest isn't the focused window.",
     "soundLabel": "Sound",
     "soundHint": "Play the system notification sound with them.",
-    "trayLabel": "Keep running in the tray",
-    "trayHint": "Closing the window hides DevDigest to the system tray, so running reviews finish and notifications still arrive. Quit from the tray menu.",
     "browserNote": "System notifications are available in the DevDigest desktop app."
   },
   "appearance": {
@@ -178,5 +178,53 @@
       "violet": "Violet",
       "emerald": "Emerald"
     }
+  },
+  "keyboard": {
+    "title": "Keyboard",
+    "body": "Every shortcut in the studio. Click Change and press the keys you want; shortcuts match the physical keys, so they work on any keyboard layout.",
+    "singleKeyLabel": "Single-key shortcuts",
+    "singleKeyHint": "Shortcuts without Ctrl/⌘ or Alt, like “j”, “?” or “g then p”. Turn off if you trigger them by accident (screen readers, voice control).",
+    "searchPlaceholder": "Search shortcuts…",
+    "searchByKeys": "Search by keys",
+    "searchByKeysPrompt": "Press a key combination…",
+    "clearKeySearch": "Clear",
+    "noMatches": "No shortcuts match.",
+    "notSet": "Not set",
+    "modified": "Modified",
+    "global": "Global · desktop app",
+    "notActive": "Not active — taken by another app",
+    "change": "Change",
+    "changeFor": "Change shortcut for {command}",
+    "reset": "Reset",
+    "resetFor": "Reset {command} to its default",
+    "disable": "Disable",
+    "disableFor": "Disable shortcut for {command}",
+    "resetAll": "Reset all to defaults",
+    "resetAllConfirm": "Reset every shortcut to its default?",
+    "recording": "Press the new shortcut. Esc cancels, Backspace disables.",
+    "recordingFor": "Recording a shortcut for {command}",
+    "conflict": "Already used by “{command}”.",
+    "replace": "Replace",
+    "cancel": "Cancel",
+    "errors": {
+      "reserved": "That combination is reserved by the system or text editing.",
+      "needsModifier": "Needs Ctrl/⌘ or Alt — this one works even while you type.",
+      "noSequenceHere": "This command takes a single combination, not a sequence.",
+      "sequenceNeedsPlainKeys": "Sequences use plain keys only, like “g then p”.",
+      "altGr": "Ctrl+Alt is AltGr on many layouts (ґ, ł, €) — pick another combination.",
+      "taken": "Taken by another app — pick a different combination.",
+      "invalid": "The desktop app rejected this combination."
+    }
+  },
+  "desktop": {
+    "title": "Desktop app",
+    "body": "How the DevDigest window behaves on this computer.",
+    "trayLabel": "Keep running in the tray",
+    "trayHint": "Closing the window hides DevDigest to the system tray, so running reviews finish and notifications still arrive. Quit from the tray menu.",
+    "globalLabel": "Show / hide from anywhere",
+    "globalHint": "A global shortcut that brings DevDigest up from any app, or hides it again. Off until you set one.",
+    "globalNotSet": "Not set",
+    "globalNotActive": "Not active — taken by another app",
+    "change": "Change in Keyboard settings"
   }
 }

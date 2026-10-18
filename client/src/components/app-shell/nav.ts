@@ -1,6 +1,6 @@
-/* nav.ts — sidebar nav groups + keyboard shortcut registry.
+/* nav.ts — sidebar nav groups (keyboard commands live in @/components/keyboard).
    hrefs use the :repoId token, filled from the active repo. Labels come from
-   messages/en/shell.json: `nav.<key>`, `navSection.<section>`, `shortcuts.*`. */
+   messages/en/shell.json: `nav.<key>`, `navSection.<section>`. */
 import type { IconName } from "@/components/icon";
 
 export interface NavItemDef {
@@ -52,28 +52,6 @@ export const SETTINGS_ITEM: NavItemDef = {
   href: "/settings/api-keys",
   gKey: ",",
 };
-
-export type ShortcutGroup = "global" | "navigation" | "findings";
-
-/** Keyboard shortcut cheat sheet. `label` is a `shell.shortcuts.*` key, or a
- *  nav key for the "Go to …" entries (`navKey`). */
-export interface ShortcutDef {
-  keys: string;
-  group: ShortcutGroup;
-  label?: "openPalette" | "showHelp" | "nextPrevFinding" | "acceptFinding" | "dismissFinding";
-  navKey?: string;
-}
-
-export const SHORTCUTS: ShortcutDef[] = [
-  { keys: "⌘K", group: "global", label: "openPalette" },
-  { keys: "?", group: "global", label: "showHelp" },
-  ...NAV.flatMap((g) => g.items)
-    .filter((it) => it.gKey)
-    .map((it): ShortcutDef => ({ keys: `g ${it.gKey}`, group: "navigation", navKey: it.key })),
-  { keys: "j / k", group: "findings", label: "nextPrevFinding" },
-  { keys: "a", group: "findings", label: "acceptFinding" },
-  { keys: "d", group: "findings", label: "dismissFinding" },
-];
 
 /** Resolve an :repoId-templated href against the active repo id. */
 export function resolveHref(href: string, repoId: string | null | undefined): string {

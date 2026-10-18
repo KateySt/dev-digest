@@ -33,6 +33,17 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-18 — Match shortcuts by `e.code`, not `e.key`
+
+`e.key === "g"` silently fails on Ukrainian/Russian layouts (`"п"`), so
+every letter shortcut was dead for Cyrillic users. The keyboard registry
+(`components/keyboard`) matches physical keys (`KeyG`) and only `?` also
+matches by character (it moves between layouts). Add shortcuts as registry
+commands + `useCommand(id, handler)` — never a new `window` keydown
+listener — so they're rebindable, shown in the `?` sheet, and layout-proof.
+
+---
+
 ### 2026-10-16 — Inner scroll panes must be `relative`, or `sr-only` text adds a page scrollbar
 
 The PR page scrolls its tab content in an inner `overflow-auto` pane under a

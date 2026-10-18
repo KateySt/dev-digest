@@ -7,6 +7,9 @@ export const SECTION_MODELS = "models";
 export const SECTION_CATALOG = "catalog";
 export const SECTION_NOTIFICATIONS = "notifications";
 export const SECTION_APPEARANCE = "appearance";
+export const SECTION_KEYBOARD = "keyboard";
+/** Only in the desktop app (SPEC-11 AC-39). */
+export const SECTION_DESKTOP = "desktop";
 
 /** Sub-nav order. Labels come from `settings.sections.<key>` in messages/en/settings.json. */
 export const SETTINGS_SECTIONS = [
@@ -15,6 +18,8 @@ export const SETTINGS_SECTIONS = [
   SECTION_CATALOG,
   SECTION_NOTIFICATIONS,
   SECTION_APPEARANCE,
+  SECTION_KEYBOARD,
+  SECTION_DESKTOP,
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];

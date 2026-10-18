@@ -12,6 +12,7 @@ import { isOwnOrigin, openExternalSafe } from './validate';
 import { getPrefs, loadPrefs, updatePrefs } from './prefs';
 import { createTray } from './tray';
 import { attachTaskbar } from './taskbar';
+import { applyBindings, loadCachedBindings, unregisterAllGlobals } from './keybindings';
 import { loadSecretsKey } from './secrets-key';
 import { deepLinkFromArgv, handleDeepLink, registerProtocol, setDeepLinkTarget } from './deep-link';
 import { initTheme, windowBackground } from './theme';
@@ -57,8 +58,15 @@ async function boot(): Promise<void> {
   loadPrefs();
   initTheme();
   registerProtocol();
-  buildMenu();
-  registerIpc();
+  buildMenu(loadCachedBindings({ 'window.toggle': toggleWindow }), sendCommand);
+  registerIpc({
+    // SPEC-11 D-4: new bindings from the studio → menu rebuilt, globals re-registered.
+    setKeybindings: (raw) => {
+      const { bindings, global } = applyBindings(raw);
+      buildMenu(bindings, sendCommand);
+      return { global };
+    },
+  });
   const splash = createSplash();
   setSplashStatus(splash, 'Checking ports…');
 
@@ -134,6 +142,11 @@ function createWindow(): void {
     mainWindow?.hide();
     showTrayHintOnce();
   });
+  // Windows mouse side buttons (SPEC-11 D-2): same commands as Alt+←/→.
+  mainWindow.on('app-command', (_event, cmd) => {
+    if (cmd === 'browser-backward') sendCommand('desktop.back');
+    else if (cmd === 'browser-forward') sendCommand('desktop.forward');
+  });
   mainWindow.on('closed', () => (mainWindow = undefined));
   const win = mainWindow;
   win.webContents.once('did-finish-load', () => setDeepLinkTarget(win));
@@ -151,6 +164,25 @@ function showWindow(): void {
   mainWindow.focus();
 }
 
+/** A native menu item or accelerator fired: the studio runs the registry command. */
+function sendCommand(id: string): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('app:command', id);
+}
+
+/**
+ * Global Show/Hide (SPEC-11 D-7): visible and focused → hide (to the tray
+ * when close-to-tray is on, else minimize); otherwise bring it back.
+ */
+function toggleWindow(): void {
+  if (mainWindow && mainWindow.isVisible() && mainWindow.isFocused() && !mainWindow.isMinimized()) {
+    if (closesToTray()) mainWindow.hide();
+    else mainWindow.minimize();
+    return;
+  }
+  showWindow();
+}
+
 /** Windows/Linux only — on macOS closing the window already keeps the app in the Dock. */
 function closesToTray(): boolean {
   return process.platform !== 'darwin' && getPrefs().closeToTray;
@@ -163,7 +195,7 @@ function showTrayHintOnce(): void {
   // Held in a module variable: Windows can GC a toast before it is shown/clicked.
   trayHint = new Notification({
     title: 'DevDigest is still running',
-    body: 'It keeps working in the system tray. Quit from the tray menu, or turn this off in Settings → Notifications.',
+    body: 'It keeps working in the system tray. Quit from the tray menu, or turn this off in Settings → Desktop app.',
   });
   trayHint.show();
 }
@@ -202,6 +234,8 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   void Promise.allSettled([api && stop(api, true), web && stop(web, false)]).finally(() => app.quit());
 });
+
+app.on('will-quit', () => unregisterAllGlobals());
 
 app.on('window-all-closed', () => {
   // macOS convention: closing the window keeps the app alive in the Dock.

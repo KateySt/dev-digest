@@ -16,9 +16,11 @@ export interface DesktopPrefs {
   closeToTray: boolean;
   /** The one-time "still running in the tray" toast has been shown. */
   trayHintShown: boolean;
+  /** Last keyboard bindings from the studio (SPEC-11 D-8) — re-validated by keybindings.ts on load. */
+  keybindings: unknown;
 }
 
-const DEFAULTS: DesktopPrefs = { themeSource: 'dark', closeToTray: true, trayHintShown: false };
+const DEFAULTS: DesktopPrefs = { themeSource: 'dark', closeToTray: true, trayHintShown: false, keybindings: null };
 
 let prefs: DesktopPrefs = { ...DEFAULTS };
 const file = () => join(app.getPath('userData'), 'desktop-prefs.json');
@@ -31,6 +33,7 @@ export function loadPrefs(): DesktopPrefs {
       themeSource: oneOf(raw.themeSource, THEME_SOURCES) ? raw.themeSource : DEFAULTS.themeSource,
       closeToTray: typeof raw.closeToTray === 'boolean' ? raw.closeToTray : DEFAULTS.closeToTray,
       trayHintShown: raw.trayHintShown === true,
+      keybindings: raw.keybindings ?? null,
     };
   } catch {
     // Missing or corrupt file → defaults.
