@@ -5,6 +5,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
+import { useCommand } from "@/components/keyboard";
 import { FilterChip } from "@/components/filter-chip";
 import { SEVERITY_STYLE } from "@/components/severity";
 import { Switch } from "@/components/ui/switch";
@@ -13,7 +14,7 @@ import { FindingCard } from "@/app/repos/[repoId]/pulls/[number]/_components/Fin
 import { useLinkedSkills } from "@/lib/hooks/agents";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
 import { countBySeverity } from "../../../../../../../lib/findings";
-import { KEY_TO_ACTION, SEVERITY_FILTER_ORDER } from "./constants";
+import { SEVERITY_FILTER_ORDER } from "./constants";
 import { visibleFindings } from "./helpers";
 
 export function FindingsPanel({
@@ -76,20 +77,16 @@ export function FindingsPanel({
     if (idx >= 0) setFocusIdx(idx);
   }, [targetFindingId, shown]);
 
-  // j/k navigation + a/d shortcuts on the focused finding (keyboard).
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (e.key === "j") setFocusIdx((i) => Math.min(i + 1, shown.length - 1));
-      else if (e.key === "k") setFocusIdx((i) => Math.max(i - 1, 0));
-      else if (KEY_TO_ACTION[e.key] && shown[focusIdx]) {
-        action.mutate({ findingId: shown[focusIdx]!.id, action: KEY_TO_ACTION[e.key]!, prId });
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [shown, focusIdx, action, prId]);
+  // Next/previous + accept/dismiss on the focused finding — keyboard commands
+  // from the registry (j/k/a/d by default, rebindable, layout-independent).
+  const act = (kind: "accept" | "dismiss") => {
+    const f = shown[focusIdx];
+    if (f) action.mutate({ findingId: f.id, action: kind, prId });
+  };
+  useCommand("findings.next", () => setFocusIdx((i) => Math.min(i + 1, shown.length - 1)));
+  useCommand("findings.prev", () => setFocusIdx((i) => Math.max(i - 1, 0)));
+  useCommand("findings.accept", () => act("accept"));
+  useCommand("findings.dismiss", () => act("dismiss"));
 
   return (
     <div>

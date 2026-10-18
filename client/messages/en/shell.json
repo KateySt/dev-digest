@@ -84,17 +84,7 @@
   "shortcuts": {
     "title": "Keyboard shortcuts",
     "description": "Shortcuts available anywhere in the studio.",
-    "groups": {
-      "global": "Global",
-      "navigation": "Navigation",
-      "findings": "Findings"
-    },
-    "openPalette": "Open command palette",
-    "showHelp": "Show keyboard shortcuts",
-    "goTo": "Go to {label}",
-    "nextPrevFinding": "Next / previous finding",
-    "acceptFinding": "Accept finding",
-    "dismissFinding": "Dismiss finding"
+    "goTo": "Go to {label}"
   },
   "account": {
     "label": "Account",
@@ -129,5 +119,42 @@
   },
   "deepLink": {
     "repoNotAdded": "{repo} isn't added to DevDigest yet. Add the repository, then open the link again."
+  },
+  "keyboard": {
+    "then": "then",
+    "off": "off",
+    "customize": "Customize shortcuts…",
+    "groups": {
+      "general": "General",
+      "navigation": "Navigation",
+      "findings": "Findings",
+      "desktop": "Desktop app"
+    },
+    "commands": {
+      "openPalette": "Open command palette",
+      "showHelp": "Show keyboard shortcuts",
+      "toggleSidebar": "Toggle sidebar",
+      "toggleTheme": "Toggle dark / light theme",
+      "toggleSound": "Toggle notification sound",
+      "nextFinding": "Next finding",
+      "prevFinding": "Previous finding",
+      "acceptFinding": "Accept focused finding",
+      "dismissFinding": "Dismiss focused finding",
+      "openSettings": "Open Settings",
+      "goToSection": "Go to sidebar section {n}",
+      "goBack": "Go back",
+      "goForward": "Go forward",
+      "toggleTray": "Toggle “Keep running in the tray”",
+      "toggleWindow": "Show / hide the DevDigest window"
+    },
+    "toggled": {
+      "theme": "Theme: {state}",
+      "sound": "Notification sound: {state}",
+      "tray": "Keep running in the tray: {state}",
+      "on": "on",
+      "off": "off",
+      "dark": "dark",
+      "light": "light"
+    }
   }
 }

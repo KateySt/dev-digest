@@ -21,6 +21,8 @@ export interface Command {
   group?: string;
   icon?: IconName;
   hint?: string;
+  /** Keyboard registry id — the palette shows its effective binding (SPEC-11 AC-7). */
+  commandId?: string;
   run: () => void;
 }
 

@@ -35,6 +35,32 @@ export function useUpdateSettings() {
   });
 }
 
+/**
+ * Save the `keybindings` pref (SPEC-11) — a passthrough settings key whose
+ * shape is owned by `@/components/keyboard`. The cache is written
+ * synchronously before the request so a rebind applies at once; a failed
+ * save restores the previous value (the global mutation toast reports it).
+ */
+export function useSaveKeybindings() {
+  const qc = useQueryClient();
+  const { mutate, isPending } = useMutation({
+    mutationKey: ["settings", "keybindings"],
+    scope: { id: "settings-keybindings" },
+    mutationFn: ({ value }: { value: unknown; previous: unknown }) =>
+      api.put<Settings>("/settings", { keybindings: value }),
+    onMutate: () => qc.cancelQueries({ queryKey: ["settings"] }),
+    onSuccess: (data) => qc.setQueryData(["settings"], data),
+    onError: (_err, { previous }) =>
+      qc.setQueryData<Settings>(["settings"], (s) => (s ? { ...s, keybindings: previous } : s)),
+  });
+  const save = (value: unknown) => {
+    const previous = qc.getQueryData<Settings>(["settings"])?.keybindings;
+    qc.setQueryData<Settings>(["settings"], (s) => ({ ...(s ?? ({} as Settings)), keybindings: value }));
+    mutate({ value, previous });
+  };
+  return { save, isPending };
+}
+
 export function useTestConnection() {
   const qc = useQueryClient();
   return useMutation({

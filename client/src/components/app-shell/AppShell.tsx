@@ -1,5 +1,5 @@
 /* AppShell.tsx — thin orchestrator: sidebar + top bar around the page, plus the
-   command palette, shortcuts help, global keyboard shortcuts, the first-run
+   command palette, shortcuts help, the keyboard command registry (KeyboardProvider + ShellKeyboard), the first-run
    setup guard, desktop deep links, and the shell context. Concerns live in ./hooks; overlay
    open/close is local view state. */
 "use client";
@@ -10,7 +10,9 @@ import { AppSidebar } from "./AppSidebar";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Topbar } from "./Topbar";
-import { useDesktopDeepLinks, useGlobalShortcuts, useSetupGuard, useShellCommands, useShellContext } from "./hooks";
+import { KeyboardProvider } from "@/components/keyboard";
+import { ShellKeyboard } from "./ShellKeyboard";
+import { useDesktopDeepLinks, useSetupGuard, useShellCommands, useShellContext } from "./hooks";
 import type { Crumb } from "./types";
 
 export function AppShell({ children, crumb }: { children: React.ReactNode; crumb?: Crumb[] }) {
@@ -23,23 +25,25 @@ export function AppShell({ children, crumb }: { children: React.ReactNode; crumb
 
   useSetupGuard();
   useDesktopDeepLinks();
-  useGlobalShortcuts({ onOpenPalette: openPalette, onOpenHelp: openHelp });
   const commands = useShellCommands();
   const ctx = useShellContext({ onOpenCommandPalette: openPalette });
 
   return (
-    <SidebarProvider className="h-full min-h-screen bg-background">
-      <AppSidebar ctx={ctx} />
-      <SidebarInset className="min-w-0">
-        <Topbar ctx={ctx} crumb={crumb} />
-        {/* relative: absolutely positioned content (sr-only text…) must scroll
-            and clip with <main>, not grow the document — see INSIGHTS.md. */}
-        <main className="relative min-h-0 flex-1 overflow-auto">
-          <div className="mx-auto h-full w-full max-w-[1600px]">{children}</div>
-        </main>
-      </SidebarInset>
-      <CommandPalette open={paletteOpen} commands={commands} onClose={closePalette} />
-      <ShortcutsHelp open={helpOpen} onClose={closeHelp} />
-    </SidebarProvider>
+    <KeyboardProvider>
+      <SidebarProvider className="h-full min-h-screen bg-background">
+        <ShellKeyboard onOpenPalette={openPalette} onOpenHelp={openHelp} />
+        <AppSidebar ctx={ctx} />
+        <SidebarInset className="min-w-0">
+          <Topbar ctx={ctx} crumb={crumb} />
+          {/* relative: absolutely positioned content (sr-only text…) must scroll
+              and clip with <main>, not grow the document — see INSIGHTS.md. */}
+          <main className="relative min-h-0 flex-1 overflow-auto">
+            <div className="mx-auto h-full w-full max-w-[1600px]">{children}</div>
+          </main>
+        </SidebarInset>
+        <CommandPalette open={paletteOpen} commands={commands} onClose={closePalette} />
+        <ShortcutsHelp open={helpOpen} onClose={closeHelp} />
+      </SidebarProvider>
+    </KeyboardProvider>
   );
 }

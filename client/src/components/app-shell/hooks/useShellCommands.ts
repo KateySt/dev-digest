@@ -25,6 +25,7 @@ export function useShellCommands(): Command[] {
         label: t("commandPalette.goTo", { label: t(`nav.${it.key}`) }),
         group: t(`navSection.${g.section}`),
         icon: it.icon,
+        commandId: `nav.${it.key}`,
         run: () => router.push(resolveHref(it.href, repoId)),
       }))
     );
@@ -33,6 +34,7 @@ export function useShellCommands(): Command[] {
       label: t("commandPalette.goToSettings"),
       group: t("commandPalette.globalGroup"),
       icon: SETTINGS_ITEM.icon,
+      commandId: "nav.settings",
       run: () => router.push(SETTINGS_ITEM.href),
     });
     navCmds.push({
@@ -42,6 +44,7 @@ export function useShellCommands(): Command[] {
       }),
       group: t("commandPalette.themeAppearanceGroup"),
       icon: theme === "dark" ? "Sun" : "Moon",
+      commandId: "theme.toggle",
       run: toggle,
     });
     navCmds.push({
