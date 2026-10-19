@@ -23,8 +23,11 @@ export function PageTabs({
     <div
       role="tablist"
       // Inset shadow instead of a border: the active underline paints over it
-      // without a negative margin, so nothing overflows vertically.
-      className={cn("flex gap-0.5 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_var(--border)]", className)}
+      // without a negative margin, so nothing overflows vertically. The strip
+      // is its own container: in a narrow pane (an editor beside a list at the
+      // 1024px desktop minimum) tabs drop their icons and tighten instead of
+      // scrolling sideways.
+      className={cn("@container/tabs flex gap-0.5 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_var(--border)]", className)}
     >
       {tabs.map((t) => {
         const key = typeof t === "string" ? t : t.key;
@@ -41,13 +44,19 @@ export function PageTabs({
             aria-selected={on}
             onClick={() => onChange(key)}
             className={cn(
-              "flex shrink-0 cursor-pointer items-center gap-2 border-0 border-b-2 bg-transparent px-4 py-3 text-base whitespace-nowrap transition-colors",
+              "flex shrink-0 cursor-pointer items-center gap-2 border-0 border-b-2 bg-transparent px-2.5 py-3 text-sm whitespace-nowrap transition-colors @min-[600px]/tabs:px-4 @min-[600px]/tabs:text-base",
               on
                 ? "border-primary font-semibold text-foreground"
                 : "border-transparent font-medium text-muted-foreground hover:text-foreground",
             )}
           >
-            {I && <I size={14} className={on ? "text-primary" : "text-subtle-foreground"} aria-hidden />}
+            {I && (
+              <I
+                size={14}
+                className={cn("hidden @min-[600px]/tabs:block", on ? "text-primary" : "text-subtle-foreground")}
+                aria-hidden
+              />
+            )}
             {label}
             {count != null && <span className="tnum text-xs text-subtle-foreground">{count}</span>}
           </button>
