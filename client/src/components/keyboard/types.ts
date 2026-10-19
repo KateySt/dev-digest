@@ -14,13 +14,13 @@ export type Binding = string;
 
 /** Where a command can fire: anywhere in the app, only while a findings
  *  list is mounted, or system-wide (desktop global shortcut). */
-export type CommandScope = "app" | "page:findings" | "os";
+export type CommandScope = "app" | "page:findings" | "page:list" | "os";
 
 /** Who receives the key: the studio's keydown dispatcher, the desktop's
  *  native menu (accelerator), or the OS (global shortcut). */
 export type CommandOwner = "studio" | "menu" | "os";
 
-export type CommandGroup = "general" | "navigation" | "findings" | "desktop";
+export type CommandGroup = "general" | "navigation" | "lists" | "findings" | "desktop";
 
 export interface CommandLabel {
   /** Key under `shell.keyboard.commands`, or "goTo" with `nav`. */

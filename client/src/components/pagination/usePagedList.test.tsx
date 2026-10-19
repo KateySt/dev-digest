@@ -1,8 +1,12 @@
 /* usePagedList — client slicing, server mode, URL state, clamping, page-size memory. */
 import React from "react";
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, fireEvent, renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NuqsTestingAdapter, type UrlUpdateEvent } from "nuqs/adapters/testing";
+import { KeyboardProvider } from "@/components/keyboard";
+import { get, mockFetch, put } from "@/test/eval-utils";
+import { IntlWrapper } from "@/test/intl";
 import { usePagedList, type PagedListOptions } from "./usePagedList";
 
 type Row = { id: number };
@@ -97,5 +101,27 @@ describe("usePagedList — server mode", () => {
     const { result } = setup("?page=9", { rows: undefined, total: undefined });
     expect(updates).toEqual([]);
     expect(result.current.page).toBe(1); // nothing to page yet
+  });
+});
+
+describe("usePagedList — keyboard", () => {
+  it("registers [ and ] as page commands while there is more than one page", async () => {
+    mockFetch([get("/settings", () => ({})), put("/settings", () => ({}))]);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    const { result } = renderHook(() => usePagedList<Row>({ listKey: "kb", rows }), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={qc}>
+          <IntlWrapper>
+            <NuqsTestingAdapter searchParams="?page=3" hasMemory>
+              <KeyboardProvider>{children}</KeyboardProvider>
+            </NuqsTestingAdapter>
+          </IntlWrapper>
+        </QueryClientProvider>
+      ),
+    });
+    act(() => void fireEvent.keyDown(window, { key: "]", code: "BracketRight" }));
+    await waitFor(() => expect(result.current.page).toBe(4));
+    act(() => void fireEvent.keyDown(window, { key: "х", code: "BracketLeft" })); // Ukrainian layout
+    await waitFor(() => expect(result.current.page).toBe(3));
   });
 });

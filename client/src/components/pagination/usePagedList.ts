@@ -19,6 +19,7 @@ import {
   type PaginationState,
   type RowData,
 } from "@tanstack/react-table";
+import { useCommand } from "@/components/keyboard";
 import { clampPage, pageKeepingFirstItem } from "./helpers";
 import type { PagerState } from "./DataPagination";
 
@@ -146,6 +147,10 @@ export function usePagedList<T extends RowData>(options: PagedListOptions<T>): P
     },
     [pageSizes, listKey, setUrl, defaultPageSize, page, pageSize],
   );
+
+  // [ / ] (rebindable): page this list while it's mounted and has more than one page.
+  useCommand("list.prevPage", () => setPage(page - 1), pageCount > 1);
+  useCommand("list.nextPage", () => setPage(page + 1), pageCount > 1);
 
   const pageRows = server ? [] : table.getRowModel().rows.map((r) => r.original as T);
 

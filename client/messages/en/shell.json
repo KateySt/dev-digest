@@ -128,7 +128,8 @@
       "general": "General",
       "navigation": "Navigation",
       "findings": "Findings",
-      "desktop": "Desktop app"
+      "desktop": "Desktop app",
+      "lists": "Lists"
     },
     "commands": {
       "openPalette": "Open command palette",
@@ -145,7 +146,9 @@
       "goBack": "Go back",
       "goForward": "Go forward",
       "toggleTray": "Toggle “Keep running in the tray”",
-      "toggleWindow": "Show / hide the DevDigest window"
+      "toggleWindow": "Show / hide the DevDigest window",
+      "prevPage": "Previous page of the list",
+      "nextPage": "Next page of the list"
     },
     "toggled": {
       "theme": "Theme: {state}",
