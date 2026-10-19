@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import {
   useClearNotifications,
+  NOTIFICATIONS_PAGE,
   useInvalidateActivity,
   useMarkAllNotificationsRead,
   useNotifications,
@@ -31,7 +32,12 @@ export function NotificationCenter({ onNotification }: { onNotification?: (n: Ap
   const t = useTranslations("shell.notifications");
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const { data } = useNotifications();
+  // "Load more" grows the window by NOTIFICATIONS_PAGE; it starts over when the popover reopens.
+  const [limit, setLimit] = React.useState(NOTIFICATIONS_PAGE);
+  React.useEffect(() => {
+    if (!open) setLimit(NOTIFICATIONS_PAGE);
+  }, [open]);
+  const { data, isFetching } = useNotifications(limit);
   const { mutate: setRead } = useSetNotificationRead();
   const { mutate: markAll, isPending: markingAll } = useMarkAllNotificationsRead();
   const { mutate: remove } = useRemoveNotification();
@@ -113,6 +119,18 @@ export function NotificationCenter({ onNotification }: { onNotification?: (n: Ap
                   onRemove={() => remove(n.id)}
                 />
               ))}
+              {data?.total !== undefined && items.length < data.total && (
+                <li className="flex justify-center border-t border-border py-2">
+                  <button
+                    type="button"
+                    disabled={isFetching}
+                    onClick={() => setLimit((n) => n + NOTIFICATIONS_PAGE)}
+                    className="cursor-pointer border-none bg-transparent text-ui font-semibold text-primary hover:underline disabled:cursor-default disabled:opacity-60"
+                  >
+                    {t("loadMore", { shown: items.length, total: data.total })}
+                  </button>
+                </li>
+              )}
             </ul>
             <div className="flex justify-center border-t border-border px-3.5 py-2">
               <button

@@ -5,6 +5,7 @@ import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { NotFoundError } from '../../platform/errors.js';
 import type { NotificationDto } from './helpers.js';
+import { MAX_NOTIFICATIONS } from './constants.js';
 
 /**
  * Notification center.
@@ -16,6 +17,9 @@ import type { NotificationDto } from './helpers.js';
  *   DELETE /notifications            → clear all
  */
 
+/** `limit` — how many of the newest to return ("Load more" asks for the next 20). */
+const ListQuery = z.object({ limit: z.coerce.number().int().min(1).max(MAX_NOTIFICATIONS).optional() });
+
 const ReadBody = z.object({ read: z.boolean().default(true) }).default({ read: true });
 
 /** Keep-alive comment cadence; also how fast a dead connection is noticed. */
@@ -26,9 +30,9 @@ export default async function notificationsRoutes(appBase: FastifyInstance) {
   const { container } = app;
   const service = container.notifications;
 
-  app.get('/notifications', async (req) => {
+  app.get('/notifications', { schema: { querystring: ListQuery } }, async (req) => {
     const { workspaceId } = await getContext(container, req);
-    return service.list(workspaceId);
+    return service.list(workspaceId, req.query.limit);
   });
 
   // One long-lived connection per open studio window — no rate limit.

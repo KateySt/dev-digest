@@ -109,7 +109,8 @@
     "unreadPrefix": "Unread: {title}",
     "markRead": "Mark as read",
     "markUnread": "Mark as unread",
-    "remove": "Remove"
+    "remove": "Remove",
+    "loadMore": "Load more ({shown} of {total})"
   },
   "window": {
     "minimize": "Minimize window",
