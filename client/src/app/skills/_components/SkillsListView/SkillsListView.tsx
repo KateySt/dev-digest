@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SplitPane } from "@/components/split-pane";
+import { DataPagination, GRID_DEFAULT_PAGE_SIZE, GRID_PAGE_SIZES, usePagedList } from "@/components/pagination";
 import { cn } from "@/lib/utils";
 import { useSkills, useUpdateSkill } from "@/lib/hooks/skills";
 import { useRepos } from "@/lib/hooks";
@@ -84,6 +85,13 @@ export function SkillsListView() {
   };
 
   const list = filterSkills(skills ?? [], query);
+  const pager = usePagedList({
+    listKey: "skills",
+    rows: skills ? list : undefined,
+    pageSizes: GRID_PAGE_SIZES,
+    defaultPageSize: GRID_DEFAULT_PAGE_SIZE,
+    resetOn: [query, scope],
+  });
 
   const listPane = (
     <div className="h-full overflow-auto px-7 pt-6 pb-11">
@@ -155,7 +163,7 @@ export function SkillsListView() {
       )}
       {list.length > 0 && (
         <div className={GRID}>
-          {list.map((sk) => (
+          {pager.pageRows.map((sk) => (
             <SkillCard
               key={sk.id}
               skill={sk}
@@ -167,6 +175,7 @@ export function SkillsListView() {
           ))}
         </div>
       )}
+      {list.length > 0 && <DataPagination pager={pager} className="mt-4" />}
     </div>
   );
 

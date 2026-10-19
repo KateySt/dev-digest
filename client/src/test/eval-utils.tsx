@@ -1,6 +1,7 @@
 /* Shared helpers for the Evals feature tests: a tiny `fetch` router (the only
    mocked boundary), a fresh-QueryClient + next-intl render wrapper, and
    fixture builders for the shared eval contracts. */
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import React from "react";
 import { vi } from "vitest";
 import { render } from "@testing-library/react";
@@ -133,7 +134,8 @@ export function renderApp(
   const result = render(
     <QueryClientProvider client={queryClient}>
       <NextIntlClientProvider locale="en" messages={ALL_MESSAGES}>
-        {ui}
+        {/* Paged lists keep ?page= in the URL via nuqs, which needs an adapter. */}
+        <NuqsTestingAdapter hasMemory>{ui}</NuqsTestingAdapter>
       </NextIntlClientProvider>
     </QueryClientProvider>,
   );

@@ -14,6 +14,7 @@ import { ConventionCard } from "./_components/ConventionCard";
 import { CreateSkillModal } from "./_components/CreateSkillModal";
 import { UsedSkillGroup } from "./_components/UsedSkillGroup";
 import { groupConventions, pruneSelection } from "./helpers";
+import { DataPagination, usePagedList } from "@/components/pagination";
 
 const PAGE = "mx-auto max-w-[920px] px-7 pt-6 pb-11";
 const SECTION = "mb-7 flex flex-col gap-3";
@@ -37,6 +38,14 @@ export function ConventionsView() {
   const [modalRepoId, setModalRepoId] = React.useState<string | null>(null);
   const [showRejected, setShowRejected] = React.useState(false);
 
+  const list = conventions ?? [];
+  const groups = groupConventions(list);
+  // The flat sections can hold hundreds of extracted candidates — page each one.
+  const rows = <T,>(items: T[]) => (conventions ? items : undefined);
+  const readyPager = usePagedList({ listKey: "conventions-ready", urlPrefix: "ready", rows: rows(groups.ready) });
+  const reviewPager = usePagedList({ listKey: "conventions-review", urlPrefix: "review", rows: rows(groups.toReview) });
+  const rejectedPager = usePagedList({ listKey: "conventions-rejected", urlPrefix: "rejected", rows: rows(groups.rejected) });
+
   const crumb = [{ label: t("page.crumbLab") }, { label: t("page.crumbConventions") }];
 
   if (reposLoaded && !repoId) {
@@ -49,8 +58,6 @@ export function ConventionsView() {
     );
   }
 
-  const list = conventions ?? [];
-  const groups = groupConventions(list);
   // Derived, so ids that stopped being "ready" (used, un-accepted, refetched
   // after a 409) drop out of what the modal and the counter see.
   const selectedList = groups.ready.filter((c) => selected.has(c.id));
@@ -172,14 +179,16 @@ export function ConventionsView() {
                   </div>
                 </div>
                 <p className="m-0 text-sm text-muted-foreground">{t("sections.readyHint")}</p>
-                <div className={LIST}>{groups.ready.map((c) => card(c, true))}</div>
+                <div className={LIST}>{readyPager.pageRows.map((c) => card(c, true))}</div>
+                <DataPagination pager={readyPager} />
               </section>
             )}
 
             {groups.toReview.length > 0 && (
               <section className={SECTION} aria-label={t("sections.toReview")}>
                 <h2 className={H2}>{t("sections.toReview")}</h2>
-                <div className={LIST}>{groups.toReview.map((c) => card(c))}</div>
+                <div className={LIST}>{reviewPager.pageRows.map((c) => card(c))}</div>
+                <DataPagination pager={reviewPager} />
               </section>
             )}
 
@@ -205,7 +214,12 @@ export function ConventionsView() {
                     {showRejected ? t("sections.hideRejected") : t("sections.showRejected")}
                   </button>
                 </div>
-                {showRejected && <div className={LIST}>{groups.rejected.map((c) => card(c))}</div>}
+                {showRejected && (
+                  <>
+                    <div className={LIST}>{rejectedPager.pageRows.map((c) => card(c))}</div>
+                    <DataPagination pager={rejectedPager} />
+                  </>
+                )}
               </section>
             )}
           </>

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
+import { DataPagination, usePagedList } from "@/components/pagination";
 import { EmptyState, ErrorState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,8 @@ export function EvalCaseList({
   const [editing, setEditing] = React.useState<EvalCaseListItem | "new" | null>(null);
 
   const caseList = (cases ?? []) as EvalCaseListItem[];
+  // Shares the URL with its host page (Agent/Skill editor, dashboards): prefixed keys.
+  const pager = usePagedList({ listKey: "eval-cases", urlPrefix: "cases", rows: cases ? caseList : undefined });
   const { passing, withResult } = countPassing(caseList);
   const runAllReason = runAll.disabled ? runAll.disabledReason : undefined;
 
@@ -107,7 +110,7 @@ export function EvalCaseList({
 
       {caseList.length > 0 && (
         <div className="flex flex-col gap-2">
-          {caseList.map((c) => (
+          {pager.pageRows.map((c) => (
             <CaseRow
               key={c.id}
               c={c}
@@ -121,6 +124,7 @@ export function EvalCaseList({
               }}
             />
           ))}
+          <DataPagination pager={pager} className="mt-2" />
         </div>
       )}
     </div>

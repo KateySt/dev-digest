@@ -67,6 +67,8 @@ export interface PagedListOptions<T extends RowData> {
   total?: number;
   /** Server mode: the next page is loading (shown on the pager). */
   busy?: boolean;
+  /** Filters/search/sort the list depends on — any change goes back to page 1. */
+  resetOn?: unknown;
 }
 
 export interface PagedList<T extends RowData> extends PagerState {
@@ -87,6 +89,7 @@ export function usePagedList<T extends RowData>(options: PagedListOptions<T>): P
     rows,
     total: serverTotal,
     busy,
+    resetOn,
   } = options;
   const server = serverTotal !== undefined;
 
@@ -123,6 +126,15 @@ export function usePagedList<T extends RowData>(options: PagedListOptions<T>): P
       void setUrl({ page: next.pageIndex + 1 }, { history: "push" });
     },
   });
+
+  // A new filter/search/sort starts again at page 1 (skips the first render, so a shared URL keeps its page).
+  const resetKey = JSON.stringify(resetOn ?? null);
+  const lastResetKey = React.useRef(resetKey);
+  React.useEffect(() => {
+    if (lastResetKey.current === resetKey) return;
+    lastResetKey.current = resetKey;
+    void setUrl({ page: null }, { history: "replace" });
+  }, [resetKey, setUrl]);
 
   // A stale ?page= past the end (rows deleted, filter narrowed) snaps to the last page.
   const knownTotal = server ? serverTotal !== undefined : rows !== undefined;
