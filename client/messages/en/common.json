@@ -86,5 +86,21 @@
   "splitPane": {
     "resize": "Resize panels",
     "hint": "Drag to resize · double-click to reset"
+  },
+  "pagination": {
+    "nav": "Pagination",
+    "showing": "Showing {from}–{to} of {total}",
+    "items": "{total, plural, one {# item} other {# items}}",
+    "rowsPerPage": "Rows per page",
+    "first": "Go to first page",
+    "previous": "Go to previous page",
+    "next": "Go to next page",
+    "last": "Go to last page",
+    "goToPage": "Go to page {page}",
+    "jump": "Jump to a page",
+    "page": "Page",
+    "of": "of {count}",
+    "pageNumber": "Page number",
+    "loading": "Loading…"
   }
 }
