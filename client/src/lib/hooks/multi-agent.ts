@@ -2,7 +2,8 @@
    agents, poll the results, list past runs, cancel, per-agent estimates. */
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Paged } from "@/lib/types";
 import { api, ApiError } from "@/lib/api";
 import type {
   AgentEstimates,
@@ -29,6 +30,15 @@ export function useMultiAgentRun(id: string | null | undefined) {
 }
 
 /** Past multi-runs, newest first (server default limit 10), optionally for one PR. */
+/** One page of recent multi-runs (Multi-Agent page), previous page kept while the next loads. */
+export function useMultiAgentRunsPage(page: number, perPage: number) {
+  return useQuery({
+    queryKey: ["multi-agent-runs", "page", page, perPage],
+    queryFn: () => api.get<Paged<MultiAgentRunSummary>>(`/multi-agent-runs?page=${page}&per_page=${perPage}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useMultiAgentRuns(limit = 10, prId?: string | null) {
   return useQuery({
     queryKey: ["multi-agent-runs", prId ?? null, limit],

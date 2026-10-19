@@ -7,10 +7,11 @@ import { EmptyState, ErrorState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent, Severity } from "@devdigest/shared";
-import { useAgentStats, useAgentRuns } from "@/lib/hooks/agent-performance";
+import { useAgentStats, useAgentRunsPage } from "@/lib/hooks/agent-performance";
+import { DataPagination, usePageState, usePagedList } from "@/components/pagination";
 import { RunCostBadge, formatRunCost, formatTokens } from "@/components/run-cost-badge";
 import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
-import { SEVERITY_COLOR, SEVERITY_ORDER, DEFAULT_RUNS_LIMIT } from "./constants";
+import { SEVERITY_COLOR, SEVERITY_ORDER } from "./constants";
 import { formatSeconds, formatTimestamp } from "./helpers";
 
 const TH =
@@ -23,7 +24,18 @@ const TD = "border-b border-border p-2.5 text-sm text-muted-foreground";
 export function StatsTab({ agent }: { agent: Agent }) {
   const t = useTranslations("agents");
   const { data: stats, isLoading, isError, refetch } = useAgentStats(agent.id);
-  const { data: runs } = useAgentRuns(agent.id, DEFAULT_RUNS_LIMIT);
+  // Run history is server-paged (it grows with every review); the URL keys are prefixed
+  // because the editor shares its URL with the rest of the Agents page.
+  const pageState = usePageState({ listKey: "agent-runs", urlPrefix: "history" });
+  const runsPage = useAgentRunsPage(agent.id, pageState.page, pageState.pageSize);
+  const runs = runsPage.data?.items;
+  const pager = usePagedList({
+    listKey: "agent-runs",
+    urlPrefix: "history",
+    server: true,
+    total: runsPage.data?.total,
+    busy: runsPage.isPlaceholderData,
+  });
   const [traceRunId, setTraceRunId] = React.useState<string | null>(null);
 
   if (isLoading) {
@@ -136,6 +148,7 @@ export function StatsTab({ agent }: { agent: Agent }) {
           </tbody>
         </table>
       </div>
+      <DataPagination pager={pager} className="mt-3" />
 
       {traceRunId && (
         <RunTraceDrawer

@@ -10,4 +10,3 @@ export const SEVERITY_COLOR: Record<Severity, string> = {
 
 export const SEVERITY_ORDER: Severity[] = ["CRITICAL", "WARNING", "SUGGESTION"];
 
-export const DEFAULT_RUNS_LIMIT = 20;

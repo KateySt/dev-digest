@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { AppShell } from "@/components/app-shell";
 import { useActiveRepo } from "@/lib/contexts";
-import { useAgentEstimates, useAgents, useMultiAgentRuns, usePulls, useStartMultiRun } from "@/lib/hooks";
+import { usePageState, usePagedList } from "@/components/pagination";
+import { useAgentEstimates, useAgents, useMultiAgentRunsPage, usePulls, useStartMultiRun } from "@/lib/hooks";
 import { RecentMultiRuns } from "../RecentMultiRuns";
 import { resolveAccent } from "@/app/multi-agent/helpers";
 import { formatCost, formatDuration } from "@/app/multi-agent/helpers";
@@ -47,7 +48,15 @@ export function ConfigureRun() {
   const pulls = usePulls(activeRepo?.id);
   const agentsQ = useAgents();
   const estimatesQ = useAgentEstimates();
-  const recent = useMultiAgentRuns(10);
+  const recentPage = usePageState({ listKey: "multi-agent-recent", urlPrefix: "recent" });
+  const recent = useMultiAgentRunsPage(recentPage.page, recentPage.pageSize);
+  const recentPager = usePagedList({
+    listKey: "multi-agent-recent",
+    urlPrefix: "recent",
+    server: true,
+    total: recent.data?.total,
+    busy: recent.isPlaceholderData,
+  });
   const start = useStartMultiRun();
 
   const [chosenPr, setChosenPr] = React.useState<string | null>(null);
@@ -260,7 +269,7 @@ export function ConfigureRun() {
           )}
         </section>
 
-        <RecentMultiRuns runs={recent.data ?? []} />
+        <RecentMultiRuns runs={recent.data?.items ?? []} pager={recentPager} />
       </div>
     </AppShell>
   );

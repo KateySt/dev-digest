@@ -62,3 +62,12 @@ export interface PrRowView {
   status: "needs_review" | "reviewed" | "stale";
   updated: string;
 }
+
+/** One page of a server-paged list (`?page=&per_page=`).
+ *  TODO: move to @devdigest/shared (plan 2026-10-19, Part 2 "API shape"). */
+export interface Paged<T> {
+  items: T[];
+  total: number;
+  page: number;
+  per_page: number;
+}

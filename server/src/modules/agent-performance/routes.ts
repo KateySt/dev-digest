@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
+import { PageQuery, pageWindow, paged } from '../_shared/paging.js';
 import { NotFoundError } from '../../platform/errors.js';
 import { AgentPerformanceService } from './service.js';
 
@@ -13,7 +14,7 @@ import { AgentPerformanceService } from './service.js';
  *   GET /agents/performance → workspace-wide rollup (global Agent Performance page)
  */
 
-const RunsQuery = z.object({ limit: z.coerce.number().int().positive().max(200).optional() });
+const RunsQuery = z.object({ limit: z.coerce.number().int().positive().max(200).optional() }).merge(PageQuery);
 
 export default async function agentPerformanceRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
@@ -31,6 +32,13 @@ export default async function agentPerformanceRoutes(appBase: FastifyInstance) {
     { schema: { params: IdParams, querystring: RunsQuery } },
     async (req) => {
       const { workspaceId } = await getContext(app.container, req);
+      // ?page= → { items, total, page, per_page }; otherwise the legacy ?limit= bare array.
+      const window = pageWindow(req.query);
+      if (window) {
+        const page = await service.pageRunsForAgent(workspaceId, req.params.id, window.limit, window.offset);
+        if (!page) throw new NotFoundError('Agent not found');
+        return paged(page.items, page.total, window);
+      }
       const runs = await service.runsForAgent(workspaceId, req.params.id, req.query.limit);
       if (!runs) throw new NotFoundError('Agent not found');
       return runs;

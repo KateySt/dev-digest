@@ -12,6 +12,7 @@ import type {
   CiRun,
   CiSyncResult,
 } from "@devdigest/shared";
+import type { Paged } from "@/lib/types";
 import { api } from "../api";
 
 export type CiRunPeriod = "24h" | "7d" | "30d";
@@ -27,13 +28,7 @@ export interface CiRunFilters {
   perPage?: number;
 }
 
-// TODO: move to @devdigest/shared — GET /ci-runs?page= response.
-export interface CiRunPage {
-  items: CiRun[];
-  total: number;
-  page: number;
-  per_page: number;
-}
+export type CiRunPage = Paged<CiRun>;
 
 /** Installations + recent runs for one agent (CI tab). */
 export function useAgentCi(agentId: string | null | undefined) {

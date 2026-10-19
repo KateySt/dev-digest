@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import { DEFAULT_RUNS_LIMIT } from './constants.js';
@@ -77,6 +77,7 @@ export class AgentPerformanceRepository {
     workspaceId: string,
     agentId: string,
     limit = DEFAULT_RUNS_LIMIT,
+    offset = 0,
   ): Promise<
     {
       run: typeof t.agentRuns.$inferSelect;
@@ -90,8 +91,18 @@ export class AgentPerformanceRepository {
       .leftJoin(t.agents, eq(t.agents.id, t.agentRuns.agentId))
       .leftJoin(t.pullRequests, eq(t.pullRequests.id, t.agentRuns.prId))
       .where(and(eq(t.agentRuns.workspaceId, workspaceId), eq(t.agentRuns.agentId, agentId)))
-      .orderBy(desc(t.agentRuns.ranAt))
-      .limit(limit);
+      // id breaks ties so pages never repeat or skip a run.
+      .orderBy(desc(t.agentRuns.ranAt), desc(t.agentRuns.id))
+      .limit(limit)
+      .offset(offset);
     return rows;
+  }
+
+  async countRunsForAgent(workspaceId: string, agentId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(t.agentRuns)
+      .where(and(eq(t.agentRuns.workspaceId, workspaceId), eq(t.agentRuns.agentId, agentId)));
+    return row?.n ?? 0;
   }
 }

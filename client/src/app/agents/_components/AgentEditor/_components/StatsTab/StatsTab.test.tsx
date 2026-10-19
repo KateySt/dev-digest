@@ -1,3 +1,4 @@
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -49,7 +50,7 @@ const RUNS: RunSummary[] = [
 
 vi.mock("@/lib/hooks/agent-performance", () => ({
   useAgentStats: () => ({ data: STATS, isLoading: false, isError: false, refetch: vi.fn() }),
-  useAgentRuns: () => ({ data: RUNS }),
+  useAgentRunsPage: () => ({ data: { items: RUNS, total: RUNS.length, page: 1, per_page: 25 }, isPlaceholderData: false }),
 }));
 
 import { StatsTab } from "./StatsTab";
@@ -61,7 +62,9 @@ const AGENT = { id: "ag1", name: "Security Reviewer" } as Agent;
 function renderWithIntl() {
   return render(
     <NextIntlClientProvider locale="en" messages={{ agents: messages }}>
-      <StatsTab agent={AGENT} />
+      <NuqsTestingAdapter hasMemory>
+        <StatsTab agent={AGENT} />
+      </NuqsTestingAdapter>
     </NextIntlClientProvider>,
   );
 }
