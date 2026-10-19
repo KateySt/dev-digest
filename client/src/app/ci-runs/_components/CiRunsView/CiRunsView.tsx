@@ -16,6 +16,7 @@ import { SeverityCountBadges } from "@/components/findings-tooltip/SeverityCount
 import { formatRunCost } from "@/components/run-cost-badge";
 import { useAgents } from "@/lib/hooks/agents";
 import { type CiRunPeriod, useCiRepos, useCiRuns, useSyncCiRuns } from "@/lib/hooks/ci";
+import { DataPagination, usePageState, usePagedList } from "@/components/pagination";
 import { ciStatusBadge, ingestErrorMessage, isKnownCiStatus } from "@/lib/ci-status";
 import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
 import {
@@ -48,12 +49,23 @@ export function CiRunsView() {
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const [traceRun, setTraceRun] = React.useState<CiRun | null>(null);
 
-  const { data: runs, isLoading, isError, refetch } = useCiRuns({
+  const pageState = usePageState({ listKey: "ci-runs" });
+  const { data, isLoading, isError, refetch, isPlaceholderData } = useCiRuns({
     period,
     ...(agentId ? { agentId } : {}),
     ...(repo ? { repo } : {}),
     ...(status ? { status } : {}),
     ...(source ? { source } : {}),
+    page: pageState.page,
+    perPage: pageState.pageSize,
+  });
+  const runs = data?.items;
+  const pager = usePagedList({
+    listKey: "ci-runs",
+    server: true,
+    total: data?.total,
+    busy: isPlaceholderData,
+    resetOn: [period, agentId, repo, status, source],
   });
 
   // Refresh = sync (pull + verify + ingest), then the hook refetches the list.
@@ -225,6 +237,7 @@ export function CiRunsView() {
             </table>
           </div>
         )}
+        <DataPagination pager={pager} className="mt-4" />
 
         {traceRun?.agent_run_id && (
           <RunTraceDrawer

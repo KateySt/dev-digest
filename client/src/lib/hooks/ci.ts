@@ -22,6 +22,17 @@ export interface CiRunFilters {
   repo?: string;
   status?: string;
   source?: string;
+  /** Opt-in server paging (1-based). */
+  page?: number;
+  perPage?: number;
+}
+
+// TODO: move to @devdigest/shared — GET /ci-runs?page= response.
+export interface CiRunPage {
+  items: CiRun[];
+  total: number;
+  page: number;
+  per_page: number;
 }
 
 /** Installations + recent runs for one agent (CI tab). */
@@ -88,10 +99,11 @@ export function useCiRuns(filters: CiRunFilters = {}) {
   if (filters.repo) params.set("repo", filters.repo);
   if (filters.status) params.set("status", filters.status);
   if (filters.source) params.set("source", filters.source);
-  const qs = params.toString();
+  params.set("page", String(filters.page ?? 1));
+  if (filters.perPage) params.set("per_page", String(filters.perPage));
   return useQuery({
     queryKey: ["ci-runs", filters],
-    queryFn: () => api.get<CiRun[]>(`/ci-runs${qs ? `?${qs}` : ""}`),
+    queryFn: () => api.get<CiRunPage>(`/ci-runs?${params.toString()}`),
     placeholderData: keepPreviousData,
   });
 }

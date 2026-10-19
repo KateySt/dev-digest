@@ -222,6 +222,13 @@ export class CiService {
     return rows.map(toRunDto);
   }
 
+  /** One page of runs plus the total matching the same filters. */
+  async pageRuns(workspaceId: string, filters: CiRunFilters): Promise<{ items: CiRun[]; total: number }> {
+    const { limit: _limit, offset: _offset, ...where } = filters;
+    const [items, total] = await Promise.all([this.listRuns(workspaceId, filters), this.repo.countRuns(workspaceId, where)]);
+    return { items, total };
+  }
+
   async listRepos(workspaceId: string): Promise<string[]> {
     return this.repo.listRepos(workspaceId);
   }
