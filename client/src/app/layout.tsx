@@ -1,3 +1,4 @@
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NextIntlClientProvider } from "next-intl";
@@ -34,7 +35,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body suppressHydrationWarning>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Suspense fallback={null}>
-            <Providers>{children}</Providers>
+            {/* nuqs: type-safe URL state (?page=&per=…) for paged lists. */}
+            <NuqsAdapter>
+              <Providers>{children}</Providers>
+            </NuqsAdapter>
           </Suspense>
         </NextIntlClientProvider>
       </body>
