@@ -65,7 +65,8 @@ export function ProjectContextView() {
 
   const { data: detail, isLoading: detailLoading } = useProjectContextDocument(repoId, selectedPath);
 
-  const repoName = activeRepo?.full_name ?? repoId;
+  // Empty while repos load — the breadcrumb shows a skeleton, never the raw id.
+  const repoName = activeRepo?.full_name ?? "";
 
   if (repoNotFound) {
     return (

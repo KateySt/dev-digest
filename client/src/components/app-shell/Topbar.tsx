@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BindingKeys, useKeyboard } from "@/components/keyboard";
 import { cn } from "@/lib/utils";
 import type { Crumb, ShellContext } from "./types";
@@ -24,29 +25,35 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
   return (
     <header
       className={cn(
-        "app-drag flex h-13 shrink-0 items-center gap-4 border-b border-border bg-background",
+        // Container: below ~820px of bar width (expanded sidebar in the
+        // 1024px window) the search collapses to an icon button.
+        "app-drag @container/topbar flex h-13 shrink-0 items-center gap-4 border-b border-border bg-background",
         // Window controls sit flush against the right edge, full height.
         ctx.windowControls ? "pl-6" : "px-6",
       )}
     >
       <nav aria-label={t("breadcrumb")} className="min-w-0">
-        <ol className="flex items-center gap-2">
+        <ol className="flex min-w-0 items-center gap-2">
           {crumb.map((c, i) => {
             const last = i === crumb.length - 1;
-            const text = (
+            // An empty label is still loading (e.g. the repo name) — never show a raw id.
+            const text = !c.label ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
               <span
                 className={cn(
-                  "text-base whitespace-nowrap",
+                  "block truncate text-base whitespace-nowrap",
                   c.mono && "mono",
-                  last ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
+                  last ? "font-semibold text-foreground" : "max-w-60 font-medium text-muted-foreground",
                 )}
+                title={c.label}
                 aria-current={last ? "page" : undefined}
               >
                 {c.label}
               </span>
             );
             return (
-              <li key={i} className="flex items-center gap-2">
+              <li key={i} className={cn("flex min-w-0 items-center gap-2", !last && "shrink-0")}>
                 {i > 0 && <Icon.ChevronRight size={13} className="shrink-0 text-subtle-foreground" aria-hidden />}
                 {c.href ? <Link href={c.href}>{text}</Link> : text}
               </li>
@@ -57,10 +64,15 @@ export function Topbar({ ctx, crumb = [] }: { ctx: ShellContext; crumb?: Crumb[]
       <button
         type="button"
         onClick={ctx.onOpenCommandPalette}
-        className="ml-auto flex w-[260px] items-center gap-2.5 rounded-[7px] border border-border bg-surface px-3.5 py-2 text-sm text-subtle-foreground transition-colors hover:border-border-strong"
+        aria-label={t("search")}
+        title={t("search")}
+        className="ml-auto flex size-9 shrink-0 items-center justify-center gap-2.5 rounded-[7px] border border-border bg-surface text-sm text-subtle-foreground transition-colors hover:border-border-strong @min-[820px]/topbar:h-auto @min-[820px]/topbar:w-[260px] @min-[820px]/topbar:justify-start @min-[820px]/topbar:px-3.5 @min-[820px]/topbar:py-2"
       >
-        <span className="flex-1 text-left">{t("search")}</span>
-        <PaletteHint />
+        <Icon.Search size={15} className="@min-[820px]/topbar:hidden" aria-hidden />
+        <span className="hidden flex-1 text-left @min-[820px]/topbar:block">{t("search")}</span>
+        <span className="hidden @min-[820px]/topbar:contents">
+          <PaletteHint />
+        </span>
       </button>
       <Button variant="ghost" size="icon-sm" aria-label={themeLabel} title={themeLabel} onClick={ctx.onToggleTheme}>
         {ctx.theme === "light" ? <Icon.Moon /> : <Icon.Sun />}
