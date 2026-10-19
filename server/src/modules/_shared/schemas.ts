@@ -10,3 +10,10 @@ import { z } from 'zod';
  */
 export const IdParams = z.object({ id: z.string().uuid() });
 export type IdParams = z.infer<typeof IdParams>;
+
+/** A comma-separated query value parsed into an array of `item` (`?kinds=a,b` → ['a', 'b']). */
+export const csvOf = <T extends z.ZodTypeAny>(item: T) =>
+  z
+    .string()
+    .transform((s) => s.split(',').map((x) => x.trim()).filter(Boolean))
+    .pipe(z.array(item));

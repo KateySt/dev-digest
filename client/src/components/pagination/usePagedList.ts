@@ -63,7 +63,9 @@ export interface PagedListOptions<T extends RowData> {
   defaultPageSize?: number;
   /** Client mode: the whole (already filtered/sorted) list. */
   rows?: readonly T[];
-  /** Server mode: the total from the API; the caller fetches `page`/`pageSize`. */
+  /** Server mode: the caller fetches `page`/`pageSize` (read them first with `usePageState`). */
+  server?: boolean;
+  /** Server mode: the total from the API (undefined while the first page loads). */
   total?: number;
   /** Server mode: the next page is loading (shown on the pager). */
   busy?: boolean;
@@ -80,19 +82,25 @@ export interface PagedList<T extends RowData> extends PagerState {
 
 const EMPTY: readonly never[] = [];
 
-export function usePagedList<T extends RowData>(options: PagedListOptions<T>): PagedList<T> {
-  const {
-    listKey,
-    urlPrefix,
-    pageSizes = TABLE_PAGE_SIZES,
-    defaultPageSize = TABLE_DEFAULT_PAGE_SIZE,
-    rows,
-    total: serverTotal,
-    busy,
-    resetOn,
-  } = options;
-  const server = serverTotal !== undefined;
+export interface PageStateOptions {
+  listKey: string;
+  urlPrefix?: string;
+  pageSizes?: readonly number[];
+  defaultPageSize?: number;
+}
 
+/**
+ * The requested page and page size, straight from the URL (and the
+ * remembered size) — no total needed. Server-paged lists call this *before*
+ * their query (the query key needs page/size), then `usePagedList` after it;
+ * both read the same URL keys, so they always agree.
+ */
+export function usePageState({
+  listKey,
+  urlPrefix,
+  pageSizes = TABLE_PAGE_SIZES,
+  defaultPageSize = TABLE_DEFAULT_PAGE_SIZE,
+}: PageStateOptions) {
   const [url, setUrl] = useQueryStates(
     { page: parseAsInteger.withDefault(1), per: parseAsInteger },
     {
@@ -108,9 +116,28 @@ export function usePagedList<T extends RowData>(options: PagedListOptions<T>): P
 
   const allowed = (n: number | null | undefined): n is number => !!n && pageSizes.includes(n);
   const pageSize = allowed(url.per) ? url.per : allowed(storedSize) ? storedSize : defaultPageSize;
+  return { page: Math.max(1, url.page), pageSize, urlPage: url.page, setUrl, setStoredSize };
+}
+
+export function usePagedList<T extends RowData>(options: PagedListOptions<T>): PagedList<T> {
+  const {
+    listKey,
+    urlPrefix,
+    pageSizes = TABLE_PAGE_SIZES,
+    defaultPageSize = TABLE_DEFAULT_PAGE_SIZE,
+    rows,
+    server = options.total !== undefined,
+    total: serverTotal,
+    busy,
+    resetOn,
+  } = options;
+
+  const { pageSize, urlPage, setUrl, setStoredSize } = usePageState({ listKey, urlPrefix, pageSizes, defaultPageSize });
+  const knownTotal = server ? serverTotal !== undefined : rows !== undefined;
   const total = server ? Math.max(0, serverTotal ?? 0) : (rows?.length ?? 0);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const page = clampPage(url.page, pageCount);
+  // Until the total is known, trust the URL (clamping to page 1 would fetch page 1 first, then the real one).
+  const page = knownTotal ? clampPage(urlPage, pageCount) : Math.max(1, urlPage);
 
   const pagination: PaginationState = { pageIndex: page - 1, pageSize };
   const table = useTable({
@@ -137,10 +164,9 @@ export function usePagedList<T extends RowData>(options: PagedListOptions<T>): P
   }, [resetKey, setUrl]);
 
   // A stale ?page= past the end (rows deleted, filter narrowed) snaps to the last page.
-  const knownTotal = server ? serverTotal !== undefined : rows !== undefined;
   React.useEffect(() => {
-    if (knownTotal && url.page !== page) void setUrl({ page }, { history: "replace" });
-  }, [knownTotal, url.page, page, setUrl]);
+    if (knownTotal && urlPage !== page) void setUrl({ page }, { history: "replace" });
+  }, [knownTotal, urlPage, page, setUrl]);
 
   const setPage = React.useCallback(
     (p: number) => table.setPageIndex(clampPage(p, pageCount) - 1),

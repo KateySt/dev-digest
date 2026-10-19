@@ -1,10 +1,11 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { MemoryKind, MemoryLink, MemoryScope, MemorySource, MemorySummary } from '@devdigest/shared';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import { MEMORY_LIST_LIMIT, MEMORY_SEARCH_MIN_COSINE, MEMORY_STALE_DAYS } from './constants.js';
 import type { LinkWithName } from './helpers.js';
+import type { PageWindow } from '../_shared/paging.js';
 
 /**
  * Memory data-access (SPEC-2026-10-12-memory). Owns `memory` + `memory_links`
@@ -53,6 +54,9 @@ export interface MemoryListFilter {
   repoId?: string;
   scope?: MemoryScope;
   kind?: MemoryKind;
+  /** Multi-select filters from the Memory page (any of). */
+  scopes?: MemoryScope[];
+  kinds?: MemoryKind[];
   includeStale: boolean;
   archived: boolean;
   now: Date;
@@ -107,38 +111,44 @@ export class MemoryRepository {
     return where;
   }
 
-  async list(workspaceId: string, f: MemoryListFilter, search?: MemorySearch): Promise<MemoryRow[]> {
+  /** WHERE + ORDER BY for a list query (filters, then search: text rank or cosine). */
+  private listQuery(workspaceId: string, f: MemoryListFilter, search?: MemorySearch): { where: SQL[]; order: SQL[] } {
     const where = this.baseWhere(workspaceId, f);
     if (f.scope) where.push(eq(t.memory.scope, f.scope));
     if (f.kind) where.push(eq(t.memory.kind, f.kind));
-
+    if (f.scopes?.length) where.push(inArray(t.memory.scope, f.scopes));
+    if (f.kinds?.length) where.push(inArray(t.memory.kind, f.kinds));
+    // `id` last: a deterministic order, so pages never repeat or skip rows.
     if (search?.mode === 'text') {
       const q = orTsQuery(search.q);
       where.push(sql`${t.memory.contentTsv} @@ ${q}`);
-      return this.db
-        .select(cols)
-        .from(t.memory)
-        .where(and(...where))
-        .orderBy(desc(sql`ts_rank_cd(${t.memory.contentTsv}, ${q}, 32)`), desc(t.memory.updatedAt))
-        .limit(MEMORY_LIST_LIMIT);
+      return { where, order: [desc(sql`ts_rank_cd(${t.memory.contentTsv}, ${q}, 32)`), desc(t.memory.updatedAt), desc(t.memory.id)] };
     }
     if (search?.mode === 'semantic') {
-      where.push(
-        sql`1 - (${t.memory.embedding} <=> ${JSON.stringify(search.vec)}::vector) >= ${MEMORY_SEARCH_MIN_COSINE}`,
-      );
-      return this.db
-        .select(cols)
-        .from(t.memory)
-        .where(and(...where))
-        .orderBy(sql`${t.memory.embedding} <=> ${JSON.stringify(search.vec)}::vector nulls last`)
-        .limit(MEMORY_LIST_LIMIT);
+      const vec = JSON.stringify(search.vec);
+      where.push(sql`1 - (${t.memory.embedding} <=> ${vec}::vector) >= ${MEMORY_SEARCH_MIN_COSINE}`);
+      return { where, order: [sql`${t.memory.embedding} <=> ${vec}::vector nulls last`, desc(t.memory.id)] };
     }
+    return { where, order: [desc(t.memory.updatedAt), desc(t.memory.id)] };
+  }
+
+  /** One page when `window` is given; otherwise the legacy capped list (MEMORY_LIST_LIMIT). */
+  async list(workspaceId: string, f: MemoryListFilter, search?: MemorySearch, window?: PageWindow): Promise<MemoryRow[]> {
+    const { where, order } = this.listQuery(workspaceId, f, search);
     return this.db
       .select(cols)
       .from(t.memory)
       .where(and(...where))
-      .orderBy(desc(t.memory.updatedAt))
-      .limit(MEMORY_LIST_LIMIT);
+      .orderBy(...order)
+      .limit(window?.limit ?? MEMORY_LIST_LIMIT)
+      .offset(window?.offset ?? 0);
+  }
+
+  /** How many rows `list` would page through — same filters and search. */
+  async total(workspaceId: string, f: MemoryListFilter, search?: MemorySearch): Promise<number> {
+    const { where } = this.listQuery(workspaceId, f, search);
+    const [row] = await this.db.select({ n: count() }).from(t.memory).where(and(...where));
+    return row?.n ?? 0;
   }
 
   /** Facet counts over the base filter, ignoring the scope/kind filters they describe. */

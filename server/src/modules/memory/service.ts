@@ -2,6 +2,8 @@ import {
   MemoryInput,
   type CreateMemoryBody,
   type Memory,
+  type MemoryKind,
+  type MemoryScope,
   type MemoryListQuery,
   type MemoryListResponse,
   type MemorySource,
@@ -12,6 +14,7 @@ import {
 import type { Container } from '../../platform/container.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../platform/errors.js';
 import { MemoryRepository, type FindingSource, type MemoryRow, type MemorySearch } from './repository.js';
+import { pageMeta, pageWindow, type PageQuery } from '../_shared/paging.js';
 import { memoryRowToDto, validateMemoryInput } from './helpers.js';
 import { MEMORY_DUP_COSINE, MEMORY_FTS_DUP_THRESHOLD, MEMORY_SIMILAR_LIMIT } from './constants.js';
 
@@ -26,12 +29,19 @@ export class MemoryService {
     this.repo = new MemoryRepository(container.db);
   }
 
-  async list(workspaceId: string, query: MemoryListQuery): Promise<MemoryListResponse> {
+  /** With `page` (and optional `per_page`) one page plus `total`/`page`/`per_page`; without, the legacy capped list. */
+  async list(
+    workspaceId: string,
+    query: MemoryListQuery & PageQuery & { scopes?: MemoryScope[]; kinds?: MemoryKind[] },
+  ): Promise<MemoryListResponse & Partial<ReturnType<typeof pageMeta>>> {
+    const window = pageWindow(query);
     const now = new Date();
     const filter = {
       repoId: query.repo_id,
       scope: query.scope,
       kind: query.kind,
+      scopes: query.scopes,
+      kinds: query.kinds,
       includeStale: query.stale === true,
       archived: query.archived === true,
       now,
@@ -46,11 +56,13 @@ export class MemoryService {
     } else if (await this.embeddingsAvailable()) {
       mode = 'semantic';
     }
-    const [rows, counts] = await Promise.all([
-      this.repo.list(workspaceId, filter, search),
+    const [rows, counts, total] = await Promise.all([
+      this.repo.list(workspaceId, filter, search, window ?? undefined),
       this.repo.counts(workspaceId, filter),
+      window ? this.repo.total(workspaceId, filter, search) : Promise.resolve(0),
     ]);
-    return { items: await this.toDtos(rows, now), counts, search_mode: mode };
+    const items = await this.toDtos(rows, now);
+    return window ? { items, counts, search_mode: mode, ...pageMeta(total, window) } : { items, counts, search_mode: mode };
   }
 
   async get(workspaceId: string, id: string): Promise<Memory> {

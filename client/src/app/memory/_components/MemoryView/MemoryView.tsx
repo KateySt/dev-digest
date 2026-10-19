@@ -16,6 +16,7 @@ import { useActiveRepo } from "@/lib/contexts";
 import { useAgents } from "@/lib/hooks/agents";
 import { useSkills } from "@/lib/hooks/skills";
 import { useMemories, useMemory } from "@/lib/hooks/memory";
+import { DataPagination, usePageState, usePagedList } from "@/components/pagination";
 import { FilterRail } from "./_components/filter-rail";
 import { MemoryCard } from "./_components/memory-card";
 import { MemoryDetail } from "./_components/memory-detail";
@@ -49,11 +50,27 @@ export function MemoryView() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Server-paged: scope/kind filters go to the API too, so pages and totals stay right.
+  const all = (set: ReadonlySet<string>, values: readonly string[]) => set.size === values.length;
+  const scopesParam = all(scopes, MEMORY_SCOPES) ? undefined : [...scopes].join(",");
+  const kindsParam = all(kinds, MEMORY_KINDS) ? undefined : [...kinds].join(",");
+  const pageState = usePageState({ listKey: "memories" });
   const memories = useMemories({
     repo_id: repoId ?? undefined,
     stale: showStale,
     archived: showArchived,
     q: q || undefined,
+    scopes: scopesParam,
+    kinds: kindsParam,
+    page: pageState.page,
+    per_page: pageState.pageSize,
+  });
+  const pager = usePagedList({
+    listKey: "memories",
+    server: true,
+    total: memories.data?.total,
+    busy: memories.isPlaceholderData,
+    resetOn: [repoId, showStale, showArchived, q, scopesParam, kindsParam],
   });
   const agents = useAgents();
   const skills = useSkills();
@@ -124,9 +141,12 @@ export function MemoryView() {
                   <EmptyState icon="Brain" title={t("page.empty.title")} body={t("page.empty.body")} />
                 </div>
               ) : (
-                items.map((m) => (
-                  <MemoryCard key={m.id} m={m} now={now} selected={m.id === selectedId} onSelect={setSelectedId} />
-                ))
+                <>
+                  {items.map((m) => (
+                    <MemoryCard key={m.id} m={m} now={now} selected={m.id === selectedId} onSelect={setSelectedId} />
+                  ))}
+                  <DataPagination pager={pager} className="mt-1" />
+                </>
               )
             ) : memories.error ? (
               <ErrorState title={t("page.loadError")} onRetry={() => memories.refetch()} />

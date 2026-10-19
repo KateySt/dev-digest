@@ -5,13 +5,16 @@ import {
   CurateMergeBody,
   CurateMergeDraftBody,
   CurateScanBody,
+  MemoryKind,
   MemoryListQuery,
+  MemoryScope,
   MergeMemoryBody,
   UpdateMemoryBody,
 } from '@devdigest/shared';
 import { z } from 'zod';
 import { getContext } from '../_shared/context.js';
-import { IdParams } from '../_shared/schemas.js';
+import { IdParams, csvOf } from '../_shared/schemas.js';
+import { PageQuery } from '../_shared/paging.js';
 import { MemoryService } from './service.js';
 import { LearnService } from './learn.js';
 import { CurationService } from './curation.js';
@@ -44,7 +47,13 @@ export default async function memoryRoutes(appBase: FastifyInstance) {
   const learn = new LearnService(app.container);
   const curation = new CurationService(app.container);
 
-  app.get('/memories', { schema: { querystring: MemoryListQuery } }, async (req) => {
+  // page/per_page (opt-in paging) and scopes/kinds (comma lists for the page's multi-select filters)
+  // extend the shared query without touching the vendored contract.
+  const ListQuery = MemoryListQuery.merge(PageQuery).extend({
+    scopes: csvOf(MemoryScope).optional(),
+    kinds: csvOf(MemoryKind).optional(),
+  });
+  app.get('/memories', { schema: { querystring: ListQuery } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     return service.list(workspaceId, req.query);
   });
