@@ -12,6 +12,7 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Topbar } from "./Topbar";
 import { KeyboardProvider } from "@/components/keyboard";
 import { ShellKeyboard } from "./ShellKeyboard";
+import { useSidebarOpen } from "./sidebarState";
 import { useDesktopDeepLinks, useSetupGuard, useShellCommands, useShellContext } from "./hooks";
 import type { Crumb } from "./types";
 
@@ -23,6 +24,9 @@ export function AppShell({ children, crumb }: { children: React.ReactNode; crumb
   const openHelp = React.useCallback(() => setHelpOpen(true), []);
   const closeHelp = React.useCallback(() => setHelpOpen(false), []);
 
+  // Expanded/collapsed survives route changes and follows the window width (M6).
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
+
   useSetupGuard();
   useDesktopDeepLinks();
   const commands = useShellCommands();
@@ -30,7 +34,7 @@ export function AppShell({ children, crumb }: { children: React.ReactNode; crumb
 
   return (
     <KeyboardProvider>
-      <SidebarProvider className="h-full min-h-screen bg-background">
+      <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen} className="h-full min-h-screen bg-background">
         <ShellKeyboard onOpenPalette={openPalette} onOpenHelp={openHelp} />
         <AppSidebar ctx={ctx} />
         <SidebarInset className="min-w-0">

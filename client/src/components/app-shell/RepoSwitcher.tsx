@@ -3,6 +3,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,20 +13,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ShellContext } from "./types";
 
-/** Repo picker at the top of the sidebar: switch, add, or remove a repo. */
-export function RepoSwitcher({ ctx }: { ctx: ShellContext }) {
+/** Repo picker at the top of the sidebar: switch, add, or remove a repo.
+ *  `compact`: the sidebar's icon rail — only the repo icon, name in the trigger's title. */
+export function RepoSwitcher({ ctx, compact = false }: { ctx: ShellContext; compact?: boolean }) {
   const t = useTranslations("shell.repoSwitcher");
   const active = ctx.activeRepo;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t("label")}
-        className="mb-2 flex w-full items-center gap-2.5 rounded-[7px] border border-border bg-elevated px-3.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        title={compact ? (active?.full_name ?? t("noRepo")) : undefined}
+        className={cn(
+          "mb-2 flex w-full items-center gap-2.5 rounded-[7px] border border-border bg-elevated px-3.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          compact && "justify-center px-0 py-2",
+        )}
       >
         <span className="grid size-6.5 shrink-0 place-items-center rounded-md bg-linear-135 from-blue-500 to-violet-500">
           <Icon.GitBranch size={14} className="text-white" aria-hidden />
         </span>
-        <span className="min-w-0 flex-1">
+        <span className={cn("min-w-0 flex-1", compact && "sr-only")}>
           <span className="mono block truncate text-sm font-semibold">{active?.full_name ?? t("noRepo")}</span>
           <span className="block text-xs text-subtle-foreground">
             {active
@@ -33,7 +39,7 @@ export function RepoSwitcher({ ctx }: { ctx: ShellContext }) {
               : t("addRepoHint")}
           </span>
         </span>
-        <Icon.ChevronsUpDown size={14} className="text-subtle-foreground" aria-hidden />
+        {!compact && <Icon.ChevronsUpDown size={14} className="text-subtle-foreground" aria-hidden />}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="dd-dropdown-panel max-h-80 w-60">
         {ctx.repos.map((r) => (
