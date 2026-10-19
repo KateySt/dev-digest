@@ -13,17 +13,19 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { ApiError } from "@/lib/api";
 import { formatRunCost } from "@/components/run-cost-badge";
 import { useBulkReview, useReviewEstimate } from "@/lib/hooks/reviews";
+import { usePulls } from "@/lib/hooks";
 import type { PrMeta } from "@/lib/types";
 import { BULK_REVIEW_MAX_PRS } from "../../constants";
 import { estimateView } from "./helpers";
 
 export function ReviewAllDialog({
   repoId,
-  pulls,
+  pulls: given,
   onClose,
 }: {
   repoId: string;
-  pulls: PrMeta[];
+  /** PRs to label rows with; when omitted the dialog loads the repo's full list itself. */
+  pulls?: PrMeta[];
   onClose: () => void;
 }) {
   const t = useTranslations("prReview");
@@ -45,7 +47,9 @@ export function ReviewAllDialog({
             : null
       : null;
 
-  const pullById = new Map(pulls.map((p) => [p.id, p]));
+  // The list page only holds one page of PRs — the dialog loads the full list (titles) when opened.
+  const { data: fetched } = usePulls(given ? null : repoId);
+  const pullById = new Map((given ?? fetched ?? []).map((p) => [p.id, p]));
 
   return (
     // Radix Dialog traps focus, closes on Escape and returns focus to the opener.

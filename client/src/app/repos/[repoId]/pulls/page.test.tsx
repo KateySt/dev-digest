@@ -51,7 +51,12 @@ describe("PullsPage Review all", () => {
     const pulls = Array.from({ length: COUNT }, (_, i) => pr(i + 1));
     let started = false;
     const api = mockFetch([
-      get("/repos/r1/pulls", () => pulls),
+      // The page asks for one server page (?page=); the Review all dialog loads the full list.
+      get("/repos/r1/pulls", (c) =>
+        c.path.includes("page=")
+          ? { items: pulls, total: COUNT, page: 1, per_page: 25, counts: { all: COUNT, open: COUNT, needs_review: COUNT, reviewed: 0, stale: 0 } }
+          : pulls,
+      ),
       get("/repos/r1/pulls/review-estimate", () => ({
         pr_count: COUNT, agent_count: 2, run_count: COUNT * 2, approx_cost_usd: null, approximate: true, skip_count: 0,
       })),

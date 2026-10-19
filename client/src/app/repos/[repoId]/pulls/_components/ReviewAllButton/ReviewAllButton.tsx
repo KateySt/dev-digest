@@ -13,12 +13,22 @@ import { Button } from "@/components/ui/button";
 import type { PrMeta } from "@/lib/types";
 import { ReviewAllDialog } from "./_components/ReviewAllDialog";
 
-export function ReviewAllButton({ repoId, pulls }: { repoId: string; pulls: PrMeta[] | undefined }) {
+/** The count comes either from the paged list's server counts (`needsReviewCount`) or
+ *  from a full PR list (`pulls`); undefined while loading. */
+export function ReviewAllButton({
+  repoId,
+  needsReviewCount,
+  pulls,
+}: {
+  repoId: string;
+  needsReviewCount?: number;
+  pulls?: PrMeta[];
+}) {
   const t = useTranslations("prReview");
   const [open, setOpen] = React.useState(false);
-  const count = (pulls ?? []).filter((p) => p.status === "needs_review").length;
+  const count = needsReviewCount ?? (pulls ?? []).filter((p) => p.status === "needs_review").length;
   // Not loaded yet is not the same as "nothing needs review".
-  const loaded = pulls !== undefined;
+  const loaded = needsReviewCount !== undefined || pulls !== undefined;
   const empty = loaded && count === 0;
 
   return (
@@ -39,7 +49,7 @@ export function ReviewAllButton({ repoId, pulls }: { repoId: string; pulls: PrMe
           {t("list.reviewAll.button", { count })}
         </Button>
       </span>
-      {open && <ReviewAllDialog repoId={repoId} pulls={pulls ?? []} onClose={() => setOpen(false)} />}
+      {open && <ReviewAllDialog repoId={repoId} pulls={pulls} onClose={() => setOpen(false)} />}
     </>
   );
 }

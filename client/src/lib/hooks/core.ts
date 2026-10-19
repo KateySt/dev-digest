@@ -6,7 +6,7 @@
    these from hooks/index.ts. */
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import type {
   Settings,
@@ -17,6 +17,7 @@ import type {
   Repo,
   PrMeta,
   PrDetail,
+  Paged,
 } from "../types";
 
 // ---- Settings (F1: GET/PUT /settings, POST /settings/test-connection) ----
@@ -145,6 +146,38 @@ export function useDeleteRepo() {
 }
 
 // ---- Pull requests (F1: GET /repos/:id/pulls, GET /pulls/:id) ----
+// TODO: move to @devdigest/shared — GET /repos/:id/pulls?page= response.
+export type PullStatusCounts = { all: number; open: number; needs_review: number; reviewed: number; stale: number };
+export type PullsPage = Paged<PrMeta> & { counts: PullStatusCounts };
+export interface PullsPageQuery {
+  status: string;
+  q: string;
+  sort: string;
+  page: number;
+  perPage: number;
+}
+
+/** One server-filtered, server-sorted page of a repo's PRs, plus per-status counts.
+ *  Polls like `usePulls` (the server throttles the GitHub sync); the previous
+ *  page stays visible while the next one loads. */
+export function usePullsPage(repoId: string | null | undefined, query: PullsPageQuery) {
+  const qs = new URLSearchParams({
+    status: query.status,
+    sort: query.sort,
+    page: String(query.page),
+    per_page: String(query.perPage),
+  });
+  if (query.q) qs.set("q", query.q);
+  return useQuery({
+    queryKey: ["pulls", repoId, "page", query],
+    queryFn: () => api.get<PullsPage>(`/repos/${repoId}/pulls?${qs.toString()}`),
+    enabled: !!repoId,
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 export function usePulls(repoId: string | null | undefined) {
   return useQuery({
     queryKey: ["pulls", repoId],
