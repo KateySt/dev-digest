@@ -18,7 +18,7 @@ import { usePullsPage, useRefreshRepo } from "@/lib/hooks";
 import { DataPagination, usePageState, usePagedList } from "@/components/pagination";
 import { useActiveRepo, useRepoNotFound } from "@/lib/contexts/repoContext";
 import { ApiError } from "@/lib/api";
-import { COLUMN_KEYS, GRID_COLS, SKELETON_ROWS } from "./constants";
+import { COLUMN_KEYS, GRID_COLS, SKELETON_ROWS, WIDE_ONLY, WIDE_ONLY_COLUMNS } from "./constants";
 import { PRRow } from "./_components/PRRow";
 import { FilterBar } from "./_components/FilterBar";
 import { ReviewAllButton } from "./_components/ReviewAllButton";
@@ -120,7 +120,8 @@ export default function PullsPage() {
     resetOn: [repoId, status, q, sort],
   });
   const filtered = data?.items ?? [];
-  const repoName = activeRepo?.full_name ?? repoId;
+  // Empty while repos load — the breadcrumb shows a skeleton, never the raw id.
+  const repoName = activeRepo?.full_name ?? "";
   const openCount = data?.counts.open ?? 0;
   const needsReviewCount = data?.counts.needs_review ?? 0;
 
@@ -173,7 +174,7 @@ export default function PullsPage() {
         {/* Only the header and the rows scroll sideways (the grid keeps a
             150px title column); loading/error/empty states stay at the
             card's visible width. */}
-        <div className="overflow-x-auto">
+        <div className="@container/prs overflow-x-auto">
           <div className="w-full min-w-fit">
             <div
               className={cn(
@@ -182,7 +183,13 @@ export default function PullsPage() {
               )}
             >
               {COLUMN_KEYS.map((key, i) => (
-                <div key={key} className={i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left"}>
+                <div
+                  key={key}
+                  className={cn(
+                    i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left",
+                    WIDE_ONLY_COLUMNS.has(key) && WIDE_ONLY,
+                  )}
+                >
                   {t(`list.columns.${key}`)}
                 </div>
               ))}

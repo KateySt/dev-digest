@@ -72,7 +72,7 @@ export function AppSidebar({ ctx }: { ctx: ShellContext }) {
       collapsible="none"
       data-collapsed={collapsed || undefined}
       className={cn(
-        "h-auto min-h-svh shrink-0 gap-0.5 overflow-hidden border-r border-sidebar-border px-3.5 pb-4 transition-[width] duration-150",
+        "h-auto min-h-svh shrink-0 gap-0.5 overflow-hidden border-r border-sidebar-border px-3.5 pb-4",
         // Icon rail (< 1200px window, or Ctrl/⌘+B): 56px instead of 264px.
         collapsed && "w-14 px-2",
         // Desktop app: the logo row sits on the title bar's line.
