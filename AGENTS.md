@@ -11,6 +11,13 @@ Local-first AI PR-review tool, course starter template. Full picture: README.md
 - `e2e/` — deterministic browser e2e suite (`@devdigest/e2e`)
 - `desktop/` — Electron app for Windows/macOS (`@devdigest/desktop`); released
   by `.github/workflows/release.yml` on `v*` tags
+- `agent-runner/` — CLI that runs a review agent inside a target repo's own CI
+  (`@devdigest/agent-runner`); `bundle/runner.mjs` is committed on purpose —
+  rebuild it with `pnpm build`, never hand-edit
+- `mcp-server/` — stdio MCP server exposing review tools to Claude Code, a thin
+  HTTP client over the API on :3001 (`@devdigest/mcp-server`)
+- `evals/` — vitest + Claude Agent SDK evals for `.claude/skills`, `.claude/agents`
+  and workflow behaviour (`@devdigest/evals`); `**/fixtures/**` is intentionally bad code
 
 Each module has its own `AGENTS.md` that Claude Code loads automatically once
 you touch a file inside it. Don't duplicate module-level conventions here —
@@ -22,6 +29,13 @@ put them in the module's own `AGENTS.md` instead.
 - `docker compose up -d` / `docker compose down` — Postgres only
 - Per package: `pnpm dev` / `pnpm test` / `pnpm typecheck` (exact scripts in
   each module's README)
+- Repo root (tooling only — `pnpm install` once at the root):
+  - `pnpm lint` / `pnpm lint:fix` — Biome linter over every module (`biome.jsonc`).
+    Formatter is off on purpose: modules use different quote styles.
+  - `pnpm knip` — unused files / exports / deps across all modules (`knip.jsonc`);
+    needs each module's `node_modules` installed, so it is local-only, not in CI.
+- Versions: Node 22 (`.nvmrc`), pnpm pinned via `packageManager` in every
+  `package.json` (corepack). Dependabot opens weekly grouped PRs (`.github/dependabot.yml`).
 
 ## Read when
 
@@ -54,6 +68,7 @@ put them in the module's own `AGENTS.md` instead.
   Check the owning package before editing.
 - Lock files (`package-lock.json`, `pnpm-lock.yaml`) in any module — generated
   by the package manager, never hand-edit; regenerate via `pnpm install`.
-  `client/` and `server/` currently carry **both** lock files — `pnpm-lock.yaml`
-  is canonical (README requires pnpm); don't "fix" this by editing
-  `package-lock.json`.
+  `reviewer-core/` and `e2e/` CI installs use `npm ci`, so their
+  `package-lock.json` is live; every other module is pnpm-only.
+- Lint suppressions: `// biome-ignore lint/<group>/<rule>: <reason>` placed
+  above the statement — there is no ESLint here, so `eslint-disable` does nothing.
