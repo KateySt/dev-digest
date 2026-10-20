@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
-      "@devdigest/shared": path.resolve(__dirname, "src/vendor/shared"),
+      "@": path.resolve(import.meta.dirname, "src"),
+      "@devdigest/shared": path.resolve(import.meta.dirname, "src/vendor/shared"),
     },
   },
   test: {
