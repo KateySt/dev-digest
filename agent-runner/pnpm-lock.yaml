@@ -177,8 +177,8 @@ importers:
         specifier: ^22.10.0
         version: 22.20.0
       '@vercel/ncc':
-        specifier: ^0.38.3
-        version: 0.38.4
+        specifier: ^0.45.0
+        version: 0.45.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -318,8 +318,8 @@ packages:
   '@types/node@22.20.0':
     resolution: {integrity: sha512-QWlFW2wf3nTjC13/DqRnBpR4ZO36VJH/JVBkA/vcnmbTBNQIlnObqyqZE1tUR7+Ni23Lda8R1BxMfbXRpCUx5g==}
 
-  '@vercel/ncc@0.38.4':
-    resolution: {integrity: sha512-8LwjnlP39s08C08J5NstzriPvW1SP8Zfpp1BvC2sI35kPeZnHfxVkCwu4/+Wodgnd60UtT1n8K8zw+Mp7J9JmQ==}
+  '@vercel/ncc@0.45.0':
+    resolution: {integrity: sha512-8zPi1yO2mHpoKTD+e+Bf0ZT3e+sWHSOyGapm9s7b5R0gxJi3CiFTqmeQiMEyu6ejrz2s09M8JkEoUaTWjBJPQQ==}
     hasBin: true
 
   '@vitest/mocker@5.0.4':
@@ -673,7 +673,7 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@vercel/ncc@0.38.4': {}
+  '@vercel/ncc@0.45.0': {}
 
   '@vitest/mocker@5.0.4(vite@8.3.4(@types/node@22.20.0)(yaml@2.9.0))':
     dependencies:

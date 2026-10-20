@@ -33,13 +33,15 @@ import { EXTRACTION_SYSTEM_PROMPT } from './prompts.js';
  * really exist are discarded before they ever reach the DB.
  */
 
+// `.nullish()`, not `.optional()`: OpenAI structured outputs require every field,
+// so openai ≥ 5's zodResponseFormat rejects optional-only fields outright.
 const LLMCandidate = z.object({
   category: ConventionCategory,
   rule: z.string().min(1),
-  rationale: z.string().min(1).optional(),
+  rationale: z.string().min(1).nullish(),
   evidence_path: z.string().min(1),
   evidence_snippet: z.string().min(1),
-  evidence_line: z.number().int().positive().optional(),
+  evidence_line: z.number().int().positive().nullish(),
   confidence: z.number().min(0).max(1),
 });
 
@@ -201,7 +203,7 @@ export class ConventionsService {
           rationale: c.rationale ?? null,
           evidencePath: c.evidence_path,
           evidenceSnippet: c.evidence_snippet,
-          evidenceLine: clampEvidenceLine(source, c.evidence_line),
+          evidenceLine: clampEvidenceLine(source, c.evidence_line ?? undefined),
           confidence: c.confidence,
         };
       }),

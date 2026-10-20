@@ -11,7 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "openai": "^4.77.0",
+    "openai": "^7.32.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

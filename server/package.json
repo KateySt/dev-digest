@@ -19,7 +19,7 @@
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.33.1",
+    "@anthropic-ai/sdk": "^0.133.0",
     "@ast-grep/napi": "0.50.0",
     "@electric-sql/pglite": "0.5.8",
     "@electric-sql/pglite-pgvector": "0.0.9",
@@ -38,7 +38,7 @@
     "graphology-metrics": "^2.4.0",
     "js-tiktoken": "^1.0.21",
     "octokit": "^5.0.5",
-    "openai": "^4.77.0",
+    "openai": "^7.32.0",
     "p-queue": "^10.0.0",
     "postgres": "^3.4.5",
     "simple-git": "^4.0.2",
