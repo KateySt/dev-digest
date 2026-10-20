@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {Provider} from './knowledge.js';
+import { patchOf } from './patch.js';
 
 /**
  * Platform / scaffolding DTOs owned by F1:
@@ -115,7 +116,7 @@ export const SettingsKnown = z.object({
   sync_to_folder: z.boolean().default(true),
   automatic_reviews: z.boolean().default(false),
   /** Per-feature model overrides (provider+model), keyed by FeatureModelId. */
-  feature_models: z.record(FeatureModelId, FeatureModelChoice).default({}),
+  feature_models: z.partialRecord(FeatureModelId, FeatureModelChoice).default({}),
   /** Community skill catalog repo override (SPEC-07), `owner/name` form.
    *  Absent/empty ⇒ fall back to the COMMUNITY_CATALOG_REPO env default. Not
    *  a secret — deliberately NOT routed through SecretsProvider, must be
@@ -135,7 +136,7 @@ export type SettingsKnown = z.infer<typeof SettingsKnown>;
 export const Settings = SettingsKnown.passthrough();
 export type Settings = z.infer<typeof Settings>;
 
-export const SettingsUpdate = Settings.partial();
+export const SettingsUpdate = patchOf(Settings);
 export type SettingsUpdate = z.infer<typeof SettingsUpdate>;
 
 // ---- Connection test ----

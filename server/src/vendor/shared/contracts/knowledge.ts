@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { patchOf } from './patch.js';
 
 /**
  * Conformance, Eval, Memory, Conventions, Skills,
@@ -220,7 +221,7 @@ export const CreateMemoryBody = MemoryInput.extend({
 });
 export type CreateMemoryBody = z.infer<typeof CreateMemoryBody>;
 
-export const UpdateMemoryBody = MemoryInput.partial().extend({
+export const UpdateMemoryBody = patchOf(MemoryInput).extend({
   archived: z.boolean().optional(),
   /** Curation "Keep": sets `kept_at = now`, changes nothing else. */
   kept: z.literal(true).optional(),
