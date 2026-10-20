@@ -98,6 +98,6 @@ export function compactConvention(c: ConventionCandidate): CompactConvention {
     rule: c.rule,
     file: c.evidence_path,
     confidence: c.confidence,
-    accepted: c.accepted,
+    accepted: c.status === 'accepted',
   };
 }
