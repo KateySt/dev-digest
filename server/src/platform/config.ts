@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './load-env.js';
 import { z } from 'zod';
 import { homedir } from 'node:os';
 import { join, isAbsolute, resolve } from 'node:path';
