@@ -2,6 +2,7 @@
   "name": "@devdigest/desktop",
   "productName": "DevDigest",
   "version": "0.0.0",
+  "packageManager": "pnpm@12.14.0",
   "description": "DevDigest desktop app (Electron shell around the API + studio)",
   "author": "KateySt",
   "private": true,

@@ -1,0 +1,42 @@
+# Weekly dependency PRs. Minor + patch bumps land as ONE grouped PR per module;
+# majors stay separate so each breaking upgrade gets its own review + migration.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /server
+      - /client
+      - /reviewer-core
+      - /e2e
+      - /desktop
+      - /agent-runner
+      - /mcp-server
+      - /evals
+    schedule:
+      interval: weekly
+      day: monday
+    # same supply-chain buffer pnpm applies locally (minimumReleaseAge)
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Electron majors need the electron-best-practices checklist — upgrade by hand.
+      - dependency-name: electron
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
