@@ -17,6 +17,8 @@ const nextConfig = {
   // The vendored @devdigest/shared barrel uses NodeNext-style `./contracts/x.js`
   // specifiers for `.ts` files. Type-only imports are erased, but a runtime
   // import (e.g. MEMORY_CONTENT_MAX in MemoryForm) makes webpack resolve them.
+  // Turbopack (Next 16's default) has no extensionAlias equivalent and fails
+  // with "module has no exports", so dev/build run with --webpack.
   webpack: (config) => {
     config.resolve.extensionAlias = { ".js": [".ts", ".tsx", ".js"] };
     return config;
