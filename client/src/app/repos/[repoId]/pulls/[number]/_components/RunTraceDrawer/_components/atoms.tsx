@@ -1,6 +1,6 @@
 /* atoms — trivial presentational layout helpers shared by the trace body
    (Stat tile, labelled Row). Grouped in one file: no logic, never tested alone. */
-import React from "react";
+import type React from "react";
 
 export function Stat({ label, val }: { label: string; val: React.ReactNode }) {
   return (

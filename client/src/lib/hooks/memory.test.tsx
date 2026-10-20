@@ -1,5 +1,5 @@
 /* SPEC-2026-10-12-memory client hooks. `fetch` is the only mock. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

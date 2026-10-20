@@ -2,7 +2,6 @@
    its tabbed editor (config, skills, context, evals, stats, ci). */
 "use client";
 
-import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/empty-state";

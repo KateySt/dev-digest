@@ -2,7 +2,6 @@
    assembly, Tool calls, and Raw output sections for one persisted RunTrace. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";

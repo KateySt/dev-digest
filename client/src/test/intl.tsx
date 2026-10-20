@@ -1,7 +1,7 @@
 /* Test helper: an intl provider that always carries the `common` namespace
    (shared UI strings used by components/ui and the domain components) plus
    whatever feature namespaces a test passes in. */
-import React from "react";
+import type React from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import common from "../../messages/en/common.json";

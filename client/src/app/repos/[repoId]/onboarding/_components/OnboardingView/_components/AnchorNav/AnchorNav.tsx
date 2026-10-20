@@ -1,4 +1,4 @@
-import React from "react";
+
 
 /**
  * In-page anchor nav (C-AC-7) — one `<a href="#id">` per section, native

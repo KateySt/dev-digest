@@ -61,13 +61,10 @@ const EXPECTED_OUTPUT = [{ severity: 'INFO', file: 'src/config.ts', start_line: 
 
 d('eval (Testcontainers pg)', () => {
   let pg: PgFixture;
-  let workspaceId: string;
 
   beforeAll(async () => {
     pg = await startPg();
     await seed(pg.handle.db);
-    const [ws] = await pg.handle.db.select().from(t.workspaces);
-    workspaceId = ws!.id;
   });
   afterAll(async () => {
     await pg?.stop();

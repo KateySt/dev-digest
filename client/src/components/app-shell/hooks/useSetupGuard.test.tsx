@@ -1,5 +1,5 @@
 /* useSetupGuard — redirects to /first-run only when keys are known to be missing. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

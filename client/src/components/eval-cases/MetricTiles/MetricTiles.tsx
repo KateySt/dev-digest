@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import type { AgentEvalStats } from "@devdigest/shared";
 import { MetricDelta, MetricValue } from "@/components/eval-metrics";

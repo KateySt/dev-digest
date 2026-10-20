@@ -8,7 +8,6 @@
    come from the run row, zero extra model calls. */
 "use client";
 
-import React from "react";
 import { cn } from "@/lib/utils";
 
 export function formatRunCost(costUsd: number): string {

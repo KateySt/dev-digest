@@ -1,6 +1,6 @@
 /* BarRow — single labelled horizontal bar. The fill width and colour are data,
    passed as the `--w` / `--c` CSS variables. */
-import React from "react";
+import type React from "react";
 
 export function BarRow({
   label,

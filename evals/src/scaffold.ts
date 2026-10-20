@@ -113,12 +113,19 @@ function scaffold(tier: "skills" | "agents", name: string): void {
 
 function main(): void {
   const argv = process.argv.slice(2);
-  if (argv.length === 0) return list();
+  if (argv.length === 0) {
+    list();
+    return;
+  }
   const agentIdx = argv.indexOf("--agent");
   if (agentIdx !== -1) {
     const name = argv[agentIdx + 1];
-    if (!name) return void console.error("usage: pnpm eval:scaffold --agent <agent-name>");
-    return scaffold("agents", name);
+    if (!name) {
+      console.error("usage: pnpm eval:scaffold --agent <agent-name>");
+      return;
+    }
+    scaffold("agents", name);
+    return;
   }
   scaffold("skills", argv[0]);
 }

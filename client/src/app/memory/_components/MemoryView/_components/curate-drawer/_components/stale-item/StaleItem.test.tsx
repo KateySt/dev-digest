@@ -1,5 +1,4 @@
-/* One stale curation candidate (SPEC-2026-10-12-memory-curation AC-C14, AC-C19, AC-C20). */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { memory as curMem, mockFetch, renderApp } from "@/test/eval-utils";

@@ -1,5 +1,4 @@
-/* useDesktopDeepLinks — a devdigest://pr link opens the PR when its repo is added, else explains. */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { act, cleanup, waitFor } from "@testing-library/react";
 import { get, mockFetch, renderApp } from "@/test/eval-utils";

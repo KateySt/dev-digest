@@ -2,7 +2,6 @@
    Stored as non-secret prefs; the in-app bell always works regardless. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { NOTIFICATION_PREF_KEYS, notificationPrefs, useSettings, useUpdateSettings } from "@/lib/hooks";
 import { useDesktop } from "@/lib/desktop";

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import type { EvalCaseListItem, SkillEvalSuiteRunDetail } from "@devdigest/shared";
 import { MetricValue } from "@/components/eval-metrics";

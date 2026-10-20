@@ -1,7 +1,7 @@
 import type { Container } from '../../platform/container.js';
 import type { UnifiedDiff } from '@devdigest/shared';
 import { parseUnifiedDiff } from '../../adapters/git/diff-parser.js';
-import * as schema from '../../db/schema.js';
+import type * as schema from '../../db/schema.js';
 import type { ReviewRepository, PullRow } from './repository.js';
 
 /**
@@ -12,7 +12,7 @@ import type { ReviewRepository, PullRow } from './repository.js';
 export async function loadDiff(
   container: Container,
   repo: ReviewRepository,
-  workspaceId: string,
+  _workspaceId: string,
   pull: PullRow,
   repoRow: typeof schema.repos.$inferSelect,
 ): Promise<UnifiedDiff> {

@@ -24,7 +24,7 @@ vi.mock("@/components/eval-cases", () => ({
   }) => (
     <div>
       <span>{`${ownerKind}:${ownerId}`}</span>
-      <button onClick={runAll.onClick} disabled={runAll.disabled} title={runAll.disabledReason}>
+      <button type="button" onClick={runAll.onClick} disabled={runAll.disabled} title={runAll.disabledReason}>
         {runAll.label}
       </button>
       <span>{`row-reason:${rowRunDisabledReason ?? "none"}`}</span>

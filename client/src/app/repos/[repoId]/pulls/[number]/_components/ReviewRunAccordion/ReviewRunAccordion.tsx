@@ -52,12 +52,12 @@ export function ReviewRunAccordion({
   const [open, setOpen] = React.useState(defaultOpen);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [pendingScroll, setPendingScroll] = React.useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `targetNonce` is a deliberate re-trigger for repeated jumps to the same run
   React.useEffect(() => {
     if (review.run_id && review.run_id === targetRunId) {
       setOpen(true);
       setPendingScroll(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetRunId, targetNonce, review.run_id]);
 
   React.useEffect(() => {

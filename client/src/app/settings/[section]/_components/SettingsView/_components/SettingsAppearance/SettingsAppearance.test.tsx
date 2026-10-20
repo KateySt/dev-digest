@@ -1,5 +1,4 @@
-/* Settings → Appearance: each choice is a radio that updates <html> attributes and persists. */
-import React from "react";
+
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
 import { SectionLabel } from "@/components/section-label";

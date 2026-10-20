@@ -2,7 +2,6 @@
    Freshness and Archived toggles (design + SPEC-2026-10-12-memory AC-24). */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MEMORY_CLASSES, MEMORY_KINDS, MEMORY_SCOPES } from "../../constants";

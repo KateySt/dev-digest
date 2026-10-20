@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Combobox } from "@/components/combobox";
 import { FormField } from "@/components/form-field";

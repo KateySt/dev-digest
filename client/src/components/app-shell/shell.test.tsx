@@ -1,5 +1,5 @@
 /* App shell chrome: sidebar nav, repo switcher, command palette, shortcuts help. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { IntlWrapper } from "@/test/intl";

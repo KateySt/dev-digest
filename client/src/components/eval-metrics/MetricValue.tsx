@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { formatPercent, type MetricKey } from "@/lib/eval";
 import { cn } from "@/lib/utils";
 import { METRIC_TONE } from "./tones";

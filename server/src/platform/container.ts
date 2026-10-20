@@ -128,19 +128,23 @@ export class Container {
   }
 
   get agentsRepo(): AgentsRepository {
-    return (this._agentsRepo ??= new AgentsRepository(this.db));
+    this._agentsRepo ??= new AgentsRepository(this.db);
+    return this._agentsRepo;
   }
 
   get reviewRepo(): ReviewRepository {
-    return (this._reviewRepo ??= new ReviewRepository(this.db));
+    this._reviewRepo ??= new ReviewRepository(this.db);
+    return this._reviewRepo;
   }
 
   get skillsRepo(): SkillsRepository {
-    return (this._skillsRepo ??= new SkillsRepository(this.db));
+    this._skillsRepo ??= new SkillsRepository(this.db);
+    return this._skillsRepo;
   }
 
   get evalRepo(): EvalRepository {
-    return (this._evalRepo ??= new EvalRepository(this.db));
+    this._evalRepo ??= new EvalRepository(this.db);
+    return this._evalRepo;
   }
 
   /**
@@ -153,17 +157,20 @@ export class Container {
    * always-empty cache.
    */
   get skillsService(): SkillsService {
-    return (this._skillsService ??= new SkillsService(this));
+    this._skillsService ??= new SkillsService(this);
+    return this._skillsService;
   }
 
   /** Notification center — producers call `container.notifications.notify()`. */
   get notifications(): NotificationsService {
-    return (this._notifications ??= new NotificationsService(this));
+    this._notifications ??= new NotificationsService(this);
+    return this._notifications;
   }
 
   /** Shared `AgentsService` instance, memoized like `skillsService`. */
   get agentsService(): AgentsService {
-    return (this._agentsService ??= new AgentsService(this));
+    this._agentsService ??= new AgentsService(this);
+    return this._agentsService;
   }
 
   get codeIndex(): CodeIndex {

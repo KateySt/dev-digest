@@ -135,13 +135,13 @@ function useSetContextDocuments(
   });
   const { mutate } = mutation;
   /** Apply `paths` to the cache now, then queue the POST. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `key` is derived from `ownerId`, which is listed
   const replace = React.useCallback(
     (paths: string[], options?: MutateOptions<ProjectContextAttachment[], Error, { paths: string[]; previous: ProjectContextAttachment[] | undefined }>) => {
       const previous = qc.getQueryData<ProjectContextAttachment[]>(key);
       qc.setQueryData(key, toAttachments(paths));
       mutate({ paths, previous }, options);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [qc, mutate, ownerId],
   );
   return { replace, isPending: mutation.isPending };

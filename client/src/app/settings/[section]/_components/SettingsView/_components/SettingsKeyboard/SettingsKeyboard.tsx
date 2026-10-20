@@ -162,7 +162,7 @@ export function SettingsKeyboard() {
                   cmd={cmd}
                   name={label(cmd)}
                   binding={effective.get(cmd.id) ?? null}
-                  modified={Object.prototype.hasOwnProperty.call(overrides, cmd.id)}
+                  modified={Object.hasOwn(overrides, cmd.id)}
                   off={!singleKey}
                   notActive={cmd.owner === "os" && !!globalStatus[cmd.id] && globalStatus[cmd.id] !== "ok"}
                   editing={editing === cmd.id}

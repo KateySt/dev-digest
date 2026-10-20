@@ -1,6 +1,6 @@
 /* useLinkedSkills — feeds FindingCard's "Turn into eval case" target picker (SK-34).
    `null` means "still loading" and must never be confused with "no skills". */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { renderHook, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

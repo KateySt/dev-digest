@@ -1,5 +1,5 @@
 /* One duplicate group in the Curate drawer (SPEC-2026-10-12-memory-curation AC-C10..AC-C17). */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { CurateGroup } from "@devdigest/shared";

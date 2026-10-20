@@ -53,9 +53,9 @@ function makeGit(cloneRoot: string): GitClient & { calls: string[] } {
   return {
     calls,
     clonePathFor: (_repo: RepoRef) => cloneRoot,
-    clone: async (...args: unknown[]) => { calls.push('clone'); return { path: cloneRoot }; },
-    fetchPullHead: async (...args: unknown[]) => { calls.push('fetchPullHead'); },
-    sync: async (...args: unknown[]) => { calls.push('sync'); return { head: 'abc' }; },
+    clone: async () => { calls.push('clone'); return { path: cloneRoot }; },
+    fetchPullHead: async () => { calls.push('fetchPullHead'); },
+    sync: async () => { calls.push('sync'); return { head: 'abc' }; },
     currentHead: async () => { calls.push('currentHead'); return 'abc'; },
     diffNameOnly: async () => { calls.push('diffNameOnly'); return []; },
     diff: async () => { calls.push('diff'); return { raw: '', files: [] }; },

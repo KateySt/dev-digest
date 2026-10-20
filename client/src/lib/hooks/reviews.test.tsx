@@ -1,6 +1,6 @@
 /* SPEC-05 client hooks: useRunReview invalidation (C-AC-14), useReviewEstimate,
    useBulkReview (C-AC-24/25). `fetch` is the only mock. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

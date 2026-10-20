@@ -1,6 +1,6 @@
 /* SPEC-08 FindingCard "Turn into eval case" targets (SK-34..36) and the SPEC-01
    AC-2 / AC-4 amendments (per target). `fetch` is the only mocked boundary. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

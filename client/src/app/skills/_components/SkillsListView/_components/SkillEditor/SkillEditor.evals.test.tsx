@@ -14,7 +14,6 @@ import {
   evalCase,
   get,
   mockFetch,
-  post,
   renderApp,
   skill as makeSkill,
   skillEvalRuns,

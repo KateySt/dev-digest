@@ -4,7 +4,6 @@
    RunStatusNotice. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { CircularScore } from "@/components/circular-score";
 import { Icon } from "@/components/icon";

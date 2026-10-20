@@ -3,7 +3,7 @@ import type { BulkReviewOutcome, FindingActionKind, PrReviewComment, ReviewEstim
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
-import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
+import type { ReviewDto, ReviewDtoFinding } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl, replyToFinding as replyToFindingImpl } from './findings.js';
 import { reviewToDto } from './helpers.js';

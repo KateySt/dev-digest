@@ -3,7 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Container } from '../../../platform/container.js';
 import { NotFoundError } from '../../../platform/errors.js';
-import { ReviewRepository } from '../../reviews/repository.js';
+import type { ReviewRepository } from '../../reviews/repository.js';
 import { BlastService } from '../../blast/service.js';
 import { TOOL_NAMES } from '../constants.js';
 import { jsonResult, safeToolCall } from '../dto.js';

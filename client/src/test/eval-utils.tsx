@@ -2,7 +2,7 @@
    mocked boundary), a fresh-QueryClient + next-intl render wrapper, and
    fixture builders for the shared eval contracts. */
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import React from "react";
+import type React from "react";
 import { vi } from "vitest";
 import { render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

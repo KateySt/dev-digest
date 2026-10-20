@@ -1,5 +1,5 @@
 /* WindowControls — desktop-only caption buttons driving the preload bridge. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach } from "vitest";
 import { act, cleanup, fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import { WindowControls } from "./WindowControls";

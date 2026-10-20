@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { FilterChip } from "@/components/filter-chip";
 import { Icon } from "@/components/icon";

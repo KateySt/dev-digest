@@ -1,5 +1,4 @@
-/* ShellKeyboard — app-wide command handlers: navigation, Mod+1…9, toggles with a toast. */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { get, mockFetch, put, renderApp } from "@/test/eval-utils";

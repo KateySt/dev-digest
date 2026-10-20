@@ -13,7 +13,7 @@ import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
 
 type ReviewOutcome = Awaited<ReturnType<typeof reviewPullRequest>>;
 import { RunLogger } from '../../platform/run-logger.js';
-import * as schema from '../../db/schema.js';
+import type * as schema from '../../db/schema.js';
 import type { AgentRow } from '../../db/rows.js';
 import type { ReviewRepository, FindingRow, PullRow, ReviewRow } from './repository.js';
 import { REVIEW_STRATEGY } from './constants.js';

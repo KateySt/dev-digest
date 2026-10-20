@@ -44,8 +44,8 @@ vi.mock("@/app/repos/[repoId]/pulls/[number]/_components/FindingCard", () => ({
       {p.defaultExpanded && (
         <>
           <p>{`why ${p.f.title}`}</p>
-          <button onClick={() => p.onAction?.("accept")}>Accept</button>
-          <button disabled>Learn</button>
+          <button type="button" onClick={() => p.onAction?.("accept")}>Accept</button>
+          <button type="button" disabled>Learn</button>
         </>
       )}
     </div>
@@ -55,7 +55,7 @@ vi.mock("@/components/app-shell", () => ({ AppShell: ({ children }: { children: 
 vi.mock("@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer", () => ({
   default: (p: { runId: string; running?: boolean; queued?: boolean; onClose: () => void }) => (
     <div data-testid="drawer" data-run={p.runId} data-running={String(!!p.running)} data-queued={String(!!p.queued)}>
-      <button onClick={p.onClose}>close drawer</button>
+      <button type="button" onClick={p.onClose}>close drawer</button>
     </div>
   ),
 }));

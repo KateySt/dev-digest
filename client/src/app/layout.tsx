@@ -26,6 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <head>
         {/* set theme before paint to avoid FOUC */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, build-time constant script */}
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
       </head>
       {/* suppressHydrationWarning: browser extensions (Grammarly, translators, …)

@@ -1,6 +1,4 @@
-/* Settings → Keyboard: rebind, disable, reset, conflicts, reserved combos,
-   sequences, search (by name and by keys), single-key switch, global shortcuts. */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { get, mockFetch, put, renderApp } from "@/test/eval-utils";

@@ -8,7 +8,7 @@ import { parseUnifiedDiff, stripIgnoredFiles } from './diff.js';
  * `UnifiedDiff`/`DiffHunk` shape the citation-grounding gate needs: per-file
  * hunks with the set of new-side line numbers they cover.
  */
-export const FIXTURE_DIFF_RAW = `diff --git a/src/config.ts b/src/config.ts
+const FIXTURE_DIFF_RAW = `diff --git a/src/config.ts b/src/config.ts
 --- a/src/config.ts
 +++ b/src/config.ts
 @@ -9,3 +9,4 @@

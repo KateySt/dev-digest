@@ -1,4 +1,4 @@
-import React from "react";
+
 import type { Severity } from "@devdigest/shared";
 import { Icon } from "@/components/icon";
 import { SEVERITY_STYLE } from "@/components/severity";

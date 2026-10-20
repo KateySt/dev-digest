@@ -1,7 +1,6 @@
 /* NotFoundState — 404 for an unknown / other-workspace multi-run (C-AC-26). */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
 

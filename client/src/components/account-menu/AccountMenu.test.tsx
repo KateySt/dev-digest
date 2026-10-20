@@ -1,5 +1,4 @@
-/* AccountMenu — the active GitHub user, plus desktop-only app actions. */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { get, mockFetch, renderApp } from "@/test/eval-utils";

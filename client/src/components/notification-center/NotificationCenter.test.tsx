@@ -1,5 +1,4 @@
-/* NotificationCenter — bell badge, dropdown list, read/remove actions, live stream. */
-import React from "react";
+
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { get, mockFetch, post, renderApp } from "@/test/eval-utils";

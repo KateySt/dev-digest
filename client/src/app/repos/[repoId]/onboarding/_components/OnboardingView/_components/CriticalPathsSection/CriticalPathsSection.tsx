@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { MonoLink } from "@/components/mono-link";
 import { githubBlobUrl } from "@/lib/utils";

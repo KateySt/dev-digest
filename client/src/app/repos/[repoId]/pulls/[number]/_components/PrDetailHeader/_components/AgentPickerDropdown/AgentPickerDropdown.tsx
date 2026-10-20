@@ -39,9 +39,9 @@ export function AgentPickerDropdown({ prId, warnMerged = false, onRunsStarted }:
   const workspaceId = workspace?.workspaceId;
 
   const enabled = React.useMemo(() => (agents ?? []).filter((a) => a.enabled), [agents]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `open` is a deliberate re-read trigger for the stored selection
   const enabledIds = React.useMemo(() => enabled.map((a) => a.id), [enabled]);
   // Re-read on open so a selection saved elsewhere (Configure page) is picked up.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stored = React.useMemo(() => readStoredSelection(workspaceId), [workspaceId, open]);
   const checked = keepEnabled(touched ?? stored, enabledIds);
   const estimateById = React.useMemo(

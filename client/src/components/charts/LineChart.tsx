@@ -1,5 +1,5 @@
 /* LineChart — multi-series line chart on Recharts. */
-import React from "react";
+import type React from "react";
 import {
   LineChart as RLineChart,
   Line,

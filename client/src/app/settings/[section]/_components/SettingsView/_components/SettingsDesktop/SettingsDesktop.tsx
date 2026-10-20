@@ -3,7 +3,6 @@
    edited in Settings → Keyboard like every other shortcut. */
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { BindingKeys, useKeyboard } from "@/components/keyboard";

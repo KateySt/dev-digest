@@ -53,6 +53,7 @@ export function ConfigTab({
   const [description, setDescription] = React.useState(skill.description);
   const [type, setType] = React.useState<SkillType>(skill.type);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset the form only when a different skill is opened, not on every refetch
   React.useEffect(() => {
     setName(skill.name);
     setDescription(skill.description);

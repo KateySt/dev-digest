@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";

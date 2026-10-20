@@ -1,5 +1,4 @@
-/* Settings → Desktop: close-to-tray (moved from Notifications) and the global Show/Hide status. */
-import React from "react";
+
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { get, mockFetch, put, renderApp } from "@/test/eval-utils";

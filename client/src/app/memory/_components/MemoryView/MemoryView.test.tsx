@@ -1,5 +1,5 @@
 /* Memory page (SPEC-2026-10-12-memory AC-24..AC-29). fetch is the only API mock. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Memory, MemoryListResponse } from "@devdigest/shared";

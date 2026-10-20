@@ -95,6 +95,7 @@ export function useEvalSuiteRun(runId: string | null | undefined, owner?: EvalRu
   const wasRunning = useRef(false);
   const ownerKind = owner?.kind;
   const ownerId = owner?.id;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: invalidators are stable query-client callbacks; only status transitions matter
   useEffect(() => {
     if (status === "running") {
       wasRunning.current = true;
@@ -102,7 +103,6 @@ export function useEvalSuiteRun(runId: string | null | undefined, owner?: EvalRu
       wasRunning.current = false;
       if (ownerId) (ownerKind === "skill" ? invalidateSkill : invalidateAgent)(ownerId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, ownerKind, ownerId]);
 
   return query;

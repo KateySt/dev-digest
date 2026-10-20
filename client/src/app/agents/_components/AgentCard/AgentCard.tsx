@@ -2,7 +2,6 @@
    we render the provider/model + skill count here. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";

@@ -36,6 +36,7 @@ export function ConfigTab({ agent }: { agent: Agent }) {
   const [repoIntel, setRepoIntel] = React.useState(agent.repo_intel);
 
   // Reset local form when switching agents.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset the form only when a different agent is opened, not on every refetch
   React.useEffect(() => {
     setName(agent.name);
     setDescription(agent.description);

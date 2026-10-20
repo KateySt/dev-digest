@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { ConventionCandidate, ConventionStatus, CreateSkillFromConventionsInput } from '@devdigest/shared';
+import { type ConventionCandidate, ConventionStatus, CreateSkillFromConventionsInput } from '@devdigest/shared';
 import { z } from 'zod';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';

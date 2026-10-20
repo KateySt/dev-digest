@@ -16,7 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EvalRange } from "@devdigest/shared";
 import { AppShell } from "@/components/app-shell";
-import { type TrendPoint } from "@/components/eval-metrics";
+import type { TrendPoint } from "@/components/eval-metrics";
 import { MetricCards, RegressionBanner, RunsTable, TrendPanel } from "@/components/eval-dashboard";
 import { notify } from "@/lib/contexts";
 import { useAgent, useAgents } from "@/lib/hooks/agents";

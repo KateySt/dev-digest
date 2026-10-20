@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { formatPointDelta, toPointDelta } from "@/lib/eval";
 import { cn } from "@/lib/utils";
 import { deltaTone } from "./tones";

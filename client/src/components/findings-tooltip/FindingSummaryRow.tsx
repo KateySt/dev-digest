@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import type { FindingRecord } from "@devdigest/shared";
 import { MonoLink } from "@/components/mono-link";
