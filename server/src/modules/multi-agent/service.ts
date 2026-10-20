@@ -118,8 +118,22 @@ export class MultiAgentService {
   }
 
   /** Bare array, newest first (the client hook expects no wrapper). */
-  async list(workspaceId: string, prId: string | undefined, limit: number): Promise<MultiAgentRunSummary[]> {
-    const headers = await this.repo.listHeaders(workspaceId, prId, limit);
+  /** One page of multi-runs plus the total (Multi-Agent page's recent runs). */
+  async page(
+    workspaceId: string,
+    prId: string | undefined,
+    limit: number,
+    offset: number,
+  ): Promise<{ items: MultiAgentRunSummary[]; total: number }> {
+    const [items, total] = await Promise.all([
+      this.list(workspaceId, prId, limit, offset),
+      this.repo.countHeaders(workspaceId, prId),
+    ]);
+    return { items, total };
+  }
+
+  async list(workspaceId: string, prId: string | undefined, limit: number, offset = 0): Promise<MultiAgentRunSummary[]> {
+    const headers = await this.repo.listHeaders(workspaceId, prId, limit, offset);
     const children = await this.repo.childRuns(headers.map((h) => h.id));
     return headers.map((h: MultiRunHeader) => {
       const own = children.filter((c) => c.multiAgentRunId === h.id);

@@ -36,6 +36,10 @@ export const COMMANDS: CommandDef[] = [
       }),
     ),
 
+  // Paged lists (only while a paged list is mounted; the innermost one wins)
+  { id: "list.prevPage", label: { key: "prevPage" }, group: "lists", scope: "page:list", owner: "studio", defaults: both("BracketLeft"), rebindable: true },
+  { id: "list.nextPage", label: { key: "nextPage" }, group: "lists", scope: "page:list", owner: "studio", defaults: both("BracketRight"), rebindable: true },
+
   // Findings (only while a findings list is mounted)
   { id: "findings.next", label: { key: "nextFinding" }, group: "findings", scope: "page:findings", owner: "studio", defaults: both("KeyJ"), rebindable: true },
   { id: "findings.prev", label: { key: "prevFinding" }, group: "findings", scope: "page:findings", owner: "studio", defaults: both("KeyK"), rebindable: true },
@@ -62,7 +66,7 @@ export const COMMANDS: CommandDef[] = [
   { id: "window.toggle", label: { key: "toggleWindow" }, group: "desktop", scope: "os", owner: "os", defaults: both(null), rebindable: true, desktopOnly: true },
 ];
 
-export const COMMAND_GROUPS = ["general", "navigation", "findings", "desktop"] as const;
+export const COMMAND_GROUPS = ["general", "navigation", "lists", "findings", "desktop"] as const;
 
 const BY_ID = new Map(COMMANDS.map((c) => [c.id, c]));
 

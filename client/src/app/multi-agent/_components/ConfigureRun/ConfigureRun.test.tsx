@@ -1,3 +1,4 @@
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -32,13 +33,15 @@ function setup(over: { pulls?: unknown[]; agents?: unknown[] } = {}) {
     get("/repos/r1/pulls", () => over.pulls ?? [pr("p1", 482), pr("p2", 483), pr("p3", 1, "closed")]),
     get("/agents", () => over.agents ?? [agent("a1", "Security"), agent("a2", "Perf"), agent("a3", "Off", false)]),
     get("/multi-agent-runs/estimates", () => estimates),
-    get("/multi-agent-runs", () => []),
+    get("/multi-agent-runs", () => ({ items: [], total: 0, page: 1, per_page: 25 })),
   ]);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
       <NextIntlClientProvider locale="en" messages={{ runs: runsMessages }}>
-        <ConfigureRun />
+        <NuqsTestingAdapter hasMemory>
+          <ConfigureRun />
+        </NuqsTestingAdapter>
       </NextIntlClientProvider>
     </QueryClientProvider>,
   );

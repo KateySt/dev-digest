@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { RunTrace } from '@devdigest/shared';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
@@ -11,6 +11,8 @@ export interface CiRunFilters {
   source?: string;
   since?: Date;
   limit: number;
+  /** Rows to skip (paging). */
+  offset?: number;
 }
 
 /** A run row joined with its installation's agent/repo — for the CI Runs
@@ -185,20 +187,35 @@ export class CiRepository {
 
   /** Runs for the workspace's agents, newest first, optionally filtered. */
   async listRuns(workspaceId: string, filters: CiRunFilters): Promise<CiRunWithContext[]> {
+    return this.selectRuns(this.runsWhere(workspaceId, filters), filters.limit, filters.offset);
+  }
+
+  /** How many runs match the filters (for paging). */
+  async countRuns(workspaceId: string, filters: Omit<CiRunFilters, 'limit' | 'offset'>): Promise<number> {
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(t.ciRuns)
+      .innerJoin(t.ciInstallations, eq(t.ciInstallations.id, t.ciRuns.ciInstallationId))
+      .innerJoin(t.agents, eq(t.agents.id, t.ciInstallations.agentId))
+      .where(this.runsWhere(workspaceId, filters));
+    return row?.n ?? 0;
+  }
+
+  private runsWhere(workspaceId: string, filters: Omit<CiRunFilters, 'limit' | 'offset'>) {
     const conditions = [eq(t.agents.workspaceId, workspaceId)];
     if (filters.agentId) conditions.push(eq(t.agents.id, filters.agentId));
     if (filters.repo) conditions.push(eq(t.ciInstallations.repo, filters.repo));
     if (filters.status) conditions.push(eq(t.ciRuns.status, filters.status));
     if (filters.source) conditions.push(eq(t.ciRuns.source, filters.source));
     if (filters.since) conditions.push(gte(t.ciRuns.ranAt, filters.since));
-    return this.selectRuns(and(...conditions), filters.limit);
+    return and(...conditions);
   }
 
   async recentRunsForAgent(agentId: string, limit: number): Promise<CiRunWithContext[]> {
     return this.selectRuns(eq(t.ciInstallations.agentId, agentId), limit);
   }
 
-  private async selectRuns(where: ReturnType<typeof and>, limit: number): Promise<CiRunWithContext[]> {
+  private async selectRuns(where: ReturnType<typeof and>, limit: number, offset = 0): Promise<CiRunWithContext[]> {
     return this.db
       .select({
         run: t.ciRuns,
@@ -211,8 +228,10 @@ export class CiRepository {
       .innerJoin(t.ciInstallations, eq(t.ciInstallations.id, t.ciRuns.ciInstallationId))
       .innerJoin(t.agents, eq(t.agents.id, t.ciInstallations.agentId))
       .where(where)
-      .orderBy(desc(t.ciRuns.ranAt))
-      .limit(limit);
+      // id breaks ties so pages never repeat or skip a run.
+      .orderBy(desc(t.ciRuns.ranAt), desc(t.ciRuns.id))
+      .limit(limit)
+      .offset(offset);
   }
 
   // ---- ingest -----------------------------------------------------------

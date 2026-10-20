@@ -2,6 +2,7 @@
    results page. Renders nothing while there are none. */
 "use client";
 
+import { DataPagination, type PagerState } from "@/components/pagination";
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -17,7 +18,7 @@ const STATUS_KEY: Record<MultiAgentRunSummary["status"], string> = {
 
 const META = "text-xs whitespace-nowrap text-subtle-foreground";
 
-export function RecentMultiRuns({ runs }: { runs: MultiAgentRunSummary[] }) {
+export function RecentMultiRuns({ runs, pager }: { runs: MultiAgentRunSummary[]; pager?: PagerState }) {
   const t = useTranslations("runs.multiAgent.configure.recent");
   if (runs.length === 0) return null;
   return (
@@ -39,6 +40,7 @@ export function RecentMultiRuns({ runs }: { runs: MultiAgentRunSummary[] }) {
           </li>
         ))}
       </ul>
+      {pager && <DataPagination pager={pager} className="mt-3" />}
     </section>
   );
 }

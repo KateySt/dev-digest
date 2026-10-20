@@ -3,7 +3,7 @@
 /* Memory & Learn hooks (SPEC-2026-10-12-memory). Memory is written only by a
    human-confirmed Save / Merge in the Learn modal or the Memory page. */
 import React from "react";
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateMemoryBody,
   CurateMergeBody,
@@ -24,7 +24,12 @@ export const SIMILAR_DEBOUNCE_MS = 400;
 /** Below this the duplicate check is noise — no request. */
 export const SIMILAR_MIN_CHARS = 20;
 
-function listPath(query: MemoryListQuery): string {
+// TODO: move to @devdigest/shared — opt-in paging (`page`/`per_page` → `total`)
+// and the Memory page's multi-select filters as comma lists.
+export type MemoryPageQuery = MemoryListQuery & { page?: number; per_page?: number; scopes?: string; kinds?: string };
+export type MemoryPage = MemoryListResponse & { total?: number; page?: number; per_page?: number };
+
+function listPath(query: MemoryPageQuery): string {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) {
     if (v === undefined || v === null || v === "" || v === false) continue;
@@ -36,10 +41,10 @@ function listPath(query: MemoryListQuery): string {
 
 export const memoryQueries = {
   all: () => ["memories"] as const,
-  list: (query: MemoryListQuery) =>
+  list: (query: MemoryPageQuery) =>
     queryOptions({
       queryKey: ["memories", query],
-      queryFn: () => api.get<MemoryListResponse>(listPath(query)),
+      queryFn: () => api.get<MemoryPage>(listPath(query)),
     }),
   detail: (id: string) =>
     queryOptions({ queryKey: ["memory", id], queryFn: () => api.get<Memory>(`/memories/${id}`) }),
@@ -54,8 +59,9 @@ export const memoryQueries = {
     }),
 };
 
-export function useMemories(query: MemoryListQuery) {
-  return useQuery(memoryQueries.list(query));
+/** Keeps the previous page on screen while the next one loads (`isPlaceholderData`). */
+export function useMemories(query: MemoryPageQuery) {
+  return useQuery({ ...memoryQueries.list(query), placeholderData: keepPreviousData });
 }
 
 export function useMemory(id: string | null) {

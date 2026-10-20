@@ -105,7 +105,8 @@ export function OnboardingView() {
 
   const repoName = activeRepo?.full_name ?? repoId;
   const repoFullName = activeRepo?.full_name ?? null;
-  const crumb = [{ label: repoName, mono: true }, { label: t("title") }];
+  // Empty while repos load — the breadcrumb shows a skeleton, never the raw id.
+  const crumb = [{ label: activeRepo?.full_name ?? "", mono: true }, { label: t("title") }];
 
   if (repoNotFound) {
     return (

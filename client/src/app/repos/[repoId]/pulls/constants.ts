@@ -27,8 +27,19 @@ export const SIZE_CLASS: Record<string, string> = {
  *  C-AC-11/31 appends a fixed-width "actions" column for the permanent
  *  per-row Run Review dropdown, keeping header and rows aligned. The title
  *  column never shrinks below 150px (author below 100px) — on a narrower
- *  window the table scrolls sideways instead of collapsing the title. */
-export const GRID_COLS = "grid-cols-[minmax(150px,1fr)_minmax(100px,132px)_92px_60px_108px_118px_72px_78px_140px]";
+ *  window the table scrolls sideways instead of collapsing the title.
+ *
+ *  Narrow tables (< PR_TABLE_WIDE of the `prs` container — the 1024px desktop
+ *  window) drop the Cost and Updated columns; the updated time moves under
+ *  the title instead (see WIDE_ONLY). */
+export const GRID_COLS =
+  "grid-cols-[minmax(150px,1fr)_minmax(100px,132px)_92px_60px_108px_118px_140px] @min-[1100px]/prs:grid-cols-[minmax(150px,1fr)_minmax(100px,132px)_92px_60px_108px_118px_72px_78px_140px]";
+
+/** Cells shown only in the wide table (Cost, Updated). */
+export const WIDE_ONLY = "hidden @min-[1100px]/prs:block";
+/** The narrow table's stand-in for the Updated column. */
+export const NARROW_ONLY = "@min-[1100px]/prs:hidden";
+export const WIDE_ONLY_COLUMNS = new Set(["cost", "updated"]);
 
 /** Line-count thresholds for the S/M/L size bucket. */
 export const SIZE_SMALL_MAX = 100;

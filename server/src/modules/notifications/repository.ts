@@ -24,6 +24,14 @@ export class NotificationsRepository {
       .limit(limit);
   }
 
+  async totalCount(workspaceId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(t.notifications)
+      .where(eq(t.notifications.workspaceId, workspaceId));
+    return row?.n ?? 0;
+  }
+
   async unreadCount(workspaceId: string): Promise<number> {
     const [row] = await this.db
       .select({ n: count() })

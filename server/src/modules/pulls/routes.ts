@@ -7,6 +7,8 @@ import { PrCommentInput, PrCommentUpdateInput } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
+import { pageWindow, paged } from '../_shared/paging.js';
+import { PullsQuery, filterAndSortPulls, pullCounts, shouldSync } from './list.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import { deriveReviewStatus } from './status.js';
 import { BlastRepository } from '../blast/repository.js';
@@ -31,7 +33,9 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
 
-  app.get('/repos/:id/pulls', { schema: { params: IdParams } }, async (req): Promise<PrMeta[]> => {
+  // ?page= → { items, total, page, per_page, counts } filtered/sorted on the server;
+  // without page → the legacy full array (other screens and older clients).
+  app.get('/repos/:id/pulls', { schema: { params: IdParams, querystring: PullsQuery } }, async (req) => {
     const { workspaceId } = await getContext(container, req);
     const [repo] = await container.db
       .select()
@@ -48,6 +52,8 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
 
     // Local-first: sync from GitHub when a token is configured, but never
     // fail the read — already-imported/seeded PRs stay viewable offline.
+    // Throttled per repo, so paging through the list never waits on GitHub.
+    if (gh && !shouldSync(repo.id, req.query.sync === '1')) gh = null;
     if (gh) {
       try {
         const pulls = await gh.listPullRequests({ owner: repo.owner, name: repo.name });
@@ -183,7 +189,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
     const blastByPr = await blastRepo.getSlices(prIds);
 
     const now = Date.now();
-    return rows.map((r) => {
+    const items: PrMeta[] = rows.map((r) => {
       const review = latestReviewByPr.get(r.id);
       const blastSlice = blastByPr.get(r.id);
       const blastSize =
@@ -223,6 +229,14 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
           : { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 },
       };
     });
+
+    const window = pageWindow(req.query);
+    if (!window) return items;
+    const matching = filterAndSortPulls(items, req.query);
+    return {
+      ...paged(matching.slice(window.offset, window.offset + window.limit), matching.length, window),
+      counts: pullCounts(items),
+    };
   });
 
   app.get('/pulls/:id', { schema: { params: IdParams } }, async (req): Promise<PrDetail> => {

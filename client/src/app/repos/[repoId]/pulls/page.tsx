@@ -14,17 +14,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { RepoNotFound } from "@/components/repo-not-found";
-import { usePulls, useRefreshRepo } from "@/lib/hooks";
+import { usePullsPage, useRefreshRepo } from "@/lib/hooks";
+import { DataPagination, usePageState, usePagedList } from "@/components/pagination";
 import { useActiveRepo, useRepoNotFound } from "@/lib/contexts/repoContext";
 import { ApiError } from "@/lib/api";
-import { COLUMN_KEYS, GRID_COLS, SKELETON_ROWS } from "./constants";
-import { compareByRisk } from "./helpers";
+import { COLUMN_KEYS, GRID_COLS, SKELETON_ROWS, WIDE_ONLY, WIDE_ONLY_COLUMNS } from "./constants";
 import { PRRow } from "./_components/PRRow";
 import { FilterBar } from "./_components/FilterBar";
 import { ReviewAllButton } from "./_components/ReviewAllButton";
 
 /** Open PRs carry a derived review status; everything else is merged/closed. */
-const OPEN_STATUSES = new Set(["needs_review", "reviewed", "stale"]);
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function PullsPage() {
   const t = useTranslations("prReview");
@@ -34,7 +34,6 @@ export default function PullsPage() {
   const router = useRouter();
   const { activeRepo } = useActiveRepo();
   const repoNotFound = useRepoNotFound(repoId);
-  const { data: pulls, isLoading, isError, error, refetch } = usePulls(repoId);
   const refresh = useRefreshRepo();
 
   // Default to "needs review" — the most actionable filter on open.
@@ -97,21 +96,34 @@ export default function PullsPage() {
   const toggleTriage = () => (triageOn ? deactivateTriage() : activateTriage());
 
   const [query, setQuery] = React.useState("");
+  // Search runs on the server — debounce keystrokes.
+  const [q, setQ] = React.useState("");
+  React.useEffect(() => {
+    const timer = setTimeout(() => setQ(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  const q = query.trim().toLowerCase();
-  const filtered = (pulls ?? [])
-    .filter((p) => status === "all" || p.status === status)
-    .filter((p) => !q || p.title.toLowerCase().includes(q) || String(p.number).includes(q))
-    .slice()
-    .sort((a, b) => {
-      if (sort === "highest_risk") return compareByRisk(a, b);
-      const ta = Date.parse(a.updated_at ?? "") || 0;
-      const tb = Date.parse(b.updated_at ?? "") || 0;
-      return sort === "oldest" ? ta - tb : tb - ta;
-    });
-  const repoName = activeRepo?.full_name ?? repoId;
-  const openCount = (pulls ?? []).filter((p) => OPEN_STATUSES.has(p.status)).length;
-  const needsReviewCount = (pulls ?? []).filter((p) => p.status === "needs_review").length;
+  // Server-paged: status, search and sort (incl. Highest risk) are applied by the API.
+  const pageState = usePageState({ listKey: "pulls" });
+  const { data, isLoading, isError, error, refetch, isPlaceholderData } = usePullsPage(repoId, {
+    status,
+    q,
+    sort,
+    page: pageState.page,
+    perPage: pageState.pageSize,
+  });
+  const pager = usePagedList({
+    listKey: "pulls",
+    server: true,
+    total: data?.total,
+    busy: isPlaceholderData,
+    resetOn: [repoId, status, q, sort],
+  });
+  const filtered = data?.items ?? [];
+  // Empty while repos load — the breadcrumb shows a skeleton, never the raw id.
+  const repoName = activeRepo?.full_name ?? "";
+  const openCount = data?.counts.open ?? 0;
+  const needsReviewCount = data?.counts.needs_review ?? 0;
 
   // Stale/unknown :repoId → friendly empty state instead of a 404 error.
   if (repoNotFound) {
@@ -128,7 +140,7 @@ export default function PullsPage() {
         <div>
           <h1 className="text-4xl font-bold tracking-[-0.02em]">{t("list.title")}</h1>
           <p className="mt-1 text-base text-muted-foreground">
-            {pulls
+            {data
               ? t("list.summary", { open: openCount, needsReview: needsReviewCount })
               : t("list.loading")}
           </p>
@@ -144,7 +156,7 @@ export default function PullsPage() {
             <Icon.Filter aria-hidden />
             {t("list.triageQueue")}
           </Button>
-          <ReviewAllButton repoId={repoId} pulls={pulls} />
+          <ReviewAllButton repoId={repoId} needsReviewCount={data ? needsReviewCount : undefined} />
         </div>
       </div>
 
@@ -162,7 +174,7 @@ export default function PullsPage() {
         {/* Only the header and the rows scroll sideways (the grid keeps a
             150px title column); loading/error/empty states stay at the
             card's visible width. */}
-        <div className="overflow-x-auto">
+        <div className="@container/prs overflow-x-auto">
           <div className="w-full min-w-fit">
             <div
               className={cn(
@@ -171,7 +183,13 @@ export default function PullsPage() {
               )}
             >
               {COLUMN_KEYS.map((key, i) => (
-                <div key={key} className={i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left"}>
+                <div
+                  key={key}
+                  className={cn(
+                    i === COLUMN_KEYS.length - 1 ? "text-right" : "text-left",
+                    WIDE_ONLY_COLUMNS.has(key) && WIDE_ONLY,
+                  )}
+                >
                   {t(`list.columns.${key}`)}
                 </div>
               ))}
@@ -210,6 +228,7 @@ export default function PullsPage() {
           />
         ) : null}
       </div>
+      <DataPagination pager={pager} className="mx-8 -mt-7 mb-11 w-auto" />
     </AppShell>
   );
 }

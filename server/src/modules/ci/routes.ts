@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { CiExportInput } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
+import { PageQuery, pageWindow, paged } from '../_shared/paging.js';
 import { CiService } from './service.js';
 import { CI_RUNS_LIMIT, PERIOD_MS } from './constants.js';
 
@@ -76,16 +77,20 @@ export default async function ciRoutes(appBase: FastifyInstance) {
     return service.listRepos(workspaceId);
   });
 
-  app.get('/ci-runs', { schema: { querystring: RunsQuery } }, async (req) => {
+  // With ?page= → { items, total, page, per_page }; without → the legacy bare array capped at CI_RUNS_LIMIT.
+  app.get('/ci-runs', { schema: { querystring: RunsQuery.merge(PageQuery) } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
     const { period, agent_id, repo, status, source } = req.query;
-    return service.listRuns(workspaceId, {
+    const filters = {
       ...(agent_id ? { agentId: agent_id } : {}),
       ...(repo ? { repo } : {}),
       ...(status ? { status } : {}),
       ...(source ? { source } : {}),
       since: new Date(Date.now() - PERIOD_MS[period]),
-      limit: CI_RUNS_LIMIT,
-    });
+    };
+    const window = pageWindow(req.query);
+    if (!window) return service.listRuns(workspaceId, { ...filters, limit: CI_RUNS_LIMIT });
+    const { items, total } = await service.pageRuns(workspaceId, { ...filters, limit: window.limit, offset: window.offset });
+    return paged(items, total, window);
   });
 }

@@ -109,6 +109,10 @@ describe("KeyboardProvider dispatch", () => {
   it("saves only overrides and applies them at once (AC-13, AC-29)", async () => {
     const { api } = setup();
     await waitFor(() => expect(ctx.effective.size).toBeGreaterThan(0));
+    // Let the initial GET /settings land first — a late response would
+    // overwrite the optimistic save below.
+    await waitFor(() => expect(api.calls.some((c) => c.method === "GET")).toBe(true));
+    await act(async () => {});
     await act(async () => {
       await ctx.setBindings({ "nav.pulls": "Mod+Shift+Digit1" });
     });

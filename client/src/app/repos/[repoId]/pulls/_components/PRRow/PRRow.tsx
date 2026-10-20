@@ -17,7 +17,7 @@ import { RunReviewDropdown } from "@/components/run-review-dropdown";
 import { usePrActiveRuns, usePrReviews, usePrRuns } from "@/lib/hooks/reviews";
 import { latestReview } from "@/lib/findings";
 import type { PrMeta } from "@/lib/types";
-import { GRID_COLS, SIZE_CLASS, STATUS_META } from "../../constants";
+import { GRID_COLS, NARROW_ONLY, SIZE_CLASS, STATUS_META, WIDE_ONLY } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 
 const EMPTY_FINDINGS_COUNTS = { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 } as const;
@@ -91,7 +91,10 @@ export function PRRow({
         <Icon.GitPullRequest size={15} className={cn("shrink-0", st.text)} aria-hidden />
         <div className="min-w-0">
           <div className="truncate text-base font-[550] text-foreground group-hover/row:text-brand-text">{pr.title}</div>
-          <span className="mono text-xs text-subtle-foreground">#{pr.number}</span>
+          <span className="mono text-xs text-subtle-foreground">
+            #{pr.number}
+            {pr.updated_at && <span className={NARROW_ONLY}> · {relativeTime(pr.updated_at)}</span>}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -157,10 +160,10 @@ export function PRRow({
           {t(`list.status.${st.labelKey}`)}
         </Badge>
       </div>
-      <div>
+      <div className={WIDE_ONLY}>
         <RunCostBadge costUsd={pr.cost_usd ?? null} />
       </div>
-      <div className="text-right text-xs text-subtle-foreground">{relativeTime(pr.updated_at)}</div>
+      <div className={cn("text-right text-xs text-subtle-foreground", WIDE_ONLY)}>{relativeTime(pr.updated_at)}</div>
       <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-end gap-2">
         {failedRun && (
           <span

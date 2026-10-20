@@ -12,6 +12,7 @@ import type {
   CiRun,
   CiSyncResult,
 } from "@devdigest/shared";
+import type { Paged } from "@/lib/types";
 import { api } from "../api";
 
 export type CiRunPeriod = "24h" | "7d" | "30d";
@@ -22,7 +23,12 @@ export interface CiRunFilters {
   repo?: string;
   status?: string;
   source?: string;
+  /** Opt-in server paging (1-based). */
+  page?: number;
+  perPage?: number;
 }
+
+export type CiRunPage = Paged<CiRun>;
 
 /** Installations + recent runs for one agent (CI tab). */
 export function useAgentCi(agentId: string | null | undefined) {
@@ -88,10 +94,11 @@ export function useCiRuns(filters: CiRunFilters = {}) {
   if (filters.repo) params.set("repo", filters.repo);
   if (filters.status) params.set("status", filters.status);
   if (filters.source) params.set("source", filters.source);
-  const qs = params.toString();
+  params.set("page", String(filters.page ?? 1));
+  if (filters.perPage) params.set("per_page", String(filters.perPage));
   return useQuery({
     queryKey: ["ci-runs", filters],
-    queryFn: () => api.get<CiRun[]>(`/ci-runs${qs ? `?${qs}` : ""}`),
+    queryFn: () => api.get<CiRunPage>(`/ci-runs?${params.toString()}`),
     placeholderData: keepPreviousData,
   });
 }

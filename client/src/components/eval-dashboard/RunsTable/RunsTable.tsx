@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import type { EvalSuiteRun, SkillEvalSuiteRun } from "@devdigest/shared";
 import { MetricBar, RunStatusChip } from "@/components/eval-metrics";
 import { formatRunCost } from "@/components/run-cost-badge";
+import { DataPagination, usePagedList } from "@/components/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { METRICS, formatRanAt, runVersion } from "@/lib/eval";
 import { cn } from "@/lib/utils";
@@ -43,56 +44,61 @@ export function RunsTable({
     "cost",
     "status",
   ] as const;
+  // Run history grows with every suite run — paged (selection for Compare survives paging).
+  const pager = usePagedList({ listKey: "eval-runs", urlPrefix: "runs", rows: runs as Run[] });
 
   return (
-    <table className="w-full border-collapse">
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th key={c} scope="col" className={TH}>
-              {c === "select" ? <span className="sr-only">{t("runs.columns.select")}</span> : t(`runs.columns.${c}`)}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {runs.map((r) => {
-          const ranAt = formatRanAt(r.started_at);
-          const version = runVersion(r);
-          const isSelected = selected.includes(r.id);
-          return (
-            <tr key={r.id} data-selected={isSelected || undefined} className={cn(isSelected && "bg-accent")}>
-              <td className={TD}>
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onToggle(r.id)}
-                  aria-label={t("runs.selectRun", { version: version ?? "?", ranAt })}
-                />
-              </td>
-              <td className={cn("mono", TD)}>{ranAt}</td>
-              <td className={cn("mono text-primary", TD)}>v{version ?? "?"}</td>
-              {showModel && (
-                <td className={cn("mono min-w-0 wrap-anywhere", TD)}>{"model" in r && r.model ? r.model : "—"}</td>
-              )}
-              {METRICS.map((m) => (
-                <td key={m.key} className={TD}>
-                  <MetricBar value={r[m.key]} metric={m.key} barWidth={64} />
+    <>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            {columns.map((c) => (
+              <th key={c} scope="col" className={TH}>
+                {c === "select" ? <span className="sr-only">{t("runs.columns.select")}</span> : t(`runs.columns.${c}`)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {pager.pageRows.map((r) => {
+            const ranAt = formatRanAt(r.started_at);
+            const version = runVersion(r);
+            const isSelected = selected.includes(r.id);
+            return (
+              <tr key={r.id} data-selected={isSelected || undefined} className={cn(isSelected && "bg-accent")}>
+                <td className={TD}>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggle(r.id)}
+                    aria-label={t("runs.selectRun", { version: version ?? "?", ranAt })}
+                  />
                 </td>
-              ))}
-              <td className={cn("tnum", TD, "font-bold text-foreground")}>
-                {r.status === "running" ? `${r.cases_done}/${r.cases_total}` : `${r.passed_count}/${r.evaluated_count}`}
-                {r.errored_count > 0 && (
-                  <div className="text-2xs font-medium text-warn">{t("runs.errored", { count: r.errored_count })}</div>
+                <td className={cn("mono", TD)}>{ranAt}</td>
+                <td className={cn("mono text-primary", TD)}>v{version ?? "?"}</td>
+                {showModel && (
+                  <td className={cn("mono min-w-0 wrap-anywhere", TD)}>{"model" in r && r.model ? r.model : "—"}</td>
                 )}
-              </td>
-              <td className={cn("mono", TD)}>{r.cost_usd != null ? formatRunCost(r.cost_usd) : "—"}</td>
-              <td className={TD}>
-                <RunStatusChip status={r.status} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                {METRICS.map((m) => (
+                  <td key={m.key} className={TD}>
+                    <MetricBar value={r[m.key]} metric={m.key} barWidth={64} />
+                  </td>
+                ))}
+                <td className={cn("tnum", TD, "font-bold text-foreground")}>
+                  {r.status === "running" ? `${r.cases_done}/${r.cases_total}` : `${r.passed_count}/${r.evaluated_count}`}
+                  {r.errored_count > 0 && (
+                    <div className="text-2xs font-medium text-warn">{t("runs.errored", { count: r.errored_count })}</div>
+                  )}
+                </td>
+                <td className={cn("mono", TD)}>{r.cost_usd != null ? formatRunCost(r.cost_usd) : "—"}</td>
+                <td className={TD}>
+                  <RunStatusChip status={r.status} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <DataPagination pager={pager} className="mt-3" />
+    </>
   );
 }

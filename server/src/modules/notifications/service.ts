@@ -35,12 +35,21 @@ export class NotificationsService {
     }
   }
 
-  async list(workspaceId: string): Promise<{ items: NotificationDto[]; unread: number }> {
-    const [rows, unread] = await Promise.all([
-      this.repo.list(workspaceId, LIST_LIMIT),
+  /**
+   * Newest first. With `limit` (the popover's "Load more" window) the response
+   * also carries `total`; without it, the legacy shape and LIST_LIMIT.
+   */
+  async list(
+    workspaceId: string,
+    limit?: number,
+  ): Promise<{ items: NotificationDto[]; unread: number; total?: number }> {
+    const [rows, unread, total] = await Promise.all([
+      this.repo.list(workspaceId, limit ?? LIST_LIMIT),
       this.repo.unreadCount(workspaceId),
+      limit === undefined ? Promise.resolve(undefined) : this.repo.totalCount(workspaceId),
     ]);
-    return { items: rows.map(toNotificationDto), unread };
+    const items = rows.map(toNotificationDto);
+    return total === undefined ? { items, unread } : { items, unread, total };
   }
 
   setRead(workspaceId: string, id: string, read: boolean): Promise<boolean> {

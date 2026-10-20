@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type { FindingRow } from '../../db/rows.js';
@@ -65,7 +65,7 @@ export class MultiAgentRepository {
   }
 
   /** Newest first; optionally one PR; at most `limit`. */
-  listHeaders(workspaceId: string, prId: string | undefined, limit: number): Promise<MultiRunHeader[]> {
+  listHeaders(workspaceId: string, prId: string | undefined, limit: number, offset = 0): Promise<MultiRunHeader[]> {
     return this.db
       .select({
         id: t.multiAgentRuns.id,
@@ -84,7 +84,17 @@ export class MultiAgentRepository {
         ),
       )
       .orderBy(desc(t.multiAgentRuns.ranAt), desc(t.multiAgentRuns.id))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async countHeaders(workspaceId: string, prId: string | undefined): Promise<number> {
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(t.multiAgentRuns)
+      .innerJoin(t.pullRequests, eq(t.pullRequests.id, t.multiAgentRuns.prId))
+      .where(and(eq(t.multiAgentRuns.workspaceId, workspaceId), prId ? eq(t.multiAgentRuns.prId, prId) : undefined));
+    return row?.n ?? 0;
   }
 
   /** Children (selection order) of the given parents, with review + findings. */

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { RepoInput } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
+import { resetSyncThrottle } from '../pulls/list.js';
 import { IdParams } from '../_shared/schemas.js';
 import { RepoService } from './service.js';
 
@@ -38,6 +39,8 @@ export default async function reposRoutes(appBase: FastifyInstance) {
 
   app.post('/repos/:id/refresh', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(app.container, req);
+    // Refresh means "now": the PR list's next read re-syncs from GitHub.
+    resetSyncThrottle(req.params.id);
     return service.refresh(workspaceId, req.params.id);
   });
 

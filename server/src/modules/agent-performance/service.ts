@@ -37,6 +37,22 @@ export class AgentPerformanceService {
     return rows.map(toRunSummary);
   }
 
+  /** One page of an agent's run history plus its total (Stats tab). */
+  async pageRunsForAgent(
+    workspaceId: string,
+    agentId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{ items: RunSummary[]; total: number } | undefined> {
+    const agent = await this.container.agentsRepo.getById(workspaceId, agentId);
+    if (!agent) return undefined;
+    const [rows, total] = await Promise.all([
+      this.repo.recentRunsForAgent(workspaceId, agentId, limit, offset),
+      this.repo.countRunsForAgent(workspaceId, agentId),
+    ]);
+    return { items: rows.map(toRunSummary), total };
+  }
+
   /** GET /agents/performance — workspace-wide rollup for the global page. */
   async performanceForWorkspace(workspaceId: string): Promise<AgentPerf> {
     const [agents, runs, findings] = await Promise.all([

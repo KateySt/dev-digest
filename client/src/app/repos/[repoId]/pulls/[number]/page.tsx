@@ -97,7 +97,8 @@ export default function PRDetailPage() {
   const lethalTrifecta = allFindings.filter((f) => f.kind === "lethal_trifecta");
   const findingsCount = allFindings.length;
 
-  const repoName = activeRepo?.full_name ?? repoId;
+  // Empty while repos load — the breadcrumb shows a skeleton, never the raw id.
+  const repoName = activeRepo?.full_name ?? "";
   // The real "owner/repo" (null until the repo is loaded) — used to build
   // github.com deep-links for the header and finding file references.
   const repoFullName = activeRepo?.full_name ?? null;

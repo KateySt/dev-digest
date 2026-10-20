@@ -1,6 +1,7 @@
 /* SPEC-08 per-skill dashboard (SK-19..24), the picker-switch polling edge case
    and the skill-not-found state. `fetch` is the only mocked boundary (plus the
    router and the app chrome). */
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import React from "react";
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within, act } from "@testing-library/react";
@@ -437,7 +438,9 @@ describe("SkillEvalDashboard: switching skills and missing skills", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
     const tree = () => (
       <QueryClientProvider client={qc}>
-        <Tree />
+        <NuqsTestingAdapter hasMemory>
+          <Tree />
+        </NuqsTestingAdapter>
       </QueryClientProvider>
     );
     const view = render(tree());

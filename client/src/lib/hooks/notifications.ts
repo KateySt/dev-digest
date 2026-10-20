@@ -3,7 +3,7 @@
 "use client";
 
 import React from "react";
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, API_BASE } from "../api";
 
 // TODO: move to @devdigest/shared once the vendored contracts are re-synced.
@@ -21,7 +21,12 @@ export interface AppNotification {
 export interface NotificationList {
   items: AppNotification[];
   unread: number;
+  /** All stored notifications (the popover shows the newest `limit`). */
+  total?: number;
 }
+
+/** First load and each "Load more" step in the popover. */
+export const NOTIFICATIONS_PAGE = 20;
 
 /** Non-secret prefs (the `settings` table, via PUT /settings) for OS notifications. */
 export const NOTIFICATION_PREF_KEYS = {
@@ -41,21 +46,23 @@ export function notificationPrefs(settings: Record<string, unknown> | undefined)
 const FALLBACK_POLL_MS = 60_000;
 
 export const notificationQueries = {
-  list: () =>
+  /** `["notifications"]` stays the prefix every invalidation targets. */
+  list: (limit = NOTIFICATIONS_PAGE) =>
     queryOptions({
-      queryKey: ["notifications"],
-      queryFn: () => api.get<NotificationList>("/notifications"),
+      queryKey: ["notifications", limit],
+      queryFn: () => api.get<NotificationList>(`/notifications?limit=${limit}`),
       refetchInterval: FALLBACK_POLL_MS,
+      placeholderData: keepPreviousData,
     }),
 };
 
-export function useNotifications() {
-  return useQuery(notificationQueries.list());
+export function useNotifications(limit = NOTIFICATIONS_PAGE) {
+  return useQuery(notificationQueries.list(limit));
 }
 
 function useInvalidateNotifications() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: notificationQueries.list().queryKey });
+  return () => qc.invalidateQueries({ queryKey: ["notifications"] });
 }
 
 export function useSetNotificationRead() {

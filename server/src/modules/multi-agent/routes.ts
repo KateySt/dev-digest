@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
+import { PageQuery, pageWindow, paged } from '../_shared/paging.js';
 import { MultiAgentService } from './service.js';
 
 /**
@@ -13,10 +14,12 @@ import { MultiAgentService } from './service.js';
  *   POST /multi-agent-runs/:id/cancel    -> cancel every queued/running child
  * `estimates` is a static segment, so find-my-way matches it before `/:id`.
  */
-const ListQuery = z.object({
-  pr_id: z.string().uuid().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
-});
+const ListQuery = z
+  .object({
+    pr_id: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+  })
+  .merge(PageQuery);
 
 export default async function multiAgentRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
@@ -30,7 +33,11 @@ export default async function multiAgentRoutes(appBase: FastifyInstance) {
 
   app.get('/multi-agent-runs', { schema: { querystring: ListQuery } }, async (req) => {
     const { workspaceId } = await getContext(container, req);
-    return service.list(workspaceId, req.query.pr_id, req.query.limit);
+    // ?page= → { items, total, page, per_page }; otherwise the legacy ?limit= bare array.
+    const window = pageWindow(req.query);
+    if (!window) return service.list(workspaceId, req.query.pr_id, req.query.limit);
+    const { items, total } = await service.page(workspaceId, req.query.pr_id, window.limit, window.offset);
+    return paged(items, total, window);
   });
 
   app.get('/multi-agent-runs/:id', { schema: { params: IdParams } }, async (req) => {
