@@ -160,9 +160,7 @@ function lineOf(text: string, index: number): string {
 /** Text of each `stage('<name>') { … }` block, matched by brace depth. */
 function stageBlocks(text: string): { name: string; start: number; body: string }[] {
   const out: { name: string; start: number; body: string }[] = [];
-  const re = /stage\s*\(\s*(['"])(.*?)\1\s*\)\s*\{/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) {
+  for (const m of text.matchAll(/stage\s*\(\s*(['"])(.*?)\1\s*\)\s*\{/g)) {
     let depth = 1;
     let i = m.index + m[0].length;
     for (; i < text.length && depth > 0; i++) {
@@ -177,9 +175,7 @@ function stageBlocks(text: string): { name: string; start: number; body: string 
 /** Character ranges covered by `withCredentials(...) { … }` blocks. */
 function credentialRanges(text: string): [number, number][] {
   const out: [number, number][] = [];
-  const re = /withCredentials\s*\(/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) {
+  for (const m of text.matchAll(/withCredentials\s*\(/g)) {
     const open = text.indexOf('{', m.index);
     if (open < 0) break;
     let depth = 1;
@@ -254,20 +250,12 @@ export function lintJenkinsfile(
     if (!binding.test(text)) {
       push('credentials.binding', -1, `${variable} must be bound with withCredentials from credential '${id}'.`);
     }
-    const re = new RegExp(`\\b${variable}\\b`, 'g');
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text))) {
-      if (!inside(m.index)) {
-        push('credentials.outside', m.index, `${variable} is used outside withCredentials.`);
-        break;
-      }
-    }
+    const outside = [...text.matchAll(new RegExp(`\\b${variable}\\b`, 'g'))].find((m) => !inside(m.index));
+    if (outside) push('credentials.outside', outside.index, `${variable} is used outside withCredentials.`);
   }
 
   // Groovy interpolation into a shell string.
-  const shRe = /\b(sh|bat|powershell)\s*\(?\s*(?:script\s*:\s*)?("""|")/g;
-  let sh: RegExpExecArray | null;
-  while ((sh = shRe.exec(text))) {
+  for (const sh of text.matchAll(/\b(sh|bat|powershell)\s*\(?\s*(?:script\s*:\s*)?("""|")/g)) {
     const quote = sh[2]!;
     const bodyStart = sh.index + sh[0].length;
     const end = text.indexOf(quote, bodyStart);
