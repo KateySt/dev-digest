@@ -16,6 +16,8 @@ import { SeverityCountBadges } from "@/components/findings-tooltip/SeverityCount
 import { formatRunCost } from "@/components/run-cost-badge";
 import { useAgents } from "@/lib/hooks/agents";
 import { type CiRunPeriod, useCiRepos, useCiRuns, useSyncCiRuns } from "@/lib/hooks/ci";
+import { JenkinsConnectionDialog } from "@/components/jenkins-connection-dialog";
+import { SyncErrors } from "./_components/SyncErrors";
 import { DataPagination, usePageState, usePagedList } from "@/components/pagination";
 import { ciStatusBadge, ingestErrorMessage, isKnownCiStatus } from "@/lib/ci-status";
 import RunTraceDrawer from "@/app/repos/[repoId]/pulls/[number]/_components/RunTraceDrawer";
@@ -48,6 +50,7 @@ export function CiRunsView() {
   const [source, setSource] = React.useState("");
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const [traceRun, setTraceRun] = React.useState<CiRun | null>(null);
+  const [connectionRepo, setConnectionRepo] = React.useState<string | null>(null);
 
   const pageState = usePageState({ listKey: "ci-runs" });
   const { data, isLoading, isError, refetch, isPlaceholderData } = useCiRuns({
@@ -147,6 +150,14 @@ export function CiRunsView() {
             <SelectField value={source} onChange={setSource} options={sourceOptions} mono={false} ariaLabel={t("runs.filters.allSources")} />
           </div>
         </div>
+
+        {connectionRepo && <JenkinsConnectionDialog repo={connectionRepo} onClose={() => setConnectionRepo(null)} />}
+        {/* From the latest sync only (Q5g); the CI tab keeps the persisted last_sync_error. */}
+        <SyncErrors
+          errors={sync.data?.errors ?? []}
+          agentName={(id) => agents?.find((a) => a.id === id)?.name ?? id}
+          onConnection={setConnectionRepo}
+        />
 
         {isLoading && <Skeleton className="h-50 w-full" />}
         {isError && !runs && <ErrorState onRetry={() => refetch()} />}

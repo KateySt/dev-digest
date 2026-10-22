@@ -6,14 +6,15 @@ import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { CiLintViolation, CiPreview } from "@devdigest/shared";
-import { WORKFLOW_PATH } from "../../constants";
-import { formatBytes, isRunnerFile } from "../../helpers";
+import { JENKINSFILE_PATH } from "../../constants";
+import { formatBytes, isRunnerFile, workflowFile } from "../../helpers";
 
 /* Paths are unbroken mono strings: every container that can hold one is
    min-w-0 and wraps anywhere (client INSIGHTS 2026-09-24). */
 
-/** Step 2 - what will be committed. The workflow is editable (server-linted on
- *  Continue); the runner shows metadata only; everything else is read-only. */
+/** Step 2 - what will be committed. The pipeline file (workflow or Jenkinsfile)
+ *  is editable (server-linted on Continue); the runner shows metadata only;
+ *  everything else is read-only. */
 export function PreviewStep({
   preview,
   workflowDraft,
@@ -26,9 +27,11 @@ export function PreviewStep({
   violations: CiLintViolation[];
 }) {
   const t = useTranslations("ci");
-  const [selected, setSelected] = React.useState(WORKFLOW_PATH);
+  const pipelinePath = workflowFile(preview)?.path ?? null;
+  const isJenkins = pipelinePath === JENKINSFILE_PATH;
+  const [selected, setSelected] = React.useState(pipelinePath);
   const file = preview.files.find((f) => f.path === selected) ?? preview.files[0];
-  const isWorkflow = file?.path === WORKFLOW_PATH;
+  const isWorkflow = file !== undefined && file.path === pipelinePath;
 
   return (
     <>
@@ -40,14 +43,16 @@ export function PreviewStep({
         >
           <Icon.AlertTriangle size={14} aria-hidden />
           <span className="min-w-0 wrap-anywhere">
-            <strong>{t("exportWizard.modelWarning")}:</strong> {w}
+            <strong>{isJenkins ? t("exportWizard.note") : t("exportWizard.modelWarning")}:</strong> {w}
           </span>
         </div>
       ))}
 
       {violations.length > 0 && (
         <div role="alert" className="rounded-lg border border-crit bg-surface px-3 py-2.5 text-ui">
-          <div className="mb-1.5 font-semibold text-crit">{t("exportWizard.lint.title")}</div>
+          <div className="mb-1.5 font-semibold text-crit">
+            {isJenkins ? t("exportWizard.lint.jenkinsTitle") : t("exportWizard.lint.title")}
+          </div>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-4.5">
             {violations.map((v) => (
               <li key={`${v.rule}:${v.location}`} className="mono text-xs wrap-anywhere">
@@ -109,7 +114,7 @@ export function PreviewStep({
                 </div>
               ) : isWorkflow ? (
                 <textarea
-                  aria-label={t("exportWizard.workflowEditorLabel")}
+                  aria-label={isJenkins ? t("exportWizard.jenkinsfileEditorLabel") : t("exportWizard.workflowEditorLabel")}
                   value={workflowDraft ?? file.contents}
                   onChange={(e) => onEditWorkflow(e.target.value)}
                   spellCheck={false}

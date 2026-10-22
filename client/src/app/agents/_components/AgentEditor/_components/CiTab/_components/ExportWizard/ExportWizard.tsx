@@ -14,21 +14,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Agent, CiExport, CiPostAs, CiTrigger } from "@devdigest/shared";
+import { JenkinsConnectionDialog } from "@/components/jenkins-connection-dialog";
 import { ApiError } from "@/lib/api";
 import { useActiveRepo } from "@/lib/contexts";
-import { useCiPreview, useDownloadCiZip, useExportCi } from "@/lib/hooks/ci";
+import { useCiPreview, useDownloadCiZip, useExportCi, useJenkinsConnection } from "@/lib/hooks/ci";
 import {
   type InstallMethod,
+  type WizardInitial,
   type WizardState,
   errorMessage,
   initialState,
+  isCredentialId,
   isEdited,
   isRepo,
+  jenkinsFieldErrors,
   saveBlob,
+  targetConflictFromError,
   toInput,
   violationsFromError,
   wizardReducer,
 } from "./helpers";
+import type { ExportTarget, JenkinsFields } from "./constants";
 import { WizardStepper } from "./_components/WizardStepper";
 import { TargetStep } from "./_components/TargetStep";
 import { PreviewStep } from "./_components/PreviewStep";
@@ -37,8 +43,8 @@ import { InstallStep } from "./_components/InstallStep";
 
 export interface ExportWizardProps {
   agent: Agent;
-  /** Pre-fill for "Update CI config" (repo, triggers, post_as). */
-  initial?: { repo?: string; triggers?: CiTrigger[]; post_as?: CiPostAs };
+  /** Pre-fill for "Update CI config" (repo, target, triggers, post_as, Jenkins settings). */
+  initial?: WizardInitial;
   onClose: () => void;
 }
 
@@ -56,6 +62,10 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   const [result, setResult] = React.useState<CiExport | null>(null);
   const [installError, setInstallError] = React.useState<string | null>(null);
   const [zipDone, setZipDone] = React.useState(false);
+  const [connectionOpen, setConnectionOpen] = React.useState(false);
+  const isJenkins = state.target === "jenkins";
+  const connection = useJenkinsConnection(isJenkins ? repo : null);
+  const connected = !!connection.data?.has_token;
 
   const previewReq = useCiPreview();
   const exportReq = useExportCi();
@@ -74,7 +84,12 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
             ...(opts.nextStep !== undefined ? { step: opts.nextStep } : {}),
           }),
         onError: (err) =>
-          dispatch({ type: "previewFailed", error: errorMessage(err), violations: violationsFromError(err) }),
+          dispatch({
+            type: "previewFailed",
+            error: errorMessage(err),
+            violations: violationsFromError(err),
+            conflict: targetConflictFromError(err, repo),
+          }),
       },
     );
   };
@@ -110,7 +125,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   const install = () => {
     setInstallError(null);
     setZipDone(false);
-    const input = toInput(repo, state, { withEdits: true });
+    const input = toInput(repo, state, { withEdits: true, createJob: method === "pr" && connected });
     if (method === "zip") {
       zipReq.mutate(
         { agentId: agent.id, input },
@@ -142,12 +157,25 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
   };
 
   const done = result !== null;
+  const jenkinsValid = !isJenkins || Object.keys(jenkinsFieldErrors(state.jenkins)).length === 0;
   const canContinue =
     !previewing &&
-    (state.step === 0 ? isRepo(repo) : state.step === 2 ? state.triggers.length > 0 : true);
+    (state.step === 0
+      ? isRepo(repo) && !state.conflict
+      : state.step === 2
+        ? state.triggers.length > 0 && jenkinsValid
+        : true);
+  // C-AC-43: Install waits for a valid scan credential when the job is to be created.
+  const scanBlocks =
+    isJenkins && method === "pr" && connected && state.createJob && !isCredentialId(state.scanCredentialId.trim());
+
+  const onTarget = (target: ExportTarget) => dispatch({ type: "setTarget", target });
+  const onJenkins = (patch: Partial<JenkinsFields>) => dispatch({ type: "setJenkins", patch });
+  const openConnection = () => setConnectionOpen(true);
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !connectionOpen && onClose()}>
+      {connectionOpen && <JenkinsConnectionDialog repo={repo} onClose={() => setConnectionOpen(false)} />}
       <DialogContent className="sm:max-w-[780px]">
       <DialogHeader>
         <DialogTitle>{t("exportWizard.title")}</DialogTitle>
@@ -158,7 +186,15 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
       </div>
 
       <DialogBody className="flex min-w-0 flex-col gap-4 p-6">
-        {state.step === 0 && <TargetStep hasRepo={isRepo(repo)} error={state.error} />}
+        {state.step === 0 && (
+          <TargetStep
+            target={state.target}
+            onTarget={onTarget}
+            hasRepo={isRepo(repo)}
+            error={state.error}
+            conflict={state.conflict}
+          />
+        )}
         {state.step === 1 && state.preview && (
           <PreviewStep
             preview={state.preview}
@@ -181,6 +217,11 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
             failOn={agent.ci_fail_on}
             editsDiscarded={state.editsDiscarded}
             error={state.error}
+            target={state.target}
+            repo={repo}
+            jenkins={state.jenkins}
+            onJenkins={onJenkins}
+            onOpenConnection={openConnection}
           />
         )}
         {state.step === 3 && (
@@ -192,6 +233,21 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
             prUrl={result ? (result.pr_url ?? result.installation.pr_url ?? "") : null}
             zipDone={zipDone}
             error={installError}
+            target={state.target}
+            jenkinsJob={result?.jenkins_job ?? null}
+            jenkinsOption={
+              isJenkins
+                ? {
+                    jobName: state.jenkins.job_name,
+                    connected,
+                    createJob: state.createJob,
+                    onCreateJob: (createJob) => dispatch({ type: "setCreateJob", createJob }),
+                    scanCredentialId: state.scanCredentialId,
+                    onScanCredentialId: (value) => dispatch({ type: "setScanCredentialId", value }),
+                    onOpenConnection: openConnection,
+                  }
+                : null
+            }
           />
         )}
       </DialogBody>
@@ -224,7 +280,7 @@ export function ExportWizard({ agent, initial, onClose }: ExportWizardProps) {
                   <Icon.ArrowRight aria-hidden />
                 </Button>
               ) : (
-                <Button disabled={installing} onClick={install}>
+                <Button disabled={installing || scanBlocks} onClick={install}>
                   <Icon.Check aria-hidden />
                   {installing ? t("exportWizard.installing") : t("exportWizard.install")}
                 </Button>

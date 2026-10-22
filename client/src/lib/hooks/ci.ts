@@ -3,7 +3,13 @@
    `@devdigest/shared`; nothing is redeclared here. */
 "use client";
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type {
   AgentCiOverview,
   CiExport,
@@ -11,6 +17,10 @@ import type {
   CiPreview,
   CiRun,
   CiSyncResult,
+  JenkinsConnection,
+  JenkinsConnectionInput,
+  JenkinsConnectionTestInput,
+  JenkinsConnectionTestResult,
 } from "@devdigest/shared";
 import type { Paged } from "@/lib/types";
 import { api } from "../api";
@@ -57,7 +67,19 @@ export function useExportCi() {
     mutationFn: ({ agentId, input }: { agentId: string; input: CiExportInputBody }) =>
       api.post<CiExport>(`/agents/${agentId}/ci/export`, input),
     // The wizard shows the server message (incl. `pat_workflow_scope`) inline.
-    meta: { silentCodes: ["pat_workflow_scope", "github_repo_not_found", "github_forbidden", "external_service_error", "validation_error", "config_error"] },
+    meta: {
+      silentCodes: [
+        "pat_workflow_scope",
+        "github_repo_not_found",
+        "github_forbidden",
+        "external_service_error",
+        "validation_error",
+        "config_error",
+        "ci_target_conflict",
+        "trigger_not_supported",
+        "jenkins_not_configured",
+      ],
+    },
     onSuccess: (_data, { agentId }) =>
       Promise.all([
         qc.invalidateQueries({ queryKey: ["agent-ci", agentId] }),
@@ -116,4 +138,63 @@ export function useCiRepos() {
 export function useInvalidateAgentCi() {
   const qc = useQueryClient();
   return (agentId: string) => qc.invalidateQueries({ queryKey: ["agent-ci", agentId] });
+}
+
+// ---- per-repo Jenkins connection -----------------------------------------
+
+const OWNER_NAME = /^[^/\s]+\/[^/\s]+$/;
+
+export const jenkinsConnectionQueries = {
+  all: () => ["jenkins-connection"] as const,
+  detail: (repo: string) =>
+    queryOptions({
+      queryKey: ["jenkins-connection", repo.toLowerCase()],
+      queryFn: () =>
+        api.get<JenkinsConnection | null>(
+          `/ci/jenkins-connection?repo=${encodeURIComponent(repo)}`,
+        ),
+    }),
+};
+
+/** The repo's Jenkins connection (never the token), or null. Idle until `repo` is `owner/name`. */
+export function useJenkinsConnection(repo: string | null | undefined) {
+  const valid = !!repo && OWNER_NAME.test(repo);
+  return useQuery({ ...jenkinsConnectionQueries.detail(valid ? repo : ""), enabled: valid });
+}
+
+/** Save URL/username and (optionally) a new API token. The token never enters the cache. */
+export function useSaveJenkinsConnection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: JenkinsConnectionInput) =>
+      api.put<JenkinsConnection>("/ci/jenkins-connection", input),
+    gcTime: 0,
+    meta: { silentCodes: ["validation_error"] },
+    onSuccess: (saved) => {
+      qc.setQueryData(jenkinsConnectionQueries.detail(saved.repo).queryKey, saved);
+      return qc.invalidateQueries({ queryKey: ["agent-ci"] });
+    },
+  });
+}
+
+/** Remove the repo's connection + token. Installations and runs are kept. */
+export function useDeleteJenkinsConnection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ repo }: { repo: string }) =>
+      api.del<void>(`/ci/jenkins-connection?repo=${encodeURIComponent(repo)}`),
+    onSuccess: (_data, { repo }) => {
+      qc.setQueryData(jenkinsConnectionQueries.detail(repo).queryKey, null);
+      return qc.invalidateQueries({ queryKey: ["agent-ci"] });
+    },
+  });
+}
+
+/** Click-only connection check (never from a mount effect). Writes nothing server-side. */
+export function useTestJenkinsConnection() {
+  return useMutation({
+    mutationFn: (input: JenkinsConnectionTestInput) =>
+      api.post<JenkinsConnectionTestResult>("/ci/jenkins-connection/test", input),
+    gcTime: 0,
+  });
 }
