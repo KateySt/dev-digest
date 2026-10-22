@@ -1,0 +1,8 @@
+workflow-aggregator
+workflow-multibranch
+pipeline-model-definition
+github-branch-source
+credentials-binding
+git
+cloudbees-folder
+configuration-as-code
