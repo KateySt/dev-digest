@@ -3,7 +3,7 @@ import { CiResultArtifact } from '@devdigest/shared';
 import { RunnerError } from './errors.js';
 
 /** Runner version string embedded in every artifact and in the bundle banner. */
-export const RUNNER_VERSION = '2';
+export const RUNNER_VERSION = '3';
 
 /** Schema version of `devdigest-result.json` (bumped on breaking changes). */
 export const ARTIFACT_SCHEMA_VERSION = 1;
@@ -29,6 +29,10 @@ export interface BuildResultArtifactInput {
   gateTriggered: boolean;
   model: string;
   manifestVersion: number;
+  /** Which CI produced the artifact (S-AC-82). Defaults to GitHub Actions. */
+  ciTarget?: 'gha' | 'jenkins';
+  /** Jenkins `<job>/PR-<n>`; null under GitHub Actions. */
+  ciJob?: string | null;
 }
 
 function severityCounts(findings: Finding[]): { critical: number; warning: number; suggestion: number } {
@@ -79,6 +83,8 @@ export function buildResultArtifact(input: BuildResultArtifactInput): CiResultAr
     model: input.model,
     manifest_version: input.manifestVersion,
     dependencies: { runner: RUNNER_VERSION, node: process.version },
+    ci_target: input.ciTarget ?? 'gha',
+    ci_job: input.ciJob ?? null,
   };
   const result = CiResultArtifact.safeParse(candidate);
   if (!result.success) {

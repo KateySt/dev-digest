@@ -1,4 +1,4 @@
-// devdigest-runner 2
+// devdigest-runner 3
 import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /******/ var __webpack_modules__ = ({
 
@@ -8580,7 +8580,7 @@ exports.visitAsync = visitAsync;
 
 /***/ }),
 
-/***/ 1060:
+/***/ 6687:
 /***/ ((module, exports, __nccwpck_require__) => {
 
 /* module decorator */ module = __nccwpck_require__.nmd(module);
@@ -8749,7 +8749,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   i: () => (/* binding */ main)
 });
 
-// NAMESPACE OBJECT: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-transport-state-browser.mjs
+// NAMESPACE OBJECT: ../reviewer-core/node_modules/openai/internal/auth/x509-transport-state-browser.mjs
 var x509_transport_state_browser_namespaceObject = {};
 __nccwpck_require__.r(x509_transport_state_browser_namespaceObject);
 __nccwpck_require__.d(x509_transport_state_browser_namespaceObject, {
@@ -8904,7 +8904,7 @@ function groundingSummary(result) {
     return `${result.kept.length}/${total} passed`;
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/registries.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/registries.js
 var _a;
 const $output = /*@__PURE__*/ (/* unused pure expression or super */ null && (Symbol("ZodOutput")));
 const $input = /*@__PURE__*/ (/* unused pure expression or super */ null && (Symbol("ZodInput")));
@@ -8957,7 +8957,7 @@ function registry() {
 (_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
 const globalRegistry = globalThis.__zod_globalRegistry;
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/regexes.js
 
 /**
  * @deprecated CUID v1 is deprecated by its authors due to information leakage
@@ -9115,7 +9115,7 @@ const sha512_hex = /^[0-9a-fA-F]{128}$/;
 const sha512_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(86, "==")));
 const sha512_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(86)));
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/util.js
 
 // functions
 function assertEqual(val) {
@@ -9990,7 +9990,7 @@ function constantCatch(value) {
     return fn;
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/core.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/core.js
 var core_a;
 
 /** A special constant with type `never` */
@@ -10133,14 +10133,14 @@ function config(newConfig) {
     return core_globalConfig;
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/versions.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/versions.js
 const version = {
     major: 4,
     minor: 6,
     patch: 7,
 };
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/schemas.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/schemas.js
 
 
 
@@ -12778,7 +12778,7 @@ function handleRefineResult(result, payload, input, inst) {
     }
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/to-json-schema.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/to-json-schema.js
 
 
 function assignProps(target, ...sources) {
@@ -13431,7 +13431,7 @@ const createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params)
     return to_json_schema_finalize(ctx, schema);
 };
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/json-schema-processors.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/json-schema-processors.js
 
 
 
@@ -14276,7 +14276,7 @@ function toJSONSchema(input, params) {
     return to_json_schema_finalize(ctx, input);
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/errors.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/errors.js
 
 
 /* Computing the message eagerly is expensive (pretty-printed JSON of all
@@ -14545,7 +14545,7 @@ function prettifyError(error) {
     return lines.join("\n");
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/parse.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/core/parse.js
 
 
 
@@ -14722,7 +14722,7 @@ const _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 const safeDecodeAsync = /* @__PURE__*/ _safeDecodeAsync($ZodRealError);
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/errors.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/classic/errors.js
 
 
 
@@ -14781,7 +14781,7 @@ const errors_ZodRealError = /*@__PURE__*/ $constructor("ZodError", errors_initia
 // /** @deprecated Use `z.core.$ZodErrorMapCtx` instead. */
 // export type ErrorMapCtx = core.$ZodErrorMapCtx;
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/parse.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v4/classic/parse.js
 
 
 const classic_parse_parse = /* @__PURE__ */ _parse(errors_ZodRealError);
@@ -14799,7 +14799,7 @@ const parse_safeDecode = /* @__PURE__ */ (/* unused pure expression or super */ 
 const parse_safeEncodeAsync = /* @__PURE__ */ (/* unused pure expression or super */ null && (core._safeEncodeAsync(ZodRealError)));
 const parse_safeDecodeAsync = /* @__PURE__ */ (/* unused pure expression or super */ null && (core._safeDecodeAsync(ZodRealError)));
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/errors.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/errors.mjs
 function isAbortError(err) {
     return (typeof err === 'object' &&
         err !== null &&
@@ -14836,7 +14836,7 @@ const castToError = (err) => {
     return new Error(err);
 };
 //# sourceMappingURL=errors.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/core/error.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/core/error.mjs
 
 class error_OpenAIError extends Error {
 }
@@ -14985,11 +14985,11 @@ class SubjectTokenProviderError extends error_OpenAIError {
     }
 }
 //# sourceMappingURL=error.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/error.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/error.mjs
 /** @deprecated Import from ./core/error instead */
 
 //# sourceMappingURL=error.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/parser.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/parser.mjs
 
 /** Returns whether an optional chat completion tool contains a function-tool definition. */
 function isChatCompletionFunctionTool(tool) {
@@ -15250,7 +15250,7 @@ function validateInputTools(tools) {
     }
 }
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/helpers/util.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/helpers/util.js
 var util_util;
 (function (util) {
     util.assertEqual = (_) => { };
@@ -15385,7 +15385,7 @@ const util_getParsedType = (data) => {
     }
 };
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/ZodError.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/ZodError.js
 
 const ZodIssueCode = util_util.arrayToEnum([
     "invalid_type",
@@ -15530,7 +15530,7 @@ ZodError_ZodError.create = (issues) => {
     return error;
 };
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/locales/en.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/locales/en.js
 
 
 const errorMap = (issue, _ctx) => {
@@ -15641,7 +15641,7 @@ const errorMap = (issue, _ctx) => {
 };
 /* harmony default export */ const en = (errorMap);
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/errors.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/errors.js
 
 let overrideErrorMap = en;
 
@@ -15652,7 +15652,7 @@ function getErrorMap() {
     return overrideErrorMap;
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/helpers/errorUtil.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function (errorUtil) {
     errorUtil.errToObj = (message) => typeof message === "string" ? { message } : message || {};
@@ -15660,7 +15660,7 @@ var errorUtil;
     errorUtil.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/helpers/parseUtil.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/helpers/parseUtil.js
 
 
 const makeIssue = (params) => {
@@ -15771,7 +15771,7 @@ const isDirty = (x) => x.status === "dirty";
 const isValid = (x) => x.status === "valid";
 const isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/types.js
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/zod/v3/types.js
 
 
 
@@ -19470,7 +19470,7 @@ const coerce = {
 
 const types_NEVER = (/* unused pure expression or super */ null && (INVALID));
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/values.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/values.mjs
 
 // https://url.spec.whatwg.org/#url-scheme-string
 const startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
@@ -19564,12 +19564,12 @@ const safeJSON = (text) => {
     }
 };
 //# sourceMappingURL=values.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/any.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/any.mjs
 function parseAnyDef() {
     return {};
 }
 //# sourceMappingURL=any.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/errorMessages.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/errorMessages.mjs
 function addErrorMessage(res, key, errorMessage, refs) {
     if (!refs?.errorMessages) {
         return;
@@ -19586,7 +19586,7 @@ function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
     addErrorMessage(res, key, errorMessage, refs);
 }
 //# sourceMappingURL=errorMessages.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/array.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/array.mjs
 
 
 
@@ -19613,7 +19613,7 @@ function parseArrayDef(def, refs) {
     return res;
 }
 //# sourceMappingURL=array.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/bigint.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/bigint.mjs
 
 function parseBigintDef(def, refs) {
     const res = {
@@ -19670,24 +19670,24 @@ function parseBigintDef(def, refs) {
     return res;
 }
 //# sourceMappingURL=bigint.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/boolean.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/boolean.mjs
 function parseBooleanDef() {
     return {
         type: 'boolean',
     };
 }
 //# sourceMappingURL=boolean.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/branded.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/branded.mjs
 
 function parseBrandedDef(_def, refs, forceResolution) {
     return parseDef(_def.type._def, refs, forceResolution);
 }
 //# sourceMappingURL=branded.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/catch.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/catch.mjs
 
 const parseCatchDef = (def, refs, forceResolution) => parseDef(def.innerType._def, refs, forceResolution);
 //# sourceMappingURL=catch.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/date.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/date.mjs
 
 function parseDateDef(def, refs, overrideDateStrategy) {
     const strategy = overrideDateStrategy ?? refs.dateStrategy;
@@ -19740,7 +19740,7 @@ const integerDateParser = (def, refs) => {
     return res;
 };
 //# sourceMappingURL=date.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/default.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/default.mjs
 
 function parseDefaultDef(_def, refs, forceResolution) {
     return {
@@ -19749,13 +19749,13 @@ function parseDefaultDef(_def, refs, forceResolution) {
     };
 }
 //# sourceMappingURL=default.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/effects.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/effects.mjs
 
 function parseEffectsDef(_def, refs, forceResolution) {
     return refs.effectStrategy === 'input' ? parseDef(_def.schema._def, refs, forceResolution) : {};
 }
 //# sourceMappingURL=effects.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/enum.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/enum.mjs
 function parseEnumDef(def) {
     return {
         type: 'string',
@@ -19763,7 +19763,7 @@ function parseEnumDef(def) {
     };
 }
 //# sourceMappingURL=enum.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/intersection.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/intersection.mjs
 
 const isJsonSchema7AllOfType = (type) => {
     if ('type' in type && type.type === 'string') {
@@ -19815,7 +19815,7 @@ function parseIntersectionDef(def, refs) {
         : undefined;
 }
 //# sourceMappingURL=intersection.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/null.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/null.mjs
 function parseNullDef(refs) {
     // SAFETY: The OpenAPI target uses nullable plus enum because its null representation differs from the JSON Schema return type.
     return refs.target === 'openApi3'
@@ -19828,7 +19828,7 @@ function parseNullDef(refs) {
         };
 }
 //# sourceMappingURL=null.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/literal.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/literal.mjs
 
 function parseLiteralDef(def, refs) {
     if (def.value === null) {
@@ -19856,7 +19856,7 @@ function parseLiteralDef(def, refs) {
     };
 }
 //# sourceMappingURL=literal.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/string.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/string.mjs
 
 let string_emojiRegex;
 /**
@@ -20192,7 +20192,7 @@ const processRegExp = (regexOrFunction, refs) => {
     return pattern;
 };
 //# sourceMappingURL=string.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/record.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/record.mjs
 
 
 
@@ -20241,7 +20241,7 @@ function parseRecordDef(def, refs) {
     return schema;
 }
 //# sourceMappingURL=record.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/map.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/map.mjs
 
 
 function parseMapDef(def, refs) {
@@ -20268,7 +20268,7 @@ function parseMapDef(def, refs) {
     };
 }
 //# sourceMappingURL=map.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/nativeEnum.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/nativeEnum.mjs
 function parseNativeEnumDef(def) {
     const object = def.values;
     const actualKeys = Object.keys(def.values).filter((key) => typeof object[object[key]] !== 'number');
@@ -20284,14 +20284,14 @@ function parseNativeEnumDef(def) {
     };
 }
 //# sourceMappingURL=nativeEnum.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/never.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/never.mjs
 function parseNeverDef() {
     return {
         not: {},
     };
 }
 //# sourceMappingURL=never.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/union.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/union.mjs
 
 const primitiveMappings = {
     ZodString: 'string',
@@ -20387,7 +20387,7 @@ const asAnyOf = (def, refs) => {
     return anyOf.length ? { anyOf } : undefined;
 };
 //# sourceMappingURL=union.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/nullable.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/nullable.mjs
 
 
 function parseNullableDef(def, refs, forceResolution) {
@@ -20424,7 +20424,7 @@ function parseNullableDef(def, refs, forceResolution) {
     return base && { anyOf: [base, { type: 'null' }] };
 }
 //# sourceMappingURL=nullable.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/number.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/number.mjs
 
 function parseNumberDef(def, refs) {
     const res = {
@@ -20485,7 +20485,7 @@ function parseNumberDef(def, refs) {
     return res;
 }
 //# sourceMappingURL=number.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/object.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/object.mjs
 
 function decideAdditionalProperties(def, refs) {
     if (refs.removeAdditionalStrategy === 'strict') {
@@ -20545,7 +20545,7 @@ function parseObjectDef(def, refs) {
     return result;
 }
 //# sourceMappingURL=object.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/optional.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/optional.mjs
 
 const parseOptionalDef = (def, refs, forceResolution) => {
     if (refs.propertyPath &&
@@ -20567,7 +20567,7 @@ const parseOptionalDef = (def, refs, forceResolution) => {
         : {};
 };
 //# sourceMappingURL=optional.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/pipeline.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/pipeline.mjs
 
 const parsePipelineDef = (def, refs, forceResolution) => {
     if (refs.pipeStrategy === 'input') {
@@ -20589,13 +20589,13 @@ const parsePipelineDef = (def, refs, forceResolution) => {
     };
 };
 //# sourceMappingURL=pipeline.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/promise.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/promise.mjs
 
 function parsePromiseDef(def, refs, forceResolution) {
     return parseDef(def.type._def, refs, forceResolution);
 }
 //# sourceMappingURL=promise.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/set.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/set.mjs
 
 
 function parseSetDef(def, refs) {
@@ -20617,7 +20617,7 @@ function parseSetDef(def, refs) {
     return schema;
 }
 //# sourceMappingURL=set.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/tuple.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/tuple.mjs
 
 /**
  * `items` is positional and `minItems`/`maxItems` come from `def.items.length`, so the
@@ -20656,23 +20656,23 @@ function parseTupleDef(def, refs) {
     };
 }
 //# sourceMappingURL=tuple.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/undefined.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/undefined.mjs
 function parseUndefinedDef() {
     return {
         not: {},
     };
 }
 //# sourceMappingURL=undefined.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/unknown.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/unknown.mjs
 function parseUnknownDef() {
     return {};
 }
 //# sourceMappingURL=unknown.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parsers/readonly.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parsers/readonly.mjs
 
 const parseReadonlyDef = (def, refs, forceResolution) => parseDef(def.innerType._def, refs, forceResolution);
 //# sourceMappingURL=readonly.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/Options.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/Options.mjs
 const ignoreOverride = Symbol('Let zodToJsonSchema decide on which parser to use');
 const defaultOptions = {
     name: undefined,
@@ -20720,7 +20720,7 @@ const getDefaultOptions = (options) => {
     return resolvedOptions;
 };
 //# sourceMappingURL=Options.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/util.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/util.mjs
 const zodDef = (zodSchema) => '_def' in zodSchema ? zodSchema._def : zodSchema;
 // oxlint-disable-next-line anti-slop/no-object-parameters -- Preserve the upstream utility contract: any object can have enumerable own or inherited keys.
 function util_isEmptyObj(obj) {
@@ -20734,7 +20734,7 @@ function util_isEmptyObj(obj) {
     return true;
 }
 //# sourceMappingURL=util.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/parseDef.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/parseDef.mjs
 
 
 
@@ -21003,7 +21003,7 @@ const addMeta = (def, refs, jsonSchema) => {
     return jsonSchema;
 };
 //# sourceMappingURL=parseDef.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/Refs.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/Refs.mjs
 
 
 const getRefs = (options) => {
@@ -21028,7 +21028,7 @@ const getRefs = (options) => {
     };
 };
 //# sourceMappingURL=Refs.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/zodToJsonSchema.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/zodToJsonSchema.mjs
 
 
 
@@ -21180,7 +21180,7 @@ const zodToJsonSchema_zodToJsonSchema = (schema, options) => {
 };
 
 //# sourceMappingURL=zodToJsonSchema.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/zod-to-json-schema/index.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/zod-to-json-schema/index.mjs
 
 
 
@@ -21219,7 +21219,7 @@ const zodToJsonSchema_zodToJsonSchema = (schema, options) => {
 
 /* harmony default export */ const zod_to_json_schema = ((/* unused pure expression or super */ null && (zodToJsonSchema)));
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/ResponsesParser.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/ResponsesParser.mjs
 
 
 /**
@@ -21426,7 +21426,7 @@ function addOutputText(rsp) {
     rsp.output_text = texts.join('');
 }
 //# sourceMappingURL=ResponsesParser.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/base64.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/base64.mjs
 
 
 const toBase64 = (data) => {
@@ -21484,7 +21484,7 @@ const toFloat32Array = (base64Str) => {
     }
 };
 //# sourceMappingURL=base64.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/env.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/env.mjs
 /**
  * Read an environment variable.
  *
@@ -21507,7 +21507,7 @@ const env_readEnv = (env) => {
     return undefined;
 };
 //# sourceMappingURL=env.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/log.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/log.mjs
 
 const levelNumbers = {
     off: 0,
@@ -21648,7 +21648,7 @@ const formatRequestDetails = (details) => {
     return details;
 };
 //# sourceMappingURL=log.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/qs/formats.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/qs/formats.mjs
 const default_format = 'RFC3986';
 const default_formatter = String;
 const formatters = {
@@ -21658,7 +21658,7 @@ const formatters = {
 const RFC1738 = 'RFC1738';
 const RFC3986 = 'RFC3986';
 //# sourceMappingURL=formats.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/qs/utils.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/qs/utils.mjs
 
 
 // oxlint-disable-next-line anti-slop/no-object-parameters -- The cached own-property predicate accepts arrays, callable objects, and records.
@@ -22194,7 +22194,7 @@ function maybe_map(val, fn) {
     return fn(val);
 }
 //# sourceMappingURL=utils.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/qs/stringify.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/qs/stringify.mjs
 
 
 
@@ -22478,13 +22478,13 @@ function stringify(object, opts = {}) {
     return joined.length > 0 ? prefix + joined : '';
 }
 //# sourceMappingURL=stringify.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/query.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/query.mjs
 
 function stringifyQuery(query) {
     return stringify(query, { arrayFormat: 'brackets' });
 }
 //# sourceMappingURL=query.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils.mjs
 
 
 
@@ -22493,7 +22493,7 @@ function stringifyQuery(query) {
 
 
 //# sourceMappingURL=utils.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/transform.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/transform.mjs
 
 const JSON_SCHEMA_ANNOTATION_KEYWORDS = new Set([
     '$comment',
@@ -24165,7 +24165,7 @@ function schemasEqual(left, right) {
     return leftKeys.every((key, index) => key === rightKeys[index] && schemasEqual(leftRecord[key], rightRecord[key]));
 }
 //# sourceMappingURL=transform.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/helpers/zod-v3-strict-schema.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/helpers/zod-v3-strict-schema.mjs
 // oxlint-disable-next-line anti-slop/no-known-value-widening -- Runtime Zod type names index this dictionary, including unsupported names outside the known entries.
 const simpleJSONDomains = {
     ZodString: 'string',
@@ -24570,7 +24570,7 @@ function assertJSONSerializableSchema(value, path = '$', ancestors = new Set()) 
     ancestors.delete(value);
 }
 //# sourceMappingURL=zod-v3-strict-schema.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/helpers/zod.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/helpers/zod.mjs
 
 
 
@@ -36137,6 +36137,24 @@ const AgentManifest = object({
     ci_fail_on: CiFailOn.default('critical'),
     post_as: CiPostAs.default('github_review'),
 });
+/** Jenkins-specific export settings (target `jenkins`). Repo-wide: one
+ *  Jenkinsfile and one multibranch job per repo. Credential IDs name Jenkins
+ *  credentials; the secret values never reach DevDigest. */
+const CI_JENKINS_JOB_NAME_RE = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
+const CI_JENKINS_CREDENTIAL_ID_RE = /^[A-Za-z0-9._-]{1,100}$/;
+const CI_JENKINS_AGENT_LABEL_RE = /^[A-Za-z0-9._ &|!()-]{1,100}$/;
+const CiJenkinsInput = object({
+    job_name: schemas_string().max(200).regex(CI_JENKINS_JOB_NAME_RE).default('devdigest-review'),
+    openrouter_credential_id: schemas_string()
+        .regex(CI_JENKINS_CREDENTIAL_ID_RE)
+        .default('devdigest-openrouter-api-key'),
+    github_credential_id: schemas_string()
+        .regex(CI_JENKINS_CREDENTIAL_ID_RE)
+        .default('devdigest-github-token'),
+    agent_label: schemas_string().regex(CI_JENKINS_AGENT_LABEL_RE).default('any'),
+    /** Only used when DevDigest creates the multibranch job (scan credential). */
+    scan_credential_id: schemas_string().regex(CI_JENKINS_CREDENTIAL_ID_RE).nullish(),
+});
 /** Request body for `POST /agents/:id/ci/{preview,export,zip}`. */
 const CiExportInput = object({
     repo: schemas_string().min(1), // "owner/name"
@@ -36148,6 +36166,12 @@ const CiExportInput = object({
     base: schemas_string().default('main'),
     /** User-edited workflow text (linted server-side; replaces the generated one). */
     workflow_yaml: schemas_string().max(200_000).nullish(),
+    /** Required when `target` is `jenkins`. */
+    jenkins: CiJenkinsInput.nullish(),
+    /** User-edited Jenkinsfile (target `jenkins`; linted server-side). */
+    jenkinsfile: schemas_string().max(200_000).nullish(),
+    /** Also create the multibranch job on the repo's Jenkins connection. */
+    create_jenkins_job: schemas_boolean().nullish(),
 });
 /** A persisted CI installation (mirrors `ci_installations`). */
 const CiInstallation = object({
@@ -36169,12 +36193,28 @@ const CiInstallation = object({
     out_of_date: schemas_boolean().nullish(),
     last_run_status: schemas_string().nullish(),
     last_run_at: schemas_string().nullish(),
+    // Jenkins target (null for GitHub Actions installations).
+    ci_server_url: schemas_string().nullish(),
+    ci_job_name: schemas_string().nullish(),
+    openrouter_credential_id: schemas_string().nullish(),
+    github_credential_id: schemas_string().nullish(),
+    scan_credential_id: schemas_string().nullish(),
+    agent_label: schemas_string().nullish(),
+    /** Code of the last failed sync of this installation (`CiSyncErrorCode`). */
+    last_sync_error: schemas_string().nullish(),
 });
 /** Response of `POST /agents/:id/ci/export`. */
 const CiExport = object({
     installation: CiInstallation,
     files: array(CiFile),
     pr_url: schemas_string().nullable(),
+    /** Outcome of the optional Jenkins job creation (`create_jenkins_job`). */
+    jenkins_job: object({
+        status: schemas_enum(['created', 'already_exists', 'failed']),
+        url: schemas_string().nullish(),
+        code: schemas_string().nullish(),
+    })
+        .nullish(),
 });
 /** Metadata describing the bundled runner (its body is never sent to the client). */
 const CiRunnerMeta = object({
@@ -36197,12 +36237,28 @@ const CiLintViolation = object({
     location: schemas_string(),
     message: schemas_string(),
 });
+const CiSyncErrorCode = schemas_enum([
+    'jenkins_not_configured',
+    'jenkins_connection_mismatch',
+    'jenkins_auth_failed',
+    'jenkins_unreachable',
+    'jenkins_job_not_found',
+]);
+/** One installation that could not be synced (the others still were). */
+const CiSyncError = object({
+    installation_id: schemas_string(),
+    repo: schemas_string(),
+    agent_id: schemas_string(),
+    code: CiSyncErrorCode,
+    message: schemas_string(),
+});
 /** Response of `POST /ci-runs/sync`. */
 const CiSyncResult = object({
     ingested: schemas_number().int(),
     failed: schemas_number().int(),
     skipped: schemas_number().int(),
     throttled: schemas_boolean(),
+    errors: array(CiSyncError).default([]),
 });
 const CiRunStatus = schemas_enum(['succeeded', 'failed', 'no_findings', 'running']);
 /** A CI run row (mirrors `ci_runs`) — ingested from GitHub Actions artifacts. */
@@ -36268,8 +36324,49 @@ const CiResultArtifact = object({
     manifest_version: schemas_number().int().nonnegative().max(1000),
     dependencies: object({ runner: schemas_string().max(200), node: schemas_string().max(200) })
         .strict(),
+    /** Which CI produced the artifact. Older GitHub Actions runners omit it. */
+    ci_target: schemas_enum(['gha', 'jenkins']).default('gha'),
+    /** Jenkins `<job>/PR-<n>`; null under GitHub Actions. */
+    ci_job: schemas_string().max(200).nullish(),
 })
     .strict();
+// ---------------------------------------------------------------------------
+// Per-repo Jenkins connection (`/ci/jenkins-connection`)
+// ---------------------------------------------------------------------------
+/** `GET /ci/jenkins-connection?repo=` — the token is never returned. */
+const JenkinsConnection = object({
+    repo: schemas_string(),
+    url: schemas_string(),
+    username: schemas_string(),
+    has_token: schemas_boolean(),
+});
+/** `PUT /ci/jenkins-connection` — omit `api_token` to keep the stored one. */
+const JenkinsConnectionInput = object({
+    repo: schemas_string().min(1).max(200),
+    url: schemas_string().min(1).max(2000),
+    username: schemas_string().min(1).max(200),
+    api_token: schemas_string().min(1).max(500).nullish(),
+});
+/** `POST /ci/jenkins-connection/test` — unsaved fields override saved ones. */
+const JenkinsConnectionTestInput = object({
+    repo: schemas_string().min(1).max(200),
+    url: schemas_string().min(1).max(2000).nullish(),
+    username: schemas_string().min(1).max(200).nullish(),
+    api_token: schemas_string().min(1).max(500).nullish(),
+});
+const JenkinsConnectionTestResult = object({
+    ok: schemas_boolean(),
+    version: schemas_string().nullish(),
+    user: schemas_string().nullish(),
+    code: schemas_enum([
+        'jenkins_auth_failed',
+        'jenkins_unreachable',
+        'jenkins_not_jenkins',
+        'jenkins_not_configured',
+    ])
+        .nullish(),
+    message: schemas_string().nullish(),
+});
 // ===========================================================================
 // Conformance (PRD ↔ PR) — API record (the analysis shape is `Conformance`)
 // ===========================================================================
@@ -37335,7 +37432,7 @@ function toReviewPayload(review, opts = {}) {
     };
 }
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/tslib.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f) {
     if (kind === "m")
         throw new TypeError("Private method is not writable");
@@ -37359,7 +37456,7 @@ function __classPrivateFieldIn(state, receiver) {
 }
 
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/uuid.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/uuid.mjs
 /**
  * https://stackoverflow.com/a/2117523
  */
@@ -37374,7 +37471,7 @@ let uuid_uuid4 = function () {
     return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (+c ^ (randomByte() & (15 >> (+c / 4)))).toString(16));
 };
 //# sourceMappingURL=uuid.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/sleep.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/sleep.mjs
 const sleep = (ms, ...signals) => new Promise((resolve, reject) => {
     const activeSignals = [...new Set(signals.filter((signal) => signal != null))];
     let timeout;
@@ -37427,7 +37524,7 @@ const sleep = (ms, ...signals) => new Promise((resolve, reject) => {
     }
 });
 //# sourceMappingURL=sleep.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/abort.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/abort.mjs
 // Keep these optional runtime features out of the SDK's ES2020 type requirements.
 // SAFETY: These host features are optional and checked before use; the structural view avoids requiring newer ambient library declarations.
 const weakGlobals = globalThis;
@@ -37518,7 +37615,7 @@ function addRequestAbortListener(signal, abort, requestSignal) {
     return cleanup;
 }
 //# sourceMappingURL=abort.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/shims.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/shims.mjs
 /**
  * This module provides internal shims and utility functions for environments where certain Node.js or global types may not be available.
  *
@@ -37609,7 +37706,7 @@ async function CancelReadableStream(stream) {
     await cancelPromise;
 }
 //# sourceMappingURL=shims.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/bytes.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/bytes.mjs
 /** Copies byte arrays into one contiguous `Uint8Array` while preserving their order. */
 function bytes_concatBytes(buffers) {
     let length = 0;
@@ -37641,7 +37738,7 @@ function decodeUTF8(bytes) {
         ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
 }
 //# sourceMappingURL=bytes.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/decoders/line.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/decoders/line.mjs
 var _LineDecoder_instances, _LineDecoder_buffer, _LineDecoder_start, _LineDecoder_end, _LineDecoder_searchIndex, _LineDecoder_skipLeadingLF, _LineDecoder_append;
 
 
@@ -37836,7 +37933,7 @@ function lineEndingLength(buffer, index) {
     return 0;
 }
 //# sourceMappingURL=line.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/core/streaming.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/core/streaming.mjs
 var _Stream_instances, _Stream_client, _Stream_isTeeBranch, _Stream_cancelIterator;
 
 
@@ -38496,7 +38593,7 @@ function partition(str, delimiter) {
     return [str, '', ''];
 }
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/parse.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/parse.mjs
 
 
 
@@ -38577,11 +38674,11 @@ function addRequestID(value, response) {
     });
 }
 //# sourceMappingURL=parse.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/version.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/version.mjs
 /** Version of the installed OpenAI SDK package. */
 const VERSION = '7.32.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/detect-platform.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/detect-platform.mjs
 
 const isRunningInBrowser = () => {
     return (
@@ -38738,7 +38835,7 @@ const getPlatformHeaders = () => {
     return (_platformHeaders ?? (_platformHeaders = getPlatformProperties()));
 };
 //# sourceMappingURL=detect-platform.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/request-options.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/request-options.mjs
 const jsonRequestBodyObservers = new WeakMap();
 /** Observes values produced by the actual JSON request serializer without changing them. */
 function observeJSONRequestBody(body, observer) {
@@ -38789,7 +38886,7 @@ const FallbackEncoder = ({ headers, body }) => {
     };
 };
 //# sourceMappingURL=request-options.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/data-residency.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/data-residency.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -38820,7 +38917,7 @@ function assertNoDataResidency(dataResidency, clientName) {
     }
 }
 //# sourceMappingURL=data-residency.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/core/api-promise.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/core/api-promise.mjs
 var _APIPromise_client;
 
 
@@ -38892,7 +38989,7 @@ class APIPromise extends Promise {
 }
 _APIPromise_client = new WeakMap();
 //# sourceMappingURL=api-promise.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/core/pagination.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/core/pagination.mjs
 var _AbstractPage_client;
 
 
@@ -39100,7 +39197,7 @@ class TokenPage extends AbstractPage {
     }
 }
 //# sourceMappingURL=pagination.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/auth/workload-identity-auth.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/auth/workload-identity-auth.mjs
 
 
 const SUBJECT_TOKEN_TYPES = {
@@ -39352,7 +39449,7 @@ class WorkloadIdentityAuth {
     }
 }
 //# sourceMappingURL=workload-identity-auth.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-api-origin.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-api-origin.mjs
 
 
 /** Sole API authority approved for OpenAI X.509 workload-identity federation. */
@@ -39377,7 +39474,7 @@ function assertX509APIOrigin(value) {
     return target;
 }
 //# sourceMappingURL=x509-api-origin.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/headers.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/headers.mjs
 
 const brand_privateNullableHeaders = /* @__PURE__ */ Symbol('brand.privateNullableHeaders');
 const httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -39454,7 +39551,7 @@ const isEmptyHeaders = (headers) => {
     return true;
 };
 //# sourceMappingURL=headers.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-transport-state-browser.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-transport-state-browser.mjs
 /** Browser-safe capability state keeps CommonJS outside the ordinary SDK ESM graph. */
 const registeredX509Transports = new WeakMap();
 const transientX509ConnectionErrors = new WeakSet();
@@ -39487,10 +39584,10 @@ const rememberX509Credential = WeakMap.prototype.set.bind(approvedX509Credential
 /** Resolves only credentials registered by the optional Node authentication helper. */
 const findX509Credential = WeakMap.prototype.get.bind(approvedX509Credentials);
 //# sourceMappingURL=x509-transport-state-browser.mjs.map
-// EXTERNAL MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-transport-state.js
-var x509_transport_state = __nccwpck_require__(1060);
+// EXTERNAL MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-transport-state.js
+var x509_transport_state = __nccwpck_require__(6687);
 var x509_transport_state_namespaceObject = /*#__PURE__*/__nccwpck_require__.t(x509_transport_state, 2);
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-transport-state.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-transport-state.mjs
 
 
 
@@ -39512,7 +39609,7 @@ const {
   findX509Credential: x509_transport_state_findX509Credential,
 } = state;
 
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-transport-registry.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-transport-registry.mjs
 
 
 const transientX509TransportCodes = new Set([
@@ -39561,7 +39658,7 @@ function resolveX509Transport(value) {
     return registered;
 }
 //# sourceMappingURL=x509-transport-registry.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-workload-identity-auth.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-workload-identity-auth.mjs
 var _X509WorkloadIdentityAuth_instances, x509_workload_identity_auth_a, _X509WorkloadIdentityAuth_identityProviderId, _X509WorkloadIdentityAuth_serviceAccountId, _X509WorkloadIdentityAuth_configuredRefreshBufferMs, _X509WorkloadIdentityAuth_configuredRefreshBufferSeconds, _X509WorkloadIdentityAuth_organization, _X509WorkloadIdentityAuth_project, _X509WorkloadIdentityAuth_transport, _X509WorkloadIdentityAuth_refreshBufferMs, _X509WorkloadIdentityAuth_cachedToken, _X509WorkloadIdentityAuth_refresh, _X509WorkloadIdentityAuth_tokenGeneration, _X509WorkloadIdentityAuth_cancelRequestBody, _X509WorkloadIdentityAuth_assignToken, _X509WorkloadIdentityAuth_recoverRefreshFailure, _X509WorkloadIdentityAuth_fallbackToken, _X509WorkloadIdentityAuth_retireRefresh, _X509WorkloadIdentityAuth_beginRefresh, _X509WorkloadIdentityAuth_refreshToken, _X509WorkloadIdentityAuth_preflight, _X509WorkloadIdentityAuth_scope, _X509WorkloadIdentityAuth_assertTenantHeaders;
 
 
@@ -40340,7 +40437,7 @@ x509_workload_identity_auth_a = X509WorkloadIdentityAuth, _X509WorkloadIdentityA
     }
 };
 //# sourceMappingURL=x509-workload-identity-auth.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/auth/x509-credential-options.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/auth/x509-credential-options.mjs
 
 
 
@@ -40462,7 +40559,7 @@ function prepareX509ClientClone(inherited, overrides, credential, currentlyX509)
     return { credential: nextCredential, provider: prepareProviderClone(inherited, overrides) };
 }
 //# sourceMappingURL=x509-credential-options.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/uploads.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/uploads.mjs
 
 
 
@@ -40944,7 +41041,7 @@ const addFormValue = async (form, key, value, options) => {
     }
 };
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/to-file.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/to-file.mjs
 
 /**
  * This check adds the arrayBuffer() method type because it is available and used at runtime
@@ -41056,18 +41153,18 @@ function propsForError(value) {
     return `; props: [${props.map((p) => `"${p}"`).join(', ')}]`;
 }
 //# sourceMappingURL=to-file.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/core/uploads.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/core/uploads.mjs
 
 
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/core/resource.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/core/resource.mjs
 class APIResource {
     constructor(client) {
         this._client = client;
     }
 }
 //# sourceMappingURL=resource.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/utils/path.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/utils/path.mjs
 
 /**
  * Percent-encodes a single URI path parameter while preserving RFC 3986 path characters.
@@ -41162,7 +41259,7 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
  */
 const path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 //# sourceMappingURL=path.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/chat/completions/messages.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/chat/completions/messages.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -41241,7 +41338,7 @@ class Messages extends APIResource {
     }
 }
 //# sourceMappingURL=messages.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/chat-completions/streaming.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/chat-completions/streaming.mjs
 function normalizeChatCompletionChunk(chunk) {
     if (!Array.isArray(chunk?.choices)) {
         // SAFETY: This is an opaque provider record, with no choices to normalize.
@@ -41265,7 +41362,7 @@ function normalizeChatCompletionStream(stream) {
     return stream;
 }
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/chatCompletionUtils.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/chatCompletionUtils.mjs
 /** Returns whether a conversation message was produced by the assistant. */
 const isAssistantMessage = (message) => message?.role === 'assistant';
 /** Returns whether a conversation message contains the result of a tool call. */
@@ -41275,7 +41372,7 @@ function isPresent(obj) {
     return obj != null;
 }
 //# sourceMappingURL=chatCompletionUtils.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/EventStream.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/EventStream.mjs
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_emittedListenerRegistrations, _EventStream_pendingListenerCleanup, _EventStream_pendingBufferedEventChecks, _EventStream_listenerDispatchDepth, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_terminalFailure, _EventStream_abortFromSignal, _EventStream_removeAbortListeners, _EventStream_onceForEmitted, _EventStream_removeEmittedListener, _EventStream_cleanupEmittedListeners, _EventStream_handleError, _EventStream_settleTerminalEvent;
 
 
@@ -42940,7 +43037,7 @@ _EventStream_connectedPromise = new WeakMap(), _EventStream_resolveConnectedProm
     }
 };
 //# sourceMappingURL=EventStream.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/RunnableFunction.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/RunnableFunction.mjs
 /** Returns whether a runnable function provides a parser for its raw argument string. */
 function isRunnableFunctionWithParse(fn) {
     return typeof fn.parse === 'function';
@@ -42958,7 +43055,7 @@ class ParsingToolFunction {
     }
 }
 //# sourceMappingURL=RunnableFunction.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
 var _AbstractChatCompletionRunner_instances, AbstractChatCompletionRunner_a, _AbstractChatCompletionRunner_completionArrivedBeforeAbort, _AbstractChatCompletionRunner_afterCompletionInvoked, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_throwIfAborted, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult;
 
 
@@ -43451,7 +43548,7 @@ AbstractChatCompletionRunner_a = AbstractChatCompletionRunner, _AbstractChatComp
     return JSON.stringify(rawContent);
 };
 //# sourceMappingURL=AbstractChatCompletionRunner.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/ChatCompletionRunner.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/ChatCompletionRunner.mjs
 
 
 /** Executes function tools and follows up with non-streaming chat completion requests. */
@@ -43479,7 +43576,7 @@ class ChatCompletionRunner extends AbstractChatCompletionRunner {
     }
 }
 //# sourceMappingURL=ChatCompletionRunner.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/_vendor/partial-json-parser/parser.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/_vendor/partial-json-parser/parser.mjs
 const STR = 1;
 const NUM = 2;
 const ARR = 4;
@@ -43738,11 +43835,11 @@ const _parseJSON = (jsonString, allow) => {
 const partialParse = (input) => parseJSON(input, Allow.ALL ^ Allow.NUM);
 
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/streaming.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/streaming.mjs
 /** @deprecated Import from ./core/streaming instead */
 
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/ChatCompletionStream.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/ChatCompletionStream.mjs
 var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_rejectsUnfinishedTurns, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_hasAutoParseableTool, _ChatCompletionStream_partialJSONParseBudget, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_validateStructuredSnapshots, _ChatCompletionStream_endRequest, _ChatCompletionStream_accumulateChatCompletion;
 
 
@@ -45479,7 +45576,7 @@ function ChatCompletionStream_assertNever(_x) {
     return _x;
 }
 //# sourceMappingURL=ChatCompletionStream.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 
 
 
@@ -45538,7 +45635,7 @@ class ChatCompletionStreamingRunner extends ChatCompletionStream {
     }
 }
 //# sourceMappingURL=ChatCompletionStreamingRunner.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/chat/completions/completions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/chat/completions/completions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -45710,7 +45807,7 @@ class Completions extends APIResource {
 
 Completions.Messages = Messages;
 //# sourceMappingURL=completions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/chat/chat.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/chat/chat.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -45723,18 +45820,18 @@ class Chat extends APIResource {
 }
 Chat.Completions = Completions;
 //# sourceMappingURL=chat.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/chat/completions/index.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/chat/completions/index.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/chat/index.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/chat/index.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -45862,7 +45959,7 @@ class AdminAPIKeys extends APIResource {
     }
 }
 //# sourceMappingURL=admin-api-keys.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/audit-logs.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/audit-logs.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -45951,7 +46048,7 @@ class AuditLogs extends APIResource {
     }
 }
 //# sourceMappingURL=audit-logs.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/certificates.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/certificates.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -46144,7 +46241,7 @@ class Certificates extends APIResource {
     }
 }
 //# sourceMappingURL=certificates.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/data-retention.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/data-retention.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function data_retention_resolveResourceRequestOptions(options, buildOptions) {
@@ -46186,7 +46283,7 @@ class DataRetention extends APIResource {
     }
 }
 //# sourceMappingURL=data-retention.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/external-storage.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/external-storage.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -46339,7 +46436,7 @@ class ExternalStorage extends APIResource {
     }
 }
 //# sourceMappingURL=external-storage.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/invites.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/invites.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -46469,7 +46566,7 @@ class Invites extends APIResource {
     }
 }
 //# sourceMappingURL=invites.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/roles.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/roles.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -46612,7 +46709,7 @@ class Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/spend-alerts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/spend-alerts.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -46773,7 +46870,7 @@ class SpendAlerts extends APIResource {
     }
 }
 //# sourceMappingURL=spend-alerts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/spend-limit.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/spend-limit.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function spend_limit_resolveResourceRequestOptions(options, buildOptions) {
@@ -46832,7 +46929,7 @@ class SpendLimit extends APIResource {
     }
 }
 //# sourceMappingURL=spend-limit.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/usage.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/usage.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function usage_resolveResourceRequestOptions(options, buildOptions) {
@@ -47039,7 +47136,7 @@ class Usage extends APIResource {
     }
 }
 //# sourceMappingURL=usage.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/groups/roles.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/groups/roles.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47172,7 +47269,7 @@ class roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/groups/users.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/groups/users.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47305,7 +47402,7 @@ class Users extends APIResource {
     }
 }
 //# sourceMappingURL=users.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/groups/groups.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/groups/groups.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47460,7 +47557,7 @@ class Groups extends APIResource {
 Groups.Users = Users;
 Groups.Roles = roles_Roles;
 //# sourceMappingURL=groups.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47577,7 +47674,7 @@ class APIKeys extends APIResource {
     }
 }
 //# sourceMappingURL=api-keys.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/certificates.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/certificates.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47700,7 +47797,7 @@ class certificates_Certificates extends APIResource {
     }
 }
 //# sourceMappingURL=certificates.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47746,7 +47843,7 @@ class data_retention_DataRetention extends APIResource {
     }
 }
 //# sourceMappingURL=data-retention.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47791,7 +47888,7 @@ class HostedToolPermissions extends APIResource {
     }
 }
 //# sourceMappingURL=hosted-tool-permissions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47854,7 +47951,7 @@ class ModelPermissions extends APIResource {
     }
 }
 //# sourceMappingURL=model-permissions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -47950,7 +48047,7 @@ class RateLimits extends APIResource {
     }
 }
 //# sourceMappingURL=rate-limits.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/roles.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/roles.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48103,7 +48200,7 @@ class projects_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48273,7 +48370,7 @@ class spend_alerts_SpendAlerts extends APIResource {
     }
 }
 //# sourceMappingURL=spend-alerts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48340,7 +48437,7 @@ class spend_limit_SpendLimit extends APIResource {
     }
 }
 //# sourceMappingURL=spend-limit.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48431,7 +48528,7 @@ class groups_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48572,7 +48669,7 @@ class groups_Groups extends APIResource {
 }
 groups_Groups.Roles = groups_roles_Roles;
 //# sourceMappingURL=groups.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48602,7 +48699,7 @@ class api_keys_APIKeys extends APIResource {
     }
 }
 //# sourceMappingURL=api-keys.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48766,7 +48863,7 @@ class ServiceAccounts extends APIResource {
 }
 ServiceAccounts.APIKeys = api_keys_APIKeys;
 //# sourceMappingURL=service-accounts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -48857,7 +48954,7 @@ class users_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/users/users.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/users/users.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49021,7 +49118,7 @@ class users_Users extends APIResource {
 }
 users_Users.Roles = users_roles_Roles;
 //# sourceMappingURL=users.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/projects/projects.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/projects/projects.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49220,7 +49317,7 @@ Projects.SpendLimit = spend_limit_SpendLimit;
 Projects.SpendAlerts = spend_alerts_SpendAlerts;
 Projects.Certificates = certificates_Certificates;
 //# sourceMappingURL=projects.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/users/roles.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/users/roles.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49353,7 +49450,7 @@ class organization_users_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/users/users.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/users/users.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49483,7 +49580,7 @@ class users_users_Users extends APIResource {
 }
 users_users_Users.Roles = organization_users_roles_Roles;
 //# sourceMappingURL=users.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/organization/organization.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/organization/organization.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49544,7 +49641,7 @@ Organization.SpendAlerts = SpendAlerts;
 Organization.Certificates = Certificates;
 Organization.Projects = Projects;
 //# sourceMappingURL=organization.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/admin/admin.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/admin/admin.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49557,7 +49654,7 @@ class Admin extends APIResource {
 }
 Admin.Organization = Organization;
 //# sourceMappingURL=admin.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/audio/speech.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/audio/speech.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49596,7 +49693,7 @@ class Speech extends APIResource {
     }
 }
 //# sourceMappingURL=speech.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/audio/transcriptions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/audio/transcriptions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49618,7 +49715,7 @@ class Transcriptions extends APIResource {
     }
 }
 //# sourceMappingURL=transcriptions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/audio/translations.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/audio/translations.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49634,7 +49731,7 @@ class Translations extends APIResource {
     }
 }
 //# sourceMappingURL=translations.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/audio/voices.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/audio/voices.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49672,7 +49769,7 @@ class Voices extends APIResource {
     }
 }
 //# sourceMappingURL=voices.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/audio/audio.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/audio/audio.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49697,7 +49794,7 @@ Audio.Translations = Translations;
 Audio.Speech = Speech;
 Audio.Voices = Voices;
 //# sourceMappingURL=audio.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/batches.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/batches.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49800,7 +49897,7 @@ class Batches extends APIResource {
     }
 }
 //# sourceMappingURL=batches.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/assistants.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/assistants.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -49931,7 +50028,7 @@ class Assistants extends APIResource {
     }
 }
 //# sourceMappingURL=assistants.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/realtime/sessions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/realtime/sessions.mjs
 
 
 class Sessions extends APIResource {
@@ -49960,7 +50057,7 @@ class Sessions extends APIResource {
     }
 }
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
 
 
 class TranscriptionSessions extends APIResource {
@@ -49989,7 +50086,7 @@ class TranscriptionSessions extends APIResource {
     }
 }
 //# sourceMappingURL=transcription-sessions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/realtime/realtime.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/realtime/realtime.mjs
 
 
 
@@ -50008,7 +50105,7 @@ class Realtime extends APIResource {
 Realtime.Sessions = Sessions;
 Realtime.TranscriptionSessions = TranscriptionSessions;
 //# sourceMappingURL=realtime.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/files.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/files.mjs
 
 
 /** Beta: uploaded file IDs remain available after partial preparation or staging failure. */
@@ -50095,7 +50192,7 @@ async function uploadAgentFile(client, resource, environmentID, params, options)
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/environments/files.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/environments/files.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -50165,7 +50262,7 @@ class Files extends APIResource {
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/environments/templates.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/environments/templates.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -50323,7 +50420,7 @@ class Templates extends APIResource {
     }
 }
 //# sourceMappingURL=templates.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/environments/environments.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/environments/environments.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -50467,7 +50564,7 @@ class EnvironmentInfosPage extends CursorPage {
 Environments.Files = Files;
 Environments.Templates = Templates;
 //# sourceMappingURL=environments.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/agents/turn-state.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/agents/turn-state.mjs
 var _TurnState_turnID, _TurnState_turnEnded, _TurnState_eventIDs, _TurnState_calls;
 
 /** Tracks one helper invocation's coordinator turn and duplicate deliveries.
@@ -50526,7 +50623,7 @@ class TurnState {
 }
 _TurnState_turnID = new WeakMap(), _TurnState_turnEnded = new WeakMap(), _TurnState_eventIDs = new WeakMap(), _TurnState_calls = new WeakMap();
 //# sourceMappingURL=turn-state.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/tool-output.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/tool-output.mjs
 
 /**
  * Recognizes supported content blocks without confusing JSON business data with content.
@@ -50550,11 +50647,11 @@ function isInputContent(value) {
     return hasOwn(content, 'type') && hasOwn(content, field) && typeof content[field] === 'string';
 }
 //# sourceMappingURL=tool-output.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/tool-stages.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/tool-stages.mjs
 /** @internal */
 const toolStages = Symbol.for('openai.beta.agents.toolStages');
 //# sourceMappingURL=tool-stages.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/tool-dispatcher.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/tool-dispatcher.mjs
 var _AgentToolDispatcher_instances, _AgentToolDispatcher_handlers, _AgentToolDispatcher_options, _AgentToolDispatcher_sessions, _AgentToolDispatcher_controller, _AgentToolDispatcher_onToolError, _AgentToolDispatcher_result, _AgentToolDispatcher_checkAbort, _AgentToolDispatcher_abortError, _AgentToolDispatcher_wait, _AgentToolDispatcher_submit;
 
 
@@ -50736,13 +50833,13 @@ _AgentToolDispatcher_handlers = new WeakMap(), _AgentToolDispatcher_options = ne
     }
 };
 //# sourceMappingURL=tool-dispatcher.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/agents/output-text.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/agents/output-text.mjs
 /** Joins output_text blocks in content order, without filtering phase, fetching, or mutating the message. */
 function outputText(message) {
     return message.content.map((block) => (block.type === 'output_text' ? block.text : '')).join('');
 }
 //# sourceMappingURL=output-text.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/agent-turn-result.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/agent-turn-result.mjs
 
 /** Beta: the completed final assistant messages from one hosted root turn. */
 class AgentTurnResult {
@@ -50761,7 +50858,7 @@ class AgentTurnResult {
     }
 }
 //# sourceMappingURL=agent-turn-result.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/parsed-agent-turn-result.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/parsed-agent-turn-result.mjs
 
 /** Beta: a completed hosted turn whose output passed the local parser. */
 class ParsedAgentTurnResult extends AgentTurnResult {
@@ -50772,7 +50869,7 @@ class ParsedAgentTurnResult extends AgentTurnResult {
     }
 }
 //# sourceMappingURL=parsed-agent-turn-result.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/output-parse-error.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/output-parse-error.mjs
 var _AgentOutputParseError_rawResult;
 
 
@@ -50791,7 +50888,7 @@ class AgentOutputParseError extends error_OpenAIError {
 }
 _AgentOutputParseError_rawResult = new WeakMap();
 //# sourceMappingURL=output-parse-error.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/parse-result.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/parse-result.mjs
 
 
 
@@ -50902,7 +50999,7 @@ async function parseAgentResultPromise(result, format) {
     return parseAgentResult(await result, format);
 }
 //# sourceMappingURL=parse-result.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/agent-turn-result-error.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/agent-turn-result-error.mjs
 
 /** Beta: final collection failed; partial state is evidence, not a successful result. */
 class AgentTurnResultError extends error_OpenAIError {
@@ -50921,7 +51018,7 @@ class AgentTurnResultError extends error_OpenAIError {
     }
 }
 //# sourceMappingURL=agent-turn-result-error.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/agent-turn-result-collector.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/agent-turn-result-collector.mjs
 var _AgentTurnResultCollector_instances, _AgentTurnResultCollector_sessionID, _AgentTurnResultCollector_turn, _AgentTurnResultCollector_messages, _AgentTurnResultCollector_requiredActions, _AgentTurnResultCollector_sessionFailed, _AgentTurnResultCollector_terminal, _AgentTurnResultCollector_idle, _AgentTurnResultCollector_acceptTurn, _AgentTurnResultCollector_acceptOutput, _AgentTurnResultCollector_finalMessages;
 
 
@@ -51017,7 +51114,7 @@ _AgentTurnResultCollector_sessionID = new WeakMap(), _AgentTurnResultCollector_t
         .map(({ message }) => message));
 };
 //# sourceMappingURL=agent-turn-result-collector.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/result-collection.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/result-collection.mjs
 var _ResultCollection_instances, _ResultCollection_iterator, _ResultCollection_ended, _ResultCollection_enabled, _ResultCollection_uncollectedEvents, _ResultCollection_error, _ResultCollection_result, _ResultCollection_source, _ResultCollection_signal, _ResultCollection_canHandle, _ResultCollection_observe, _ResultCollection_collect;
 
 
@@ -51124,7 +51221,7 @@ _ResultCollection_iterator = new WeakMap(), _ResultCollection_ended = new WeakMa
     }
 };
 //# sourceMappingURL=result-collection.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/agents/agent-session-stream.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/agents/agent-session-stream.mjs
 var _AgentSessionStream_instances, _AgentSessionStream_consumed, _AgentSessionStream_format, _AgentSessionStream_parsedResult, _AgentSessionStream_collection, _AgentSessionStream_stream, _AgentSessionStream_response, _AgentSessionStream_reading, _AgentSessionStream_sessions, _AgentSessionStream_sessionID, _AgentSessionStream_input, _AgentSessionStream_dispatcher, _AgentSessionStream_inputKey, _AgentSessionStream_options, _AgentSessionStream_iterate, _AgentSessionStream_checkAbort, _AgentSessionStream_abortError;
 
 
@@ -51296,7 +51393,7 @@ _AgentSessionStream_iterate = async function* _AgentSessionStream_iterate() {
     return error;
 };
 //# sourceMappingURL=agent-session-stream.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/agent-session-create-stream.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/agent-session-create-stream.mjs
 
 
 
@@ -51386,7 +51483,7 @@ function captureCreationTools(body, options) {
     };
 }
 //# sourceMappingURL=agent-session-create-stream.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/pages.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/pages.mjs
 
 
 /** Retain server cursor metadata for legacy Agents items with nullable IDs.
@@ -51416,7 +51513,7 @@ async function* agentItems(load) {
     }
 }
 //# sourceMappingURL=pages.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/beta/agents/result-artifacts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/beta/agents/result-artifacts.mjs
 var _AgentResultArtifacts_resource, _AgentResultArtifacts_sessionID, _AgentResultArtifacts_turnID;
 
 
@@ -51480,7 +51577,7 @@ class AgentResultArtifacts {
 }
 _AgentResultArtifacts_resource = new WeakMap(), _AgentResultArtifacts_sessionID = new WeakMap(), _AgentResultArtifacts_turnID = new WeakMap();
 //# sourceMappingURL=result-artifacts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/artifacts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/artifacts.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -51635,7 +51732,7 @@ class Artifacts extends APIResource {
     }
 }
 //# sourceMappingURL=artifacts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/events.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/events.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -51717,7 +51814,7 @@ class Events extends APIResource {
     }
 }
 //# sourceMappingURL=events.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -51795,7 +51892,7 @@ class Items extends APIResource {
     }
 }
 //# sourceMappingURL=items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/traces.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/traces.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -51873,7 +51970,7 @@ class Traces extends APIResource {
     }
 }
 //# sourceMappingURL=traces.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/subagents/items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/subagents/items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -51909,7 +52006,7 @@ class items_Items extends APIResource {
     }
 }
 //# sourceMappingURL=items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/subagents/turns/items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/subagents/turns/items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -51945,7 +52042,7 @@ class turns_items_Items extends APIResource {
     }
 }
 //# sourceMappingURL=items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/subagents/turns/turns.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/subagents/turns/turns.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52012,7 +52109,7 @@ class Turns extends APIResource {
 }
 Turns.Items = turns_items_Items;
 //# sourceMappingURL=turns.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/subagents/subagents.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/subagents/subagents.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52122,7 +52219,7 @@ class Subagents extends APIResource {
 Subagents.Items = items_Items;
 Subagents.Turns = Turns;
 //# sourceMappingURL=subagents.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/turns/items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/turns/items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52159,7 +52256,7 @@ class sessions_turns_items_Items extends APIResource {
     }
 }
 //# sourceMappingURL=items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/turns/turns.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/turns/turns.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52266,7 +52363,7 @@ class turns_Turns extends APIResource {
 }
 turns_Turns.Items = sessions_turns_items_Items;
 //# sourceMappingURL=turns.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/sessions/sessions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/sessions/sessions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52453,7 +52550,7 @@ sessions_Sessions.Events = Events;
 sessions_Sessions.Traces = Traces;
 sessions_Sessions.Turns = turns_Turns;
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/vaults/credentials.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/vaults/credentials.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52624,7 +52721,7 @@ class Credentials extends APIResource {
     }
 }
 //# sourceMappingURL=credentials.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/vaults/vaults.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/vaults/vaults.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52762,7 +52859,7 @@ class Vaults extends APIResource {
 }
 Vaults.Credentials = Credentials;
 //# sourceMappingURL=vaults.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/agents/agents.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/agents/agents.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52925,7 +53022,7 @@ Agents.Environments = Environments;
 Agents.Vaults = Vaults;
 Agents.Sessions = sessions_Sessions;
 //# sourceMappingURL=agents.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/chatkit/sessions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/chatkit/sessions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -52974,7 +53071,7 @@ class chatkit_sessions_Sessions extends APIResource {
     }
 }
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/chatkit/threads.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/chatkit/threads.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53099,7 +53196,7 @@ class Threads extends APIResource {
     }
 }
 //# sourceMappingURL=threads.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/chatkit/chatkit.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/chatkit/chatkit.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53116,7 +53213,7 @@ class ChatKit extends APIResource {
 ChatKit.Sessions = chatkit_sessions_Sessions;
 ChatKit.Threads = Threads;
 //# sourceMappingURL=chatkit.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/responses/input-items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/responses/input-items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53201,7 +53298,7 @@ class InputItems extends APIResource {
     }
 }
 //# sourceMappingURL=input-items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/responses/input-tokens.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/responses/input-tokens.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53238,7 +53335,7 @@ class InputTokens extends APIResource {
     }
 }
 //# sourceMappingURL=input-tokens.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/responses/responses.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/responses/responses.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53422,7 +53519,7 @@ class Responses extends APIResource {
 Responses.InputItems = InputItems;
 Responses.InputTokens = InputTokens;
 //# sourceMappingURL=responses.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/threads/messages.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/threads/messages.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53558,7 +53655,7 @@ class messages_Messages extends APIResource {
     }
 }
 //# sourceMappingURL=messages.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/threads/runs/steps.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/threads/runs/steps.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -53603,7 +53700,7 @@ class Steps extends APIResource {
     }
 }
 //# sourceMappingURL=steps.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/assistant-stream-delta.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/assistant-stream-delta.mjs
 
 
 const MAX_ASSISTANT_STREAM_ARRAY_GROWTH = 1024;
@@ -53912,7 +54009,7 @@ function createAssistantStreamArrayDeltaCommit(accumulator, delta, kind, cacheAr
     return () => commitAssistantStreamArrayProjection(projection);
 }
 //# sourceMappingURL=assistant-stream-delta.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/AssistantStream.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/AssistantStream.mjs
 var _AssistantStream_instances, _AssistantStream_runStepSnapshots, _AssistantStream_runStepIDOwners, _AssistantStream_activeRunStepID, _AssistantStream_messageSnapshots, _AssistantStream_messageIDOwners, _AssistantStream_messageSnapshot, _AssistantStream_activeMessageID, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_validateRunStepEvent, _AssistantStream_reserveRunStepAlias, _AssistantStream_validateMessageEvent, _AssistantStream_reserveMessageAlias, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_emitExposed, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun;
 
 
@@ -54633,7 +54730,7 @@ function AssistantStream_assertNever(_x) {
     return _x;
 }
 //# sourceMappingURL=AssistantStream.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/polling.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/polling.mjs
 
 
 
@@ -54762,7 +54859,7 @@ async function pollWithResponse(retrieve, intermediateStatuses, terminalStatuses
     }
 }
 //# sourceMappingURL=polling.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/assistant-run-polling.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/assistant-run-polling.mjs
 
 /**
  * Polls an assistant run through the resource's retrieve method, preserving the
@@ -54777,7 +54874,7 @@ function pollAssistantRun(resource, runID, params, options) {
     }), ['queued', 'in_progress', 'cancelling'], ['requires_action', 'incomplete', 'cancelled', 'completed', 'failed', 'expired'], options);
 }
 //# sourceMappingURL=assistant-run-polling.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/threads/runs/runs.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/threads/runs/runs.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -54980,7 +55077,7 @@ class Runs extends APIResource {
 }
 Runs.Steps = Steps;
 //# sourceMappingURL=runs.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/threads/threads.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/threads/threads.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55083,7 +55180,7 @@ class threads_Threads extends APIResource {
 threads_Threads.Runs = Runs;
 threads_Threads.Messages = messages_Messages;
 //# sourceMappingURL=threads.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/beta/beta.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/beta/beta.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55116,7 +55213,7 @@ Beta.ChatKit = ChatKit;
 Beta.Assistants = Assistants;
 Beta.Threads = threads_Threads;
 //# sourceMappingURL=beta.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/completions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/completions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function resources_completions_resolveResourceRequestOptions(options, buildOptions) {
@@ -55136,7 +55233,7 @@ class completions_Completions extends APIResource {
     }
 }
 //# sourceMappingURL=completions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/containers/files/content.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/containers/files/content.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55159,7 +55256,7 @@ class Content extends APIResource {
     }
 }
 //# sourceMappingURL=content.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/containers/files/files.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/containers/files/files.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55271,7 +55368,7 @@ class files_Files extends APIResource {
 }
 files_Files.Content = Content;
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/containers/containers.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/containers/containers.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55381,7 +55478,7 @@ class Containers extends APIResource {
 }
 Containers.Files = files_Files;
 //# sourceMappingURL=containers.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/content-provenance-checks.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/content-provenance-checks.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55405,7 +55502,7 @@ class ContentProvenanceChecks extends APIResource {
     }
 }
 //# sourceMappingURL=content-provenance-checks.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/conversations/items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/conversations/items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55514,7 +55611,7 @@ class conversations_items_Items extends APIResource {
     }
 }
 //# sourceMappingURL=items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/conversations/conversations.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/conversations/conversations.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55566,7 +55663,7 @@ class Conversations extends APIResource {
 }
 Conversations.Items = conversations_items_Items;
 //# sourceMappingURL=conversations.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/decisions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/decisions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function decisions_resolveResourceRequestOptions(options, buildOptions) {
@@ -55595,7 +55692,7 @@ class Decisions extends APIResource {
     }
 }
 //# sourceMappingURL=decisions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/embeddings.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/embeddings.mjs
 
 /**
  * Sends the optimized embeddings request while preserving explicit encodings and
@@ -55651,7 +55748,7 @@ function createEmbedding(client, body, options) {
     });
 }
 //# sourceMappingURL=embeddings.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/embeddings.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/embeddings.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55664,7 +55761,7 @@ class Embeddings extends APIResource {
     }
 }
 //# sourceMappingURL=embeddings.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/evals/runs/output-items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/evals/runs/output-items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55696,7 +55793,7 @@ class OutputItems extends APIResource {
     }
 }
 //# sourceMappingURL=output-items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/evals/runs/runs.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/evals/runs/runs.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55815,7 +55912,7 @@ class runs_Runs extends APIResource {
 }
 runs_Runs.OutputItems = OutputItems;
 //# sourceMappingURL=runs.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/evals/evals.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/evals/evals.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -55938,7 +56035,7 @@ class Evals extends APIResource {
 }
 Evals.Runs = runs_Runs;
 //# sourceMappingURL=evals.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/file-processing.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/file-processing.mjs
 
 
 /**
@@ -55967,7 +56064,7 @@ async function waitForFileProcessing(resource, id, pollInterval, maxWait) {
     return file;
 }
 //# sourceMappingURL=file-processing.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/files.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/files.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56110,13 +56207,13 @@ class resources_files_Files extends APIResource {
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/methods.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/methods.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class Methods extends APIResource {
 }
 //# sourceMappingURL=methods.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function graders_resolveResourceRequestOptions(options, buildOptions) {
@@ -56176,7 +56273,7 @@ class Graders extends APIResource {
     }
 }
 //# sourceMappingURL=graders.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56189,7 +56286,7 @@ class Alpha extends APIResource {
 }
 Alpha.Graders = Graders;
 //# sourceMappingURL=alpha.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56333,7 +56430,7 @@ class Permissions extends APIResource {
     }
 }
 //# sourceMappingURL=permissions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56346,7 +56443,7 @@ class Checkpoints extends APIResource {
 }
 Checkpoints.Permissions = Permissions;
 //# sourceMappingURL=checkpoints.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56425,7 +56522,7 @@ class checkpoints_Checkpoints extends APIResource {
     }
 }
 //# sourceMappingURL=checkpoints.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56602,7 +56699,7 @@ class Jobs extends APIResource {
 }
 Jobs.Checkpoints = checkpoints_Checkpoints;
 //# sourceMappingURL=jobs.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56627,13 +56724,13 @@ FineTuning.Jobs = Jobs;
 FineTuning.Checkpoints = Checkpoints;
 FineTuning.Alpha = Alpha;
 //# sourceMappingURL=fine-tuning.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/graders/grader-models.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/graders/grader-models.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class GraderModels extends APIResource {
 }
 //# sourceMappingURL=grader-models.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/graders/graders.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/graders/graders.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56646,7 +56743,7 @@ class graders_Graders extends APIResource {
 }
 graders_Graders.GraderModels = GraderModels;
 //# sourceMappingURL=graders.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/images.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/images.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56686,7 +56783,7 @@ class Images extends APIResource {
     }
 }
 //# sourceMappingURL=images.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/live/sessions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/live/sessions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56810,19 +56907,19 @@ class live_sessions_Sessions extends APIResource {
     }
 }
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/live/forks/forks.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/live/forks/forks.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class Forks extends APIResource {
 }
 //# sourceMappingURL=forks.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/live/sideband/sideband.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/live/sideband/sideband.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class Sideband extends APIResource {
 }
 //# sourceMappingURL=sideband.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/live/live.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/live/live.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56865,7 +56962,7 @@ Live.Sideband = Sideband;
 Live.Forks = Forks;
 Live.Sessions = live_sessions_Sessions;
 //# sourceMappingURL=live.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/models.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/models.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56900,7 +56997,7 @@ class Models extends APIResource {
     }
 }
 //# sourceMappingURL=models.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/moderations.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/moderations.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function moderations_resolveResourceRequestOptions(options, buildOptions) {
@@ -56924,7 +57021,7 @@ class Moderations extends APIResource {
     }
 }
 //# sourceMappingURL=moderations.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/multipart-encoding.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/multipart-encoding.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -56973,7 +57070,7 @@ async function encodedMultipartFormRequestOptions(options, client, encodings, ra
     };
 }
 //# sourceMappingURL=multipart-encoding.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/realtime/calls.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/realtime/calls.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -57076,7 +57173,7 @@ class Calls extends APIResource {
     }
 }
 //# sourceMappingURL=calls.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/realtime/client-secrets.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/realtime/client-secrets.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function client_secrets_resolveResourceRequestOptions(options, buildOptions) {
@@ -57115,7 +57212,7 @@ class ClientSecrets extends APIResource {
     }
 }
 //# sourceMappingURL=client-secrets.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/realtime/translations/client-secrets.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/realtime/translations/client-secrets.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function translations_client_secrets_resolveResourceRequestOptions(options, buildOptions) {
@@ -57151,7 +57248,7 @@ class client_secrets_ClientSecrets extends APIResource {
     }
 }
 //# sourceMappingURL=client-secrets.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/realtime/translations/translations.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/realtime/translations/translations.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -57164,7 +57261,7 @@ class translations_Translations extends APIResource {
 }
 translations_Translations.ClientSecrets = client_secrets_ClientSecrets;
 //# sourceMappingURL=translations.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/realtime/realtime.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/realtime/realtime.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -57185,7 +57282,7 @@ realtime_Realtime.ClientSecrets = ClientSecrets;
 realtime_Realtime.Calls = Calls;
 realtime_Realtime.Translations = translations_Translations;
 //# sourceMappingURL=realtime.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/responses/output-text-index.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/responses/output-text-index.mjs
 /**
  * Stores output text lengths in a complete binary segment tree.
  *
@@ -57259,7 +57356,7 @@ class OutputTextIndex {
     }
 }
 //# sourceMappingURL=output-text-index.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/responses/canonical-output-text.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/responses/canonical-output-text.mjs
 
 function createCanonicalResponseContext() {
     return {
@@ -57386,7 +57483,7 @@ function updateOutputText(context, snapshot, outputIndex, previousText, nextText
             snapshot.output_text.slice(offset + previousText.length);
 }
 //# sourceMappingURL=canonical-output-text.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/responses/response-accumulator.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/responses/response-accumulator.mjs
 
 
 
@@ -58396,7 +58493,7 @@ function accumulateResponseWithContext(event, snapshot, context, rejectInvalidSh
     return response_accumulator_assertNever(dispatchEvent);
 }
 //# sourceMappingURL=response-accumulator.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/responses/ResponseStream.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/responses/ResponseStream.mjs
 var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_accumulatorContext, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest;
 
 
@@ -58584,7 +58681,7 @@ function finalizeResponse(snapshot, params) {
     return maybeParseResponse(snapshot, params);
 }
 //# sourceMappingURL=ResponseStream.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/responses/input-items.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/responses/input-items.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58663,7 +58760,7 @@ class input_items_InputItems extends APIResource {
     }
 }
 //# sourceMappingURL=input-items.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/responses/input-tokens.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/responses/input-tokens.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function responses_input_tokens_resolveResourceRequestOptions(options, buildOptions) {
@@ -58693,7 +58790,7 @@ class input_tokens_InputTokens extends APIResource {
     }
 }
 //# sourceMappingURL=input-tokens.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/responses/responses.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/responses/responses.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58869,7 +58966,7 @@ class responses_Responses extends APIResource {
 responses_Responses.InputItems = input_items_InputItems;
 responses_Responses.InputTokens = input_tokens_InputTokens;
 //# sourceMappingURL=responses.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/safety/alerts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/safety/alerts.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58885,7 +58982,7 @@ class Alerts extends APIResource {
     }
 }
 //# sourceMappingURL=alerts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/safety/cases.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/safety/cases.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58901,7 +58998,7 @@ class Cases extends APIResource {
     }
 }
 //# sourceMappingURL=cases.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/safety/safety.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/safety/safety.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58918,7 +59015,7 @@ class Safety extends APIResource {
 Safety.Cases = Cases;
 Safety.Alerts = Alerts;
 //# sourceMappingURL=safety.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/skills/content.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/skills/content.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58940,7 +59037,7 @@ class content_Content extends APIResource {
     }
 }
 //# sourceMappingURL=content.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/skills/versions/content.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/skills/versions/content.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -58963,7 +59060,7 @@ class versions_content_Content extends APIResource {
     }
 }
 //# sourceMappingURL=content.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/skills/versions/versions.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/skills/versions/versions.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59069,7 +59166,7 @@ class Versions extends APIResource {
 }
 Versions.Content = versions_content_Content;
 //# sourceMappingURL=versions.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/skills/skills.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/skills/skills.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59187,7 +59284,7 @@ class Skills extends APIResource {
 Skills.Content = content_Content;
 Skills.Versions = Versions;
 //# sourceMappingURL=skills.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/uploads/parts.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/uploads/parts.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59218,7 +59315,7 @@ class Parts extends APIResource {
     }
 }
 //# sourceMappingURL=parts.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/uploads/uploads.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/uploads/uploads.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59300,7 +59397,7 @@ class Uploads extends APIResource {
 }
 Uploads.Parts = Parts;
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/vector-store-polling.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/vector-store-polling.mjs
 
 /**
  * Polls an attached file through the resource's retrieve method until it completes,
@@ -59321,7 +59418,7 @@ function pollVectorStoreFileBatch(resource, vectorStoreID, batchID, options) {
     return pollWithResponse((headers) => resource.retrieve(batchID, { vector_store_id: vectorStoreID }, { ...options, headers }), ['in_progress'], ['failed', 'cancelled', 'completed'], options);
 }
 //# sourceMappingURL=vector-store-polling.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/Util.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/Util.mjs
 /**
  * Like `Promise.allSettled()` but throws an error if any promises are rejected.
  * Rejection reasons remain available on the thrown error's non-enumerable `rejections`
@@ -59347,7 +59444,7 @@ const allSettledWithThrow = async (promises) => {
     return values;
 };
 //# sourceMappingURL=Util.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/vector-store-upload.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/vector-store-upload.mjs
 
 /**
  * Uploads files with a shared iterator, then creates and polls the batch. Every
@@ -59386,7 +59483,7 @@ async function uploadAndPollVectorStoreFileBatch(resource, client, vectorStoreId
     return await resource.createAndPoll(vectorStoreId, { file_ids: allFileIds }, options);
 }
 //# sourceMappingURL=vector-store-upload.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/vector-stores/file-batches.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/vector-stores/file-batches.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59470,7 +59567,7 @@ class FileBatches extends APIResource {
     }
 }
 //# sourceMappingURL=file-batches.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/vector-stores/files.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/vector-stores/files.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59643,7 +59740,7 @@ class vector_stores_files_Files extends APIResource {
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/vector-stores/vector-stores.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/vector-stores/vector-stores.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59787,7 +59884,7 @@ class VectorStores extends APIResource {
 VectorStores.Files = vector_stores_files_Files;
 VectorStores.FileBatches = FileBatches;
 //# sourceMappingURL=vector-stores.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/videos.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/videos.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -59948,7 +60045,7 @@ class Videos extends APIResource {
     }
 }
 //# sourceMappingURL=videos.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/lib/webhook-signature.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/lib/webhook-signature.mjs
 
 
 
@@ -60070,7 +60167,7 @@ async function verifyWebhookSignature(payload, signatureHeader, timestamp, webho
     throw new InvalidWebhookSignatureError('The given webhook signature does not match the expected signature');
 }
 //# sourceMappingURL=webhook-signature.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/webhooks/event-types.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/webhooks/event-types.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 function event_types_resolveResourceRequestOptions(options, buildOptions) {
@@ -60091,7 +60188,7 @@ class EventTypes extends APIResource {
     }
 }
 //# sourceMappingURL=event-types.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/webhooks/webhooks.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/webhooks/webhooks.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader;
 
@@ -60321,7 +60418,7 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
 };
 Webhooks.EventTypes = EventTypes;
 //# sourceMappingURL=webhooks.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/resources/index.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/resources/index.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
@@ -60352,7 +60449,7 @@ Webhooks.EventTypes = EventTypes;
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/bedrock.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/bedrock.mjs
 
 
 /** Identifies legacy Bedrock clients without importing the client class into WebSocket modules. */
@@ -60777,7 +60874,7 @@ function resolveBedrockBearerAuth(options, { allowEnvironment = true, } = {}) {
     return { factory: undefined, explicit: false };
 }
 //# sourceMappingURL=bedrock.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/realtime-credentials.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/realtime-credentials.mjs
 
 // Only the key crosses module formats: the context belongs to each participating client.
 const realtimeCacheContext = Symbol.for('openai.realtimeAPIKeyCacheContext');
@@ -60838,7 +60935,7 @@ async function resolveRealtimeAPIKey(client, deferCache = false) {
     };
 }
 //# sourceMappingURL=realtime-credentials.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/ws.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/ws.mjs
 
 
 const webSocketErrors = new WeakMap();
@@ -61225,7 +61322,7 @@ function isRecoverableClose(code) {
     }
 }
 //# sourceMappingURL=ws.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/internal/provider.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/internal/provider.mjs
 /**
  * A provider factory such as `bedrock(options)` captures configuration in a
  * definition, while every OpenAI client receives a fresh runtime from
@@ -61272,7 +61369,7 @@ function configureProvider(provider) {
     return definition.configure();
 }
 //# sourceMappingURL=provider.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/client.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/client.mjs
 // File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_x509Authentication, _OpenAI_x509Credential, _OpenAI_x509Fetch, _OpenAI_explicitDataResidency, _OpenAI_responseAttempts, _OpenAI_sanitizedLoggers, _OpenAI_baseURLOverridden, _OpenAI_normalizeRetries, _OpenAI_isSensitiveLogKey, _OpenAI_sanitizeLogValue, _OpenAI_sanitizeLogger;
 
@@ -63036,7 +63133,7 @@ function isUndiciDispatcherVersionMismatchError(error) {
     return false;
 }
 //# sourceMappingURL=client.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/azure.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/azure.mjs
 
 
 
@@ -63183,7 +63280,7 @@ const _deployments_endpoints = new Set([
     '/images/edits',
 ]);
 //# sourceMappingURL=azure.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/bedrock.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/bedrock.mjs
 var bedrock_a;
 
 
@@ -63353,7 +63450,7 @@ class BedrockOpenAI extends OpenAI {
 }
 bedrock_a = brand_privateBedrockClient;
 //# sourceMappingURL=bedrock.mjs.map
-;// CONCATENATED MODULE: ../reviewer-core/node_modules/.pnpm/openai@7.32.0_zod@4.6.7/node_modules/openai/index.mjs
+;// CONCATENATED MODULE: ../reviewer-core/node_modules/openai/index.mjs
 
 
 
@@ -63774,6 +63871,182 @@ function resolvePrContext(env, readFile = external_node_fs_namespaceObject.readF
         repositoryId: repositoryId,
         runId,
         runAttempt,
+        ciTarget: 'gha',
+        ciJob: null,
+    };
+}
+
+;// CONCATENATED MODULE: ./src/github.ts
+
+const GITHUB_API_BASE = 'https://api.github.com';
+const API_VERSION = '2022-11-28';
+const USER_AGENT = 'devdigest-agent-runner';
+function authHeaders(token, accept) {
+    return {
+        Authorization: `Bearer ${token}`,
+        Accept: accept,
+        'X-GitHub-Api-Version': API_VERSION,
+        'User-Agent': USER_AGENT,
+    };
+}
+/** Fetch the PR's unified diff via the GitHub API's diff media type. */
+async function fetchPrDiff(ctx, token, fetchImpl = fetch) {
+    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.prNumber}`;
+    const res = await fetchImpl(url, {
+        headers: authHeaders(token, 'application/vnd.github.v3.diff'),
+    });
+    if (!res.ok) {
+        throw new RunnerError(`GitHub API error fetching PR diff (${url}): ${res.status} ${await res.text().catch(() => '')}`);
+    }
+    return res.text();
+}
+/** GET /repos/{owner}/{repo}/pulls/{n} — PR metadata from GitHub itself. */
+async function fetchPullRequest(ctx, token, fetchImpl = fetch) {
+    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.prNumber}`;
+    const res = await fetchImpl(url, { headers: authHeaders(token, 'application/vnd.github+json') });
+    if (!res.ok) {
+        throw new RunnerError(`GitHub API error fetching PR (${url}): ${res.status}`);
+    }
+    const pr = (await res.json());
+    const headSha = pr.head?.sha;
+    const baseRepoId = pr.base?.repo?.id;
+    const baseRepoFullName = pr.base?.repo?.full_name;
+    if (!headSha || !/^[0-9a-f]{40}$/.test(headSha) || !Number.isInteger(baseRepoId) || !baseRepoFullName) {
+        throw new RunnerError('GitHub returned a pull request without head SHA or base repository');
+    }
+    return {
+        title: pr.title ?? '',
+        body: pr.body ?? '',
+        headSha,
+        baseRepoId: baseRepoId,
+        baseRepoFullName,
+        headRepoFullName: pr.head?.repo?.full_name ?? null,
+    };
+}
+/** Post a full review (body + event + optional inline comments) — `post_as: 'github_review'`. */
+async function postGithubReview(ctx, token, payload, fetchImpl = fetch) {
+    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.prNumber}/reviews`;
+    const post = (body) => fetchImpl(url, {
+        method: 'POST',
+        headers: {
+            ...authHeaders(token, 'application/vnd.github+json'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+    // GitHub's Actions token (`GITHUB_TOKEN`) — which the runner always posts with
+    // — is NOT permitted to APPROVE a PR (422 "GitHub Actions is not permitted to
+    // approve pull requests"). Downgrade an APPROVE event to COMMENT; the body
+    // still renders the "Approved ✅" summary, we just don't submit the formal
+    // approval GitHub would reject.
+    const event = payload.event === 'APPROVE' ? 'COMMENT' : payload.event;
+    const base = { body: payload.body, event };
+    const hasComments = !!payload.comments && payload.comments.length > 0;
+    const withComments = hasComments
+        ? { ...base, comments: payload.comments.map((c) => ({ path: c.path, line: c.line, body: c.body })) }
+        : base;
+    let res = await post(withComments);
+    // GitHub rejects the WHOLE review with a 422 if ANY inline comment targets a
+    // file whose diff it can't resolve (e.g. "diff too large" for a huge file).
+    // `stripIgnoredFiles` removes our own bundle, but a genuinely large file in a
+    // normal PR could still trip this — so degrade gracefully to a body-only
+    // review. Every finding is already in `payload.body`; only the inline anchors
+    // are lost, which beats posting nothing.
+    if (res.status === 422 && hasComments) {
+        res = await post(base);
+    }
+    if (!res.ok) {
+        throw new RunnerError(`GitHub API error posting review (${url}): ${res.status} ${await res.text().catch(() => '')}`);
+    }
+}
+/** Post a plain issue comment (no review event) — `post_as: 'pr_comment'`. */
+async function postPrComment(ctx, token, body, fetchImpl = fetch) {
+    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/issues/${ctx.prNumber}/comments`;
+    const res = await fetchImpl(url, {
+        method: 'POST',
+        headers: {
+            ...authHeaders(token, 'application/vnd.github+json'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body }),
+    });
+    if (!res.ok) {
+        throw new RunnerError(`GitHub API error posting PR comment (${url}): ${res.status} ${await res.text().catch(() => '')}`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/jenkins-context.ts
+
+
+/**
+ * Resolves the PR context under Jenkins (Multibranch Pipeline + GitHub Branch
+ * Source), used when `JENKINS_URL` is set (S-AC-80/81). Jenkins has no event
+ * payload, so the PR's title/body/head SHA/repository come from the GitHub
+ * API with `GITHUB_TOKEN` — never from Jenkins or the workspace.
+ *
+ * - `CHANGE_ID` → PR number; `BUILD_NUMBER` → run id (attempt is always 1);
+ *   `JOB_NAME` (`<job>/PR-<n>`) → `ciJob`.
+ * - Repo from `DEVDIGEST_REPOSITORY` (set by the generated Jenkinsfile),
+ *   falling back to a parsed `GIT_URL`.
+ * - Fork PRs hard-fail: `CHANGE_FORK` set, or a head repo that is not the base.
+ */
+const REPO = /^([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)$/;
+/** `https://github.com/o/r(.git)` or `git@github.com:o/r.git` → `o/r`. */
+function repoFromGitUrl(gitUrl) {
+    if (!gitUrl)
+        return null;
+    const m = /github\.com[/:]([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/.exec(gitUrl.trim());
+    return m ? `${m[1]}/${m[2]}` : null;
+}
+function positiveInt(raw) {
+    if (!raw || !/^\d+$/.test(raw))
+        return null;
+    const n = Number(raw);
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+async function resolveJenkinsPrContext(env, fetchImpl = fetch) {
+    const repository = env.DEVDIGEST_REPOSITORY || repoFromGitUrl(env.GIT_URL);
+    const match = repository ? REPO.exec(repository) : null;
+    if (!match) {
+        throw new RunnerError(`DEVDIGEST_REPOSITORY (or GIT_URL) must name a GitHub repository "owner/name" (got: ${JSON.stringify(repository)})`);
+    }
+    const [, owner, repo] = match;
+    const prNumber = positiveInt(env.CHANGE_ID);
+    if (prNumber === null) {
+        throw new RunnerError(`CHANGE_ID must be a positive integer (got: ${JSON.stringify(env.CHANGE_ID)})`);
+    }
+    const buildNumber = positiveInt(env.BUILD_NUMBER);
+    if (buildNumber === null) {
+        throw new RunnerError(`BUILD_NUMBER must be a positive integer (got: ${JSON.stringify(env.BUILD_NUMBER)})`);
+    }
+    const ciJob = env.JOB_NAME;
+    if (!ciJob || ciJob.length > 200) {
+        throw new RunnerError('JOB_NAME must be set (at most 200 characters)');
+    }
+    if (env.CHANGE_FORK) {
+        throw new RunnerError('Refusing to review a fork pull request (CHANGE_FORK is set)');
+    }
+    const token = env.GITHUB_TOKEN;
+    if (!token)
+        throw new RunnerError('GITHUB_TOKEN is required under Jenkins to read the pull request');
+    const pr = await fetchPullRequest({ owner, repo, prNumber }, token, fetchImpl);
+    if (pr.headRepoFullName === null ||
+        pr.headRepoFullName.toLowerCase() !== pr.baseRepoFullName.toLowerCase()) {
+        throw new RunnerError('Refusing to review a fork pull request (head repository differs from base)');
+    }
+    return {
+        owner,
+        repo,
+        prNumber,
+        title: pr.title,
+        body: pr.body,
+        isFork: false,
+        headSha: pr.headSha,
+        repositoryId: pr.baseRepoId,
+        runId: buildNumber,
+        runAttempt: 1,
+        ciTarget: 'jenkins',
+        ciJob,
     };
 }
 
@@ -63914,87 +64187,11 @@ function parseUnifiedDiff(raw) {
     return { raw, files: files.filter((f) => f.path) };
 }
 
-;// CONCATENATED MODULE: ./src/github.ts
-
-const GITHUB_API_BASE = 'https://api.github.com';
-const API_VERSION = '2022-11-28';
-const USER_AGENT = 'devdigest-agent-runner';
-function authHeaders(token, accept) {
-    return {
-        Authorization: `Bearer ${token}`,
-        Accept: accept,
-        'X-GitHub-Api-Version': API_VERSION,
-        'User-Agent': USER_AGENT,
-    };
-}
-/** Fetch the PR's unified diff via the GitHub API's diff media type. */
-async function fetchPrDiff(ctx, token, fetchImpl = fetch) {
-    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.prNumber}`;
-    const res = await fetchImpl(url, {
-        headers: authHeaders(token, 'application/vnd.github.v3.diff'),
-    });
-    if (!res.ok) {
-        throw new RunnerError(`GitHub API error fetching PR diff (${url}): ${res.status} ${await res.text().catch(() => '')}`);
-    }
-    return res.text();
-}
-/** Post a full review (body + event + optional inline comments) — `post_as: 'github_review'`. */
-async function postGithubReview(ctx, token, payload, fetchImpl = fetch) {
-    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.prNumber}/reviews`;
-    const post = (body) => fetchImpl(url, {
-        method: 'POST',
-        headers: {
-            ...authHeaders(token, 'application/vnd.github+json'),
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-    });
-    // GitHub's Actions token (`GITHUB_TOKEN`) — which the runner always posts with
-    // — is NOT permitted to APPROVE a PR (422 "GitHub Actions is not permitted to
-    // approve pull requests"). Downgrade an APPROVE event to COMMENT; the body
-    // still renders the "Approved ✅" summary, we just don't submit the formal
-    // approval GitHub would reject.
-    const event = payload.event === 'APPROVE' ? 'COMMENT' : payload.event;
-    const base = { body: payload.body, event };
-    const hasComments = !!payload.comments && payload.comments.length > 0;
-    const withComments = hasComments
-        ? { ...base, comments: payload.comments.map((c) => ({ path: c.path, line: c.line, body: c.body })) }
-        : base;
-    let res = await post(withComments);
-    // GitHub rejects the WHOLE review with a 422 if ANY inline comment targets a
-    // file whose diff it can't resolve (e.g. "diff too large" for a huge file).
-    // `stripIgnoredFiles` removes our own bundle, but a genuinely large file in a
-    // normal PR could still trip this — so degrade gracefully to a body-only
-    // review. Every finding is already in `payload.body`; only the inline anchors
-    // are lost, which beats posting nothing.
-    if (res.status === 422 && hasComments) {
-        res = await post(base);
-    }
-    if (!res.ok) {
-        throw new RunnerError(`GitHub API error posting review (${url}): ${res.status} ${await res.text().catch(() => '')}`);
-    }
-}
-/** Post a plain issue comment (no review event) — `post_as: 'pr_comment'`. */
-async function postPrComment(ctx, token, body, fetchImpl = fetch) {
-    const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/issues/${ctx.prNumber}/comments`;
-    const res = await fetchImpl(url, {
-        method: 'POST',
-        headers: {
-            ...authHeaders(token, 'application/vnd.github+json'),
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ body }),
-    });
-    if (!res.ok) {
-        throw new RunnerError(`GitHub API error posting PR comment (${url}): ${res.status} ${await res.text().catch(() => '')}`);
-    }
-}
-
 ;// CONCATENATED MODULE: ./src/artifact.ts
 
 
 /** Runner version string embedded in every artifact and in the bundle banner. */
-const RUNNER_VERSION = '2';
+const RUNNER_VERSION = '3';
 /** Schema version of `devdigest-result.json` (bumped on breaking changes). */
 const ARTIFACT_SCHEMA_VERSION = 1;
 function artifact_severityCounts(findings) {
@@ -64048,6 +64245,8 @@ function buildResultArtifact(input) {
         model: input.model,
         manifest_version: input.manifestVersion,
         dependencies: { runner: RUNNER_VERSION, node: process.version },
+        ci_target: input.ciTarget ?? 'gha',
+        ci_job: input.ciJob ?? null,
     };
     const result = CiResultArtifact.safeParse(candidate);
     if (!result.success) {
@@ -64057,6 +64256,7 @@ function buildResultArtifact(input) {
 }
 
 ;// CONCATENATED MODULE: ./src/run.ts
+
 
 
 
@@ -64079,8 +64279,11 @@ async function runCi(deps) {
         const manifest = loadManifest(deps.devdigestDir, { readFile, readDir }, deps.agentSlug);
         const skills = loadSkillBodies(deps.devdigestDir, manifest.skills, readFile);
         const postAs = deps.postAs ?? manifest.post_as;
-        // 2. Resolve CI context (PR number/title/body/repo) from env + event payload.
-        const ctx = resolvePrContext(deps.env, readFile);
+        // 2. Resolve CI context (PR number/title/body/repo): GitHub Actions env +
+        //    event payload, or under Jenkins (JENKINS_URL set) env + the GitHub API.
+        const ctx = deps.env.JENKINS_URL
+            ? await resolveJenkinsPrContext(deps.env, fetchImpl)
+            : resolvePrContext(deps.env, readFile);
         const githubToken = deps.env.GITHUB_TOKEN;
         if (postAs !== 'none' && !githubToken) {
             throw new RunnerError(`GITHUB_TOKEN is required to post as '${postAs}'`);
@@ -64140,6 +64343,8 @@ async function runCi(deps) {
             gateTriggered: triggered,
             model: manifest.model,
             manifestVersion: manifest.manifest_version,
+            ciTarget: ctx.ciTarget,
+            ciJob: ctx.ciJob,
         });
         writeFile(deps.resultPath, `${JSON.stringify(artifact, null, 2)}\n`);
         // 7. Post per `post_as` (AC-24).
@@ -64171,14 +64376,15 @@ async function runCi(deps) {
 /**
  * @devdigest/agent-runner — CI runner CLI (T8).
  *
- * Invoked by the generated GitHub Actions workflow as
+ * Invoked by the generated GitHub Actions workflow or Jenkinsfile as
  * `node .devdigest/runner.mjs` (`server/src/modules/ci/constants.ts` /
  * `helpers.ts`) — bundled by `ncc` into a single self-contained
  * `bundle/runner.mjs` (see `scripts/copy-bundle.mjs`) with no runtime
  * dependency on `node_modules/@devdigest/*`.
  *
  * Reads CI-injected env vars directly (OPENROUTER_API_KEY, GITHUB_TOKEN,
- * GITHUB_REPOSITORY, PR_NUMBER). This is intentional, not a `SecretsProvider`
+ * GITHUB_REPOSITORY, PR_NUMBER; under Jenkins JENKINS_URL, CHANGE_ID,
+ * BUILD_NUMBER, JOB_NAME, DEVDIGEST_REPOSITORY). This is intentional, not a `SecretsProvider`
  * bypass: the runner executes OUTSIDE the server DI graph (in the target
  * repo's own CI), so the `SecretsProvider`/`process.env` chokepoint — which is
  * scoped to `server/` — does not apply here (see `agent-runner/CLAUDE.md`).

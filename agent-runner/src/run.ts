@@ -5,6 +5,7 @@ import { loadManifest } from './manifest.js';
 import { loadSkillBodies } from './skills.js';
 import { loadMemory } from './memory.js';
 import { resolvePrContext, type CiEnv } from './context.js';
+import { resolveJenkinsPrContext } from './jenkins-context.js';
 import { parseUnifiedDiff, stripIgnoredFiles } from './diff.js';
 import { fetchPrDiff, postGithubReview, postPrComment, type FetchLike } from './github.js';
 import { buildResultArtifact, verdictFromEvent } from './artifact.js';
@@ -100,8 +101,11 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
     const skills = loadSkillBodies(deps.devdigestDir, manifest.skills, readFile);
     const postAs: PostAs = deps.postAs ?? manifest.post_as;
 
-    // 2. Resolve CI context (PR number/title/body/repo) from env + event payload.
-    const ctx = resolvePrContext(deps.env, readFile);
+    // 2. Resolve CI context (PR number/title/body/repo): GitHub Actions env +
+    //    event payload, or under Jenkins (JENKINS_URL set) env + the GitHub API.
+    const ctx = deps.env.JENKINS_URL
+      ? await resolveJenkinsPrContext(deps.env, fetchImpl)
+      : resolvePrContext(deps.env, readFile);
 
     const githubToken = deps.env.GITHUB_TOKEN;
     if (postAs !== 'none' && !githubToken) {
@@ -170,6 +174,8 @@ export async function runCi(deps: RunCiDeps): Promise<RunCiResult> {
       gateTriggered: triggered,
       model: manifest.model,
       manifestVersion: manifest.manifest_version,
+      ciTarget: ctx.ciTarget,
+      ciJob: ctx.ciJob,
     });
     writeFile(deps.resultPath, `${JSON.stringify(artifact, null, 2)}\n`);
 

@@ -36,9 +36,13 @@ export interface PrContext {
   headSha: string;
   /** GitHub numeric repository id (from the event payload). */
   repositoryId: number;
-  /** GitHub Actions run id / attempt (from the runner env). */
+  /** GitHub Actions run id / attempt, or the Jenkins build number / 1. */
   runId: number;
   runAttempt: number;
+  /** Which CI is running the runner. */
+  ciTarget: 'gha' | 'jenkins';
+  /** Jenkins `JOB_NAME` (`<job>/PR-<n>`); null under GitHub Actions. */
+  ciJob: string | null;
 }
 
 interface PullRequestEventPayload {
@@ -119,5 +123,7 @@ export function resolvePrContext(
     repositoryId: repositoryId as number,
     runId,
     runAttempt,
+    ciTarget: 'gha',
+    ciJob: null,
   };
 }
