@@ -34,9 +34,12 @@ export class FetchJenkinsClient implements JenkinsClient {
 
   async whoAmI(): Promise<{ user: string; version: string }> {
     const res = await this.request('/whoAmI/api/json');
+    // Jenkins answers a bad token with a bare 401 (no X-Jenkins header), so auth comes first.
+    if (res.status === 401 || res.status === 403) this.assertOk(res);
     const version = res.headers.get('x-jenkins');
-    if (!version) throw jenkinsError('jenkins_not_jenkins', 'The server is not a Jenkins instance');
-    if (res.status === 404) throw jenkinsError('jenkins_not_jenkins', 'The server is not a Jenkins instance');
+    if (!version || res.status === 404) {
+      throw jenkinsError('jenkins_not_jenkins', 'The server is not a Jenkins instance');
+    }
     this.assertOk(res);
     const body = (await readJson(res)) as { name?: unknown; authenticated?: unknown };
     const user = typeof body.name === 'string' ? body.name : '';

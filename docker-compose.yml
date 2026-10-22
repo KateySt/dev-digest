@@ -20,7 +20,7 @@ services:
       retries: 10
 
   # Local Jenkins for testing the "Export to CI → Jenkins" target. Opt-in:
-  # `docker compose --profile jenkins up -d` (plain `up` starts Postgres only).
+  # `docker compose --profile jenkins up -d jenkins` (plain `up` starts Postgres only).
   jenkins:
     profiles: ["jenkins"]
     build: ./docker/jenkins

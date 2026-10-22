@@ -8,7 +8,8 @@ Plain `docker compose up -d` still starts only Postgres.
    JCasC turns them into the credentials the generated Jenkinsfile expects:
    `devdigest-openrouter-api-key`, `devdigest-github-token` (secret text) and
    `devdigest-github-scan` (username + token, for GitHub Branch Source).
-2. `docker compose --profile jenkins up -d --build` → http://localhost:8090.
+2. `docker compose --profile jenkins up -d --build jenkins` → http://localhost:8090
+   (naming the service starts Jenkins only, not Postgres).
    The image has Node.js 22 on the PATH and the needed plugins.
 3. Log in, open your user → **Security** → **API Token** → generate one. JCasC
    cannot seed API tokens, so this step is manual.
