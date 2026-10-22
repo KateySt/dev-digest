@@ -12,7 +12,7 @@ aliases, not published modules):
 | Folder           | Package                     | What it is                                            | Port |
 |------------------|-----------------------------|-------------------------------------------------------|------|
 | `server/`        | `@devdigest/api`            | Fastify API + Drizzle/Postgres (pgvector)             | 3001 |
-| `client/`        | `@devdigest/web`            | Next.js 15 web app (the studio)                       | 3000 |
+| `client/`        | `@devdigest/web`            | Next.js 16 web app (the studio)                       | 3000 |
 | `reviewer-core/` | `@devdigest/reviewer-core`  | Pure review engine: diff → prompt → LLM → findings    | —    |
 | `e2e/`           | `@devdigest/e2e`            | Deterministic browser e2e (agent-browser)             | —    |
 | `desktop/`       | `@devdigest/desktop`        | Electron app (Windows + macOS), embedded PGlite       | 43100/43101 |

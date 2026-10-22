@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";

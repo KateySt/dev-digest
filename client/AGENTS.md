@@ -4,7 +4,7 @@ Full picture: README.md (stack, UI route map) — read it first.
 
 ## Stack
 
-Next.js 15 (App Router) + React 19 + TanStack Query for API data. `next-intl`
+Next.js 16 (App Router) + React 19 + TanStack Query for API data. `next-intl`
 for i18n (`messages/<locale>/*.json`). Styling is Tailwind CSS v4 + shadcn/ui
 (new-york, Radix); shared Zod contracts are vendored under `src/vendor/shared`.
 
@@ -28,6 +28,11 @@ for i18n (`messages/<locale>/*.json`). Styling is Tailwind CSS v4 + shadcn/ui
 - `src/vendor/shared` — vendored, not owned here (see root `AGENTS.md`)
 
 ## Non-default conventions
+
+- `dev`/`build` run with `--webpack`, not Next 16's default Turbopack: the
+  vendored shared barrel imports `./contracts/x.js` (NodeNext style) and only
+  webpack's `extensionAlias` maps that to the `.ts` file. Calling `next dev`
+  directly (scripts, launch configs) needs the flag too.
 
 - Style with Tailwind classes only — no `style={{}}`, no `styles.ts` maps.
   Use the semantic tokens (`bg-surface`, `text-muted-foreground`,

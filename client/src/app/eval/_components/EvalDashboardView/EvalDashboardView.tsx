@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageTabs } from "@/components/page-tabs";

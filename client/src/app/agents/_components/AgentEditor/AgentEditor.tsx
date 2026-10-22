@@ -3,7 +3,6 @@
    component just renders the active tab's body). */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { PageTabs } from "@/components/page-tabs";
 import type { Agent } from "@devdigest/shared";

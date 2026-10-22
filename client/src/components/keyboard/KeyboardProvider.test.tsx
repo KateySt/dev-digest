@@ -1,6 +1,4 @@
-/* KeyboardProvider — the dispatcher: physical keys, sequences, text-input guard,
-   scope via registered handlers, stored overrides, single-key switch, desktop sync. */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { get, mockFetch, put, renderApp } from "@/test/eval-utils";

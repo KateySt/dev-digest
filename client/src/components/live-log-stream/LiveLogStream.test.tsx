@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

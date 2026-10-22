@@ -1,6 +1,6 @@
 /* B6 / C-AC-9, C-AC-29, C-AC-30: the resync refusal naming blocking paths.
    `fetch` is the only mocked boundary (plus router + app chrome). */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, cleanup, fireEvent, waitFor, render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

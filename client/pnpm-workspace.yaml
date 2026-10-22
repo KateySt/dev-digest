@@ -2,3 +2,5 @@ nodeLinker: hoisted
 allowBuilds:
   esbuild: true
   sharp: true
+  "@parcel/watcher": false
+  "@swc/core": false

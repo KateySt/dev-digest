@@ -46,7 +46,8 @@ export function runVitestOnce(label: string, vitestArgs: string[], extraEnv: Rec
       let f = 0;
       const tick = () => {
         const secs = Math.round((Date.now() - start) / 1000);
-        process.stdout.write(`\r  ${label}  ${FRAMES[(f = (f + 1) % FRAMES.length)]} running… ${DIM}${secs}s${RESET}   `);
+        f = (f + 1) % FRAMES.length;
+        process.stdout.write(`\r  ${label}  ${FRAMES[f]} running… ${DIM}${secs}s${RESET}   `);
       };
       tick();
       timer = setInterval(tick, 120);

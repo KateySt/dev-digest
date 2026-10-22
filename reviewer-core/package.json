@@ -1,6 +1,7 @@
 {
   "name": "@devdigest/reviewer-core",
   "version": "0.0.0",
+  "packageManager": "pnpm@12.14.0",
   "private": true,
   "type": "module",
   "description": "DevDigest review engine — pure logic (prompt assembly, citation grounding, structured output, reduce, reviewPullRequest). No DB/GitHub/FS; the only side effect is an injected LLMProvider. Consumed by server (local reviews) and agent-runner (CI) as source via tsconfig path alias.",
@@ -10,13 +11,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "openai": "^4.77.0",
-    "zod": "^3.24.1"
+    "openai": "^7.32.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^22.20.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
   }
 }

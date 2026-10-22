@@ -2,7 +2,7 @@
    feature-placeholder that renders inside the app shell with an EmptyState. */
 "use client";
 
-import React from "react";
+import type React from "react";
 import { useTranslations } from "next-intl";
 import type { IconName } from "@/components/icon";
 import { EmptyState } from "@/components/empty-state";

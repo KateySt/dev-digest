@@ -9,7 +9,6 @@
    same-repo spec/plan doc. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";

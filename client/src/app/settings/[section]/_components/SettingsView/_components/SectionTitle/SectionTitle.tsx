@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 
 /** Section heading + lede used across the settings sections. */
 export function SectionTitle({ title, body }: { title: string; body: string }) {

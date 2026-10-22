@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, cleanup, fireEvent, act, within } from "@testing-library/react";
 import type { EvalCaseListItem } from "@devdigest/shared";
 import { EvalsTab } from "./EvalsTab";
-import { agent, caseRun, evalCase, get, mockFetch, post, renderApp, stats, suiteRun } from "@/test/eval-utils";
+import { agent, caseRun, evalCase, get, mockFetch, renderApp, stats, suiteRun } from "@/test/eval-utils";
 
 afterEach(() => {
   cleanup();

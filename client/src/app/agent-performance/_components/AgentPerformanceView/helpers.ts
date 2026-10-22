@@ -11,11 +11,11 @@ export function toDonutSegments(segments: PerfCostSegment[]): DonutSegment[] {
 /** Sort agent rows by the chosen key, descending; nulls (e.g. no acted
  *  findings yet → accept_rate: null) sort last regardless of direction. */
 export function sortAgents(rows: AgentPerfRow[], key: SortKey): AgentPerfRow[] {
-  const valueOf = (r: AgentPerfRow): number | null =>
+  const metricOf = (r: AgentPerfRow): number | null =>
     key === "acceptRate" ? r.accept_rate : key === "cost" ? r.total_cost_usd : r.runs;
   return [...rows].sort((a, b) => {
-    const av = valueOf(a);
-    const bv = valueOf(b);
+    const av = metricOf(a);
+    const bv = metricOf(b);
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;

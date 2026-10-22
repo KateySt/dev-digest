@@ -1,4 +1,4 @@
-# `@devdigest/web` — the studio (Next.js 15)
+# `@devdigest/web` — the studio (Next.js 16)
 
 The DevDigest UI: import repos, browse pull requests, run and read AI reviews,
 and author agents. App Router + React Server/Client components, data via
@@ -6,7 +6,7 @@ and author agents. App Router + React Server/Client components, data via
 course lessons add the Skills, Memory, Eval, Blast/Brief, multi-agent, CI, and
 dashboard screens.)
 
-- **Stack:** Next.js 15 (App Router), React 19, TanStack Query, `next-intl`
+- **Stack:** Next.js 16 (App Router, webpack — see `next.config.mjs`), React 19, TanStack Query, `next-intl`
   (messages in `messages/<locale>/*.json`), `recharts`, `mermaid`,
   `react-markdown`. Styling is Tailwind CSS v4 (configured in
   `src/app/globals.css`) with shadcn/ui primitives in `src/components/ui`;

@@ -1,7 +1,7 @@
 /* PR list page + "Review all" connection budget (SPEC-05 C-AC-28, C-AC-29,
    verified as a unit test with a mocked EventSource). Real page, real hooks;
    `fetch` and `EventSource` are the only mocks. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import type { PrMeta } from "@/lib/types";

@@ -130,7 +130,7 @@ describe("ReviewAllDialog", () => {
       return (
         <>
           <span data-testid="n">{n}</span>
-          <button onClick={() => setN(n + 1)}>bump</button>
+          <button type="button" onClick={() => setN(n + 1)}>bump</button>
           <ReviewAllDialog repoId="r1" pulls={PULLS} onClose={() => closed(n)} />
         </>
       );

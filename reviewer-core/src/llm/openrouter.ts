@@ -38,22 +38,36 @@ export interface OpenRouterProviderOptions {
 
 export class OpenRouterProvider implements LLMProvider {
   readonly id: 'openai' | 'openrouter';
-  private client: OpenAI;
+  private _client?: OpenAI;
   private baseURL: string;
   private apiKey: string;
+  private timeoutMs: number;
+  private maxRetries: number;
   private estimateCost?: OpenRouterProviderOptions['estimateCost'];
 
   constructor(apiKey: string, opts: OpenRouterProviderOptions = {}) {
     this.id = opts.id ?? 'openrouter';
     this.apiKey = apiKey;
     this.baseURL = opts.baseURL ?? 'https://openrouter.ai/api/v1';
+    this.timeoutMs = opts.timeoutMs ?? 90_000;
+    this.maxRetries = opts.maxRetries ?? 2;
     this.estimateCost = opts.estimateCost;
-    this.client = new OpenAI({
-      apiKey,
+  }
+
+  /**
+   * Built on first use, not in the constructor: openai ≥ 5 throws on an empty
+   * key at construction, and the CI runner deliberately constructs with `''`
+   * so a missing key surfaces from the first call, inside `runCi`'s hard-fail
+   * path, as a clear FAILED report instead of a crash before it can report.
+   */
+  private get client(): OpenAI {
+    this._client ??= new OpenAI({
+      apiKey: this.apiKey,
       baseURL: this.baseURL,
-      timeout: opts.timeoutMs ?? 90_000,
-      maxRetries: opts.maxRetries ?? 2,
+      timeout: this.timeoutMs,
+      maxRetries: this.maxRetries,
     });
+    return this._client;
   }
 
   async completeStructured<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>> {

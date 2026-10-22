@@ -1,7 +1,6 @@
 /* PrefRow — one labelled on/off setting row, shared by the Settings sections. */
 "use client";
 
-import React from "react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 

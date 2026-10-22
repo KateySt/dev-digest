@@ -1,4 +1,4 @@
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { PageTabs } from "./PageTabs";

@@ -2,7 +2,7 @@
    its Evals tab and the per-skill dashboard (SPEC-08 SK-2, SK-3, SK-6, SK-13,
    SK-15, SK-16, SK-17 and the "switching skills keeps polling" edge case).
    `fetch` is the only mock. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

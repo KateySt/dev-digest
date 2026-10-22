@@ -1,7 +1,7 @@
 /* B8 / C-AC-20, C-AC-22, C-AC-24, C-AC-31, C-AC-32: poll ceiling for a
    generation that never produces a new tour. `fetch` is the only mocked
    boundary (plus router, app chrome and the unrelated suggestions card). */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { screen, cleanup, fireEvent, act, render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

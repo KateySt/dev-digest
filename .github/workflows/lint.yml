@@ -1,0 +1,35 @@
+# Repo-wide lint — Biome over every module (config: biome.jsonc at the root).
+# Installs only the root tooling package (Biome + knip), not the modules, so it
+# runs in seconds. knip needs every module's node_modules, so it stays local:
+# `pnpm knip` from the repo root.
+name: lint
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  biome:
+    name: biome
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint:ci

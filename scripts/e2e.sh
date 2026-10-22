@@ -32,8 +32,8 @@ PG_PASS="${E2E_PG_PASS:-devdigest}"
 API_PORT="${E2E_API_PORT:-3101}"
 WEB_PORT="${E2E_WEB_PORT:-3100}"
 
-# Exported BEFORE any tsx/next spawn. dotenv (used by migrate/seed/config) does
-# not override already-set env, so these win over server/.env's :5432 / :3001
+# Exported BEFORE any tsx/next spawn. process.loadEnvFile (server/src/platform/load-env.ts,
+# used by migrate/seed/config) does not override already-set env, so these win over server/.env's :5432 / :3001
 # without touching the file. WEB_PORT must be exported too: the API derives its
 # CORS allow-origin (config.webOrigin) from it. 127.0.0.1 (not localhost) avoids
 # an IPv6 ::1 vs published-IPv4 mismatch against the container.
@@ -149,7 +149,7 @@ log "API healthy"
 
 # --- web on :$WEB_PORT (next dev → reads NEXT_PUBLIC_API_BASE from env) -------
 log "starting web on :$WEB_PORT"
-(cd client && pnpm exec next dev -p "$WEB_PORT") &
+(cd client && pnpm exec next dev --webpack -p "$WEB_PORT") &
 WEB_PID=$!
 log "waiting for web :$WEB_PORT"
 web_up=0

@@ -20,7 +20,6 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const EVALS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
-const REPO_ROOT = join(EVALS_DIR, "..");
 
 const changed = (process.env.CHANGED_FILES ?? "")
   .split("\n")

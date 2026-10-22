@@ -1,10 +1,10 @@
 /* Conventions page — sections, selection and skills built from a selection
    (SPEC-2026-10-16-convention-skills AC-13…AC-20). fetch is the only API mock. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ConventionCandidate } from "@devdigest/shared";
-import { apiError, get, mockFetch, post, renderApp } from "@/test/eval-utils";
+import { apiError, get, mockFetch, renderApp } from "@/test/eval-utils";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 // CodeMirror needs layout APIs jsdom lacks; the body editor is not under test.

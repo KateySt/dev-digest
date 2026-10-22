@@ -6,7 +6,7 @@
  * HTTP/network failure returns toolError with guidance to start the API.
  */
 
-import { z } from 'zod';
+import type { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { DevDigestClient } from '../http/client.js';
 import { ApiError } from '../http/client.js';

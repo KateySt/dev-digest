@@ -2,7 +2,6 @@
    pulsing dot and an optional polling-interval detail. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 

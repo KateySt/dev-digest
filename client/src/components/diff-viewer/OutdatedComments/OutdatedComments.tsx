@@ -2,9 +2,8 @@
    current diff (the anchored line is gone). */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
-import { type CommentThread, type DiffCommentApi } from "../comments";
+import type { CommentThread, DiffCommentApi } from "../comments";
 import { SEVERITY_LABEL } from "../constants";
 import { CommentCard } from "../CommentCard";
 

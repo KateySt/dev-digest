@@ -16,6 +16,9 @@
     "sourceMap": true,
     "composite": false,
     "outDir": "dist",
+    // TS 6 defaults rootDir to this folder; sources also come from ../reviewer-core
+    // and the vendored shared contracts via paths, so pin the pre-6 inferred root.
+    "rootDir": "..",
     "types": ["node"],
     "lib": ["ES2022"],
     "paths": {

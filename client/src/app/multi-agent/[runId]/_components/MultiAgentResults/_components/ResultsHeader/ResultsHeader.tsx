@@ -2,7 +2,6 @@
    Columns/Tabs toggle (+ "Cancel all" while in flight) and the PR / totals line. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";

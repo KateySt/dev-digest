@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import type React from "react";
 import { useTranslations } from "next-intl";
 import { LineChart } from "@/components/charts";
 import { METRICS, type MetricKey } from "@/lib/eval";

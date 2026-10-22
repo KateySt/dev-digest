@@ -15,19 +15,43 @@
     "declaration": true,
     "sourceMap": true,
     "composite": false,
-    "jsx": "preserve",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node"],
-    "plugins": [{ "name": "next" }],
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node"
+    ],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@devdigest/shared": ["./src/vendor/shared/index.ts"],
-      "@devdigest/shared/*": ["./src/vendor/shared/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@devdigest/shared": [
+        "./src/vendor/shared/index.ts"
+      ],
+      "@devdigest/shared/*": [
+        "./src/vendor/shared/*"
+      ]
     },
     "noEmit": true,
     "allowJs": true,
     "incremental": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

@@ -1,5 +1,11 @@
-import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
+
+// same as src/platform/load-env.ts (kept inline: drizzle-kit loads this file on its own)
+try {
+  process.loadEnvFile();
+} catch {
+  // no .env — DATABASE_URL comes from the environment
+}
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://devdigest:devdigest@localhost:5432/devdigest';

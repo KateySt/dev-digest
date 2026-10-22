@@ -2,7 +2,6 @@
    Horizontal scroll (300px min column width) instead of squeezing at 5+ columns. */
 "use client";
 
-import React from "react";
 import type { AgentColumn, FindingGroup } from "@devdigest/shared";
 import { resolveAccent } from "@/app/multi-agent/helpers";
 import { AgentColumnCard, type AgentColumnCardProps } from "../AgentColumnCard";

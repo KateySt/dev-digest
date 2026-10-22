@@ -24,7 +24,7 @@ interface FindingsTabProps {
   runs: ReviewRecord[];
   prRuns: RunSummary[] | undefined;
   prCommits: PrCommit[];
-  cancelMutation: UseMutationResult<any, any, string, any>;
+  cancelMutation: Pick<UseMutationResult<unknown, Error, string>, "mutate" | "isPending">;
   repoId?: string | null;
   prNumber?: number | null;
   /** owner/repo + head sha — used to deep-link a finding's file:line to GitHub. */

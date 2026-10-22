@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { languageStats } from "./helpers";
 
 /** GitHub-style stacked language bar, optionally with a percentage legend below

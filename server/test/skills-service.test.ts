@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Container } from '../src/platform/container.js';
 import { SkillsService } from '../src/modules/skills/service.js';
 import { MockCatalogSource } from '../src/adapters/mocks.js';

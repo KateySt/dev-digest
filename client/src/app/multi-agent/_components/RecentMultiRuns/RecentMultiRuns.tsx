@@ -3,7 +3,6 @@
 "use client";
 
 import { DataPagination, type PagerState } from "@/components/pagination";
-import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { MultiAgentRunSummary } from "@devdigest/shared";

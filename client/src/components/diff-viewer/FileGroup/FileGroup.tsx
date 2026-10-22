@@ -17,8 +17,8 @@ import {
   ROLE_LABEL_KEYS,
 } from "../constants";
 import { FileCard } from "../FileCard";
-import { type DiffCommentApi } from "../comments";
-import { type DiffFindingApi } from "../findings";
+import type { DiffCommentApi } from "../comments";
+import type { DiffFindingApi } from "../findings";
 import type { RiskAnnotationsByFile } from "../RiskAnnotationCard";
 
 export function FileGroup({

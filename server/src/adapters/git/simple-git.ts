@@ -20,6 +20,15 @@ import { parseUnifiedDiff } from './diff-parser.js';
 const RESYNC_FETCH_DEPTH = 50;
 
 /**
+ * simple-git ≥ 4 strips every ambient `GIT_*` variable from the child git
+ * process unless it is allow-listed — without this, the non-interactive auth
+ * set in the constructor would never reach git.
+ */
+const NON_INTERACTIVE_ENV = ['GIT_TERMINAL_PROMPT', 'GCM_INTERACTIVE'] as const;
+
+const gitAt = (baseDir: string): SimpleGit => simpleGit({ baseDir, allowEnvironment: NON_INTERACTIVE_ENV });
+
+/**
  * GitClient over simple-git. Repos clone to
  * `<cloneDir>/<owner>/<repo>`. We NEVER execute repo code — only git ops.
  */
@@ -39,7 +48,7 @@ export class SimpleGitClient implements GitClient {
   }
 
   private git(repo: RepoRef): SimpleGit {
-    return simpleGit(this.clonePathFor(repo));
+    return gitAt(this.clonePathFor(repo));
   }
 
   private async exists(path: string): Promise<boolean> {
@@ -56,7 +65,7 @@ export class SimpleGitClient implements GitClient {
     await mkdir(join(this.cloneDir, repo.owner), { recursive: true });
     if (await this.exists(join(dest, '.git'))) {
       // already cloned → fetch latest
-      await simpleGit(dest).fetch();
+      await gitAt(dest).fetch();
       return { path: dest };
     }
     // A prior clone may have timed out mid-write, leaving a partial dir without
@@ -65,7 +74,7 @@ export class SimpleGitClient implements GitClient {
     const args: string[] = [];
     if (opts?.depth) args.push('--depth', String(opts.depth));
     if (opts?.branch) args.push('--branch', opts.branch);
-    await simpleGit(this.cloneDir).clone(url, dest, args);
+    await gitAt(this.cloneDir).clone(url, dest, args);
     return { path: dest };
   }
 

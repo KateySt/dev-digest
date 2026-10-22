@@ -7,11 +7,10 @@
    flat list IS "Original order", there is no second flat code path. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import type { PrFile, SmartDiffGroup } from "@/lib/types";
-import { type DiffCommentApi } from "../comments";
-import { type DiffFindingApi } from "../findings";
+import type { DiffCommentApi } from "../comments";
+import type { DiffFindingApi } from "../findings";
 import { ROLE_ORDER } from "../constants";
 import { FileCard } from "../FileCard";
 import { FileGroup } from "../FileGroup";

@@ -1,5 +1,4 @@
-/* SplitPane — resizable list | detail: keyboard + double-click + remembered width, clamped to minimums. */
-import React from "react";
+
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { IntlWrapper } from "@/test/intl";

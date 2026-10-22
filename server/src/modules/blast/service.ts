@@ -37,7 +37,7 @@ export class BlastService {
   // `workspaceId` is unused here (no model call, so no feature-model resolution
   // to scope) but kept for signature parity with sibling services (RisksService,
   // IntentService) that DO need it.
-  async getOrCompute(workspaceId: string, pull: PullRow, runLog?: RunLogger): Promise<BlastRadius> {
+  async getOrCompute(_workspaceId: string, pull: PullRow, runLog?: RunLogger): Promise<BlastRadius> {
     const indexState = await this.container.repoIntel.getIndexState(pull.repoId);
     const existing = await this.repo.getSlice(pull.id);
     if (

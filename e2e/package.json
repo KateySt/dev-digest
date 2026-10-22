@@ -1,6 +1,7 @@
 {
   "name": "@devdigest/e2e",
   "version": "0.0.0",
+  "packageManager": "pnpm@12.14.0",
   "private": true,
   "type": "module",
   "description": "Deterministic browser e2e for the DevDigest web app, driven by Vercel agent-browser (CDP, no LLM).",
@@ -10,8 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^22.20.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^6.0.3"
   }
 }

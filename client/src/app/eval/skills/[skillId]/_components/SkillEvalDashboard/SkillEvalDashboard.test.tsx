@@ -2,7 +2,7 @@
    and the skill-not-found state. `fetch` is the only mocked boundary (plus the
    router and the app chrome). */
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within, act } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

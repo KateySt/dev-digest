@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../platform/load-env.js';
 import { createDb, type Db } from './client.js';
 import { isCliEntry } from '../platform/cli.js';
 import * as t from './schema.js';

@@ -1,7 +1,6 @@
 /* FilterBar — search box, status chips, sort select, and refresh for the PR list. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { FilterChip } from "@/components/filter-chip";

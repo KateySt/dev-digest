@@ -49,7 +49,7 @@ describe("CurateDrawer", () => {
       return open ? (
         <CurateDrawer repoId="r1" agentOptions={[]} skillOptions={[]} onClose={vi.fn()} onOpenMemory={vi.fn()} />
       ) : (
-        <button onClick={() => setOpen(true)}>Curate</button>
+        <button type="button" onClick={() => setOpen(true)}>Curate</button>
       );
     }
     renderApp(

@@ -139,7 +139,10 @@ export function aggregate(records: EvalRecord[]): Record<string, NodeAggregate> 
 /** Split a record list by its `config` tag. */
 export function byConfig(records: EvalRecord[]): Record<string, EvalRecord[]> {
   const out: Record<string, EvalRecord[]> = {};
-  for (const r of records) (out[r.config] ??= []).push(r);
+  for (const r of records) {
+    out[r.config] ??= [];
+    out[r.config]!.push(r);
+  }
   return out;
 }
 

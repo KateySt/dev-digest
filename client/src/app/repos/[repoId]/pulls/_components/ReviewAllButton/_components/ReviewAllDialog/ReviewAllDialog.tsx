@@ -5,7 +5,6 @@
    - one PR failing to start never presents the whole batch as failed. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";

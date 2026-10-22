@@ -1,0 +1,61 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Modules are standalone packages (no pnpm workspace) — knip still treats each
+  // listed directory as its own workspace with its own package.json/tsconfig.
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/**/*.{mjs,ts}", ".claude/hooks/*.mjs"],
+      "project": ["scripts/**/*.{mjs,ts}", ".claude/hooks/**/*.mjs"]
+    },
+    "server": {
+      "entry": ["src/index.ts", "src/mcp/**/*.ts", "src/desktop/**/*.ts", "src/db/seed*.ts", "scripts/**/*.{ts,mjs}"],
+      "project": ["src/**/*.ts", "scripts/**/*.{ts,mjs}", "test/**/*.ts"],
+      "ignore": ["src/vendor/**"],
+      // pino-pretty: logger transport by name; @vscode/ripgrep: optional dynamic import
+      "ignoreDependencies": ["pino-pretty", "@vscode/ripgrep"]
+    },
+    "client": {
+      "project": ["src/**/*.{ts,tsx}"],
+      // shadcn primitives are a copy-in UI kit: unused ones stay available on purpose
+      "ignore": ["src/vendor/**", "src/components/ui/**"],
+      // imported from globals.css, which knip does not parse
+      "ignoreDependencies": ["tw-animate-css", "tailwindcss"]
+    },
+    "reviewer-core": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"]
+    },
+    "agent-runner": {
+      "entry": ["src/index.ts", "scripts/**/*.mjs"],
+      "project": ["src/**/*.ts", "scripts/**/*.mjs"],
+      "ignore": ["bundle/**", "dist/**"],
+      // resolved from here when ncc bundles reviewer-core source via the tsconfig alias
+      "ignoreDependencies": ["zod"]
+    },
+    "mcp-server": {
+      "entry": ["src/index.ts", "scripts/**/*.mjs"],
+      "project": ["src/**/*.ts", "scripts/**/*.mjs"]
+    },
+    "evals": {
+      "entry": ["src/*.ts", "scripts/**/*.{ts,mjs}", "proxy/**/*.{ts,mjs}"],
+      "project": ["src/**/*.ts", "scripts/**/*.{ts,mjs}", "proxy/**/*.{ts,mjs}"],
+      "ignore": ["**/fixtures/**", "results/**"]
+    },
+    "e2e": {
+      "project": ["**/*.ts"]
+    },
+    "desktop": {
+      "entry": ["src/main.ts", "src/preload.ts", "scripts/**/*.{cjs,mjs}"],
+      "project": ["src/**/*.ts", "scripts/**/*.{cjs,mjs}"]
+    }
+  },
+  // `index.ts` barrels re-export both the named and the default component
+  "ignoreExportsUsedInFile": true,
+  // CI steps run these per-module via working-directory; knip attributes them to the root
+  "ignoreBinaries": ["typecheck", "vitest"],
+  "rules": {
+    "types": "warn",
+    "exports": "warn",
+    "duplicates": "warn"
+  }
+}

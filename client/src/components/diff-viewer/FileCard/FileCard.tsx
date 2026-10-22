@@ -76,12 +76,12 @@ export function FileCard({
   );
   const lines = React.useMemo(() => parsePatch(file.patch), [file.patch]);
   const targetRef = React.useRef<HTMLDivElement | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once on mount, see comment above
   React.useEffect(() => {
     if (isTargetFile) targetRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     // Runs once on mount — DiffTab remounts fresh whenever the Overview tab's
     // "jump to file" switches the active tab, so there's no later prop change
     // to react to here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const renderedKeys = React.useMemo(() => {

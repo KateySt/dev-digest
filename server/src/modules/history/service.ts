@@ -23,7 +23,7 @@ export class HistoryService {
   private repo: HistoryRepository;
   private reviews: ReviewRepository;
 
-  constructor(private container: Container) {
+  constructor(container: Container) {
     this.repo = new HistoryRepository(container.db);
     this.reviews = container.reviewRepo;
   }

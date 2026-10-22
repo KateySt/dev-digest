@@ -1,0 +1,20 @@
+{
+  "name": "@devdigest/tooling",
+  "private": true,
+  "description": "Repo-wide lint/dead-code tooling only. Not a workspace root — each module keeps its own deps and lock file.",
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "lint:ci": "biome ci --formatter-enabled=false --assist-enabled=false .",
+    "knip": "knip"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "knip": "6.41.0"
+  }
+}

@@ -1,6 +1,4 @@
-/* FirstRunWizard — opens on the first unfinished step, never auto-advances
-   when a verified key refreshes secrets-status, and leaves when nothing is left. */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { get, mockFetch, post, renderApp } from "@/test/eval-utils";

@@ -1,5 +1,4 @@
-/* Sparkline — lightweight inline-SVG trend line (no Recharts; trivial + perf). */
-import React from "react";
+
 
 export function Sparkline({
   data,

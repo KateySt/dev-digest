@@ -1,6 +1,6 @@
 /* SPEC-10 client hooks: multi-run polling, start (409 passthrough), cancel
    invalidation, list/estimates. `fetch` is the only mock. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import {
 } from "./multi-agent";
 import { usePrRuns } from "./reviews";
 import type { MultiAgentRun } from "@devdigest/shared";
-import { ApiError } from "@/lib/api";
+import type { ApiError } from "@/lib/api";
 import { apiError, get, mockFetch, post } from "@/test/eval-utils";
 
 afterEach(() => {

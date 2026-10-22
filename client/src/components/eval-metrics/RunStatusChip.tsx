@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import type { EvalSuiteRunStatus } from "@devdigest/shared";
 import { Badge } from "@/components/ui/badge";

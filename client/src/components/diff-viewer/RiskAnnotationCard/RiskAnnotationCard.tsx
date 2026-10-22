@@ -6,7 +6,6 @@
    it's read-only, same as `unanchoredFindings` render before any review). */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import type { RiskSeverity } from "@devdigest/shared";
 import { Icon, type IconName } from "@/components/icon";

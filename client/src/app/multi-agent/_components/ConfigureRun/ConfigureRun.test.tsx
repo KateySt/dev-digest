@@ -1,5 +1,5 @@
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import React from "react";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { openMenu } from "@/test/radix";
@@ -47,11 +47,6 @@ function setup(over: { pulls?: unknown[]; agents?: unknown[] } = {}) {
   );
   return f;
 }
-
-const pickPr = async (label: string) => {
-  fireEvent.click(await screen.findByText("Select a pull request…"));
-  fireEvent.click(await screen.findByText(label));
-};
 
 beforeEach(() => {
   push.mockReset();

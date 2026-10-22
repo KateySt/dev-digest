@@ -3,7 +3,6 @@
    including the user's own (SPEC-11 AC-8/AC-9/AC-35). */
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";

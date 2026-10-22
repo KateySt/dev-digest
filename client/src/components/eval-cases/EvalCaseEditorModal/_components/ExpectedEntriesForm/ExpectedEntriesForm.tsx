@@ -1,11 +1,9 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import type { EvalCaseKind, FindingCategory, Severity } from "@devdigest/shared";
 import type { ParsedDiffFile } from "@/lib/eval";
 import { CATEGORIES, SEVERITIES, emptyEntry, entryErrors, entryWarning, type EntryDraft } from "../../entries";

@@ -6,7 +6,7 @@ import type { LLMProvider, StructuredResult } from '@devdigest/shared';
 import { OnboardingService } from './service.js';
 import type { OnboardingRepository, OnboardingRepoBasics } from './repository.js';
 import { MAX_INDEXED_FILES } from '../repo-intel/constants.js';
-import { GENERATION_DEADLINE_MS, PERSIST_MARGIN_MS } from './constants.js';
+import { GENERATION_DEADLINE_MS, } from './constants.js';
 import { MockLLMProvider } from '../../adapters/mocks.js';
 import type { Container } from '../../platform/container.js';
 

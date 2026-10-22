@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import type { Agent, CiFailOn } from "@devdigest/shared";
 import { useUpdateAgent } from "@/lib/hooks/agents";

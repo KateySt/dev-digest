@@ -4,7 +4,6 @@
    Section is deep-linked at /settings/:section. */
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";

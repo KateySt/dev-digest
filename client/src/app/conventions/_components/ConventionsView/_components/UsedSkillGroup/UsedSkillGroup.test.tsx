@@ -1,4 +1,4 @@
-import React from "react";
+
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, screen } from "@testing-library/react";
 import { renderApp } from "@/test/eval-utils";

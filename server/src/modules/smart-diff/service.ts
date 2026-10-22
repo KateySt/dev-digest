@@ -19,7 +19,7 @@ import { buildFindingLinesByPath, buildGroups } from './helpers.js';
 export class SmartDiffService {
   private reviews: ReviewRepository;
 
-  constructor(private container: Container) {
+  constructor(container: Container) {
     this.reviews = container.reviewRepo;
   }
 

@@ -83,7 +83,10 @@ describe('ReviewQueue', () => {
     const gate = deferred();
     let ranB = false;
     const a = q.enqueue({ runId: 'a', groupKey: 'g', run: () => gate.promise });
-    const b = q.enqueue({ runId: 'b', groupKey: 'g', run: async () => void (ranB = true) });
+    const b = q.enqueue({ runId: 'b', groupKey: 'g', run: async () => {
+        ranB = true;
+      },
+    });
     await tick();
     expect(q.remove('a')).toBe(false);
     expect(q.remove('b')).toBe(true);
@@ -105,7 +108,10 @@ describe('ReviewQueue', () => {
       run: async () => {},
     });
     let ok = false;
-    const good = q.enqueue({ runId: 'c', groupKey: 'g', run: async () => void (ok = true) });
+    const good = q.enqueue({ runId: 'c', groupKey: 'g', run: async () => {
+        ok = true;
+      },
+    });
     expect((await bad).status).toBe('failed');
     expect((await badStart).status).toBe('failed');
     expect((await good).status).toBe('completed');

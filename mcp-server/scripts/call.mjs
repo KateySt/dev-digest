@@ -57,8 +57,7 @@ const finish = (code) => {
 
 child.stdout.on('data', (chunk) => {
   buf += chunk;
-  let nl;
-  while ((nl = buf.indexOf('\n')) !== -1) {
+  for (let nl = buf.indexOf('\n'); nl !== -1; nl = buf.indexOf('\n')) {
     const line = buf.slice(0, nl).trim();
     buf = buf.slice(nl + 1);
     if (!line) continue;

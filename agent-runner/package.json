@@ -1,6 +1,7 @@
 {
   "name": "@devdigest/agent-runner",
   "version": "0.0.0",
+  "packageManager": "pnpm@12.14.0",
   "private": true,
   "type": "module",
   "description": "DevDigest CI runner — bundles reviewer-core + shared contracts into a single self-contained script (dist/index.js) that is exported into a target repo's devdigest/ci PR and executed by their CI. Consumes reviewer-core and @devdigest/shared as raw TypeScript source via tsconfig path aliases, exactly like the server.",
@@ -11,12 +12,13 @@
   },
   "dependencies": {
     "yaml": "^2.6.1",
-    "zod": "^3.24.1"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "@vercel/ncc": "^0.38.3",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "@types/node": "^22.20.5",
+    "@vercel/ncc": "^0.45.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
   }
 }

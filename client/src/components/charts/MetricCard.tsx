@@ -1,5 +1,5 @@
 /* MetricCard — KPI tile: big value, signed delta, and an optional Sparkline. */
-import React from "react";
+import type React from "react";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
 import { Sparkline } from "./Sparkline";

@@ -210,6 +210,7 @@ export const BlastRadiusResult = z.object({
   impactedEndpoints: z.array(z.string()),
   factsByFile: z
     .record(
+      z.string(),
       z.object({
         endpoints: z.array(z.string()),
         crons: z.array(z.string()),

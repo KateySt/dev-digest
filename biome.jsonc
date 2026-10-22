@@ -1,0 +1,70 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/vendor",
+      // reference snippets inside skills and eval fixtures are intentionally "bad" code
+      "!.claude",
+      "!evals/**/fixtures",
+      "!agent-runner/bundle",
+      "!agent-runner/dist",
+      "!server/drizzle",
+      "!evals/results",
+      "!**/*.json",
+      "!**/*.md",
+      "!**/*.html"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      // TS already types forEach callbacks as void-returning; `xs.forEach((x) => fn(x))` is idiomatic here.
+      // `let x; try { x = await … }` is narrowed by TS control flow — not a real implicit any.
+      "style": {
+        // every tsconfig sets noUncheckedIndexedAccess, so `arr[i]!` after a bounds check is the house idiom
+        "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn",
+        "useIterableCallbackReturn": "off",
+        "noImplicitAnyLet": "off"
+      },
+      "correctness": {
+        // warn, not error: debt to burn down one hook at a time — autofixing deps can cause render loops
+        "useExhaustiveDependencies": "warn"
+      },
+      // a11y: warn until the existing ~150 findings are fixed, then flip back to error
+      "a11y": {
+        "noStaticElementInteractions": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useSemanticElements": "warn",
+        "noLabelWithoutControl": "warn",
+        "useAriaPropsSupportedByRole": "warn",
+        "noNoninteractiveElementToInteractiveRole": "warn",
+        "noNoninteractiveTabindex": "warn",
+        "useFocusableInteractive": "warn",
+        "noRedundantRoles": "warn",
+        "noAutofocus": "warn"
+      }
+    }
+  }
+}

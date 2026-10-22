@@ -418,6 +418,7 @@ export function useRunEvents(runIds: string[]) {
   const [running, setRunning] = React.useState(false);
   const key = runIds.join(",");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `key` captures every input the stream subscription depends on
   React.useEffect(() => {
     if (runIds.length === 0) return;
     setEvents([]);
@@ -457,7 +458,6 @@ export function useRunEvents(runIds: string[]) {
       for (const es of sources) es.close();
       setRunning(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return { events, running };

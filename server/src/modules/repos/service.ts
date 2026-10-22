@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import { type Repo, type CommunityCatalogListing } from '@devdigest/shared';
+import type { Repo, CommunityCatalogListing } from '@devdigest/shared';
 import { NotFoundError } from '../../platform/errors.js';
 import { RepoRepository } from './repository.js';
 import { parseRepoUrl, withGitHubToken, toRepoDto } from './helpers.js';

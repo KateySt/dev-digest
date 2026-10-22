@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { cn } from "@/lib/utils";
 
 /** Ring gauge for a 0–100 score (≥75 ok, ≥50 warn, else crit). `size` is a

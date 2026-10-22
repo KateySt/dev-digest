@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { Icon, type IconName } from "@/components/icon";
 
 /** Small uppercase section heading with an optional icon and right-aligned slot. */

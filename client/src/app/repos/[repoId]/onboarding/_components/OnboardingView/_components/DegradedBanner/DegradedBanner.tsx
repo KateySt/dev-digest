@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import type { OnboardingIndexDegradedReason, OnboardingModelFailureReason } from "@/lib/types";

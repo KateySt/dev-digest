@@ -1,5 +1,4 @@
-/* Memory detail panel — curation additions (SPEC-2026-10-12-memory-curation AC-C22). */
-import React from "react";
+
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { memory, mockFetch, renderApp } from "@/test/eval-utils";

@@ -77,6 +77,7 @@ export function EvalCaseEditorModal({
   const initialExpected = initialCase?.expected_output ?? [];
   // An existing case the form can't represent faithfully opens in Advanced so
   // saving never silently drops fields.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: snapshot of the initial case, computed once per modal mount
   const initialForm = React.useMemo(() => entriesFromExpected(initialExpected, initialKind), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [name, setName] = React.useState(initialCase?.name ?? "");

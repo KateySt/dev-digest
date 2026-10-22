@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import type React from "react";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

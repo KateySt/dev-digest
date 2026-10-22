@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import React from "react";
+import type React from "react";
 import { render as rtlRender, screen, cleanup, fireEvent } from "@testing-library/react";
 import type { FindingRecord } from "@devdigest/shared";
 import { FindingsTooltip } from "./FindingsTooltip";

@@ -52,7 +52,7 @@ export function parseStoredKeybindings(raw: unknown, platform: Platform): Stored
 
 /** Override when present (including null = disabled), else the platform default (AC-15). */
 export function effectiveBinding(cmd: CommandDef, overrides: Overrides, platform: Platform): Binding | null {
-  return Object.prototype.hasOwnProperty.call(overrides, cmd.id) ? overrides[cmd.id]! : cmd.defaults[platform];
+  return  Object.hasOwn(overrides, cmd.id) ? overrides[cmd.id]! : cmd.defaults[platform];
 }
 
 export function effectiveBindings(

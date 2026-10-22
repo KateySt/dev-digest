@@ -1,5 +1,5 @@
 /* KeyStep — paste → verify (saves + live-tests the key) → continue. */
-import React from "react";
+import type React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { apiError, mockFetch, post, renderApp } from "@/test/eval-utils";

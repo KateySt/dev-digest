@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 
 /** Labelled form row on shadcn Field: label (+ required marker and an optional

@@ -13,7 +13,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { PrReviewComment } from "@/lib/types";
-import { type DiffCommentApi } from "../comments";
+import type { DiffCommentApi } from "../comments";
 import { COMMENT_BODY, COMMENT_CARD, COMMENT_HEAD, COMMENT_META, COMMENT_USER, COMPOSER_ACTIONS } from "../constants";
 
 function formatWhen(iso: string): string {

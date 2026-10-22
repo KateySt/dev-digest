@@ -39,7 +39,7 @@ export function MermaidDiagram({ chart, fallback }: { chart: string; fallback?: 
     (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict" });
+        mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict", layout: "dagre", look: "classic" });
         // parse first; suppressErrors → returns false (no throw, no DOM bomb).
         const valid = await mermaid.parse(src, { suppressErrors: true });
         if (cancelled) return;

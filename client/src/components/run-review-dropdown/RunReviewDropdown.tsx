@@ -5,7 +5,6 @@
    the PR list's per-row action can reuse it instead of duplicating it. */
 "use client";
 
-import React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";

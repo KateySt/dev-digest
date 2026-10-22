@@ -1,5 +1,4 @@
-/* Settings → Notifications: two prefs stored via PUT /settings, both default on. */
-import React from "react";
+
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";

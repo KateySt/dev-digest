@@ -2,7 +2,6 @@
    "Review runs" list), rendered inside a collapsible TraceSection. */
 "use client";
 
-import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
