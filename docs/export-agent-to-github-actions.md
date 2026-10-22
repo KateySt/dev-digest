@@ -25,7 +25,8 @@ see the repo) and `github_forbidden`.
 ## Steps
 
 1. **Export.** Open the agent, go to the **CI** tab and start the Export wizard.
-   Pick the target (only GitHub Actions is available; CircleCI, Jenkins and
+   Pick the target (GitHub Actions here; for Jenkins see
+   [`export-agent-to-jenkins.md`](export-agent-to-jenkins.md); CircleCI and
    Generic CLI are shown as "Coming soon"), review the generated workflow on the
    Preview step (you can edit it; edits are linted server-side), choose triggers
    and options on Configure, then install via PR or download the zip.
