@@ -181,6 +181,28 @@ export type AgentManifest = z.infer<typeof AgentManifest>;
 /** Caller-facing input type — `.default()` fields stay optional. */
 export type AgentManifestInput = z.input<typeof AgentManifest>;
 
+/** Jenkins-specific export settings (target `jenkins`). Repo-wide: one
+ *  Jenkinsfile and one multibranch job per repo. Credential IDs name Jenkins
+ *  credentials; the secret values never reach DevDigest. */
+export const CI_JENKINS_JOB_NAME_RE = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
+export const CI_JENKINS_CREDENTIAL_ID_RE = /^[A-Za-z0-9._-]{1,100}$/;
+export const CI_JENKINS_AGENT_LABEL_RE = /^[A-Za-z0-9._ &|!()-]{1,100}$/;
+export const CiJenkinsInput = z.object({
+  job_name: z.string().max(200).regex(CI_JENKINS_JOB_NAME_RE).default('devdigest-review'),
+  openrouter_credential_id: z
+    .string()
+    .regex(CI_JENKINS_CREDENTIAL_ID_RE)
+    .default('devdigest-openrouter-api-key'),
+  github_credential_id: z
+    .string()
+    .regex(CI_JENKINS_CREDENTIAL_ID_RE)
+    .default('devdigest-github-token'),
+  agent_label: z.string().regex(CI_JENKINS_AGENT_LABEL_RE).default('any'),
+  /** Only used when DevDigest creates the multibranch job (scan credential). */
+  scan_credential_id: z.string().regex(CI_JENKINS_CREDENTIAL_ID_RE).nullish(),
+});
+export type CiJenkinsInput = z.infer<typeof CiJenkinsInput>;
+
 /** Request body for `POST /agents/:id/ci/{preview,export,zip}`. */
 export const CiExportInput = z.object({
   repo: z.string().min(1), // "owner/name"
@@ -192,6 +214,12 @@ export const CiExportInput = z.object({
   base: z.string().default('main'),
   /** User-edited workflow text (linted server-side; replaces the generated one). */
   workflow_yaml: z.string().max(200_000).nullish(),
+  /** Required when `target` is `jenkins`. */
+  jenkins: CiJenkinsInput.nullish(),
+  /** User-edited Jenkinsfile (target `jenkins`; linted server-side). */
+  jenkinsfile: z.string().max(200_000).nullish(),
+  /** Also create the multibranch job on the repo's Jenkins connection. */
+  create_jenkins_job: z.boolean().nullish(),
 });
 export type CiExportInput = z.infer<typeof CiExportInput>;
 /** Caller-facing input type — `.default()` fields stay optional (web hooks). */
@@ -217,6 +245,15 @@ export const CiInstallation = z.object({
   out_of_date: z.boolean().nullish(),
   last_run_status: z.string().nullish(),
   last_run_at: z.string().nullish(),
+  // Jenkins target (null for GitHub Actions installations).
+  ci_server_url: z.string().nullish(),
+  ci_job_name: z.string().nullish(),
+  openrouter_credential_id: z.string().nullish(),
+  github_credential_id: z.string().nullish(),
+  scan_credential_id: z.string().nullish(),
+  agent_label: z.string().nullish(),
+  /** Code of the last failed sync of this installation (`CiSyncErrorCode`). */
+  last_sync_error: z.string().nullish(),
 });
 export type CiInstallation = z.infer<typeof CiInstallation>;
 
@@ -225,6 +262,14 @@ export const CiExport = z.object({
   installation: CiInstallation,
   files: z.array(CiFile),
   pr_url: z.string().nullable(),
+  /** Outcome of the optional Jenkins job creation (`create_jenkins_job`). */
+  jenkins_job: z
+    .object({
+      status: z.enum(['created', 'already_exists', 'failed']),
+      url: z.string().nullish(),
+      code: z.string().nullish(),
+    })
+    .nullish(),
 });
 export type CiExport = z.infer<typeof CiExport>;
 
@@ -257,12 +302,32 @@ export const CiLintViolation = z.object({
 });
 export type CiLintViolation = z.infer<typeof CiLintViolation>;
 
+export const CiSyncErrorCode = z.enum([
+  'jenkins_not_configured',
+  'jenkins_connection_mismatch',
+  'jenkins_auth_failed',
+  'jenkins_unreachable',
+  'jenkins_job_not_found',
+]);
+export type CiSyncErrorCode = z.infer<typeof CiSyncErrorCode>;
+
+/** One installation that could not be synced (the others still were). */
+export const CiSyncError = z.object({
+  installation_id: z.string(),
+  repo: z.string(),
+  agent_id: z.string(),
+  code: CiSyncErrorCode,
+  message: z.string(),
+});
+export type CiSyncError = z.infer<typeof CiSyncError>;
+
 /** Response of `POST /ci-runs/sync`. */
 export const CiSyncResult = z.object({
   ingested: z.number().int(),
   failed: z.number().int(),
   skipped: z.number().int(),
   throttled: z.boolean(),
+  errors: z.array(CiSyncError).default([]),
 });
 export type CiSyncResult = z.infer<typeof CiSyncResult>;
 
@@ -338,9 +403,60 @@ export const CiResultArtifact = z
     dependencies: z
       .object({ runner: z.string().max(200), node: z.string().max(200) })
       .strict(),
+    /** Which CI produced the artifact. Older GitHub Actions runners omit it. */
+    ci_target: z.enum(['gha', 'jenkins']).default('gha'),
+    /** Jenkins `<job>/PR-<n>`; null under GitHub Actions. */
+    ci_job: z.string().max(200).nullish(),
   })
   .strict();
 export type CiResultArtifact = z.infer<typeof CiResultArtifact>;
+
+// ---------------------------------------------------------------------------
+// Per-repo Jenkins connection (`/ci/jenkins-connection`)
+// ---------------------------------------------------------------------------
+
+/** `GET /ci/jenkins-connection?repo=` — the token is never returned. */
+export const JenkinsConnection = z.object({
+  repo: z.string(),
+  url: z.string(),
+  username: z.string(),
+  has_token: z.boolean(),
+});
+export type JenkinsConnection = z.infer<typeof JenkinsConnection>;
+
+/** `PUT /ci/jenkins-connection` — omit `api_token` to keep the stored one. */
+export const JenkinsConnectionInput = z.object({
+  repo: z.string().min(1).max(200),
+  url: z.string().min(1).max(2000),
+  username: z.string().min(1).max(200),
+  api_token: z.string().min(1).max(500).nullish(),
+});
+export type JenkinsConnectionInput = z.infer<typeof JenkinsConnectionInput>;
+
+/** `POST /ci/jenkins-connection/test` — unsaved fields override saved ones. */
+export const JenkinsConnectionTestInput = z.object({
+  repo: z.string().min(1).max(200),
+  url: z.string().min(1).max(2000).nullish(),
+  username: z.string().min(1).max(200).nullish(),
+  api_token: z.string().min(1).max(500).nullish(),
+});
+export type JenkinsConnectionTestInput = z.infer<typeof JenkinsConnectionTestInput>;
+
+export const JenkinsConnectionTestResult = z.object({
+  ok: z.boolean(),
+  version: z.string().nullish(),
+  user: z.string().nullish(),
+  code: z
+    .enum([
+      'jenkins_auth_failed',
+      'jenkins_unreachable',
+      'jenkins_not_jenkins',
+      'jenkins_not_configured',
+    ])
+    .nullish(),
+  message: z.string().nullish(),
+});
+export type JenkinsConnectionTestResult = z.infer<typeof JenkinsConnectionTestResult>;
 
 // ===========================================================================
 // Conformance (PRD ↔ PR) — API record (the analysis shape is `Conformance`)

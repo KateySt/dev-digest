@@ -23,3 +23,4 @@ export type EvalSuiteRunRow = typeof t.evalSuiteRuns.$inferSelect;
 export type EvalRunRow = typeof t.evalRuns.$inferSelect;
 export type CiInstallationRow = typeof t.ciInstallations.$inferSelect;
 export type CiRunRow = typeof t.ciRuns.$inferSelect;
+export type CiJenkinsConnectionRow = typeof t.ciJenkinsConnections.$inferSelect;

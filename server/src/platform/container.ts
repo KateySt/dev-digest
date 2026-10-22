@@ -7,6 +7,8 @@ import type {
   Embedder,
   LLMProvider,
   CatalogSource,
+  JenkinsClient,
+  JenkinsConnectionParams,
 } from '@devdigest/shared';
 import type { AppConfig } from './config.js';
 import type { Db } from '../db/client.js';
@@ -18,6 +20,7 @@ import { LocalSecretsProvider } from '../adapters/secrets/local.js';
 import { LocalNoAuthProvider } from '../adapters/auth/local.js';
 import { OctokitGitHubClient } from '../adapters/github/octokit.js';
 import { GitHubCatalogSource } from '../adapters/github/catalog.js';
+import { FetchJenkinsClient } from '../adapters/jenkins/client.js';
 import { SimpleGitClient } from '../adapters/git/simple-git.js';
 import { RipgrepCodeIndex } from '../adapters/codeindex/ripgrep.js';
 import { OpenAIProvider } from '../adapters/llm/openai.js';
@@ -69,6 +72,8 @@ export interface ContainerOverrides {
   catalogSource?: CatalogSource;
   /** CI export — the committed agent-runner bundle (tests inject a stub). */
   runnerBundle?: RunnerBundleProvider;
+  /** CI export, Jenkins target — per-connection client factory. */
+  jenkins?: (params: JenkinsConnectionParams) => JenkinsClient;
 }
 
 export class Container {
@@ -244,6 +249,12 @@ export class Container {
       }
     }, estimateCost);
     return this._priceBook;
+  }
+
+  /** A Jenkins client for one per-repo connection (built per call, never cached). */
+  jenkins(params: JenkinsConnectionParams): JenkinsClient {
+    if (this.overrides.jenkins) return this.overrides.jenkins(params);
+    return new FetchJenkinsClient(params);
   }
 
   async github(): Promise<GitHubClient> {

@@ -241,7 +241,7 @@ export class CiService {
       return { ...cached.result, throttled: true };
     }
 
-    const result: CiSyncResult = { ingested: 0, failed: 0, skipped: 0, throttled: false };
+    const result: CiSyncResult = { ingested: 0, failed: 0, skipped: 0, throttled: false, errors: [] };
     const installs = await this.repo.listInstallationsForWorkspace(workspaceId);
     if (installs.length > 0) {
       const github = await this.container.github();

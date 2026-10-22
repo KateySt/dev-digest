@@ -38,6 +38,9 @@ import type {
   CatalogSource,
   CatalogRepoRef,
   CatalogTreeEntry,
+  JenkinsBuildInfo,
+  JenkinsClient,
+  JenkinsValidationResult,
 } from '@devdigest/shared';
 import { parseUnifiedDiff } from './git/diff-parser.js';
 
@@ -136,6 +139,8 @@ export interface MockGitHubOptions {
   commitFilesBySha?: Record<string, string[]>;
   /** Fixture for `getLanguages` — bytes per language. */
   languages?: Record<string, number>;
+  /** Fixture for `listPullRequestCommitShas`, keyed by PR number. */
+  prCommitShas?: Record<number, string[]>;
   /** Fixture for `getRepo`. */
   repoInfo?: GitHubRepoInfo;
   /** Fixture for `listWorkflowRuns`. */
@@ -284,6 +289,10 @@ export class MockGitHubClient implements GitHubClient {
     return this.opts.commitFilesBySha?.[sha] ?? [];
   }
 
+  async listPullRequestCommitShas(_repo: RepoRef, n: number): Promise<string[]> {
+    return this.opts.prCommitShas?.[n] ?? [];
+  }
+
   async currentLogin(): Promise<string> {
     return this.opts.login ?? 'mock-user';
   }
@@ -406,6 +415,79 @@ export class MockSecretsProvider implements SecretsProvider {
   constructor(private secrets: Partial<Record<string, string>> = {}) {}
   async get(key: SecretKey): Promise<string | undefined> {
     return this.secrets[key as string];
+  }
+  async set(key: SecretKey, value: string): Promise<void> {
+    this.secrets[key as string] = value;
+  }
+  async delete(key: SecretKey): Promise<void> {
+    delete this.secrets[key as string];
+  }
+}
+
+// ---------- Mock Jenkins (CI export, Jenkins target) ----------
+export interface MockJenkinsOptions {
+  user?: string;
+  version?: string;
+  /** `_class` per job path; absent = item does not exist. */
+  items?: Record<string, string>;
+  /** Child job names per multibranch job path. */
+  children?: Record<string, string[]>;
+  /** Builds per branch job path (`<job>/PR-<n>`). */
+  builds?: Record<string, JenkinsBuildInfo[]>;
+  /** Artifact text keyed by `<job>/PR-<n>#<build>/<file>`. */
+  artifacts?: Record<string, string>;
+  plugins?: string[];
+  validation?: JenkinsValidationResult;
+  /** Throw this AppError-like code from every call (connection failure). */
+  failWith?: string;
+}
+
+export class MockJenkinsClient implements JenkinsClient {
+  public created: { parentPath: string; name: string; configXml: string }[] = [];
+
+  constructor(private opts: MockJenkinsOptions = {}) {}
+
+  private check(): void {
+    if (this.opts.failWith) {
+      throw Object.assign(new Error(this.opts.failWith), { code: this.opts.failWith });
+    }
+  }
+  async whoAmI() {
+    this.check();
+    return { user: this.opts.user ?? 'admin', version: this.opts.version ?? '2.0' };
+  }
+  async itemClass(jobPath: string) {
+    this.check();
+    return this.opts.items?.[jobPath] ?? null;
+  }
+  async listChildJobs(jobPath: string) {
+    this.check();
+    return this.opts.children?.[jobPath] ?? [];
+  }
+  async listBuilds(jobPath: string, limit: number) {
+    this.check();
+    return (this.opts.builds?.[jobPath] ?? []).slice(0, limit);
+  }
+  async getArtifact(jobPath: string, build: number, file: string) {
+    this.check();
+    const text = this.opts.artifacts?.[`${jobPath}#${build}/${file}`];
+    return text === undefined ? null : new TextEncoder().encode(text);
+  }
+  async listPlugins() {
+    this.check();
+    return this.opts.plugins ?? [];
+  }
+  async createItem(parentPath: string, name: string, configXml: string) {
+    this.check();
+    this.created.push({ parentPath, name, configXml });
+  }
+  async validateJenkinsfile() {
+    this.check();
+    return this.opts.validation ?? { ok: true, errors: [] };
+  }
+  jobUrl(jobPath: string, build?: number) {
+    const path = jobPath.split('/').map((p) => `/job/${p}`).join('');
+    return `http://jenkins.test${path}/${build === undefined ? '' : `${build}/`}`;
   }
 }
 
