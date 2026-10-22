@@ -77,7 +77,7 @@ export class LocalSecretsProvider implements SecretsProvider {
 
   async delete(key: SecretKey): Promise<void> {
     const data = await this.load();
-    if (!(key as string in data)) return;
+    if (!((key as string) in data)) return;
     delete data[key as string];
     await this.persist(data);
   }
