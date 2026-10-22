@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 import { AgentManifest, CiResultArtifact } from '@devdigest/shared';
-import type { CiLintViolation, CiRunnerMeta, CiTrigger, CiPostAs, WorkflowRunInfo } from '@devdigest/shared';
+import type { CiLintViolation, CiRunnerMeta, CiTrigger, CiPostAs, RepoRef, WorkflowRunInfo } from '@devdigest/shared';
 import type { AgentRow } from '../../db/rows.js';
+import { AppError, ExternalServiceError } from '../../platform/errors.js';
 import {
   ALLOWED_PERMISSIONS,
   ARTIFACT_MAX_BYTES,
@@ -642,7 +643,8 @@ export type ArtifactCheck =
   | 'repository'
   | 'pull_request'
   | 'workflow_path'
-  | 'agent_slug';
+  | 'agent_slug'
+  | 'ci_job';
 
 export type VerifyResult =
   | { ok: true; artifact: CiResultArtifact }
@@ -683,4 +685,97 @@ export function verifyArtifact(
   if (run.path.split('@')[0] !== WORKFLOW_PATH) return { ok: false, check: 'workflow_path' };
   if (a.agent_slug !== installation.agentSlug) return { ok: false, check: 'agent_slug' };
   return { ok: true, artifact: a };
+}
+
+/**
+ * S-AC-77: cross-check a Jenkins artifact against Jenkins + GitHub metadata.
+ * `n` comes from the Jenkins branch job name (`PR-<n>`), the build number from
+ * the Jenkins API, `prCommitShas` from GitHub — never from the artifact.
+ */
+export function verifyJenkinsArtifact(
+  raw: unknown,
+  build: { prNumber: number; buildNumber: number; ciJob: string; prCommitShas: string[] },
+  installation: { githubRepoId: number | null; agentSlug: string; repo: string },
+): VerifyResult {
+  const parsed = CiResultArtifact.safeParse(raw);
+  if (!parsed.success) return { ok: false, check: 'schema' };
+  const a = parsed.data;
+  if (
+    a.findings_count !== (a.critical ?? 0) + (a.warning ?? 0) + (a.suggestion ?? 0) ||
+    a.ci_target !== 'jenkins' ||
+    a.run_id !== build.buildNumber ||
+    a.run_attempt !== 1
+  ) {
+    return { ok: false, check: 'schema' };
+  }
+  if (a.ci_job !== build.ciJob) return { ok: false, check: 'ci_job' };
+  if (a.pr_number !== build.prNumber) return { ok: false, check: 'pull_request' };
+  if (installation.githubRepoId === null || a.repository_id !== installation.githubRepoId) {
+    return { ok: false, check: 'repository_id' };
+  }
+  if (a.repository.toLowerCase() !== installation.repo.toLowerCase()) return { ok: false, check: 'repository' };
+  if (!build.prCommitShas.includes(a.commit_sha)) return { ok: false, check: 'commit_sha' };
+  if (a.agent_slug !== installation.agentSlug) return { ok: false, check: 'agent_slug' };
+  return { ok: true, artifact: a };
+}
+
+// ---------------------------------------------------------------------------
+// Repo refs + GitHub error mapping (shared by export and the GHA run source)
+// ---------------------------------------------------------------------------
+
+export function parseRepo(repoFullName: string): RepoRef | null {
+  const parts = repoFullName.split('/');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return { owner: parts[0], name: parts[1] };
+}
+
+export type GitHubStep = 'repo' | 'commit' | 'commit_workflows' | 'pr' | 'sync';
+
+export const WORKFLOWS_DIR = '.github/workflows/';
+
+/**
+ * Maps a GitHub failure to a domain error. `pat_workflow_scope` only for a
+ * 403/404 raised while committing files under `.github/workflows/` (S-AC-25);
+ * any other 403/404 surfaces as a distinct not-found / forbidden error.
+ */
+export function mapGitHubError(err: unknown, step: GitHubStep): Error {
+  if (err instanceof AppError) return err;
+  const status = (err as { status?: number }).status;
+  if ((status === 403 || status === 404) && step === 'commit_workflows') {
+    return new AppError(
+      'pat_workflow_scope',
+      'The GitHub token needs the "workflow" scope (classic) or Workflows: write (fine-grained) to add .github/workflows files.',
+      403,
+    );
+  }
+  if (status === 404) {
+    return new AppError('github_repo_not_found', 'Repository not found or PAT has no access', 404);
+  }
+  if (status === 403) {
+    return new AppError('github_forbidden', 'GitHub denied the request: the token lacks permission for this repository.', 403);
+  }
+  return new ExternalServiceError(`GitHub request failed: ${(err as Error).message ?? 'unknown error'}`);
+}
+
+/**
+ * S-AC-70: a Jenkins base URL is http(s) with no userinfo, query or fragment;
+ * stored as origin + path without a trailing slash. Returns null when invalid.
+ */
+export function normalizeJenkinsUrl(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  if (url.username || url.password || url.search || url.hash) return null;
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
+
+/** `a/b/c` → parent `a/b`, leaf `c` (Jenkins `createItem` runs inside the parent). */
+export function splitJobPath(jobPath: string): { parent: string; name: string } {
+  const parts = jobPath.split('/');
+  const name = parts.pop() ?? jobPath;
+  return { parent: parts.join('/'), name };
 }

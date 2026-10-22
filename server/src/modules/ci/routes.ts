@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { CiExportInput } from '@devdigest/shared';
+import { CiExportInput, JenkinsConnectionInput, JenkinsConnectionTestInput } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { PageQuery, pageWindow, paged } from '../_shared/paging.js';
@@ -17,7 +17,13 @@ import { CI_RUNS_LIMIT, PERIOD_MS } from './constants.js';
  *   POST /ci-runs/sync           → pull + verify + ingest completed runs
  *   GET  /ci-runs?period=&agent_id=&repo=&status=&source= → CI Runs page
  *   GET  /ci-runs/repos          → repos with at least one installation
+ *   GET    /ci/jenkins-connection?repo=  → the repo's Jenkins connection (never the token)
+ *   PUT    /ci/jenkins-connection        → save it (token only via SecretsProvider)
+ *   DELETE /ci/jenkins-connection?repo=  → remove it (installations and runs are kept)
+ *   POST   /ci/jenkins-connection/test   → call Jenkins' identity endpoint, write nothing
  */
+
+const RepoQuery = z.object({ repo: z.string().min(1).max(200) });
 
 const RunsQuery = z.object({
   period: z.enum(['24h', '7d', '30d']).default('7d'),
@@ -92,5 +98,26 @@ export default async function ciRoutes(appBase: FastifyInstance) {
     if (!window) return service.listRuns(workspaceId, { ...filters, limit: CI_RUNS_LIMIT });
     const { items, total } = await service.pageRuns(workspaceId, { ...filters, limit: window.limit, offset: window.offset });
     return paged(items, total, window);
+  });
+
+  app.get('/ci/jenkins-connection', { schema: { querystring: RepoQuery } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.getJenkinsConnection(workspaceId, req.query.repo);
+  });
+
+  app.put('/ci/jenkins-connection', { schema: { body: JenkinsConnectionInput } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.saveJenkinsConnection(workspaceId, req.body);
+  });
+
+  app.delete('/ci/jenkins-connection', { schema: { querystring: RepoQuery } }, async (req, reply) => {
+    const { workspaceId } = await getContext(app.container, req);
+    await service.deleteJenkinsConnection(workspaceId, req.query.repo);
+    return reply.status(204).send();
+  });
+
+  app.post('/ci/jenkins-connection/test', { schema: { body: JenkinsConnectionTestInput } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.testJenkinsConnection(workspaceId, req.body);
   });
 }
