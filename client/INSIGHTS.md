@@ -33,6 +33,14 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-22 — `useSearchParams()` is null in component tests
+
+[Mistake] Outside the App Router (RTL tests render components without a Next
+router) `useSearchParams()` returns `null`, so `useSearchParams().get(...)`
+throws and fails every test of that component. Read optional params as
+`useSearchParams()?.get("x") ?? null` (see `CiTab.tsx` `reexport`).
+
+
 ### 2026-10-18 — Match shortcuts by `e.code`, not `e.key`
 
 `e.key === "g"` silently fails on Ukrainian/Russian layouts (`"п"`), so

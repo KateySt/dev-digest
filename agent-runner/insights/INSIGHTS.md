@@ -7,6 +7,8 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 ## What Works
 
+2026-10-22 — Under Jenkins (`JENKINS_URL` set) there is no event payload: `jenkins-context.ts` reads `CHANGE_ID`/`BUILD_NUMBER`/`JOB_NAME`/`DEVDIGEST_REPOSITORY` and gets title, body, head SHA and base repo id from `GET /repos/{o}/{r}/pulls/{n}` with `GITHUB_TOKEN` — so the token is required even with `post_as: none`. Fork PRs hard-fail twice (`CHANGE_FORK`, head repo ≠ base). `Jenkinsfile` is deliberately NOT in `IGNORED_DIFF_PREFIXES`: a same-repo PR editing it is exactly the change a reviewer should see. ref: agent-runner/src/jenkins-context.ts
+
 2026-07-08 — `ncc build src/index.ts -o dist` fully inlines both `@devdigest/reviewer-core` (raw TS via tsconfig path alias) and `@devdigest/shared` (also a path alias) plus their transitive deps (`zod`, `openai`) into a single `dist/index.js` with zero top-level `import`/`require` statements — verified with `grep -c "^import\|require(" dist/index.js` returning 0. `node dist/index.js` runs standalone. ref: agent-runner/package.json:9
 
 ## What Doesn't Work

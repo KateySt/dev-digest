@@ -14,6 +14,33 @@ What happened / what we learned, and why it matters for future work here.
 
 ---
 
+### 2026-10-22 — Two branches that both generate migration N: Drizzle silently skips one
+
+[Mistake] The migrator (postgres-js and `db/pglite.ts`) only applies a
+migration whose journal `when` (folderMillis) is newer than the latest applied
+`created_at`. Two branches cut from the same base both get `0030_*` from
+`drizzle-kit generate`; after merging, whichever has the older timestamp is
+skipped without an error on any DB that already ran the other. The branch that
+merges second must delete its own SQL + `meta/<n>_snapshot.json` + journal
+entry, rebase, and re-run `db:generate`. Generate and migrate against a
+separate database (e.g. a second pgvector container) while a parallel branch
+is unmerged, never the shared `devdigest` DB.
+
+### 2026-10-22 — Jenkins CI target: identity, trigger classes and HTTP rules
+
+[Decision] Jenkins has no PR events: build 1 of a multibranch `PR-<n>` job is
+"opened", every later build "synchronize" (`targets/jenkins.ts`
+`triggerClass`). The Jenkinsfile guards each agent stage with that rule, and
+sync MUST apply the same rule (`sources/jenkins.ts`) — otherwise every build a
+stage skipped becomes an `artifact_missing` row. Builds are keyed
+`PR-<n>#<build>@<start ms>` because build numbers restart when a job is
+recreated. `FetchJenkinsClient` follows redirects by hand (same origin, ≤3)
+so Basic auth never leaves the connection's origin, and builds every URL from
+the saved base URL; Jenkins JSON contains absolute URLs that must not be
+followed. API-token auth needs no CSRF crumb. A closed PR's `PR-<n>` job is
+deleted by Jenkins, so its unsynced builds are gone (accepted, documented).
+
+
 ### 2026-10-11 — Migrations: unjournaled files and multi-statement chunks
 
 - **A `.sql` file in `src/db/migrations/` that is not in `meta/_journal.json`
