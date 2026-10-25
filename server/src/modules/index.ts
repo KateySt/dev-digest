@@ -24,6 +24,7 @@ import multiAgent from './multi-agent/routes.js';
 import notifications from './notifications/routes.js';
 import memory from './memory/routes.js';
 import activity from './activity/routes.js';
+import docSync from './doc-sync/routes.js';
 
 /**
  * Module registry. Each feature module is a Fastify plugin in
@@ -64,4 +65,5 @@ export const modules: Record<string, FastifyPluginAsync> = {
   notifications,
   memory,
   activity,
+  docSync,
 };

@@ -21,6 +21,7 @@ export const FeatureModelId = z.enum([
   'skill_eval',
   'skill_scan',
   'memory',
+  'doc_sync',
 ]);
 export type FeatureModelId = z.infer<typeof FeatureModelId>;
 
@@ -98,6 +99,13 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     id: 'memory',
     label: 'Memory (Learn)',
     description: 'Drafts a reusable memory from a finding when you click Learn.',
+    defaultProvider: 'openrouter',
+    defaultModel: 'deepseek/deepseek-v4-flash',
+  },
+  {
+    id: 'doc_sync',
+    label: 'Docs Sync',
+    description: 'Finds outdated documentation and drafts the fixes for the docs PR.',
     defaultProvider: 'openrouter',
     defaultModel: 'deepseek/deepseek-v4-flash',
   },

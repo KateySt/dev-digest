@@ -29,4 +29,5 @@ export * from './contracts/eval-suite.js';
 export * from './contracts/observability.js';
 export * from './contracts/productionize.js';
 export * from './contracts/project-context.js';
+export * from './contracts/doc-sync.js';
 export * from './adapters.js';

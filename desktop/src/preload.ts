@@ -49,7 +49,8 @@ const bridge = {
     notify: (n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean> =>
       ipcRenderer.invoke('app:notify', n),
     /** Running jobs + unread count → taskbar progress, unread badge, tray status. */
-    setActivity: (a: { running: number; unread: number }): Promise<void> => ipcRenderer.invoke('app:set-activity', a),
+    setActivity: (a: { running: number; unread: number; keepAwake: boolean }): Promise<void> =>
+      ipcRenderer.invoke('app:set-activity', a),
     /** Shell settings kept by the main process (desktop-prefs.json). */
     getPrefs: (): Promise<{ closeToTray: boolean }> => ipcRenderer.invoke('app:get-prefs'),
     setPrefs: (p: { closeToTray?: boolean }): Promise<{ closeToTray: boolean }> => ipcRenderer.invoke('app:set-prefs', p),

@@ -123,6 +123,8 @@ export interface OpenPrPayload {
   head: string;
   base: string;
   body: string;
+  /** Open as a draft PR (GitHub's "Ready for review" gate). */
+  draft?: boolean;
 }
 
 /** A single file to write in a commit (path relative to repo root + UTF-8 text). */
@@ -138,6 +140,11 @@ export interface CommitFilesPayload {
   base: string;
   message: string;
   files: CommitFile[];
+  /**
+   * Parent the commit on `base`'s tip even when `branch` exists, force-moving
+   * the branch — so the branch is always exactly "base + this commit".
+   */
+  resetToBase?: boolean;
 }
 
 /** Repo identity + default branch, as reported by GitHub. */
@@ -198,9 +205,18 @@ export interface GitHubClient {
    * tree → commit → ref). Creates the branch from `base` if missing, else
    * fast-forwards it. Idempotent: re-publishing just adds a new commit.
    */
-  commitFiles(repo: RepoRef, payload: CommitFilesPayload): Promise<{ branch: string }>;
+  commitFiles(repo: RepoRef, payload: CommitFilesPayload): Promise<{ branch: string; sha: string }>;
   /** The open PR whose head is `branch`, if any (so re-publish reuses it). */
-  findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string } | null>;
+  findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string; number: number } | null>;
+  /** The most recent PR (any state) whose head is `branch`, if any. */
+  latestPr(
+    repo: RepoRef,
+    branch: string,
+  ): Promise<{ url: string; number: number; state: 'open' | 'closed'; merged: boolean } | null>;
+  /** Replace an open PR's title and body. */
+  updatePullRequest(repo: RepoRef, n: number, patch: { title: string; body: string }): Promise<void>;
+  /** Tip sha of `branch`, or null when the branch does not exist. */
+  getBranchSha(repo: RepoRef, branch: string): Promise<string | null>;
   getIssue(repo: RepoRef, n: number): Promise<IssueMeta>;
   /** Repo id + default branch (GET /repos/{owner}/{repo}). */
   getRepo(repo: RepoRef): Promise<GitHubRepoInfo>;
@@ -320,6 +336,8 @@ export interface GitClient {
   blame(repo: RepoRef, path: string): Promise<BlameLine[]>;
   log(repo: RepoRef, path?: string): Promise<GitCommit[]>;
   readFile(repo: RepoRef, path: string): Promise<string>;
+  /** The subset of repo-relative `paths` that .gitignore rules match (existing or not). */
+  ignoredPaths(repo: RepoRef, paths: string[]): Promise<string[]>;
   clonePathFor(repo: RepoRef): string;
 }
 

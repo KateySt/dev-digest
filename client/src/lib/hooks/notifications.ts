@@ -10,7 +10,7 @@ import { api, API_BASE } from "../api";
 export type NotificationStatus = "success" | "error" | "info";
 export interface AppNotification {
   id: string;
-  kind: "review" | "multi_agent" | "eval" | "clone" | "index" | "onboarding" | "interrupted";
+  kind: "review" | "multi_agent" | "eval" | "clone" | "index" | "onboarding" | "interrupted" | "doc_sync";
   status: NotificationStatus;
   title: string;
   body: string | null;

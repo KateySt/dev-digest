@@ -6,6 +6,7 @@
     "models": "Feature Models",
     "catalog": "Catalog",
     "notifications": "Notifications",
+    "doc-sync": "Docs sync",
     "appearance": "Appearance",
     "keyboard": "Keyboard",
     "desktop": "Desktop app"
@@ -226,5 +227,76 @@
     "globalNotSet": "Not set",
     "globalNotActive": "Not active — taken by another app",
     "change": "Change in Keyboard settings"
+  },
+  "docSync": {
+    "title": "Docs sync",
+    "body": "While DevDigest is open, it checks the documentation of the repositories you pick at the time you choose. When docs no longer match the code it opens one draft pull request per repository with minimal fixes — it never merges. It runs only if the app is open and the computer is awake.",
+    "scheduleTitle": "Schedule",
+    "enabledLabel": "Scheduled docs check",
+    "enabledHint": "Run the check automatically at the time below.",
+    "timeLabel": "Time",
+    "repeatLabel": "Repeat",
+    "repeat": {
+      "once": "Once — then turn off",
+      "daily": "Every day",
+      "days": "On selected days"
+    },
+    "daysLabel": "Days",
+    "overrideLabel": "Next run only",
+    "overrideHint": "Overrides the time above for the next run only, e.g. tonight at 00:00 instead of 02:00.",
+    "clearOverride": "Clear",
+    "nextRun": "Next run: {when}",
+    "nextRunNone": "No run scheduled",
+    "lastRun": "Last run: {when}",
+    "timezone": "Times are in {tz}.",
+    "catchUp": "Missed while the app was closed or asleep? It runs once on the next start if it is less than 6 hours late.",
+    "save": "Save schedule",
+    "saved": "Saved",
+    "reposTitle": "Repositories",
+    "reposEmpty": "No repositories connected yet.",
+    "repoNotCloned": "Not cloned yet — can't be checked",
+    "repoNeverChecked": "Never checked",
+    "repoLastChecked": "Last checked {when}",
+    "runsTitle": "Runs",
+    "runNow": "Run now",
+    "running": "Running…",
+    "runsEmpty": "No runs yet.",
+    "trigger": {
+      "scheduled": "Scheduled",
+      "manual": "Manual"
+    },
+    "runStatus": {
+      "running": "Running",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "repoStatus": {
+      "pending": "Waiting",
+      "unchanged": "Unchanged",
+      "up_to_date": "Up to date",
+      "stale": "{count, plural, one {# issue} other {# issues}}",
+      "failed": "Failed"
+    },
+    "findingKind": {
+      "broken_link": "Broken link",
+      "missing_path": "Missing path",
+      "unknown_script": "Unknown script"
+    },
+    "moreFindings": "+ {count} more",
+    "docsScanned": "{count, plural, one {# doc} other {# docs}} checked",
+    "issueFixed": "Fixed in PR",
+    "issueOpen": "Outdated",
+    "issueDrafted": "Fix drafted",
+    "openPr": "Open PR ↗",
+    "cost": "LLM ${usd}",
+    "prAction": {
+      "opened": "Draft PR opened · {count, plural, one {# doc} other {# docs}}",
+      "updated": "Draft PR updated · {count, plural, one {# doc} other {# docs}}",
+      "none": "",
+      "branch_moved": "PR not updated — someone pushed to its branch",
+      "failed": "PR not created"
+    },
+    "dismissed": "{count, plural, one {# suggestion} other {# suggestions}} from closed docs PRs won't be proposed again.",
+    "clearDismissed": "Allow again"
   }
 }

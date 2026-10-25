@@ -25,6 +25,12 @@ export interface JobHooks {
   onFailed?: (job: { workspaceId: string; payload: unknown; error: Error }) => unknown;
 }
 
+/** Per-kind overrides of the runner-wide timeout/retries (e.g. a long LLM job). */
+export interface JobKindOptions {
+  timeoutMs?: number;
+  retries?: number;
+}
+
 export interface JobRunnerOptions {
   concurrency?: number;
   timeoutMs?: number;
@@ -41,6 +47,7 @@ export class JobRunner {
   private queue: PQueue;
   private handlers = new Map<string, JobHandler>();
   private hooks = new Map<string, JobHooks>();
+  private kindOptions = new Map<string, JobKindOptions>();
   private timeoutMs: number;
   private retries: number;
 
@@ -53,10 +60,12 @@ export class JobRunner {
     this.retries = opts.retries ?? 2;
   }
 
-  register(kind: string, handler: JobHandler, hooks?: JobHooks): void {
+  register(kind: string, handler: JobHandler, hooks?: JobHooks, opts?: JobKindOptions): void {
     this.handlers.set(kind, handler);
     if (hooks) this.hooks.set(kind, hooks);
     else this.hooks.delete(kind);
+    if (opts) this.kindOptions.set(kind, opts);
+    else this.kindOptions.delete(kind);
   }
 
   async enqueue(workspaceId: string, kind: string, payload: unknown): Promise<EnqueuedJob> {
@@ -75,11 +84,12 @@ export class JobRunner {
         .set({ status: 'running', startedAt: new Date() })
         .where(eq(t.jobs.id, jobId));
       const hooks = this.hooks.get(kind);
+      const kindOpts = this.kindOptions.get(kind);
       let result: unknown;
       try {
         await withRetry(
           () =>
-            withTimeout(handler(payload, { jobId }), this.timeoutMs).then(async (r) => {
+            withTimeout(handler(payload, { jobId }), kindOpts?.timeoutMs ?? this.timeoutMs).then(async (r) => {
               result = r;
               await this.db
                 .update(t.jobs)
@@ -87,7 +97,7 @@ export class JobRunner {
                 .where(eq(t.jobs.id, jobId));
             }),
           {
-            retries: this.retries,
+            retries: kindOpts?.retries ?? this.retries,
             onRetry: async (attempt) => {
               await this.db
                 .update(t.jobs)

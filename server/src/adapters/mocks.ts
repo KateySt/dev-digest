@@ -152,6 +152,7 @@ export class MockGitHubClient implements GitHubClient {
   public posted: { n: number; review: GitHubReviewPayload }[] = [];
   public openedPrs: OpenPrPayload[] = [];
   public committed: CommitFilesPayload[] = [];
+  private branchShas = new Map<string, string>();
   public createdComments: CreateReviewCommentInput[] = [];
   public updatedComments: { id: number; body: string }[] = [];
   public deletedCommentIds: number[] = [];
@@ -266,14 +267,27 @@ export class MockGitHubClient implements GitHubClient {
     return { url: 'https://github.com/mock/mock/pull/1' };
   }
 
-  async commitFiles(_repo: RepoRef, payload: CommitFilesPayload): Promise<{ branch: string }> {
+  async commitFiles(_repo: RepoRef, payload: CommitFilesPayload): Promise<{ branch: string; sha: string }> {
     this.committed.push(payload);
-    return { branch: payload.branch };
+    const sha = `mock-sha-${this.committed.length}`;
+    this.branchShas.set(payload.branch, sha);
+    return { branch: payload.branch, sha };
   }
 
-  async findOpenPr(_repo: RepoRef, branch: string): Promise<{ url: string } | null> {
+  async findOpenPr(_repo: RepoRef, branch: string): Promise<{ url: string; number: number } | null> {
     const pr = this.openedPrs.find((p) => p.head === branch);
-    return pr ? { url: 'https://github.com/mock/mock/pull/1' } : null;
+    return pr ? { url: 'https://github.com/mock/mock/pull/1', number: 1 } : null;
+  }
+
+  async latestPr(_repo: RepoRef, branch: string) {
+    const pr = this.openedPrs.find((p) => p.head === branch);
+    return pr ? { url: 'https://github.com/mock/mock/pull/1', number: 1, state: 'open' as const, merged: false } : null;
+  }
+
+  async updatePullRequest(): Promise<void> {}
+
+  async getBranchSha(_repo: RepoRef, branch: string): Promise<string | null> {
+    return this.branchShas.get(branch) ?? null;
   }
 
   async getIssue(_repo: RepoRef, n: number): Promise<IssueMeta> {
@@ -372,6 +386,10 @@ export class MockGitClient implements GitClient {
   }
   async readFile(_repo: RepoRef, path: string): Promise<string> {
     return this.opts.files?.[path] ?? '';
+  }
+
+  async ignoredPaths(): Promise<string[]> {
+    return [];
   }
 }
 

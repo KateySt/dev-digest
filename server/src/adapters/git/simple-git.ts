@@ -19,6 +19,9 @@ import { parseUnifiedDiff } from './diff-parser.js';
  */
 const RESYNC_FETCH_DEPTH = 50;
 
+/** Paths per `git check-ignore` call. */
+const IGNORE_CHECK_BATCH = 200;
+
 /**
  * simple-git ≥ 4 strips every ambient `GIT_*` variable from the child git
  * process unless it is allow-listed — without this, the non-interactive auth
@@ -133,6 +136,32 @@ export class SimpleGitClient implements GitClient {
       author: c.author_name,
       date: c.date,
     }));
+  }
+
+  async ignoredPaths(repo: RepoRef, paths: string[]): Promise<string[]> {
+    const ignored: string[] = [];
+    // Batches keep the command line well under Windows' ~32K-char limit.
+    for (let i = 0; i < paths.length; i += IGNORE_CHECK_BATCH) {
+      try {
+        // --no-index: match the ignore rules even for paths git doesn't track.
+        // Exit code 1 (nothing ignored) surfaces as a throw — that's an empty answer.
+        const out = await this.git(repo).raw([
+          'check-ignore',
+          '--no-index',
+          '--',
+          ...paths.slice(i, i + IGNORE_CHECK_BATCH),
+        ]);
+        ignored.push(
+          ...out
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean),
+        );
+      } catch {
+        // nothing ignored in this batch
+      }
+    }
+    return ignored;
   }
 
   async readFile(repo: RepoRef, path: string): Promise<string> {

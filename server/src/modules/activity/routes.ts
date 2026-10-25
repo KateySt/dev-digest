@@ -4,7 +4,7 @@ import { ActivityService, type ActivityDto } from './service.js';
 
 /**
  * Workspace activity.
- *   GET /activity → { reviews_running, evals_running }
+ *   GET /activity → { reviews_running, evals_running, docs_running }
  */
 export default async function activityRoutes(app: FastifyInstance) {
   const { container } = app;

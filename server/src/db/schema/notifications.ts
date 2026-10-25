@@ -17,7 +17,7 @@ export const notifications = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     kind: text('kind', {
-      enum: ['review', 'multi_agent', 'eval', 'clone', 'index', 'onboarding', 'interrupted'],
+      enum: ['review', 'multi_agent', 'eval', 'clone', 'index', 'onboarding', 'interrupted', 'doc_sync'],
     }).notNull(),
     status: text('status', { enum: ['success', 'error', 'info'] }).notNull(),
     title: text('title').notNull(),

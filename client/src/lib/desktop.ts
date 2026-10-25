@@ -45,7 +45,8 @@ export interface DesktopBridge {
     /** OS notification — shown only while the window is unfocused; resolves true if shown. */
     notify(n: { title: string; body?: string | null; href?: string | null; silent?: boolean }): Promise<boolean>;
     /** Running jobs + unread count → taskbar progress, unread badge, tray status. */
-    setActivity(a: { running: number; unread: number }): Promise<void>;
+    /** `keepAwake`: a Docs Sync run is in progress — main blocks system sleep until it ends. */
+    setActivity(a: { running: number; unread: number; keepAwake: boolean }): Promise<void>;
     /** Shell settings kept by the main process (desktop-prefs.json). */
     getPrefs(): Promise<DesktopPrefs>;
     setPrefs(p: Partial<DesktopPrefs>): Promise<DesktopPrefs>;
