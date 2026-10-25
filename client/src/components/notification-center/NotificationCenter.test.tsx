@@ -163,7 +163,7 @@ describe("NotificationCenter", () => {
     it("reports running jobs and the unread count to the desktop app", async () => {
       const { bridge } = installFakeBridge();
       setup([n()], 1, {}, { reviews_running: 2, evals_running: 1 });
-      await waitFor(() => expect(bridge.app.setActivity).toHaveBeenLastCalledWith({ running: 3, unread: 1 }));
+      await waitFor(() => expect(bridge.app.setActivity).toHaveBeenLastCalledWith({ running: 3, unread: 1, keepAwake: false }));
     });
 
     it("does not poll /activity in a browser", async () => {

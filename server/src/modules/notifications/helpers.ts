@@ -157,6 +157,27 @@ export function onboardingNotification(input: { repoId: string; repoName: string
     : { kind: 'onboarding', status: 'success', title: `Onboarding tour ready · ${input.repoName}`, body: 'Open it to walk through the codebase', href };
 }
 
+export function docSyncNotification(input: {
+  repos: number;
+  stale: number;
+  failed: number;
+  findings: number;
+  /** Repos whose docs PR was opened or updated. */
+  prs: number;
+}): NewNotification {
+  const href = '/settings/doc-sync';
+  if (input.failed === input.repos) {
+    return { kind: 'doc_sync', status: 'error', title: 'Docs check failed', body: `${plural(input.repos, 'repository', 'repositories')} could not be checked`, href };
+  }
+  const failed = input.failed ? ` · ${input.failed} failed` : '';
+  if (input.prs > 0) {
+    return { kind: 'doc_sync', status: 'success', title: `Docs PR ready · ${plural(input.prs, 'repository', 'repositories')}`, body: `${plural(input.findings, 'issue')} found${failed} — review the draft PR`, href };
+  }
+  return input.stale === 0
+    ? { kind: 'doc_sync', status: 'success', title: 'Docs are up to date', body: `${plural(input.repos, 'repository', 'repositories')} checked${failed}`, href }
+    : { kind: 'doc_sync', status: 'info', title: `Docs need attention · ${plural(input.stale, 'repository', 'repositories')}`, body: `${plural(input.findings, 'issue')} found${failed}`, href };
+}
+
 export function interruptedNotification(count: number): NewNotification {
   return {
     kind: 'interrupted',

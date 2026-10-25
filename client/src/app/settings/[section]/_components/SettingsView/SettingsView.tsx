@@ -1,5 +1,5 @@
 /* Settings — left sub-nav + sections. API Keys (OpenRouter + GitHub PAT, with
-   Test connection), Feature Models, Catalog, Notifications, Appearance,
+   Test connection), Feature Models, Catalog, Notifications, Docs sync, Appearance,
    Keyboard, and (desktop app only) Desktop.
    Section is deep-linked at /settings/:section. */
 "use client";
@@ -14,6 +14,7 @@ import { SettingsApiKeys } from "./_components/SettingsApiKeys";
 import { SettingsModels } from "./_components/SettingsModels";
 import { SettingsCatalog } from "./_components/SettingsCatalog";
 import { SettingsNotifications } from "./_components/SettingsNotifications";
+import { SettingsDocSync } from "./_components/SettingsDocSync";
 import { SettingsAppearance } from "./_components/SettingsAppearance";
 import { SettingsKeyboard } from "./_components/SettingsKeyboard";
 import { SettingsDesktop } from "./_components/SettingsDesktop";
@@ -24,6 +25,7 @@ import {
   SECTION_MODELS,
   SECTION_CATALOG,
   SECTION_NOTIFICATIONS,
+  SECTION_DOC_SYNC,
   SECTION_APPEARANCE,
   SECTION_KEYBOARD,
   SECTION_DESKTOP,
@@ -75,6 +77,8 @@ export function SettingsView() {
             <SettingsCatalog />
           ) : section === SECTION_NOTIFICATIONS ? (
             <SettingsNotifications />
+          ) : section === SECTION_DOC_SYNC ? (
+            <SettingsDocSync />
           ) : section === SECTION_APPEARANCE ? (
             <SettingsAppearance />
           ) : section === SECTION_KEYBOARD ? (

@@ -12,6 +12,7 @@ import { isOwnOrigin, openExternalSafe } from './validate';
 import { getPrefs, loadPrefs, updatePrefs } from './prefs';
 import { createTray } from './tray';
 import { attachTaskbar } from './taskbar';
+import { keepAwakeWhileDocSync } from './power';
 import { applyBindings, loadCachedBindings, unregisterAllGlobals } from './keybindings';
 import { loadSecretsKey } from './secrets-key';
 import { deepLinkFromArgv, handleDeepLink, registerProtocol, setDeepLinkTarget } from './deep-link';
@@ -90,6 +91,7 @@ async function boot(): Promise<void> {
 
   createWindow();
   createTray(showWindow);
+  keepAwakeWhileDocSync();
   splash.destroy();
   initUpdates();
 }

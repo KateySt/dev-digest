@@ -6,6 +6,8 @@ export interface ActivityDto {
   reviews_running: number;
   /** Eval suite runs in progress. */
   evals_running: number;
+  /** Docs Sync runs in progress (the desktop app keeps the machine awake meanwhile). */
+  docs_running: number;
 }
 
 /**
@@ -20,10 +22,11 @@ export class ActivityService {
   }
 
   async current(workspaceId: string): Promise<ActivityDto> {
-    const [reviews_running, evals_running] = await Promise.all([
+    const [reviews_running, evals_running, docs_running] = await Promise.all([
       this.repo.reviewsInFlight(workspaceId),
       this.repo.evalsRunning(workspaceId),
+      this.repo.docSyncRunning(workspaceId),
     ]);
-    return { reviews_running, evals_running };
+    return { reviews_running, evals_running, docs_running };
   }
 }

@@ -13,3 +13,4 @@ export * from "./onboarding";
 export * from "./setup";
 export * from "./notifications";
 export * from "./activity";
+export * from "./doc-sync";

@@ -5,9 +5,11 @@
 export interface Activity {
   running: number;
   unread: number;
+  /** A Docs Sync run is in progress — see power.ts. */
+  keepAwake: boolean;
 }
 
-let current: Activity = { running: 0, unread: 0 };
+let current: Activity = { running: 0, unread: 0, keepAwake: false };
 const listeners = new Set<(a: Activity) => void>();
 
 export function getActivity(): Activity {
@@ -15,7 +17,9 @@ export function getActivity(): Activity {
 }
 
 export function setActivity(next: Activity): void {
-  if (next.running === current.running && next.unread === current.unread) return;
+  if (next.running === current.running && next.unread === current.unread && next.keepAwake === current.keepAwake) {
+    return;
+  }
   current = next;
   for (const fn of listeners) fn(current);
 }

@@ -296,6 +296,7 @@ export class OctokitGitHubClient implements GitHubClient {
             head: payload.head,
             base: payload.base,
             body: payload.body,
+            draft: payload.draft,
           });
           return { url: res.data.html_url };
         })(),
@@ -307,7 +308,7 @@ export class OctokitGitHubClient implements GitHubClient {
   async commitFiles(
     repo: RepoRef,
     payload: CommitFilesPayload,
-  ): Promise<{ branch: string }> {
+  ): Promise<{ branch: string; sha: string }> {
     return withRetry(() =>
       withTimeout(
         (async () => {
@@ -316,13 +317,16 @@ export class OctokitGitHubClient implements GitHubClient {
           const g = this.octokit.rest.git;
 
           // Parent commit: the target branch if it already exists, else the base.
-          let parentSha: string;
+          let parentSha: string | null = null;
           let branchExists = false;
           try {
             const ref = await g.getRef({ owner, repo: name, ref: `heads/${payload.branch}` });
-            parentSha = ref.data.object.sha;
+            if (!payload.resetToBase) parentSha = ref.data.object.sha;
             branchExists = true;
           } catch {
+            // branch missing → fork it from base below
+          }
+          if (parentSha === null) {
             const baseRef = await g.getRef({ owner, repo: name, ref: `heads/${payload.base}` });
             parentSha = baseRef.data.object.sha;
           }
@@ -365,14 +369,14 @@ export class OctokitGitHubClient implements GitHubClient {
               sha: commit.data.sha,
             });
           }
-          return { branch: payload.branch };
+          return { branch: payload.branch, sha: commit.data.sha };
         })(),
         TIMEOUT,
       ),
     );
   }
 
-  async findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string } | null> {
+  async findOpenPr(repo: RepoRef, branch: string): Promise<{ url: string; number: number } | null> {
     return withRetry(() =>
       withTimeout(
         (async () => {
@@ -384,7 +388,71 @@ export class OctokitGitHubClient implements GitHubClient {
             per_page: 1,
           });
           const pr = res.data[0];
-          return pr ? { url: pr.html_url } : null;
+          return pr ? { url: pr.html_url, number: pr.number } : null;
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async latestPr(
+    repo: RepoRef,
+    branch: string,
+  ): Promise<{ url: string; number: number; state: 'open' | 'closed'; merged: boolean } | null> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.pulls.list({
+            owner: repo.owner,
+            repo: repo.name,
+            state: 'all',
+            head: `${repo.owner}:${branch}`,
+            sort: 'created',
+            direction: 'desc',
+            per_page: 1,
+          });
+          const pr = res.data[0];
+          if (!pr) return null;
+          return {
+            url: pr.html_url,
+            number: pr.number,
+            state: pr.state === 'open' ? ('open' as const) : ('closed' as const),
+            merged: pr.merged_at !== null,
+          };
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async updatePullRequest(repo: RepoRef, n: number, patch: { title: string; body: string }): Promise<void> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          await this.octokit.rest.pulls.update({
+            owner: repo.owner,
+            repo: repo.name,
+            pull_number: n,
+            title: patch.title,
+            body: patch.body,
+          });
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async getBranchSha(repo: RepoRef, branch: string): Promise<string | null> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          try {
+            const ref = await this.octokit.rest.git.getRef({ owner: repo.owner, repo: repo.name, ref: `heads/${branch}` });
+            return ref.data.object.sha;
+          } catch (err) {
+            if ((err as { status?: number }).status === 404) return null;
+            throw err;
+          }
         })(),
         TIMEOUT,
       ),

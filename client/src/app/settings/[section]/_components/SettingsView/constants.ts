@@ -6,6 +6,7 @@ export const SECTION_API_KEYS = "api-keys";
 export const SECTION_MODELS = "models";
 export const SECTION_CATALOG = "catalog";
 export const SECTION_NOTIFICATIONS = "notifications";
+export const SECTION_DOC_SYNC = "doc-sync";
 export const SECTION_APPEARANCE = "appearance";
 export const SECTION_KEYBOARD = "keyboard";
 /** Only in the desktop app (SPEC-11 AC-39). */
@@ -17,6 +18,7 @@ export const SETTINGS_SECTIONS = [
   SECTION_MODELS,
   SECTION_CATALOG,
   SECTION_NOTIFICATIONS,
+  SECTION_DOC_SYNC,
   SECTION_APPEARANCE,
   SECTION_KEYBOARD,
   SECTION_DESKTOP,

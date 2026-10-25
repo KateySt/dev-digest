@@ -9,6 +9,13 @@ import { api } from "../api";
 export interface Activity {
   reviews_running: number;
   evals_running: number;
+  /** Absent on an API older than Docs Sync. */
+  docs_running?: number;
+}
+
+/** Everything in flight — what the taskbar/tray show and what keeps the machine awake. */
+export function runningCount(a: Activity): number {
+  return a.reviews_running + a.evals_running + (a.docs_running ?? 0);
 }
 
 /** While something runs, notice it finishing quickly; idle, notice a new start
@@ -23,7 +30,7 @@ export const activityQueries = {
       queryKey: ["activity"],
       queryFn: () => api.get<Activity>("/activity"),
       refetchInterval: (q) =>
-        q.state.data && q.state.data.reviews_running + q.state.data.evals_running > 0
+        q.state.data && runningCount(q.state.data) > 0
           ? ACTIVITY_BUSY_POLL_MS
           : ACTIVITY_IDLE_POLL_MS,
     }),

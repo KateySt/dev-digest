@@ -27,6 +27,7 @@ export * from './schema/runs';
 export * from './schema/ops';
 export * from './schema/repo-intel';
 export * from './schema/notifications';
+export * from './schema/doc-sync';
 
 import { users, workspaces, workspaceMembers, settings } from './schema/core';
 import { repos } from './schema/repos';

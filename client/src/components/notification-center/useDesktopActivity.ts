@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useActivity, useNotifications } from "@/lib/hooks";
+import { runningCount, useActivity, useNotifications } from "@/lib/hooks";
 import { useDesktop } from "@/lib/desktop";
 
 /**
@@ -15,10 +15,11 @@ export function useDesktopActivity(): void {
   const { data: activity } = useActivity(!!desktop);
   const { data: notifications } = useNotifications();
 
-  const running = activity ? activity.reviews_running + activity.evals_running : 0;
+  const running = activity ? runningCount(activity) : 0;
   const unread = notifications?.unread ?? 0;
+  const keepAwake = (activity?.docs_running ?? 0) > 0;
 
   React.useEffect(() => {
-    void desktop?.app.setActivity({ running, unread });
-  }, [desktop, running, unread]);
+    void desktop?.app.setActivity({ running, unread, keepAwake });
+  }, [desktop, running, unread, keepAwake]);
 }

@@ -105,7 +105,11 @@ export function registerIpc(deps: IpcDeps): void {
   });
   handle('app:set-activity', (_win, arg) => {
     const a = (arg ?? {}) as Record<string, unknown>;
-    setActivity({ running: clampInt(a.running, 0, 999), unread: clampInt(a.unread, 0, 999) });
+    setActivity({
+      running: clampInt(a.running, 0, 999),
+      unread: clampInt(a.unread, 0, 999),
+      keepAwake: a.keepAwake === true,
+    });
   });
   handle('app:check-for-updates', () => checkForUpdates(true));
   handle('app:open-releases', () => shell.openExternal(RELEASES_URL));

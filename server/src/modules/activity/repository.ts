@@ -16,6 +16,14 @@ export class ActivityRepository {
     return row?.n ?? 0;
   }
 
+  async docSyncRunning(workspaceId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(t.docSyncRuns)
+      .where(and(eq(t.docSyncRuns.workspaceId, workspaceId), eq(t.docSyncRuns.status, 'running')));
+    return row?.n ?? 0;
+  }
+
   async evalsRunning(workspaceId: string): Promise<number> {
     const [row] = await this.db
       .select({ n: count() })
