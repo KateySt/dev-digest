@@ -78,7 +78,7 @@ flowchart TB
     evalMod["eval<br/>/eval-cases · /findings/:id/eval-case<br/>/agents/:id/eval-runs (+ /compare)<br/>/eval-suite-runs/:id · /eval-dashboard (+ /run-all)<br/>/skills/:id/eval-runs (+ /compare) · /eval-dashboard/skills (+ /run-all)"]
   end
   subgraph CI["Export to CI"]
-    ciMod["ci<br/>GET /agents/:id/ci · POST /agents/:id/ci/(preview|export|zip)<br/>POST /ci-runs/sync · /ci-runs · /ci-runs/repos"]
+    ciMod["ci<br/>GET /agents/:id/ci · POST /agents/:id/ci/(preview|export|zip)<br/>POST /ci-runs/sync · /ci-runs · /ci-runs/repos<br/>/ci/jenkins-connection (GET|PUT|DELETE) · POST /ci/jenkins-connection/test"]
   end
   subgraph Intel["Repo intelligence"]
     repoIntel["repo-intel<br/>/repos/:id/index-state · /resync"]
@@ -99,11 +99,13 @@ flowchart TB
 | Route | Purpose |
 |-------|---------|
 | `GET /agents/:id/ci` | installations (with out-of-date flag) + recent runs for an agent |
-| `POST /agents/:id/ci/preview` | generate the file set and workflow; a hand-edited workflow is linted (`422` on violations) |
+| `POST /agents/:id/ci/preview` | generate the file set and workflow (GitHub Actions) or `Jenkinsfile` (Jenkins); a hand-edited one is linted (`422` on violations) |
 | `POST /agents/:id/ci/export` | commit to branch `devdigest/ci` and open/update the PR "Add DevDigest CI review" (one PR per repo, one job per agent) |
 | `POST /agents/:id/ci/zip` | same file set as a zip download |
-| `POST /ci-runs/sync` | pull-based ingest of finished runs |
+| `POST /ci-runs/sync` | pull-based ingest of finished GitHub Actions runs and Jenkins builds; per-installation `errors[]` |
 | `GET /ci-runs` · `GET /ci-runs/repos` | CI Runs page data and repo filter |
+| `GET` · `PUT` · `DELETE /ci/jenkins-connection` | per-repo Jenkins URL + username; the API token goes only to `SecretsProvider` and is never returned |
+| `POST /ci/jenkins-connection/test` | call Jenkins' identity endpoint with saved or unsaved values; writes nothing |
 
 The old one-step `publish` and its `preview` routes are removed.
 

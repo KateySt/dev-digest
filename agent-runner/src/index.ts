@@ -1,14 +1,15 @@
 /**
  * @devdigest/agent-runner — CI runner CLI (T8).
  *
- * Invoked by the generated GitHub Actions workflow as
+ * Invoked by the generated GitHub Actions workflow or Jenkinsfile as
  * `node .devdigest/runner.mjs` (`server/src/modules/ci/constants.ts` /
  * `helpers.ts`) — bundled by `ncc` into a single self-contained
  * `bundle/runner.mjs` (see `scripts/copy-bundle.mjs`) with no runtime
  * dependency on `node_modules/@devdigest/*`.
  *
  * Reads CI-injected env vars directly (OPENROUTER_API_KEY, GITHUB_TOKEN,
- * GITHUB_REPOSITORY, PR_NUMBER). This is intentional, not a `SecretsProvider`
+ * GITHUB_REPOSITORY, PR_NUMBER; under Jenkins JENKINS_URL, CHANGE_ID,
+ * BUILD_NUMBER, JOB_NAME, DEVDIGEST_REPOSITORY). This is intentional, not a `SecretsProvider`
  * bypass: the runner executes OUTSIDE the server DI graph (in the target
  * repo's own CI), so the `SecretsProvider`/`process.env` chokepoint — which is
  * scoped to `server/` — does not apply here (see `agent-runner/CLAUDE.md`).

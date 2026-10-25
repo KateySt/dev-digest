@@ -2,7 +2,7 @@ import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { RunTrace } from '@devdigest/shared';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
-import type { CiInstallationRow, CiRunRow } from '../../db/rows.js';
+import type { CiInstallationRow, CiJenkinsConnectionRow, CiRunRow } from '../../db/rows.js';
 
 export interface CiRunFilters {
   agentId?: string;
@@ -36,7 +36,7 @@ export interface InstallationWithContext {
 export interface UpsertInstallationValues {
   agentId: string;
   repo: string;
-  targetType: 'gha';
+  targetType: 'gha' | 'jenkins';
   githubRepoId: number;
   branch: string;
   workflowPath: string;
@@ -47,16 +47,38 @@ export interface UpsertInstallationValues {
   triggers: string[];
   prUrl: string | null;
   agentSlug: string;
+  /** Jenkins only; pass null for GitHub Actions. */
+  ciServerUrl: string | null;
+  ciJobName: string | null;
+  openrouterCredentialId: string | null;
+  githubCredentialId: string | null;
+  scanCredentialId: string | null;
+  agentLabel: string | null;
 }
+
+/** Repo-wide Jenkins settings shared by every Jenkins installation of a repo. */
+export interface JenkinsRepoSettings {
+  ciServerUrl: string | null;
+  ciJobName: string;
+  openrouterCredentialId: string;
+  githubCredentialId: string;
+  scanCredentialId: string | null;
+  agentLabel: string;
+}
+
+/** Which CI a run row came from, and its identity there. */
+export type RunIdentity =
+  | { source: 'gha'; githubRunId: number; runAttempt: number }
+  | { source: 'jenkins'; externalBuildId: string };
 
 /** A `ci_runs` row for a run whose artifact failed verification / download. */
 export interface FailedRunValues {
   ciInstallationId: string;
-  githubRunId: number;
-  runAttempt: number;
+  identity: RunIdentity;
   ranAt: Date;
   prNumber: number | null;
-  commitSha: string;
+  /** Null for Jenkins builds whose artifact never arrived (no trusted head SHA). */
+  commitSha: string | null;
   jobUrl: string;
   ingestError: string;
   agentSlug: string;
@@ -66,8 +88,7 @@ export interface IngestVerifiedInput {
   workspaceId: string;
   agentId: string;
   installationId: string;
-  githubRunId: number;
-  runAttempt: number;
+  identity: RunIdentity;
   ranAt: Date;
   jobUrl: string;
   prNumber: number;
@@ -116,10 +137,13 @@ export class CiRepository {
     );
   }
 
-  /** Every `gha` installation in the workspace — the sync work list. */
+  /** Every `gha` and `jenkins` installation in the workspace — the sync work list. */
   async listInstallationsForWorkspace(workspaceId: string): Promise<InstallationWithContext[]> {
     return this.selectInstallations(
-      and(eq(t.agents.workspaceId, workspaceId), eq(t.ciInstallations.targetType, 'gha')),
+      and(
+        eq(t.agents.workspaceId, workspaceId),
+        inArray(t.ciInstallations.targetType, ['gha', 'jenkins']),
+      ),
     );
   }
 
@@ -162,6 +186,36 @@ export class CiRepository {
       })
       .returning();
     return row!;
+  }
+
+  /** Q2: Jenkins job/credential/label settings are repo-wide — apply to every peer. */
+  async updateJenkinsRepoSettings(
+    workspaceId: string,
+    repo: string,
+    settings: JenkinsRepoSettings,
+  ): Promise<void> {
+    const agentIds = this.db
+      .select({ id: t.agents.id })
+      .from(t.agents)
+      .where(eq(t.agents.workspaceId, workspaceId));
+    await this.db
+      .update(t.ciInstallations)
+      .set(settings)
+      .where(
+        and(
+          eq(t.ciInstallations.repo, repo),
+          eq(t.ciInstallations.targetType, 'jenkins'),
+          inArray(t.ciInstallations.agentId, agentIds),
+        ),
+      );
+  }
+
+  /** Persist (or clear, with null) an installation's last sync error code. */
+  async setLastSyncError(installationId: string, code: string | null): Promise<void> {
+    await this.db
+      .update(t.ciInstallations)
+      .set({ lastSyncError: code })
+      .where(eq(t.ciInstallations.id, installationId));
   }
 
   async markSynced(installationIds: string[], at: Date): Promise<void> {
@@ -248,6 +302,16 @@ export class CiRepository {
     return new Set(rows.map((r) => `${r.runId}:${r.attempt}`));
   }
 
+  /** Jenkins `external_build_id`s of the given builds that are already stored. */
+  async existingExternalBuildIds(installationId: string, ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const rows = await this.db
+      .select({ id: t.ciRuns.externalBuildId })
+      .from(t.ciRuns)
+      .where(and(eq(t.ciRuns.ciInstallationId, installationId), inArray(t.ciRuns.externalBuildId, ids)));
+    return new Set(rows.map((r) => r.id).filter((id): id is string => id !== null));
+  }
+
   /**
    * Record a run whose artifact could not be ingested. Only GitHub metadata is
    * stored — never any artifact content. Returns false when the (installation,
@@ -258,8 +322,7 @@ export class CiRepository {
       .insert(t.ciRuns)
       .values({
         ciInstallationId: values.ciInstallationId,
-        githubRunId: values.githubRunId,
-        runAttempt: values.runAttempt,
+        ...identityColumns(values.identity),
         ranAt: values.ranAt,
         prNumber: values.prNumber,
         commitSha: values.commitSha,
@@ -268,7 +331,6 @@ export class CiRepository {
         ingestError: values.ingestError,
         agentSlug: values.agentSlug,
         status: 'failed',
-        source: 'gha',
       })
       .onConflictDoNothing()
       .returning({ id: t.ciRuns.id });
@@ -310,8 +372,7 @@ export class CiRepository {
           .values({
             ciInstallationId: input.installationId,
             agentRunId,
-            githubRunId: input.githubRunId,
-            runAttempt: input.runAttempt,
+            ...identityColumns(input.identity),
             ranAt: input.ranAt,
             prNumber: input.prNumber,
             prTitle: input.prTitle,
@@ -329,7 +390,6 @@ export class CiRepository {
             manifestVersion: input.manifestVersion,
             jobUrl: input.jobUrl,
             githubUrl: input.jobUrl,
-            source: 'gha',
             agentSlug: input.agentSlug,
           })
           .onConflictDoNothing()
@@ -342,4 +402,69 @@ export class CiRepository {
       throw err;
     }
   }
+}
+
+// ---- per-repo Jenkins connections ---------------------------------------
+
+/** `ci_jenkins_connections` access (URL + username; the token is in SecretsProvider). */
+export class JenkinsConnectionRepository {
+  constructor(private db: Db) {}
+
+  async get(workspaceId: string, repo: string): Promise<CiJenkinsConnectionRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(t.ciJenkinsConnections)
+      .where(
+        and(
+          eq(t.ciJenkinsConnections.workspaceId, workspaceId),
+          eq(t.ciJenkinsConnections.repo, repo.toLowerCase()),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async upsert(workspaceId: string, repo: string, url: string, username: string): Promise<void> {
+    await this.db
+      .insert(t.ciJenkinsConnections)
+      .values({ workspaceId, repo: repo.toLowerCase(), url, username })
+      .onConflictDoUpdate({
+        target: [t.ciJenkinsConnections.workspaceId, t.ciJenkinsConnections.repo],
+        set: { url, username, updatedAt: new Date() },
+      });
+  }
+
+  async delete(workspaceId: string, repo: string): Promise<void> {
+    await this.db
+      .delete(t.ciJenkinsConnections)
+      .where(
+        and(
+          eq(t.ciJenkinsConnections.workspaceId, workspaceId),
+          eq(t.ciJenkinsConnections.repo, repo.toLowerCase()),
+        ),
+      );
+  }
+
+  /** Every stored connection (all workspaces) — for the stored-secret guards (S-AC-85). */
+  async listAll(): Promise<Pick<CiJenkinsConnectionRow, 'workspaceId' | 'repo'>[]> {
+    return this.db
+      .select({ workspaceId: t.ciJenkinsConnections.workspaceId, repo: t.ciJenkinsConnections.repo })
+      .from(t.ciJenkinsConnections);
+  }
+}
+
+function identityColumns(identity: RunIdentity) {
+  return identity.source === 'gha'
+    ? {
+        source: 'gha' as const,
+        githubRunId: identity.githubRunId,
+        runAttempt: identity.runAttempt,
+        externalBuildId: null,
+      }
+    : {
+        source: 'jenkins' as const,
+        githubRunId: null,
+        runAttempt: null,
+        externalBuildId: identity.externalBuildId,
+      };
 }

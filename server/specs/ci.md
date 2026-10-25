@@ -1,7 +1,7 @@
 # Spec: Export to CI — workflow generation, export, verified ingest, CI Runs API
 
 Spec ID: SPEC-03
-Status: implemented
+Status: draft
 Supersedes: none
 
 Client-side counterpart (CI tab, Export wizard, CI Runs page):
@@ -13,6 +13,29 @@ saved by plan step 0b).
 
 ## Changelog
 
+- 2026-10-22 — Jenkins becomes a second working target (AC-46 – AC-86).
+  The Jenkins target is a `Jenkinsfile` in the same `devdigest/ci` PR,
+  consumed by a Jenkins Multibranch Pipeline with GitHub Branch Source.
+  Repos stay on GitHub, and reviews are still posted to the GitHub PR.
+  - Generation, lint and an optional Jenkins validator. One CI target per
+    repo (409 `ci_target_conflict`).
+  - A Jenkins trigger set of `opened` + `synchronize`, classified by build
+    number, with stated limits. `reopened` is not supported.
+  - A per-repo Jenkins connection (URL, username, API token kept in the
+    secrets adapter only), Test and Remove.
+  - Optional multibranch job creation over Jenkins REST (`config.xml`,
+    never an inline script).
+  - Pull-based verified Jenkins ingest with per-installation sync errors
+    and a new build identity (`external_build_id`).
+  - Runner Jenkins context, per-agent result files, and secret-scan
+    coverage of Jenkins tokens.
+
+  AC-1 – AC-45 are now scoped to target `gha` where they name
+  GitHub-Actions-only artifacts (see "Jenkins target" for the mapping).
+  The non-goal "Jenkins generator" is removed. Status moved from
+  `implemented` to `draft`: the GitHub Actions part stays implemented, the
+  Jenkins part is unbuilt. No new automated tests this iteration (user
+  decision); verification hints mark automated categories as deferred.
 - 2026-10-10 — Security hardening + sync filtering, aligning the spec with
   the implemented, user-accepted behavior. AC-4: manifest skill entries must
   match `^[a-z0-9-]+$`. AC-17: each job has a bootstrap guard that skips the
@@ -71,10 +94,20 @@ target GitHub repo, have it review every pull request with the bundled
   Verify each artifact before persisting it, and store forged or expired ones
   as failed.
 - Serve the CI Runs list with the columns and filters the client needs.
+- (2026-10-22) Offer Jenkins as a second target with the same guarantees:
+  - a hardened, linted `Jenkinsfile` in the same `devdigest/ci` PR;
+  - a per-repo Jenkins connection;
+  - optional creation of the multibranch job;
+  - verified pull-based ingest of Jenkins builds into the same tables.
 
 **Non-goals**
 
-- CircleCI, Jenkins and Generic CLI generators. Only `gha` is accepted.
+- CircleCI and Generic CLI generators. Only `gha` and `jenkins` are
+  accepted (2026-10-22).
+- Jenkins: non-GitHub repo hosting, push/webhook ingest from Jenkins, an
+  inline pipeline script in job config, switching an existing repo's CI
+  target, and silent automatic re-export when an agent changes (the
+  existing "out of date" flag + one-click re-export is reused).
 - A push/webhook ingest endpoint, or any extra secret or permission in the
   target repo.
 - Changes to the multi-run service (`reviews/run-executor`), the PR feed, or
@@ -339,6 +372,382 @@ check`). Where an automated test would normally apply, the hint ends with
   `POST /agents/:id/ci/publish` route and the old preview route shall no
   longer exist. (verify via: code inspection, typecheck)
 
+### Jenkins target (2026-10-22)
+
+Scope of AC-1 – AC-45 for Jenkins:
+
+- **Apply to `jenkins` unchanged:** AC-2 – AC-7, AC-9, AC-20, AC-24,
+  AC-26 – AC-31, AC-33, AC-36 – AC-41, AC-43 – AC-45.
+- **Replaced for `jenkins`** (they stay authoritative for `gha`): AC-1,
+  AC-8, AC-10 – AC-19, AC-32, AC-34, AC-35, AC-40 (status source) and
+  AC-42.
+- **Apply with the Jenkins additions below:** AC-21 – AC-23 and AC-25.
+
+All automated categories below are deferred this iteration (user
+decision).
+
+#### Target selection and inputs
+
+- AC-46: WHEN `POST /agents/:id/ci/preview|export|zip` is called with
+  target `jenkins`, the system shall accept it. Targets `circle` and `cli`
+  shall still be rejected with 422. (verify via: manual check; automated:
+  integration test, deferred)
+- AC-47: IF a preview or export targets a repo that already has an
+  installation (of any agent) with a different `target_type`, THEN the
+  system shall respond 409 `ci_target_conflict` naming the existing target.
+  It shall perform no GitHub, Jenkins or database write. (verify via:
+  manual check)
+- AC-48: WHERE the target is `jenkins`, the system shall require a
+  `jenkins` input object with these fields:
+  - `job_name`: default `devdigest-review`, folders allowed, matches
+    `^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$`;
+  - `openrouter_credential_id`: default `devdigest-openrouter-api-key`;
+  - `github_credential_id`: default `devdigest-github-token`;
+  - `agent_label`: default `any`, matches `^[A-Za-z0-9._ &|!()-]{1,100}$`;
+  - `scan_credential_id`: optional, used only for job creation.
+
+  Credential IDs shall match `^[A-Za-z0-9._-]{1,100}$`. IF any field is
+  invalid, or `workflow_yaml` is sent with target `jenkins`, THEN the
+  system shall respond 422. (verify via: manual check; automated: unit
+  test, deferred)
+
+#### Triggers
+
+- AC-49: WHERE the target is `jenkins`, the system shall accept only the
+  triggers `opened` and `synchronize`. IF `reopened` is selected, THEN the
+  system shall respond 422 `trigger_not_supported`. IF zero triggers are
+  selected, THEN the system shall respond 422 as in AC-9. (verify via:
+  manual check)
+- AC-50: WHEN a Jenkins build of a `PR-<n>` job runs, its trigger class
+  shall be:
+  - `opened` IF its build number is 1;
+  - `synchronize` otherwise.
+
+  The generated `Jenkinsfile` shall run an agent's stage only WHEN the
+  build's class is in that agent's installation triggers. Each agent's
+  stage carries its own installation's triggers, so exporting one agent
+  never changes another agent's triggers. Documented limitations, which
+  shall also be stated in the PR body:
+  - a manual rebuild or replay counts as `synchronize`;
+  - a reopened PR is classified `opened` only if Jenkins had removed its
+    job; Jenkins does not rebuild a reopen without new commits.
+
+  (verify via: code inspection, manual check; automated: unit test,
+  deferred)
+- AC-51: WHEN sync sees a completed Jenkins build whose trigger class
+  (AC-50) is not in the installation's triggers, the system shall skip it
+  and store no row. (verify via: code inspection)
+
+#### Generated Jenkinsfile
+
+- AC-52: WHEN the target is `jenkins`, the system shall return the AC-1
+  file set, except that a root `Jenkinsfile` replaces
+  `.github/workflows/devdigest-review.yml`. No file under
+  `.github/workflows/` shall be generated. (verify via: manual check)
+- AC-53: WHEN the `Jenkinsfile` is generated, it shall be a declarative
+  pipeline with:
+  - a `devdigest-jenkinsfile-version` header comment carrying the
+    generator version;
+  - a 15-minute timeout;
+  - concurrent builds disabled, with the previous build aborted;
+  - a build discarder.
+
+  (verify via: code inspection)
+- AC-54: WHEN the `Jenkinsfile` is generated, every agent stage shall be
+  skipped WHEN the build is not a change request (`CHANGE_ID` unset) or
+  `CHANGE_FORK` is set. (verify via: code inspection)
+- AC-55: WHEN the `Jenkinsfile` is generated, the first step before any
+  agent stage shall replace `.devdigest/` in the workspace with the
+  version from `origin/$CHANGE_TARGET`. The fetch shall be authenticated
+  through the GitHub token credential, so it works for private repos.
+  `CHANGE_TARGET` shall appear only as a quoted shell variable inside a
+  single-quoted Groovy string. No step shall execute `.devdigest/` content
+  from the PR head. (verify via: code inspection, manual check)
+- AC-56: WHEN the `Jenkinsfile` is generated, each agent stage shall
+  contain a bootstrap guard. WHEN `.devdigest/runner.mjs` or that agent's
+  manifest is absent after the restore, the stage shall print a notice and
+  skip the runner without failing. Such a build produces no result file
+  and is recorded as `artifact_missing` (AC-38). (verify via: code
+  inspection, manual check)
+- AC-57: WHEN the `Jenkinsfile` is generated, the OpenRouter key and the
+  GitHub token shall be bound only through `withCredentials` using the
+  configured credential IDs. They shall be referenced inside `sh` only as
+  shell environment variables in single-quoted strings. No credential or
+  environment value shall be Groovy-interpolated into a `sh` string.
+  (verify via: code inspection)
+- AC-58: WHEN the `Jenkinsfile` is generated, each agent stage shall:
+  - set `DEVDIGEST_AGENT=<slug>` and `DEVDIGEST_REPOSITORY=<owner/name>`;
+  - run `node .devdigest/runner.mjs`, writing
+    `devdigest-result-<slug>.json`;
+  - run in sequence with the other agent stages, wrapped so that a runner
+    failure or a triggered gate marks that stage and the build `FAILURE`
+    while later stages still run.
+
+  An `always` post step shall archive `devdigest-result-*.json` with empty
+  archives allowed. (verify via: code inspection, manual check)
+- AC-59: WHEN the `Jenkinsfile` is generated, it shall run on the
+  configured agent label. Before the first agent stage it shall check that
+  `node` is on PATH at major version 20 or higher. IF that check fails,
+  THEN it shall fail with a message naming the requirement. (verify via:
+  code inspection, manual check)
+
+#### Jenkinsfile lint and validator
+
+- AC-60: WHEN a request carries a user-edited `jenkinsfile`, the system
+  shall lint it as text, never evaluating it. Each of the following is a
+  blocking violation:
+  - a missing non-change-request / fork skip (AC-54);
+  - a missing base restore of `.devdigest/` before the first agent stage
+    (AC-55);
+  - a missing `withCredentials` binding for either secret, or a credential
+    referenced outside it (AC-57);
+  - Groovy `${…}` interpolation inside a double-quoted or
+    triple-double-quoted `sh`, `bat` or `powershell` string;
+  - any `script {` block, `load`, `evaluate`, `@Grab`, `@Library` or
+    `library` step, or a scripted `node(` block;
+  - a dangerous env name (`NODE_OPTIONS`, `LD_PRELOAD`,
+    `LD_LIBRARY_PATH`, `BASH_ENV`, `ENV`, `PATH`) set in `environment` or
+    `withEnv`;
+  - a missing archive of `devdigest-result-*.json`;
+  - a missing timeout;
+  - an agent stage whose trigger guard does not match that installation's
+    triggers (AC-50).
+
+  (verify via: manual check with a deliberately insecure edit; automated:
+  unit test, deferred)
+- AC-61: IF the Jenkinsfile lint finds one or more violations, THEN the
+  system shall respond 422 listing every violation with its rule id and
+  line. It shall perform no GitHub, Jenkins or database write. (verify
+  via: manual check)
+- AC-62: WHERE the target repo has a Jenkins connection and an edited
+  `jenkinsfile` passed AC-60, the system shall submit it to that Jenkins'
+  declarative validator.
+  - IF the validator reports errors, THEN the system shall respond 422
+    with rule `jenkins_validator` and the reported messages.
+  - IF the repo has no connection, or Jenkins is unreachable, THEN the
+    system shall proceed and add a response warning that validation was
+    skipped.
+
+  (verify via: manual check)
+
+#### Install
+
+- AC-63: WHEN a Jenkins export succeeds with action `open_pr`, the system
+  shall commit to and open or reuse the `devdigest/ci` PR exactly as in
+  AC-21 – AC-23. The PR body shall contain:
+  - a Jenkins setup checklist: each credential ID to create (secret text)
+    and its purpose; Node 20+ on the agent label; required plugins
+    (Pipeline, Pipeline: Multibranch, GitHub Branch Source, Credentials
+    Binding, Git); and the job settings (same-repo PRs only, "current pull
+    request revision", no branch or fork discovery);
+  - the AC-50 trigger limitations;
+  - the runner version and hash;
+  - a CODEOWNERS / branch-protection recommendation covering both
+    `.devdigest/` and `Jenkinsfile`;
+  - a note that GitHub Branch Source "Trust" only governs fork PRs and
+    does not protect against same-repo PRs editing the `Jenkinsfile`.
+
+  The PR body shall not ask for any GitHub repository secret. (verify via:
+  manual check)
+- AC-64: WHEN a Jenkins export succeeds, the installation (AC-24) shall
+  record:
+  - `target_type='jenkins'`;
+  - `workflow_path='Jenkinsfile'` and the Jenkinsfile generator version;
+  - `ci_job_name`, the credential IDs, the agent label and the triggers;
+  - `ci_server_url`: the origin of the repo's Jenkins connection at export
+    time, or null when the repo has none.
+
+  (verify via: code inspection)
+- AC-65: WHERE the target is `jenkins`, the system shall never map an
+  export error to `pat_workflow_scope`, because no file under
+  `.github/workflows/` is committed. A GitHub 403/404 shall map to the
+  not-found/forbidden errors of AC-25. (verify via: code inspection)
+- AC-66: WHEN `POST /agents/:id/ci/zip` is called with target `jenkins`,
+  the zip shall contain the AC-52 file set. AC-26 and AC-27 apply.
+  (verify via: manual check)
+
+#### Optional Jenkins job creation
+
+- AC-67: WHEN an export with `create_jenkins_job: true` has committed and
+  opened (or reused) the PR, the system shall create the multibranch job
+  `ci_job_name` on the repo's Jenkins connection. It shall use the
+  Jenkins REST `createItem` call with a generated `config.xml` containing:
+  - a GitHub Branch Source for the repo, using `scan_credential_id`;
+  - same-repo PR discovery only, with the "current pull request
+    revision" strategy;
+  - no branch discovery and no fork discovery;
+  - script path `Jenkinsfile`;
+  - a periodic scan every 1 hour.
+
+  The pipeline script shall never be stored inline in the job config.
+  (verify via: manual check against a Dockerized Jenkins)
+- AC-68: IF `create_jenkins_job: true` is requested and the repo has no
+  Jenkins connection, or `scan_credential_id` is missing, THEN the system
+  shall respond 422 `jenkins_not_configured` before any GitHub write.
+  (verify via: manual check)
+- AC-69: IF the job already exists, THEN the system shall leave it
+  untouched. It shall report `jenkins_job.status='already_exists'` when
+  the item is a multibranch project, and `failed` with code
+  `jenkins_job_conflict` otherwise. IF job creation fails for any other
+  reason, THEN the export shall still succeed, with
+  `jenkins_job.status='failed'` and an error code (`jenkins_auth_failed`,
+  `jenkins_unreachable`, `jenkins_plugin_missing` or
+  `jenkins_create_failed`). (verify via: manual check)
+
+#### Per-repo Jenkins connection
+
+- AC-70: WHEN `PUT /ci/jenkins-connection` is called with `repo`
+  (`owner/name`), `url`, `username` and `api_token`, the system shall save
+  that repo's connection.
+  - The URL shall be http(s), carry no userinfo, query or fragment, and
+    is stored as its origin plus path.
+  - The API token shall be stored only through `SecretsProvider`, keyed
+    per repo, never in the database.
+  - An update that omits `api_token` keeps the stored token.
+  - Saving or removing a connection shall clear the sync throttle cache
+    (AC-33) for the workspace.
+
+  (verify via: manual check)
+- AC-71: WHEN `GET /ci/jenkins-connection?repo=` is called, the system
+  shall return `url`, `username` and `has_token`, or null when the repo
+  has none. It shall never return the token. (verify via: code
+  inspection, manual check)
+- AC-72: WHEN `POST /ci/jenkins-connection/test` is called with a repo and
+  optional unsaved fields, the system shall call Jenkins'
+  authenticated-identity endpoint. Unsaved fields override saved ones,
+  and the stored token is used when none is supplied. It shall return
+  either `ok` with the Jenkins version and user, or an error code:
+  `jenkins_auth_failed`, `jenkins_unreachable`, `jenkins_not_jenkins` or
+  `jenkins_not_configured`. It shall write nothing. (verify via: manual
+  check)
+- AC-73: WHEN `DELETE /ci/jenkins-connection?repo=` is called, the system
+  shall remove that repo's connection and its stored token. It shall keep
+  every installation and `ci_runs` row. (verify via: manual check)
+
+#### Sync and verified ingest (Jenkins)
+
+- AC-74: WHEN `POST /ci-runs/sync` is called, the system shall use the
+  repo's Jenkins connection to list builds of each Jenkins installation's
+  `PR-<n>` branch jobs under `ci_job_name`. It shall ingest every
+  completed build not yet stored. It shall skip without storing:
+  - builds still running (reconsidered on a later sync);
+  - builds with result `ABORTED` or `NOT_BUILT`;
+  - builds that started before `installed_at`;
+  - builds excluded by AC-51.
+
+  IF a Jenkins call fails with a network or transient error, THEN the
+  build stays unstored for a later retry. GitHub Actions installations
+  sync as before. (verify via: manual check against a Dockerized Jenkins;
+  automated: unit test with faked Jenkins HTTP, deferred)
+- AC-75: IF a Jenkins installation cannot be synced, THEN the system shall
+  skip it, still sync every other installation, and add an entry to a new
+  `CiSyncResult.errors[]`. Each entry carries `installation_id`, `repo`,
+  `agent_id`, `code` and a human-readable `message`. Codes:
+  - `jenkins_not_configured`: the repo has no connection;
+  - `jenkins_connection_mismatch`: the installation's `ci_server_url`
+    origin differs from the repo's current connection origin;
+  - `jenkins_auth_failed`: 401/403;
+  - `jenkins_unreachable`: network error, timeout or 5xx;
+  - `jenkins_job_not_found`: 404 on `ci_job_name`.
+
+  The same code shall be persisted on the installation as
+  `last_sync_error` and returned by `GET /agents/:id/ci`. It shall be
+  cleared by that installation's next successful sync. No credential
+  shall be sent when the code is `jenkins_connection_mismatch`. (verify
+  via: manual check)
+- AC-76: WHEN a Jenkins build is ingested, the system shall fetch the
+  archived file `devdigest-result-<slug>.json` directly.
+  - IF it is absent, THEN the run is stored as `failed` with
+    `artifact_missing`. A file removed by the build discarder is
+    indistinguishable from a missing one.
+  - IF it exceeds 10 MB, THEN the system stops reading and stores
+    `artifact_too_large`.
+
+  AC-36, AC-37 and AC-41 apply unchanged. (verify via: code inspection)
+- AC-77: WHEN a Jenkins artifact is verified, the system shall accept it
+  only if all of the following hold:
+  - it parses against the strict, bounded `CiResultArtifact` schema;
+  - `findings_count` equals the severity sum;
+  - `ci_target` is `jenkins`;
+  - `ci_job` equals `<ci_job_name>/PR-<n>`, with `n` taken from the
+    Jenkins branch job name;
+  - `pr_number` equals `n`;
+  - `run_id` equals the Jenkins build number and `run_attempt` equals 1;
+  - `repository_id` equals the installation's GitHub repo id;
+  - `repository` equals the installation repo (case-insensitive);
+  - `commit_sha` is a commit of PR `n` according to the GitHub API
+    (Settings PAT);
+  - the agent slug equals the installation's `agent_slug`.
+
+  The system shall trust Jenkins and GitHub metadata, never the
+  artifact's own claims. (verify via: code inspection; automated: unit
+  test, deferred)
+- AC-78: WHEN a Jenkins build is stored, its identity shall be
+  (installation, `external_build_id`), where `external_build_id` is
+  `PR-<n>#<build number>@<build start epoch ms>`. A build already stored
+  shall never create another row, and a job recreated with restarted
+  build numbers shall not collide. Jenkins rows shall have
+  `github_run_id` and `run_attempt` null and `source='jenkins'`.
+  `job_url` shall be built from the connection base URL plus the job
+  path, never taken from Jenkins JSON. (verify via: code inspection,
+  manual check)
+- AC-79: WHEN a verified Jenkins artifact is ingested, the system shall
+  write the AC-40 rows in one transaction. The status shall come from the
+  artifact, and a triggered gate is not a failure:
+  - `agent_runs.status='done'`;
+  - `ci_runs.status` is `succeeded` or `no_findings`.
+
+  No per-stage Jenkins API is consulted. (verify via: code inspection)
+
+#### Runner (agent-runner) under Jenkins
+
+- AC-80: WHEN the runner starts with `JENKINS_URL` set, it shall build its
+  context from:
+  - `CHANGE_ID` as the PR number;
+  - `DEVDIGEST_REPOSITORY` as the repo, falling back to a parsed
+    `GIT_URL`;
+  - `BUILD_NUMBER` as `run_id`, with `run_attempt` 1;
+  - `<JOB_NAME>` as `ci_job`.
+
+  IF any of them is missing or malformed, THEN it shall hard-fail: exit
+  non-zero, post nothing, write no result file. (verify via: manual
+  check; automated: unit test, deferred)
+- AC-81: WHEN running under Jenkins, the runner shall fetch the PR's
+  title, body, head SHA, base repository id and head repository from the
+  GitHub API using `GITHUB_TOKEN`. IF `CHANGE_FORK` is set or the head
+  repository differs from the base repository, THEN it shall hard-fail
+  without reviewing, posting or writing a result file. (verify via:
+  manual check; automated: unit test, deferred)
+- AC-82: WHEN running under Jenkins, the runner shall write
+  `devdigest-result-<slug>.json` with `ci_target='jenkins'` and `ci_job`
+  set. `commit_sha` shall be the head SHA it reviewed. Review posting,
+  the gate and the exit code shall be unchanged from GitHub Actions.
+  (verify via: manual check)
+- AC-83: WHEN the shared `CiResultArtifact` contract gains `ci_target`
+  (`gha` | `jenkins`, default `gha`) and `ci_job` (nullable, at most 200
+  characters), the system shall keep accepting existing GitHub Actions
+  artifacts that lack both. The committed runner bundle shall be rebuilt
+  with `pnpm build`. (verify via: typecheck, code inspection)
+
+#### Security and regressions
+
+- AC-84: WHEN any Jenkins HTTP call is made, the system shall:
+  - apply a 10-second timeout;
+  - send credentials only to the connection's origin;
+  - never follow a redirect to another origin;
+  - never follow absolute URLs returned in Jenkins responses (every URL
+    is built from the saved base URL);
+  - never log or return the Jenkins API token.
+
+  (verify via: code inspection)
+- AC-85: WHEN files are generated (AC-7) or artifacts are scanned (AC-37),
+  the system shall include every stored Jenkins API token in the
+  stored-secret checks. (verify via: code inspection)
+- AC-86: WHILE the target is `gha`, the system shall behave exactly as in
+  AC-1 – AC-45. The only additive response fields are
+  `CiSyncResult.errors[]` and `last_sync_error`. (verify via: manual
+  regression check on a demo repo)
+
 ## Edge cases
 
 - The agent has no enabled skills: no `.devdigest/skills/*` files. The
@@ -366,6 +775,32 @@ check`). Where an automated test would normally apply, the hint ends with
 - CI runs appear in agent Stats because agent-performance has no source
   filter. This was accepted. They never appear in PR feed cost sums
   (`pr_id` NULL).
+- (Jenkins) A same-repo PR can edit the `Jenkinsfile` and drop the base
+  restore, because multibranch always uses the PR branch's `Jenkinsfile`
+  for same-repo PRs. This is the same exposure as GitHub Actions. It is
+  mitigated only by CODEOWNERS / branch protection on `Jenkinsfile` and
+  `.devdigest/` (AC-63). Any forged artifact must still pass AC-77.
+- (Jenkins) Fork PRs: the generated job does not discover forks (AC-67).
+  The `CHANGE_FORK` skip (AC-54) and the runner's own fork refusal (AC-81)
+  cover jobs created by hand.
+- (Jenkins) When a PR closes, multibranch removes its `PR-<n>` job.
+  Builds not yet synced are lost and never appear in CI Runs. Accepted
+  and documented.
+- (Jenkins) The build discarder removes old archived files: such builds
+  are stored as `artifact_missing` (AC-76).
+- (Jenkins) A deleted and recreated job restarts build numbers. The start
+  timestamp in `external_build_id` prevents false "already stored" skips
+  (AC-78).
+- (Jenkins) The export PR's own build has no runner on the base branch
+  yet. The bootstrap guard keeps the build green, and the build is stored
+  as `artifact_missing` (AC-56).
+- (Jenkins) Exporting to a repo whose other agents use GitHub Actions (or
+  the reverse) returns 409 `ci_target_conflict` (AC-47).
+- (Jenkins) A repo's connection is removed or changed to another server.
+  Installations stay, and sync reports `jenkins_not_configured` or
+  `jenkins_connection_mismatch` per installation (AC-73, AC-75).
+- (Jenkins) A manual rebuild counts as `synchronize`. A reopened PR is
+  classified `opened` only if Jenkins had removed its job (AC-50).
 
 ## Non-functional requirements
 
@@ -381,6 +816,16 @@ check`). Where an automated test would normally apply, the hint ends with
   does not import Drizzle.
 - **GitHub rate limits.** Sync is throttled (AC-33) and fetches only runs that
   are not yet stored.
+- **Jenkins (2026-10-22).**
+  - Per-repo API tokens live only in `SecretsProvider`.
+  - Jenkins HTTP follows AC-84.
+  - The connection URL may be `http://`, because local or LAN Jenkins is
+    the primary case.
+  - Jenkins sync calls are bounded by the same 30-second throttle and
+    fetch only builds not yet stored.
+
+  The Jenkins connection keeps the module's onion layering: a Jenkins
+  port and adapter, with no `fetch` in the service.
 
 ## Inputs and provenance
 
@@ -396,6 +841,18 @@ check`). Where an automated test would normally apply, the hint ends with
   target repo's CI, not in this server.
 - [deterministic: GitHub API] `head_sha`, `repository.id`, `pull_requests[]`,
   workflow path, `html_url`, run id and attempt, default branch.
+- [deterministic: generator] `Jenkinsfile`, Jenkinsfile version, job
+  `config.xml` (2026-10-22).
+- [deterministic: user input] Jenkins job name, credential IDs, agent
+  label, scan credential ID, edited `jenkinsfile`, per-repo connection
+  (URL, username, API token).
+- [deterministic: Jenkins REST API] branch job names (`PR-<n>`), build
+  numbers, start timestamps, `building`/result, archived file bytes,
+  validator result, identity/version for Test connection.
+- [deterministic: GitHub API] whether `commit_sha` belongs to PR `n`
+  (AC-77).
+- [reused: CI artifact produced by the runner on Jenkins] same fields as
+  the GitHub Actions artifact plus `ci_target` and `ci_job`.
 - No new LLM calls in this server: [new: 0 LLM calls].
 
 ## Untrusted inputs
@@ -408,6 +865,18 @@ check`). Where an automated test would normally apply, the hint ends with
   persisted.
 - **PR titles and other GitHub strings.** They are stored as plain text and
   never interpolated into generated YAML `run:` values (AC-15).
+- **User-edited `jenkinsfile`.** It is linted as text (AC-60) and
+  optionally checked by Jenkins' validator (AC-62). It is never evaluated
+  by the server.
+- **Jenkins API responses.** Build metadata and archived files from the
+  Jenkins API are untrusted. Absolute URLs in them are never followed
+  (AC-84). The archived file goes through the same size, schema, secret
+  and cross-check gates as a GitHub artifact (AC-76, AC-77).
+- **Jenkins env values in the runner** (`CHANGE_TARGET`, `CHANGE_ID`,
+  `GIT_URL`, `JOB_NAME`). They reach shell only as quoted variables
+  (AC-55, AC-57), and the runner validates them (AC-80).
+- **The Jenkins connection URL.** It is validated as http(s) with no
+  userinfo, query or fragment (AC-70).
 
 ## Module interactions / API contracts
 
@@ -440,6 +909,31 @@ check`). Where an automated test would normally apply, the hint ends with
   `memory.jsonl` if it is non-empty, and writes the extended
   `CiResultArtifact`.
 - The client consumes all of the above (see `C-AC-*`).
+- Jenkins additions (2026-10-22):
+  - `CiExportInput` gains:
+    - `jenkins?: { job_name, openrouter_credential_id,
+      github_credential_id, agent_label, scan_credential_id? }`, required
+      when `target='jenkins'`;
+    - `jenkinsfile?: string`;
+    - `create_jenkins_job?: boolean`.
+  - `CiExport` gains `jenkins_job?: { status: 'created' |
+    'already_exists' | 'failed', url?, code? }`.
+  - `CiInstallation` gains nullish `ci_server_url`, `ci_job_name`,
+    credential IDs, `agent_label` and `last_sync_error`.
+  - `CiSyncResult` gains `errors[]` (AC-75).
+  - `CiRun.source` may be `jenkins`.
+  - `CiResultArtifact` gains `ci_target` and `ci_job` (AC-83).
+  - The `ci_runs` row gains `external_build_id`, nullable for GitHub
+    Actions rows. A migration adds the new columns; the planner finalizes
+    the names.
+  - New routes: `GET|PUT|DELETE /ci/jenkins-connection` and
+    `POST /ci/jenkins-connection/test` (AC-70 – AC-73).
+  - Runner contract: Jenkins env (AC-80) plus `DEVDIGEST_REPOSITORY`,
+    `DEVDIGEST_AGENT`, `GITHUB_TOKEN` and `OPENROUTER_API_KEY`, the last
+    two bound by `withCredentials`.
+  - Jenkins REST endpoints used: authenticated identity (Test),
+    `createItem` (job creation), pipeline-model-converter `validate`, job
+    and build JSON listing, and archived-file download.
 
 ## Assumptions
 
@@ -467,8 +961,19 @@ listed in the handoff.
 - A10: Status was moved back to `draft` because the new design is
   unimplemented.
 - A11: Migration 0023 adds `ci_installations.agent_slug` (AC-24).
+- A12 (2026-10-22): The CI target is per repo (AC-47). Switching a repo
+  from one target to the other is out of scope.
+- A13: The Jenkins sequential stages, 15-minute timeout and 1-hour
+  periodic scan are defaults. Webhooks cannot reach a localhost studio,
+  and Jenkins' own GitHub webhook setup is left to the user.
+- A14: A6 still holds: only a `ci_fail_on` change marks an installation
+  out of date. Triggers are changed only by re-exporting from the wizard,
+  so they never flag an installation out of date (user decision
+  2026-10-22).
 
 ## Open questions
 
-None blocking. Automated tests for the AC-N above are deferred to a later
-iteration by user decision.
+None. (Resolved 2026-10-22: triggers do not flag an installation out of
+date; see A14.)
+
+Automated tests for every AC-N above are deferred by user decision.

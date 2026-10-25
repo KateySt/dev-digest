@@ -1,0 +1,387 @@
+import type { CiLintViolation, CiRunnerMeta } from '@devdigest/shared';
+import {
+  JENKINSFILE_PATH,
+  JENKINSFILE_VERSION,
+  JENKINS_CHANGE_GUARD,
+  JENKINS_DANGEROUS_ENV,
+  JENKINS_PREPARE_STAGE,
+  JENKINS_RESTORE_LINE,
+  RESULT_GLOB,
+  RUNNER_PATH,
+  jenkinsStageName,
+  jenkinsTriggerGuard,
+  manifestPath,
+  resultFile,
+} from '../constants.js';
+
+/**
+ * Jenkins target generators (pure, no I/O): the Jenkinsfile, its text lint,
+ * the multibranch job `config.xml` and the export PR body.
+ */
+
+export interface JenkinsStageAgent {
+  name: string;
+  slug: string;
+  /** This agent's own installation triggers (S-AC-50). */
+  triggers: string[];
+}
+
+export interface JenkinsSettings {
+  repo: string; // owner/name
+  agentLabel: string;
+  openrouterCredentialId: string;
+  githubCredentialId: string;
+}
+
+/** GitHub owner/repo names are `[A-Za-z0-9._-]`; anything else never reaches a script. */
+const SAFE_REPO = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+
+/** Trigger class of a Jenkins build of a `PR-<n>` job (S-AC-50). */
+export function triggerClass(buildNumber: number): 'opened' | 'synchronize' {
+  return buildNumber === 1 ? 'opened' : 'synchronize';
+}
+
+function q(value: string): string {
+  // Single-quoted Groovy literal: no interpolation. Inputs are regex-validated,
+  // the escape is defense in depth.
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
+function credentialsBlock(s: JenkinsSettings, inner: string, indent: string): string {
+  return [
+    `${indent}withCredentials([`,
+    `${indent}  string(credentialsId: ${q(s.openrouterCredentialId)}, variable: 'OPENROUTER_API_KEY'),`,
+    `${indent}  string(credentialsId: ${q(s.githubCredentialId)}, variable: 'GITHUB_TOKEN'),`,
+    `${indent}]) {`,
+    inner,
+    `${indent}}`,
+  ].join('\n');
+}
+
+export function buildJenkinsfile(input: { agents: JenkinsStageAgent[]; settings: JenkinsSettings }): string {
+  const { settings } = input;
+  if (!SAFE_REPO.test(settings.repo)) throw new Error(`Unsupported repository name: ${settings.repo}`);
+  const agentLine =
+    settings.agentLabel === 'any' ? '  agent any' : `  agent { label ${q(settings.agentLabel)} }`;
+
+  const prepare = [
+    `    stage(${q(JENKINS_PREPARE_STAGE)}) {`,
+    `      when { ${JENKINS_CHANGE_GUARD} }`,
+    '      steps {',
+    "        sh '''",
+    '          rm -f devdigest-result-*.json',
+    '          if ! node -e \'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)\'; then',
+    '            echo "DevDigest needs Node.js 20 or newer on the PATH of this Jenkins agent."',
+    '            exit 1',
+    '          fi',
+    "        '''",
+    '        // Run .devdigest/ from the protected base branch, never from the PR head.',
+    `        withCredentials([string(credentialsId: ${q(settings.githubCredentialId)}, variable: 'GITHUB_TOKEN')]) {`,
+    "          sh '''",
+    '            set -eu',
+    '            export GIT_CONFIG_COUNT=1',
+    '            export GIT_CONFIG_KEY_0=http.extraHeader',
+    '            GIT_CONFIG_VALUE_0="Authorization: Basic $(printf \'x-access-token:%s\' "$GITHUB_TOKEN" | base64 | tr -d \'[:space:]\')"',
+    '            export GIT_CONFIG_VALUE_0',
+    `            git fetch --no-tags --depth=1 https://github.com/${settings.repo}.git "+refs/heads/$CHANGE_TARGET:refs/remotes/devdigest-base/$CHANGE_TARGET"`,
+    '            rm -rf .devdigest',
+    '            if git cat-file -e "devdigest-base/$CHANGE_TARGET:.devdigest" 2>/dev/null; then',
+    `              ${JENKINS_RESTORE_LINE}`,
+    '            fi',
+    "          '''",
+    '        }',
+    '      }',
+    '    }',
+  ].join('\n');
+
+  const stages = input.agents.map((agent) => {
+    const run = [
+      `          withEnv([${q(`DEVDIGEST_AGENT=${agent.slug}`)}, ${q(`DEVDIGEST_REPOSITORY=${settings.repo}`)}, ${q(`DEVDIGEST_RESULT_PATH=${resultFile(agent.slug)}`)}]) {`,
+      "            sh '''",
+      `              if [ ! -f ${RUNNER_PATH} ] || [ ! -f ${manifestPath(agent.slug)} ]; then`,
+      `                echo "DevDigest: ${RUNNER_PATH} or ${manifestPath(agent.slug)} is not on the base branch yet; merge the DevDigest CI PR to enable reviews."`,
+      '                exit 0',
+      '              fi',
+      `              node ${RUNNER_PATH}`,
+      "            '''",
+      '          }',
+    ]
+      .map((line) => `  ${line}`)
+      .join('\n');
+    return [
+      `    stage(${q(jenkinsStageName(agent.slug))}) {`,
+      '      when {',
+      '        allOf {',
+      `          ${JENKINS_CHANGE_GUARD}`,
+      `          ${jenkinsTriggerGuard(agent.triggers)}`,
+      '        }',
+      '      }',
+      '      steps {',
+      "        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {",
+      credentialsBlock(settings, run, '          '),
+      '        }',
+      '      }',
+      '    }',
+    ].join('\n');
+  });
+
+  return [
+    `// devdigest-jenkinsfile-version: ${JENKINSFILE_VERSION}`,
+    '// Generated by DevDigest. Edits are linted when exported from the studio.',
+    'pipeline {',
+    agentLine,
+    '  options {',
+    "    timeout(time: 15, unit: 'MINUTES')",
+    '    disableConcurrentBuilds(abortPrevious: true)',
+    "    buildDiscarder(logRotator(numToKeepStr: '50', artifactNumToKeepStr: '50'))",
+    '  }',
+    '  stages {',
+    prepare,
+    ...stages,
+    '  }',
+    '  post {',
+    '    always {',
+    `      archiveArtifacts artifacts: ${q(RESULT_GLOB)}, allowEmptyArchive: true`,
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Jenkinsfile lint (S-AC-60) — text only, never evaluated
+// ---------------------------------------------------------------------------
+
+function lineOf(text: string, index: number): string {
+  return `line ${text.slice(0, index).split('\n').length}`;
+}
+
+/** Text of each `stage('<name>') { … }` block, matched by brace depth. */
+function stageBlocks(text: string): { name: string; start: number; body: string }[] {
+  const out: { name: string; start: number; body: string }[] = [];
+  for (const m of text.matchAll(/stage\s*\(\s*(['"])(.*?)\1\s*\)\s*\{/g)) {
+    let depth = 1;
+    let i = m.index + m[0].length;
+    for (; i < text.length && depth > 0; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') depth--;
+    }
+    out.push({ name: m[2]!, start: m.index, body: text.slice(m.index, i) });
+  }
+  return out;
+}
+
+/** Character ranges covered by `withCredentials(...) { … }` blocks. */
+function credentialRanges(text: string): [number, number][] {
+  const out: [number, number][] = [];
+  for (const m of text.matchAll(/withCredentials\s*\(/g)) {
+    const open = text.indexOf('{', m.index);
+    if (open < 0) break;
+    let depth = 1;
+    let i = open + 1;
+    for (; i < text.length && depth > 0; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') depth--;
+    }
+    out.push([m.index, i]);
+  }
+  return out;
+}
+
+const FORBIDDEN_STEPS: { rule: string; re: RegExp; what: string }[] = [
+  { rule: 'forbidden.script_block', re: /\bscript\s*\{/g, what: 'a script {} block' },
+  { rule: 'forbidden.load', re: /\bload\s*[('"]/g, what: 'the load step' },
+  { rule: 'forbidden.evaluate', re: /\bevaluate\s*\(/g, what: 'evaluate()' },
+  { rule: 'forbidden.grab', re: /@Grab\b/g, what: '@Grab' },
+  { rule: 'forbidden.library', re: /@Library\b|\blibrary\s*[('"]/g, what: 'a shared library' },
+  { rule: 'forbidden.scripted_node', re: /\bnode\s*\(/g, what: 'a scripted node() block' },
+];
+
+export function lintJenkinsfile(
+  text: string,
+  input: { agents: JenkinsStageAgent[]; settings: JenkinsSettings },
+): CiLintViolation[] {
+  const out: CiLintViolation[] = [];
+  const push = (rule: string, index: number, message: string) =>
+    out.push({ rule, location: index >= 0 ? lineOf(text, index) : JENKINSFILE_PATH, message });
+
+  const blocks = stageBlocks(text);
+  const agentBlocks = new Map(blocks.map((b) => [b.name, b]));
+
+  // Fork / non-change-request skip + trigger guard on every agent stage.
+  for (const agent of input.agents) {
+    const block = agentBlocks.get(jenkinsStageName(agent.slug));
+    if (!block) {
+      push('stage.missing', -1, `The stage '${jenkinsStageName(agent.slug)}' for agent ${agent.name} is missing.`);
+      continue;
+    }
+    if (!block.body.includes(JENKINS_CHANGE_GUARD)) {
+      push('guard.fork', block.start, `Stage '${block.name}' must skip non-PR builds and fork PRs: ${JENKINS_CHANGE_GUARD}`);
+    }
+    if (!block.body.includes(jenkinsTriggerGuard(agent.triggers))) {
+      push(
+        'guard.triggers',
+        block.start,
+        `Stage '${block.name}' must keep the trigger guard for ${agent.triggers.join(', ')}: ${jenkinsTriggerGuard(agent.triggers)}`,
+      );
+    }
+  }
+
+  // Base restore before the first agent stage.
+  const firstAgent = Math.min(
+    ...input.agents.map((a) => agentBlocks.get(jenkinsStageName(a.slug))?.start ?? Number.POSITIVE_INFINITY),
+  );
+  const restoreAt = text.indexOf(JENKINS_RESTORE_LINE);
+  if (restoreAt < 0 || restoreAt > firstAgent) {
+    push('restore.base', restoreAt, `.devdigest/ must be restored from the base branch before the first agent stage (${JENKINS_RESTORE_LINE}).`);
+  }
+
+  // Credentials: both bound via withCredentials, never referenced outside.
+  const ranges = credentialRanges(text);
+  const inside = (i: number) => ranges.some(([a, b]) => i >= a && i < b);
+  for (const [id, variable] of [
+    [input.settings.openrouterCredentialId, 'OPENROUTER_API_KEY'],
+    [input.settings.githubCredentialId, 'GITHUB_TOKEN'],
+  ] as const) {
+    const binding = new RegExp(
+      `string\\(\\s*credentialsId:\\s*['"]${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]\\s*,\\s*variable:\\s*['"]${variable}['"]\\s*\\)`,
+    );
+    if (!binding.test(text)) {
+      push('credentials.binding', -1, `${variable} must be bound with withCredentials from credential '${id}'.`);
+    }
+    const outside = [...text.matchAll(new RegExp(`\\b${variable}\\b`, 'g'))].find((m) => !inside(m.index));
+    if (outside) push('credentials.outside', outside.index, `${variable} is used outside withCredentials.`);
+  }
+
+  // Groovy interpolation into a shell string.
+  for (const sh of text.matchAll(/\b(sh|bat|powershell)\s*\(?\s*(?:script\s*:\s*)?("""|")/g)) {
+    const quote = sh[2]!;
+    const bodyStart = sh.index + sh[0].length;
+    const end = text.indexOf(quote, bodyStart);
+    const body = text.slice(bodyStart, end < 0 ? undefined : end);
+    if (body.includes('$')) {
+      push('interpolation.groovy', sh.index, `${sh[1]} with a double-quoted string interpolates Groovy values into the shell; use single quotes.`);
+    }
+  }
+
+  for (const f of FORBIDDEN_STEPS) {
+    f.re.lastIndex = 0;
+    const m = f.re.exec(text);
+    if (m) push(f.rule, m.index, `The Jenkinsfile may not use ${f.what}.`);
+  }
+
+  const envRe = new RegExp(`\\b(${JENKINS_DANGEROUS_ENV.join('|')})(\\+\\w*)?\\s*=`, 'g');
+  const env = envRe.exec(text);
+  if (env) push('env.dangerous', env.index, `Setting ${env[1]} is not allowed.`);
+
+  const archive = /archiveArtifacts\b[^\n]*devdigest-result-\*\.json/.exec(text);
+  if (!archive) push('archive.missing', -1, `The build must archive ${RESULT_GLOB} (archiveArtifacts, allowEmptyArchive: true).`);
+
+  if (!/\btimeout\s*\(\s*time\s*:/.test(text)) push('timeout.missing', -1, 'The pipeline must set a timeout in options {}.');
+
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Multibranch job config.xml (S-AC-67)
+// ---------------------------------------------------------------------------
+
+function xml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+export function buildJenkinsJobConfigXml(input: { repo: string; scanCredentialId: string }): string {
+  const [owner = '', name = ''] = input.repo.split('/');
+  const project = 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject';
+  return `<?xml version='1.1' encoding='UTF-8'?>
+<${project} plugin="workflow-multibranch">
+  <description>DevDigest AI review for ${xml(input.repo)} (created by DevDigest)</description>
+  <properties/>
+  <orphanedItemStrategy class="com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy" plugin="cloudbees-folder">
+    <pruneDeadBranches>true</pruneDeadBranches>
+    <daysToKeep>-1</daysToKeep>
+    <numToKeep>-1</numToKeep>
+    <abortBuilds>false</abortBuilds>
+  </orphanedItemStrategy>
+  <triggers>
+    <com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger plugin="cloudbees-folder">
+      <spec>H * * * *</spec>
+      <interval>3600000</interval>
+    </com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger>
+  </triggers>
+  <disabled>false</disabled>
+  <sources class="jenkins.branch.MultiBranchProject$BranchSourceList" plugin="branch-api">
+    <data>
+      <jenkins.branch.BranchSource>
+        <source class="org.jenkinsci.plugins.github_branch_source.GitHubSCMSource" plugin="github-branch-source">
+          <id>devdigest-${xml(owner)}-${xml(name)}</id>
+          <apiUri>https://api.github.com</apiUri>
+          <credentialsId>${xml(input.scanCredentialId)}</credentialsId>
+          <repoOwner>${xml(owner)}</repoOwner>
+          <repository>${xml(name)}</repository>
+          <repositoryUrl>https://github.com/${xml(owner)}/${xml(name)}</repositoryUrl>
+          <traits>
+            <org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait>
+              <strategyId>2</strategyId>
+            </org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait>
+          </traits>
+        </source>
+        <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
+          <properties class="empty-list"/>
+        </strategy>
+      </jenkins.branch.BranchSource>
+    </data>
+    <owner class="${project}" reference="../.."/>
+  </sources>
+  <factory class="org.jenkinsci.plugins.workflow.multibranch.WorkflowBranchProjectFactory">
+    <owner class="${project}" reference="../.."/>
+    <scriptPath>${JENKINSFILE_PATH}</scriptPath>
+  </factory>
+</${project}>
+`;
+}
+
+// ---------------------------------------------------------------------------
+// Export PR body (S-AC-63)
+// ---------------------------------------------------------------------------
+
+export function buildJenkinsPrBody(input: {
+  agents: { name: string; slug: string }[];
+  runnerMeta: CiRunnerMeta;
+  jobName: string;
+  openrouterCredentialId: string;
+  githubCredentialId: string;
+  agentLabel: string;
+}): string {
+  const agentLines = input.agents.map((a) => `- **${a.name}** (\`${a.slug}\`)`).join('\n');
+  return [
+    'Adds DevDigest AI code review to this repository. It runs on every pull request via a Jenkins Multibranch Pipeline.',
+    '',
+    '### Agents',
+    agentLines,
+    '',
+    '### Jenkins setup',
+    `- [ ] Credential \`${input.openrouterCredentialId}\` (Secret text): the OpenRouter API key the review calls.`,
+    `- [ ] Credential \`${input.githubCredentialId}\` (Secret text): a GitHub token that can read this repo and post reviews (also used to fetch \`.devdigest/\` from the base branch).`,
+    `- [ ] Node.js 20 or newer on the PATH of agents matching \`${input.agentLabel}\`.`,
+    '- [ ] Plugins: Pipeline, Pipeline: Multibranch, GitHub Branch Source, Credentials Binding, Git.',
+    `- [ ] A Multibranch Pipeline job \`${input.jobName}\` for this repo: GitHub Branch Source, discover pull requests from origin only with "The current pull request revision", no branch discovery, no fork discovery, script path \`${JENKINSFILE_PATH}\`.`,
+    '',
+    '### Trigger limits',
+    'Build 1 of a `PR-<n>` job counts as "opened"; any later build counts as "synchronize". A manual rebuild or replay counts as "synchronize". A reopened PR counts as "opened" only if Jenkins had removed its job; Jenkins does not rebuild a reopen without new commits.',
+    '',
+    '### Protect the pipeline',
+    `Anyone who can edit \`${JENKINSFILE_PATH}\` or \`.devdigest/\` in a same-repo pull request can change how the review runs. Add both to CODEOWNERS and require review from the owners with branch protection. The GitHub Branch Source "Trust" setting only governs fork PRs; it does not protect against a same-repo PR editing the \`${JENKINSFILE_PATH}\`. To block merges on findings, require the Jenkins commit status check.`,
+    '',
+    '### Runner',
+    `- Version: \`${input.runnerMeta.runner_version}\``,
+    `- SHA-256: \`${input.runnerMeta.sha256}\``,
+    `- Size: ${input.runnerMeta.size_bytes} bytes`,
+  ].join('\n');
+}

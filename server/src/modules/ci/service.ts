@@ -4,75 +4,95 @@ import type {
   CiExportInput,
   CiFile,
   CiInstallation,
+  CiJenkinsInput,
+  CiLintViolation,
   CiPreview,
   CiPreviewFile,
   CiRun,
   CiSyncResult,
-  GitHubClient,
+  JenkinsClient,
+  JenkinsConnection,
+  JenkinsConnectionInput,
+  JenkinsConnectionTestInput,
+  JenkinsConnectionTestResult,
   RepoRef,
   SkillScanFinding,
   SkillScanStatus,
-  WorkflowRunInfo,
 } from '@devdigest/shared';
 import type { Container } from '../../platform/container.js';
-import type { AgentRow, CiInstallationRow } from '../../db/rows.js';
+import type { AgentRow, CiInstallationRow, CiJenkinsConnectionRow } from '../../db/rows.js';
 import {
   AppError,
-  ExternalServiceError,
+  ConfigError,
+  ConflictError,
   NotFoundError,
   ValidationError,
 } from '../../platform/errors.js';
-import { buildRunTrace, emptyPromptAssembly } from '../../platform/trace-builder.js';
 import { isScanBlocking } from '../skills/helpers.js';
 import { RepoRepository } from '../repos/repository.js';
 import { MemoryRetriever } from '../memory/retrieval.js';
 import {
   CiRepository,
+  JenkinsConnectionRepository,
   type CiRunFilters,
   type CiRunWithContext,
   type InstallationWithContext,
 } from './repository.js';
 import {
-  ArtifactExtractError,
+  WORKFLOWS_DIR,
   buildManifestYaml,
   buildMemoryJsonl,
   buildPrBody,
   buildSkillFiles,
   buildWorkflowYaml,
-  collectStrings,
-  extractResultFromZip,
   lintWorkflow,
+  mapGitHubError,
   mapModel,
+  normalizeJenkinsUrl,
+  parseRepo,
   resolveAgentSlug,
   runnerMetadata,
   scanForSecrets,
   slugify,
+  splitJobPath,
   strToU8,
-  verifyArtifact,
   zipFiles,
+  type GitHubStep,
 } from './helpers.js';
 import {
   AGENT_RECENT_RUNS,
-  ARTIFACT_MAX_BYTES,
   CI_BRANCH,
-  CI_TARGET_TYPE,
   COMMIT_MESSAGE,
+  JENKINSFILE_PATH,
+  JENKINSFILE_VERSION,
+  JENKINS_MULTIBRANCH_CLASS,
+  JENKINS_REQUIRED_PLUGINS,
+  JENKINS_TRIGGERS,
   MANIFEST_VERSION,
   MEMORY_PATH,
   PR_TITLE,
   RUNNER_PATH,
-  SYNC_RUNS_PER_REPO,
   SYNC_THROTTLE_MS,
-  WORKFLOW_FILE,
   WORKFLOW_PATH,
   WORKFLOW_VERSION,
-  artifactName,
-  jobName,
+  jenkinsTokenKey,
   manifestPath,
 } from './constants.js';
+import {
+  buildJenkinsJobConfigXml,
+  buildJenkinsPrBody,
+  buildJenkinsfile,
+  lintJenkinsfile,
+  type JenkinsStageAgent,
+} from './targets/jenkins.js';
+import { GhaRunSource } from './sources/gha.js';
+import { JenkinsRunSource } from './sources/jenkins.js';
+import type { CiRunSource, SyncContext } from './sources/types.js';
 
 /** Secrets whose exact values must never appear in a generated file (S-AC-7). */
 const GUARDED_SECRET_KEYS = ['GITHUB_TOKEN', 'OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'];
+
+type ExportTarget = 'gha' | 'jenkins';
 
 /** A generated file plus its raw bytes when it must be copied unchanged. */
 interface PlannedFile {
@@ -85,6 +105,7 @@ interface PlannedFile {
 }
 
 interface ExportPlan {
+  target: ExportTarget;
   agent: AgentRow;
   slug: string;
   repoRef: RepoRef;
@@ -92,29 +113,35 @@ interface ExportPlan {
   warnings: string[];
   workflowAgents: { name: string; slug: string }[];
   runnerMeta: ReturnType<typeof runnerMetadata>;
+  /** Jenkins only: the repo-wide settings and the connection seen at plan time. */
+  jenkins: CiJenkinsInput | null;
+  connection: CiJenkinsConnectionRow | null;
 }
 
 /**
  * ci service (Ring 1). Backs the Agent Editor's CI tab, the Export wizard and
- * the CI Runs page. Depends only on ports (`GitHubClient`, the runner bundle
- * provider), `CiRepository`, the agents repo and pure helpers — no Drizzle.
+ * the CI Runs page. Depends only on ports (`GitHubClient`, `JenkinsClient`,
+ * the runner bundle provider, `SecretsProvider`), the ci repositories, the
+ * agents repo and pure helpers — no Drizzle, no fetch.
  *
  * Export = commit the file set to the shared `devdigest/ci` branch and open
- * (or reuse) one PR. Sync = pull completed workflow runs through the Settings
- * PAT and persist only artifacts that pass verification against GitHub's own
- * run metadata.
+ * (or reuse) one PR; for Jenkins optionally create the multibranch job. Sync =
+ * pull completed runs (GitHub Actions workflow runs, Jenkins `PR-<n>` builds)
+ * and persist only artifacts that pass verification.
  */
 export class CiService {
   private repo: CiRepository;
+  private connections: JenkinsConnectionRepository;
   private syncCache = new Map<string, { at: number; result: CiSyncResult }>();
 
   constructor(private container: Container) {
     this.repo = new CiRepository(container.db);
+    this.connections = new JenkinsConnectionRepository(container.db);
   }
 
   // ---- preview / export / zip ------------------------------------------
 
-  /** Generate the file set an export would commit. No GitHub or DB writes. */
+  /** Generate the file set an export would commit. No GitHub, Jenkins or DB writes. */
   async preview(workspaceId: string, agentId: string, input: CiExportInput): Promise<CiPreview> {
     const plan = await this.plan(workspaceId, agentId, input);
     return {
@@ -131,8 +158,20 @@ export class CiService {
   /** Commit the file set to `devdigest/ci`, open or reuse the PR, record the install. */
   async export(workspaceId: string, agentId: string, input: CiExportInput): Promise<CiExport> {
     const plan = await this.plan(workspaceId, agentId, input);
-    const github = await this.container.github();
 
+    // S-AC-68: job creation preconditions are checked before any GitHub write.
+    let jobClient: JenkinsClient | null = null;
+    if (plan.target === 'jenkins' && input.create_jenkins_job) {
+      if (!plan.jenkins?.scan_credential_id) {
+        throw new AppError('jenkins_not_configured', 'A scan credential ID is required to create the Jenkins job.', 422);
+      }
+      jobClient = await this.jenkinsClientFor(workspaceId, input.repo);
+      if (!jobClient) {
+        throw new AppError('jenkins_not_configured', 'This repository has no Jenkins connection.', 422);
+      }
+    }
+
+    const github = await this.container.github();
     let prUrl: string;
     let repoId: number;
     // Tracks which GitHub call is in flight so a 403/404 maps to the right error.
@@ -140,6 +179,7 @@ export class CiService {
     try {
       const info = await github.getRepo(plan.repoRef);
       repoId = info.id;
+      // Jenkins never commits under .github/workflows/, so it never maps to pat_workflow_scope (S-AC-65).
       step = plan.files.some((f) => f.path.startsWith(WORKFLOWS_DIR)) ? 'commit_workflows' : 'commit';
       await github.commitFiles(plan.repoRef, {
         branch: CI_BRANCH,
@@ -159,33 +199,69 @@ export class CiService {
           title: PR_TITLE,
           head: CI_BRANCH,
           base: info.defaultBranch,
-          body: buildPrBody({ agents: plan.workflowAgents, runnerMeta: plan.runnerMeta }),
+          body: this.prBody(plan),
         }));
       prUrl = pr.url;
     } catch (err) {
       throw mapGitHubError(err, step);
     }
 
+    const jenkins = plan.jenkins;
+    const jenkinsColumns = jenkins
+      ? {
+          ciServerUrl: plan.connection ? new URL(plan.connection.url).origin : null,
+          ciJobName: jenkins.job_name,
+          openrouterCredentialId: jenkins.openrouter_credential_id,
+          githubCredentialId: jenkins.github_credential_id,
+          scanCredentialId: jenkins.scan_credential_id ?? null,
+          agentLabel: jenkins.agent_label,
+        }
+      : {
+          ciServerUrl: null,
+          ciJobName: null,
+          openrouterCredentialId: null,
+          githubCredentialId: null,
+          scanCredentialId: null,
+          agentLabel: null,
+        };
+
     const row = await this.repo.upsertInstallation({
       agentId,
       repo: input.repo,
-      targetType: CI_TARGET_TYPE,
+      targetType: plan.target,
       githubRepoId: repoId,
       branch: CI_BRANCH,
-      workflowPath: WORKFLOW_PATH,
-      workflowVersion: WORKFLOW_VERSION,
+      workflowPath: plan.target === 'jenkins' ? JENKINSFILE_PATH : WORKFLOW_PATH,
+      workflowVersion: plan.target === 'jenkins' ? JENKINSFILE_VERSION : WORKFLOW_VERSION,
       manifestVersion: MANIFEST_VERSION,
       exportedCiFailOn: plan.agent.ciFailOn,
       postAs: input.post_as,
       triggers: input.triggers,
       prUrl,
       agentSlug: plan.slug,
+      ...jenkinsColumns,
     });
+    if (jenkins) {
+      // Q2: job/credentials/label are repo-wide — keep every peer in step.
+      await this.repo.updateJenkinsRepoSettings(workspaceId, input.repo, {
+        ...jenkinsColumns,
+        ciJobName: jenkins.job_name,
+        openrouterCredentialId: jenkins.openrouter_credential_id,
+        githubCredentialId: jenkins.github_credential_id,
+        agentLabel: jenkins.agent_label,
+      });
+    }
+
+    const jenkinsJob =
+      jobClient && jenkins
+        ? await this.createJenkinsJob(jobClient, input.repo, jenkins.job_name, jenkins.scan_credential_id!)
+        : null;
 
     return {
       installation: toInstallationDto(row, plan.agent.ciFailOn, null, null),
       files: plan.files.map<CiFile>((f) => ({ path: f.path, contents: f.contents, editable: f.editable })),
       pr_url: prUrl,
+      ...(jenkinsJob ? { jenkins_job: jenkinsJob } : {}),
     };
   }
 
@@ -241,14 +317,28 @@ export class CiService {
       return { ...cached.result, throttled: true };
     }
 
-    const result: CiSyncResult = { ingested: 0, failed: 0, skipped: 0, throttled: false };
+    const result: CiSyncResult = { ingested: 0, failed: 0, skipped: 0, throttled: false, errors: [] };
     const installs = await this.repo.listInstallationsForWorkspace(workspaceId);
     if (installs.length > 0) {
       const github = await this.container.github();
-      const runsByRepo = new Map<string, WorkflowRunInfo[]>();
-      const artifactsByRun = new Map<string, Awaited<ReturnType<GitHubClient['listRunArtifacts']>>>();
+      const ctx: SyncContext = {
+        workspaceId,
+        repo: this.repo,
+        result,
+        containsStoredSecret: (strings) => this.containsStoredSecret(strings),
+      };
+      const sources: Record<ExportTarget, CiRunSource> = {
+        gha: new GhaRunSource(ctx, github),
+        jenkins: new JenkinsRunSource(ctx, {
+          connections: this.connections,
+          secrets: this.container.secrets,
+          jenkins: (params) => this.container.jenkins(params),
+          github,
+        }),
+      };
       for (const inst of installs) {
-        await this.syncInstallation(workspaceId, github, inst, runsByRepo, artifactsByRun, result);
+        const target = inst.installation.targetType;
+        if (target === 'gha' || target === 'jenkins') await sources[target].syncInstallation(inst);
       }
       await this.repo.markSynced(
         installs.map((i) => i.installation.id),
@@ -259,208 +349,63 @@ export class CiService {
     return result;
   }
 
-  private async syncInstallation(
-    workspaceId: string,
-    github: GitHubClient,
-    inst: InstallationWithContext,
-    runsByRepo: Map<string, WorkflowRunInfo[]>,
-    artifactsByRun: Map<string, Awaited<ReturnType<GitHubClient['listRunArtifacts']>>>,
-    result: CiSyncResult,
-  ): Promise<void> {
-    const installation = inst.installation;
-    const repoRef = parseRepo(installation.repo);
-    if (!repoRef) return;
-    // Legacy rows exported before the slug was stored fall back to the name slug.
-    const agentSlug = installation.agentSlug ?? slugify(inst.agentName);
+  // ---- per-repo Jenkins connection (S-AC-70..73) -------------------------
 
-    let runs = runsByRepo.get(installation.repo);
-    if (!runs) {
-      try {
-        runs = await github.listWorkflowRuns(repoRef, WORKFLOW_FILE, {
-          event: 'pull_request',
-          perPage: SYNC_RUNS_PER_REPO,
-        });
-      } catch (err) {
-        // The workflow file does not exist yet (the export PR is not merged).
-        if ((err as { status?: number }).status === 404) return;
-        throw mapGitHubError(err, 'sync');
-      }
-      runsByRepo.set(installation.repo, runs);
-    }
-
-    const stored = await this.repo.existingRunKeys(
-      installation.id,
-      runs.map((r) => r.id),
-    );
-
-    for (const run of runs) {
-      if (run.status !== 'completed') {
-        result.skipped++; // considered again on a later sync (S-AC-34)
-        continue;
-      }
-      // Fork PRs and superseded runs produce no artifact by design (S-AC-13).
-      if (run.conclusion === 'skipped' || run.conclusion === 'cancelled') {
-        result.skipped++;
-        continue;
-      }
-      // Runs from before this agent was exported cannot carry its artifact.
-      if (new Date(run.createdAt) < installation.installedAt) {
-        result.skipped++;
-        continue;
-      }
-      if (stored.has(`${run.id}:${run.runAttempt}`)) {
-        result.skipped++; // S-AC-42
-        continue;
-      }
-      await this.ingestRun(workspaceId, github, repoRef, inst, agentSlug, run, artifactsByRun, result);
-    }
+  async getJenkinsConnection(workspaceId: string, repo: string): Promise<JenkinsConnection | null> {
+    const row = await this.connections.get(workspaceId, repo);
+    if (!row) return null;
+    const token = await this.container.secrets.get(jenkinsTokenKey(workspaceId, repo));
+    return { repo: row.repo, url: row.url, username: row.username, has_token: Boolean(token) };
   }
 
-  private async ingestRun(
+  async saveJenkinsConnection(workspaceId: string, input: JenkinsConnectionInput): Promise<JenkinsConnection> {
+    if (!parseRepo(input.repo)) throw new ValidationError('repo must be "owner/name"');
+    const url = normalizeJenkinsUrl(input.url);
+    if (!url) {
+      throw new ValidationError('The Jenkins URL must be http(s) with no credentials, query or fragment.');
+    }
+    if (input.api_token) {
+      const secrets = this.container.secrets;
+      if (!secrets.set) throw new ConfigError('The secrets backend is read-only.');
+      await secrets.set(jenkinsTokenKey(workspaceId, input.repo), input.api_token);
+    }
+    await this.connections.upsert(workspaceId, input.repo, url, input.username);
+    this.syncCache.delete(workspaceId);
+    return (await this.getJenkinsConnection(workspaceId, input.repo))!;
+  }
+
+  async deleteJenkinsConnection(workspaceId: string, repo: string): Promise<void> {
+    await this.connections.delete(workspaceId, repo);
+    await this.container.secrets.delete?.(jenkinsTokenKey(workspaceId, repo));
+    this.syncCache.delete(workspaceId);
+  }
+
+  /** Calls Jenkins' identity endpoint; unsaved fields override saved ones. Writes nothing. */
+  async testJenkinsConnection(
     workspaceId: string,
-    github: GitHubClient,
-    repoRef: RepoRef,
-    inst: InstallationWithContext,
-    agentSlug: string,
-    run: WorkflowRunInfo,
-    artifactsByRun: Map<string, Awaited<ReturnType<GitHubClient['listRunArtifacts']>>>,
-    result: CiSyncResult,
-  ): Promise<void> {
-    const installation = inst.installation;
-    const fail = async (ingestError: string): Promise<void> => {
-      const inserted = await this.repo.recordFailedRun({
-        ciInstallationId: installation.id,
-        githubRunId: run.id,
-        runAttempt: run.runAttempt,
-        ranAt: new Date(run.createdAt),
-        prNumber: run.pullRequests[0]?.number ?? null,
-        commitSha: run.headSha,
-        jobUrl: run.htmlUrl,
-        ingestError,
-        agentSlug,
-      });
-      if (inserted) result.failed++;
-      else result.skipped++;
-    };
-
-    // Network errors are transient: leave the run unstored so a later sync retries it.
-    let zipBytes: Uint8Array;
+    input: JenkinsConnectionTestInput,
+  ): Promise<JenkinsConnectionTestResult> {
+    const saved = await this.connections.get(workspaceId, input.repo);
+    const rawUrl = input.url ?? saved?.url;
+    const username = input.username ?? saved?.username;
+    const token = input.api_token ?? (await this.container.secrets.get(jenkinsTokenKey(workspaceId, input.repo)));
+    const url = rawUrl ? normalizeJenkinsUrl(rawUrl) : null;
+    if (!url || !username || !token) {
+      return {
+        ok: false,
+        code: 'jenkins_not_configured',
+        message: 'Enter the Jenkins URL, username and API token first.',
+      };
+    }
     try {
-      const key = `${repoRef.owner}/${repoRef.name}#${run.id}`;
-      let artifacts = artifactsByRun.get(key);
-      if (!artifacts) {
-        artifacts = await github.listRunArtifacts(repoRef, run.id);
-        artifactsByRun.set(key, artifacts);
-      }
-      const artifact = artifacts.find((a) => a.name === artifactName(agentSlug));
-      if (!artifact) return fail('artifact_missing');
-      if (artifact.expired) return fail('artifact_expired');
-      if (artifact.sizeInBytes > ARTIFACT_MAX_BYTES) return fail('artifact_too_large');
-      zipBytes = await github.downloadArtifact(repoRef, artifact.id, ARTIFACT_MAX_BYTES);
+      const me = await this.container.jenkins({ baseUrl: url, username, token }).whoAmI();
+      return { ok: true, version: me.version, user: me.user };
     } catch (err) {
-      if (err instanceof AppError && err.code === 'artifact_too_large') return fail('artifact_too_large');
-      result.skipped++;
-      return;
+      const code = (err as { code?: string }).code;
+      const mapped =
+        code === 'jenkins_auth_failed' || code === 'jenkins_not_jenkins' ? code : 'jenkins_unreachable';
+      return { ok: false, code: mapped, message: err instanceof Error ? err.message : 'Jenkins check failed' };
     }
-
-    let text: string;
-    try {
-      text = extractResultFromZip(zipBytes);
-    } catch (err) {
-      return fail(err instanceof ArtifactExtractError ? err.code : 'artifact_invalid');
-    }
-
-    // Scan the raw text BEFORE parsing; nothing from the artifact is stored on a hit (S-AC-37).
-    if (scanForSecrets(text)) return fail('secret_detected');
-
-    let raw: unknown;
-    try {
-      raw = JSON.parse(text);
-    } catch {
-      return fail('verification_failed:schema');
-    }
-    // JSON escapes (e.g. "ghp_") hide prefixes from the raw scan; re-scan decoded
-    // strings, and refuse any stored secret value like assertNoSecrets does.
-    const strings = collectStrings(raw);
-    if (strings.some((s) => scanForSecrets(s)) || (await this.containsStoredSecret(strings))) {
-      return fail('secret_detected');
-    }
-    const verified = verifyArtifact(raw, run, {
-      githubRepoId: installation.githubRepoId,
-      agentSlug,
-      repo: installation.repo,
-    });
-    if (!verified.ok) return fail(`verification_failed:${verified.check}`);
-    const artifact = verified.artifact;
-    const prNumber = artifact.pr_number as number; // non-null: checked against run.pullRequests
-
-    let prTitle: string | null = null;
-    try {
-      prTitle = (await github.getPullRequest(repoRef, prNumber)).title;
-    } catch {
-      prTitle = null;
-    }
-
-    const findingsCount = artifact.findings_count;
-    const jobConclusion = await this.agentJobConclusion(github, repoRef, run, agentSlug);
-    const runFailed = jobConclusion === 'failure' && !artifact.gate_triggered;
-    const trace = buildRunTrace({
-      config: {
-        agent: artifact.agent,
-        version: String(artifact.manifest_version),
-        provider: 'openrouter',
-        model: artifact.model,
-        pr: prNumber,
-        source: 'ci',
-        commit_sha: artifact.commit_sha,
-        manifest_version: artifact.manifest_version,
-        repo: installation.repo,
-        dependencies: artifact.dependencies,
-      },
-      stats: {
-        duration_ms: artifact.duration_ms ?? 0,
-        tokens_in: 0,
-        tokens_out: 0,
-        cost_usd: artifact.cost_usd,
-        findings: findingsCount,
-        grounding: '',
-      },
-      promptAssembly: emptyPromptAssembly('', ''),
-      toolCalls: [],
-      rawOutput: '',
-      memoryPulled: [],
-      specsRead: [],
-      log: [],
-    });
-
-    const inserted = await this.repo.ingestVerifiedRun({
-      workspaceId,
-      agentId: installation.agentId,
-      installationId: installation.id,
-      githubRunId: run.id,
-      runAttempt: run.runAttempt,
-      ranAt: new Date(run.createdAt),
-      jobUrl: run.htmlUrl, // from the API, never from the artifact
-      prNumber,
-      prTitle,
-      commitSha: artifact.commit_sha,
-      agentSlug,
-      verdict: artifact.verdict,
-      model: artifact.model,
-      manifestVersion: artifact.manifest_version,
-      critical: artifact.critical ?? 0,
-      warning: artifact.warning ?? 0,
-      suggestion: artifact.suggestion ?? 0,
-      blockers: artifact.blockers,
-      findingsCount,
-      durationMs: artifact.duration_ms ?? null,
-      costUsd: artifact.cost_usd,
-      agentRunStatus: runFailed ? 'failed' : 'done',
-      ciStatus: runFailed ? 'failed' : findingsCount > 0 ? 'succeeded' : 'no_findings',
-      trace,
-    });
-    if (inserted) result.ingested++;
-    else result.skipped++;
   }
 
   // ---- planning ----------------------------------------------------------
@@ -493,16 +438,49 @@ export class CiService {
     return new MemoryRetriever(this.container).resolveForExport(workspaceId, repoRow?.id ?? null, agents);
   }
 
+  /** Validate the target-specific inputs (S-AC-46/48/49). */
+  private checkTargetInput(input: CiExportInput): ExportTarget {
+    if (input.target !== 'gha' && input.target !== 'jenkins') {
+      throw new ValidationError('Only the GitHub Actions and Jenkins targets are supported');
+    }
+    if (input.target === 'gha') {
+      if (input.jenkinsfile != null) throw new ValidationError('jenkinsfile is only valid for the Jenkins target');
+      return 'gha';
+    }
+    if (!input.jenkins) throw new ValidationError('The Jenkins target needs the jenkins settings object');
+    if (input.workflow_yaml != null) throw new ValidationError('workflow_yaml is not valid for the Jenkins target');
+    const unsupported = input.triggers.filter((t) => !(JENKINS_TRIGGERS as readonly string[]).includes(t));
+    if (unsupported.length > 0) {
+      throw new AppError(
+        'trigger_not_supported',
+        `Jenkins supports only the opened and synchronize triggers (not ${unsupported.join(', ')}).`,
+        422,
+      );
+    }
+    return 'jenkins';
+  }
+
   /** Build the file set shared by preview, export and zip. Writes nothing. */
   private async plan(workspaceId: string, agentId: string, input: CiExportInput): Promise<ExportPlan> {
-    if (input.target !== CI_TARGET_TYPE) {
-      throw new ValidationError('Only the GitHub Actions target is supported');
-    }
+    const target = this.checkTargetInput(input);
     const repoRef = parseRepo(input.repo);
     if (!repoRef) throw new ValidationError('repo must be "owner/name"');
 
     const agent = await this.container.agentsRepo.getById(workspaceId, agentId);
     if (!agent) throw new NotFoundError('Agent not found');
+
+    // One job/stage per agent already installed on this repo, plus this one.
+    const peers = await this.repo.listInstallationsForRepo(workspaceId, input.repo);
+    // S-AC-47: one target per repo — refuse before generating anything.
+    const other = peers.find((p) => p.installation.targetType !== target);
+    if (other) {
+      throw new ConflictError(
+        `${input.repo} already uses the ${other.installation.targetType === 'jenkins' ? 'Jenkins' : 'GitHub Actions'} target. One repository can use one CI target.`,
+        { existing_target: other.installation.targetType },
+        'ci_target_conflict',
+      );
+    }
+
     const linked = await this.container.agentsRepo.linkedSkills(agentId);
     const skills = linked
       .filter(
@@ -517,8 +495,6 @@ export class CiService {
     const mapped = mapModel(agent.provider, agent.model);
     if (mapped.warning) warnings.push(mapped.warning);
 
-    // One job per agent already installed on this repo, plus this one.
-    const peers = await this.repo.listInstallationsForRepo(workspaceId, input.repo);
     const peerSlugs = peers.map((p) => ({
       agentId: p.installation.agentId,
       slug: p.installation.agentSlug ?? slugify(p.agentName),
@@ -544,11 +520,48 @@ export class CiService {
     workflowAgents.set(slug, { name: agent.name, slug });
     const agentList = [...workflowAgents.values()].sort((a, b) => a.slug.localeCompare(b.slug));
 
-    const workflowYaml =
-      input.workflow_yaml ?? buildWorkflowYaml({ agents: agentList, triggers: input.triggers });
-    if (input.workflow_yaml) {
-      const violations = lintWorkflow(input.workflow_yaml);
-      if (violations.length > 0) throw new ValidationError('Workflow lint failed', { violations });
+    let pipelineFile: PlannedFile;
+    let jenkins: CiJenkinsInput | null = null;
+    let connection: CiJenkinsConnectionRow | null = null;
+    if (target === 'jenkins') {
+      const settingsIn = input.jenkins!;
+      jenkins = settingsIn;
+      connection = await this.connections.get(workspaceId, input.repo);
+      const stageAgents = this.jenkinsStageAgents(agentList, peers, peerSlugs, slug, input.triggers);
+      const settings = {
+        repo: input.repo,
+        agentLabel: settingsIn.agent_label,
+        openrouterCredentialId: settingsIn.openrouter_credential_id,
+        githubCredentialId: settingsIn.github_credential_id,
+      };
+      const changed = peers.filter(
+        (p) =>
+          p.installation.agentId !== agentId &&
+          (p.installation.ciJobName !== settingsIn.job_name ||
+            p.installation.openrouterCredentialId !== settingsIn.openrouter_credential_id ||
+            p.installation.githubCredentialId !== settingsIn.github_credential_id ||
+            p.installation.agentLabel !== settingsIn.agent_label),
+      ).length;
+      if (changed > 0) {
+        warnings.push(
+          `This changes the Jenkins job, credential or label settings for ${changed} other agent${changed === 1 ? '' : 's'} on this repository (they share one Jenkinsfile and job).`,
+        );
+      }
+      const text = input.jenkinsfile ?? buildJenkinsfile({ agents: stageAgents, settings });
+      if (input.jenkinsfile != null) {
+        const violations = lintJenkinsfile(input.jenkinsfile, { agents: stageAgents, settings });
+        if (violations.length > 0) throw new ValidationError('Jenkinsfile lint failed', { violations });
+        await this.validateWithJenkins(workspaceId, input.repo, input.jenkinsfile, warnings);
+      }
+      pipelineFile = { path: JENKINSFILE_PATH, contents: text, editable: true };
+    } else {
+      const workflowYaml =
+        input.workflow_yaml ?? buildWorkflowYaml({ agents: agentList, triggers: input.triggers });
+      if (input.workflow_yaml) {
+        const violations = lintWorkflow(input.workflow_yaml);
+        if (violations.length > 0) throw new ValidationError('Workflow lint failed', { violations });
+      }
+      pipelineFile = { path: WORKFLOW_PATH, contents: workflowYaml, editable: true };
     }
 
     const runnerBytes = await this.container.runnerBundle.load();
@@ -559,7 +572,7 @@ export class CiService {
       ...skillFiles.map((s) => ({ path: s.path, contents: s.contents, editable: false })),
       { path: MEMORY_PATH, contents: buildMemoryJsonl(await this.exportMemory(workspaceId, input.repo, agentList, agentId, peers)), editable: false },
       { path: RUNNER_PATH, contents: '', editable: false, bytes: runnerBytes, metadata: runnerMeta },
-      { path: WORKFLOW_PATH, contents: workflowYaml, editable: true },
+      pipelineFile,
     ];
 
     await this.assertNoSecrets(files.filter((f) => !f.bytes));
@@ -569,87 +582,151 @@ export class CiService {
       }
     }
 
-    return { agent, slug, repoRef, files, warnings, workflowAgents: agentList, runnerMeta };
+    return {
+      target,
+      agent,
+      slug,
+      repoRef,
+      files,
+      warnings,
+      workflowAgents: agentList,
+      runnerMeta,
+      jenkins,
+      connection,
+    };
+  }
+
+  /** Each agent's stage carries its OWN installation's triggers (S-AC-50). */
+  private jenkinsStageAgents(
+    agentList: { name: string; slug: string }[],
+    peers: InstallationWithContext[],
+    peerSlugs: { agentId: string; slug: string }[],
+    slug: string,
+    triggers: string[],
+  ): JenkinsStageAgent[] {
+    const triggersBySlug = new Map<string, string[]>();
+    peers.forEach((p, i) => {
+      const stored = (p.installation.triggers ?? []).filter((t) =>
+        (JENKINS_TRIGGERS as readonly string[]).includes(t),
+      );
+      triggersBySlug.set(peerSlugs[i]!.slug, stored.length > 0 ? stored : [...JENKINS_TRIGGERS]);
+    });
+    triggersBySlug.set(slug, triggers);
+    return agentList.map((a) => ({ ...a, triggers: triggersBySlug.get(a.slug) ?? [...JENKINS_TRIGGERS] }));
+  }
+
+  /** S-AC-62: run an edited Jenkinsfile through the repo's Jenkins validator when possible. */
+  private async validateWithJenkins(
+    workspaceId: string,
+    repo: string,
+    text: string,
+    warnings: string[],
+  ): Promise<void> {
+    const client = await this.jenkinsClientFor(workspaceId, repo);
+    if (!client) {
+      warnings.push('Jenkins validation was skipped: this repository has no Jenkins connection.');
+      return;
+    }
+    let res: Awaited<ReturnType<JenkinsClient['validateJenkinsfile']>>;
+    try {
+      res = await client.validateJenkinsfile(text);
+    } catch {
+      warnings.push('Jenkins validation was skipped: Jenkins could not be reached.');
+      return;
+    }
+    if (!res.ok) {
+      const messages = res.errors.length > 0 ? res.errors : ['Jenkins rejected the Jenkinsfile.'];
+      const violations: CiLintViolation[] = messages.map((message) => ({
+        rule: 'jenkins_validator',
+        location: JENKINSFILE_PATH,
+        message,
+      }));
+      throw new ValidationError('Jenkins rejected the Jenkinsfile', { violations });
+    }
+  }
+
+  /** A client for the repo's saved connection, or null when it is incomplete. */
+  private async jenkinsClientFor(workspaceId: string, repo: string): Promise<JenkinsClient | null> {
+    const conn = await this.connections.get(workspaceId, repo);
+    if (!conn) return null;
+    const token = await this.container.secrets.get(jenkinsTokenKey(workspaceId, repo));
+    if (!token) return null;
+    return this.container.jenkins({ baseUrl: conn.url, username: conn.username, token });
+  }
+
+  /** S-AC-67/69: create the multibranch job; never overwrite an existing item. */
+  private async createJenkinsJob(
+    client: JenkinsClient,
+    repo: string,
+    jobName: string,
+    scanCredentialId: string,
+  ): Promise<NonNullable<CiExport['jenkins_job']>> {
+    try {
+      const plugins = new Set(await client.listPlugins());
+      if (JENKINS_REQUIRED_PLUGINS.some((p) => !plugins.has(p))) {
+        return { status: 'failed', code: 'jenkins_plugin_missing' };
+      }
+      const existing = await client.itemClass(jobName);
+      if (existing !== null) {
+        return existing === JENKINS_MULTIBRANCH_CLASS
+          ? { status: 'already_exists', url: client.jobUrl(jobName) }
+          : { status: 'failed', code: 'jenkins_job_conflict' };
+      }
+      const { parent, name } = splitJobPath(jobName);
+      await client.createItem(parent, name, buildJenkinsJobConfigXml({ repo, scanCredentialId }));
+      return { status: 'created', url: client.jobUrl(jobName) };
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === 'jenkins_item_exists') return { status: 'failed', code: 'jenkins_job_conflict' };
+      if (code === 'jenkins_auth_failed' || code === 'jenkins_unreachable') return { status: 'failed', code };
+      return { status: 'failed', code: 'jenkins_create_failed' };
+    }
+  }
+
+  private prBody(plan: ExportPlan): string {
+    if (plan.target === 'jenkins' && plan.jenkins) {
+      return buildJenkinsPrBody({
+        agents: plan.workflowAgents,
+        runnerMeta: plan.runnerMeta,
+        jobName: plan.jenkins.job_name,
+        openrouterCredentialId: plan.jenkins.openrouter_credential_id,
+        githubCredentialId: plan.jenkins.github_credential_id,
+        agentLabel: plan.jenkins.agent_label,
+      });
+    }
+    return buildPrBody({ agents: plan.workflowAgents, runnerMeta: plan.runnerMeta });
+  }
+
+  /** Every real secret value the generated files / artifacts must never contain (S-AC-7/37/85). */
+  private async storedSecretValues(): Promise<string[]> {
+    const keys = [
+      ...GUARDED_SECRET_KEYS,
+      ...(await this.connections.listAll()).map((c) => jenkinsTokenKey(c.workspaceId, c.repo)),
+    ];
+    const values: string[] = [];
+    for (const key of keys) {
+      const value = await this.container.secrets.get(key);
+      if (value && value.length >= 8) values.push(value);
+    }
+    return values;
   }
 
   /** True when any string contains one of the server's real secret values. */
   private async containsStoredSecret(strings: string[]): Promise<boolean> {
-    for (const key of GUARDED_SECRET_KEYS) {
-      const value = await this.container.secrets.get(key);
-      if (!value || value.length < 8) continue;
-      if (strings.some((s) => s.includes(value))) return true;
-    }
-    return false;
-  }
-
-  /**
-   * Conclusion of this agent's own job (matched by the name `buildWorkflowYaml`
-   * gives it). Falls back to the whole run's conclusion if the job list is
-   * unavailable or has no match.
-   */
-  private async agentJobConclusion(
-    github: GitHubClient,
-    repoRef: RepoRef,
-    run: WorkflowRunInfo,
-    agentSlug: string,
-  ): Promise<string | null> {
-    try {
-      const jobs = await github.listRunJobs(repoRef, run.id);
-      const job = jobs.find((j) => j.name === jobName(agentSlug));
-      if (job) return job.conclusion;
-    } catch {
-      // fall through to the run-level conclusion
-    }
-    return run.conclusion;
+    const values = await this.storedSecretValues();
+    return values.some((value) => strings.some((s) => s.includes(value)));
   }
 
   /** Refuse to emit a file that contains one of the server's real secret values (S-AC-7). */
   private async assertNoSecrets(files: PlannedFile[]): Promise<void> {
-    for (const key of GUARDED_SECRET_KEYS) {
-      const value = await this.container.secrets.get(key);
-      if (!value || value.length < 8) continue;
-      if (files.some((f) => f.contents.includes(value))) {
-        throw new ValidationError('A generated file contains a stored secret value; remove it and retry.');
-      }
+    const values = await this.storedSecretValues();
+    if (values.some((value) => files.some((f) => f.contents.includes(value)))) {
+      throw new ValidationError('A generated file contains a stored secret value; remove it and retry.');
     }
   }
 }
 
 // ---- pure mapping helpers (no I/O) -----------------------------------------
-
-function parseRepo(repoFullName: string): RepoRef | null {
-  const parts = repoFullName.split('/');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
-  return { owner: parts[0], name: parts[1] };
-}
-
-type GitHubStep = 'repo' | 'commit' | 'commit_workflows' | 'pr' | 'sync';
-
-const WORKFLOWS_DIR = '.github/workflows/';
-
-/**
- * Maps a GitHub failure to a domain error. `pat_workflow_scope` only for a
- * 403/404 raised while committing files under `.github/workflows/` (S-AC-25);
- * any other 403/404 surfaces as a distinct not-found / forbidden error.
- */
-function mapGitHubError(err: unknown, step: GitHubStep): Error {
-  if (err instanceof AppError) return err;
-  const status = (err as { status?: number }).status;
-  if ((status === 403 || status === 404) && step === 'commit_workflows') {
-    return new AppError(
-      'pat_workflow_scope',
-      'The GitHub token needs the "workflow" scope (classic) or Workflows: write (fine-grained) to add .github/workflows files.',
-      403,
-    );
-  }
-  if (status === 404) {
-    return new AppError('github_repo_not_found', 'Repository not found or PAT has no access', 404);
-  }
-  if (status === 403) {
-    return new AppError('github_forbidden', 'GitHub denied the request: the token lacks permission for this repository.', 403);
-  }
-  return new ExternalServiceError(`GitHub request failed: ${(err as Error).message ?? 'unknown error'}`);
-}
 
 function toInstallationDto(
   row: CiInstallationRow,
@@ -673,10 +750,17 @@ function toInstallationDto(
     triggers: row.triggers,
     pr_url: row.prUrl,
     last_synced_at: row.lastSyncedAt ? row.lastSyncedAt.toISOString() : null,
-    // Only a Fail CI on change flags an installation (A6).
+    // Only a Fail CI on change flags an installation (A6/A14).
     out_of_date: row.exportedCiFailOn !== agentCiFailOn,
     last_run_status: lastRunStatus,
     last_run_at: lastRunAt ? lastRunAt.toISOString() : null,
+    ci_server_url: row.ciServerUrl,
+    ci_job_name: row.ciJobName,
+    openrouter_credential_id: row.openrouterCredentialId,
+    github_credential_id: row.githubCredentialId,
+    scan_credential_id: row.scanCredentialId,
+    agent_label: row.agentLabel,
+    last_sync_error: row.lastSyncError,
   };
 }
 

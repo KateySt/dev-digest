@@ -44,6 +44,50 @@ export async function fetchPrDiff(
   return res.text();
 }
 
+/** What the runner needs about a PR when no event payload exists (Jenkins). */
+export interface PullRequestInfo {
+  title: string;
+  body: string;
+  headSha: string;
+  baseRepoId: number;
+  baseRepoFullName: string;
+  /** Null when the head repository was deleted. */
+  headRepoFullName: string | null;
+}
+
+/** GET /repos/{owner}/{repo}/pulls/{n} — PR metadata from GitHub itself. */
+export async function fetchPullRequest(
+  ctx: Pick<PrContext, 'owner' | 'repo' | 'prNumber'>,
+  token: string,
+  fetchImpl: FetchLike = fetch,
+): Promise<PullRequestInfo> {
+  const url = `${GITHUB_API_BASE}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.prNumber}`;
+  const res = await fetchImpl(url, { headers: authHeaders(token, 'application/vnd.github+json') });
+  if (!res.ok) {
+    throw new RunnerError(`GitHub API error fetching PR (${url}): ${res.status}`);
+  }
+  const pr = (await res.json()) as {
+    title?: string;
+    body?: string | null;
+    head?: { sha?: string; repo?: { full_name?: string } | null };
+    base?: { repo?: { id?: number; full_name?: string } | null };
+  };
+  const headSha = pr.head?.sha;
+  const baseRepoId = pr.base?.repo?.id;
+  const baseRepoFullName = pr.base?.repo?.full_name;
+  if (!headSha || !/^[0-9a-f]{40}$/.test(headSha) || !Number.isInteger(baseRepoId) || !baseRepoFullName) {
+    throw new RunnerError('GitHub returned a pull request without head SHA or base repository');
+  }
+  return {
+    title: pr.title ?? '',
+    body: pr.body ?? '',
+    headSha,
+    baseRepoId: baseRepoId as number,
+    baseRepoFullName,
+    headRepoFullName: pr.head?.repo?.full_name ?? null,
+  };
+}
+
 /** Post a full review (body + event + optional inline comments) — `post_as: 'github_review'`. */
 export async function postGithubReview(
   ctx: Pick<PrContext, 'owner' | 'repo' | 'prNumber'>,

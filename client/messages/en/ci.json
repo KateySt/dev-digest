@@ -36,7 +36,8 @@
     "trace": "Trace",
     "jobLink": "View job",
     "source": {
-      "gha": "GitHub Actions"
+      "gha": "GitHub Actions",
+      "jenkins": "Jenkins"
     },
     "verdict": {
       "approve": "Approve",
@@ -56,6 +57,10 @@
       "artifact_invalid": "Artifact is not a valid archive",
       "secret_detected": "Secret detected in artifact",
       "verification_failed": "Verification failed ({check})"
+    },
+    "syncErrors": {
+      "title": "Some installations could not be synced",
+      "entry": "{repo} · {agent}"
     }
   },
   "exportWizard": {
@@ -80,7 +85,7 @@
       "cli": "Generic CLI",
       "ghaDesc": "Runs on pull_request events",
       "circleDesc": "config.yml job",
-      "jenkinsDesc": "Pipeline stage",
+      "jenkinsDesc": "Jenkinsfile for a Multibranch Pipeline",
       "cliDesc": "devdigest review --pr"
     },
     "comingSoon": "Coming soon",
@@ -99,7 +104,8 @@
     "modelWarning": "Model mapping",
     "lint": {
       "title": "The workflow was rejected. Fix these and continue:",
-      "violation": "{rule} at {location}: {message}"
+      "violation": "{rule} at {location}: {message}",
+      "jenkinsTitle": "The Jenkinsfile was rejected. Fix these and continue:"
     },
     "configure": {
       "triggerLabel": "Trigger",
@@ -107,7 +113,37 @@
       "triggerOpened": "pull_request:opened",
       "triggerSynchronize": "pull_request:synchronize",
       "triggerReopened": "pull_request:reopened",
-      "editsDiscarded": "Changing triggers regenerates the workflow, so your manual edits were discarded."
+      "editsDiscarded": "Changing triggers regenerates the workflow, so your manual edits were discarded.",
+      "jenkinsTriggerOpened": "opened (build 1 of PR-<n>)",
+      "jenkinsTriggerSynchronize": "synchronize (later builds)",
+      "jenkinsTriggerLimits": "Jenkins has no PR events: build 1 of a PR-<n> job counts as opened, every later build (including a manual rebuild or replay) as synchronize. Reopen is not supported.",
+      "editsDiscardedJenkins": "Changing triggers, credential IDs or the agent label regenerates the Jenkinsfile, so your manual edits were discarded.",
+      "jenkins": {
+        "title": "Jenkins",
+        "jobName": "Multibranch job",
+        "jobNameHint": "Folders allowed, e.g. team/devdigest-review. Shared by every agent on this repository.",
+        "openrouterId": "OpenRouter credential ID",
+        "githubId": "GitHub token credential ID",
+        "agentLabel": "Agent label",
+        "agentLabelHint": "Jenkins agents with Node.js 20+ on the PATH. \"any\" runs on any agent.",
+        "invalidJobName": "Use letters, digits, . _ - and / between folder names.",
+        "invalidCredential": "Use 1 to 100 letters, digits, . _ or -.",
+        "invalidLabel": "Use a Jenkins label expression of up to 100 characters.",
+        "serverTitle": "Jenkins server",
+        "connected": "Connected to {url} as {user}",
+        "notConnected": "Not connected",
+        "notConnectedNote": "Optional. A connection lets DevDigest validate edits, create the job and sync results.",
+        "connect": "Connect Jenkins",
+        "edit": "Edit connection",
+        "secretsTitle": "Jenkins credentials expected",
+        "credential": "Credential ID",
+        "kind": "Kind",
+        "secretText": "Secret text",
+        "verifyInJenkins": "verify in Jenkins",
+        "openrouterNote": "The OpenRouter API key the review calls.",
+        "githubNote": "Reads this repo, posts the review, and fetches .devdigest/ from the base branch.",
+        "infoBox": "To block merges: set Fail CI on (currently {failOn}; CI tab) so the stage fails, then require the Jenkins commit status check in the repo's GitHub branch protection."
+      }
     },
     "postResultsLabel": "Post results as",
     "postAs": {
@@ -145,8 +181,32 @@
       "patWorkflowScope": "The GitHub token needs the “workflow” scope (classic) or Workflows: write (fine-grained) to add .github/workflows files.",
       "repoNotFound": "Repository not found or the GitHub token has no access to it.",
       "githubForbidden": "GitHub denied the request: the token lacks permission for this repository.",
-      "zipDone": "Zip downloaded. Add the files to the repo manually."
-    }
+      "zipDone": "Zip downloaded. Add the files to the repo manually.",
+      "jenkins": {
+        "createJob": "Also create the Jenkins job {job}",
+        "scanId": "Scan credential ID",
+        "scanIdHint": "A Username with password credential (GitHub user + token) GitHub Branch Source uses to scan the repo.",
+        "scanInvalid": "Enter a credential ID (letters, digits, . _ -).",
+        "noConnection": "Connect this repository to Jenkins to create the job from DevDigest.",
+        "connect": "Connect Jenkins",
+        "jobCreated": "Jenkins job created",
+        "jobExists": "The Jenkins job already exists and was left unchanged",
+        "jobFailed": "The Jenkins job was not created: {reason} The pull request was still opened.",
+        "viewJob": "Open job",
+        "codes": {
+          "jenkins_plugin_missing": "a required plugin is missing (Pipeline: Multibranch, GitHub Branch Source, Credentials Binding, Pipeline: Declarative).",
+          "jenkins_job_conflict": "an item with this name exists and is not a Multibranch Pipeline.",
+          "jenkins_auth_failed": "Jenkins rejected the saved username or API token.",
+          "jenkins_unreachable": "Jenkins could not be reached.",
+          "jenkins_create_failed": "Jenkins refused to create it (check that parent folders exist).",
+          "unknown": "Jenkins returned an error."
+        },
+        "helpLink": "Jenkins Multibranch Pipeline docs"
+      }
+    },
+    "targetConflict": "{repo} already uses {target}. One repository can use one CI target: pick {target}, or export to another repository.",
+    "jenkinsfileEditorLabel": "Jenkinsfile contents",
+    "note": "Note"
   },
   "ciTab": {
     "heading": "Continuous Integration",
@@ -173,9 +233,67 @@
       "title": "Recent CI runs",
       "empty": "No CI runs yet.",
       "trace": "Trace"
-    }
+    },
+    "jenkins": "Jenkins",
+    "jenkinsfileVersion": "Jenkinsfile v{version}",
+    "job": "job {name}",
+    "jenkinsConnection": "Jenkins connection"
   },
   "page": {
     "crumb": "CI Runs"
+  },
+  "jenkins": {
+    "connection": {
+      "title": "Jenkins connection",
+      "description": "Jenkins server for {repo}. The API token is stored on this machine and never shown again.",
+      "url": "Jenkins URL",
+      "urlHint": "e.g. http://localhost:8090 or https://ci.example.com/jenkins",
+      "username": "Username",
+      "token": "API token",
+      "tokenSaved": "saved, leave blank to keep",
+      "tokenHint": "Create one in Jenkins: your user, Security, API Token.",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "save": "Save",
+      "saving": "Saving…",
+      "remove": "Remove",
+      "removeConfirm": "Remove the Jenkins connection for {repo}? Installations and CI runs are kept, but they stop syncing until you connect again.",
+      "confirmRemove": "Remove connection",
+      "cancel": "Cancel",
+      "testOk": "Connected to Jenkins {version} as {user}.",
+      "testCodes": {
+        "jenkins_auth_failed": "Jenkins rejected the username or API token.",
+        "jenkins_unreachable": "Jenkins could not be reached at this URL.",
+        "jenkins_not_jenkins": "The server at this URL is not Jenkins.",
+        "jenkins_not_configured": "Enter the URL, username and API token first."
+      }
+    },
+    "syncErrors": {
+      "jenkins_not_configured": {
+        "what": "No Jenkins connection for this repository.",
+        "fix": "Connect the repository to its Jenkins server."
+      },
+      "jenkins_connection_mismatch": {
+        "what": "The saved Jenkins URL is a different server than the one this agent was exported to.",
+        "fix": "Point the connection back to that server, or re-export the agent."
+      },
+      "jenkins_auth_failed": {
+        "what": "Jenkins rejected the saved username or API token.",
+        "fix": "Update the API token in the connection."
+      },
+      "jenkins_unreachable": {
+        "what": "Jenkins could not be reached.",
+        "fix": "Check that Jenkins is running and the URL is right, then refresh."
+      },
+      "jenkins_job_not_found": {
+        "what": "The Jenkins job for this agent was not found.",
+        "fix": "Create the Multibranch job, or re-export with the right job name."
+      },
+      "actions": {
+        "connect": "Connect Jenkins",
+        "edit": "Edit connection",
+        "reexport": "Re-export"
+      }
+    }
   }
 }

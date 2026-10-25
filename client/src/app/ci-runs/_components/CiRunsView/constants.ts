@@ -2,8 +2,8 @@ import type { CiRunPeriod } from "@/lib/hooks/ci";
 
 export const STATUS_VALUES = ["succeeded", "no_findings", "failed", "running"] as const;
 
-/** Sources a CI run can come from (only GitHub Actions is implemented). */
-export const SOURCE_VALUES = ["gha"] as const;
+/** Sources a CI run can come from. */
+export const SOURCE_VALUES = ["gha", "jenkins"] as const;
 
 export const PERIOD_VALUES: readonly CiRunPeriod[] = ["24h", "7d", "30d"];
 export const DEFAULT_PERIOD: CiRunPeriod = "7d";

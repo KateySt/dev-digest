@@ -1,18 +1,20 @@
 "use client";
 
 import React from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { JenkinsConnectionDialog } from "@/components/jenkins-connection-dialog";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Agent, CiInstallation } from "@devdigest/shared";
+import type { Agent } from "@devdigest/shared";
 import { useAgentCi } from "@/lib/hooks/ci";
 import { ExportWizard, type ExportWizardProps } from "./_components/ExportWizard";
 import { FailCiOnCard } from "./_components/FailCiOnCard";
 import { InstallationRow } from "./_components/InstallationRow";
 import { RecentCiRuns } from "./_components/RecentCiRuns";
-import { wizardPrefill } from "./helpers";
+import { installationPrefill, wizardPrefill } from "./helpers";
 
 /** CI tab - where this agent is installed, whether each installation is
  *  current, the Fail CI on policy, recent CI history, and the Export wizard. */
@@ -20,13 +22,26 @@ export function CiTab({ agent }: { agent: Agent }) {
   const t = useTranslations("ci");
   const { data, isLoading } = useAgentCi(agent.id);
   const [wizard, setWizard] = React.useState<ExportWizardProps["initial"] | null>(null);
+  const [connectionRepo, setConnectionRepo] = React.useState<string | null>(null);
+  // CI Runs "Re-export" deep link (?reexport=<installation id>): open the
+  // pre-filled wizard once, until the user closes it.
+  // Null outside the App Router (e.g. component tests).
+  const reexportId = useSearchParams()?.get("reexport") ?? null;
+  const [reexportDismissed, setReexportDismissed] = React.useState(false);
 
   const installations = data?.installations ?? [];
   const hasInstallations = installations.length > 0;
+  const reexport = reexportDismissed ? undefined : installations.find((i) => i.id === reexportId);
+  const wizardInitial = wizard ?? (reexport ? installationPrefill(reexport) : null);
+  const closeWizard = () => {
+    setWizard(null);
+    setReexportDismissed(true);
+  };
 
   return (
     <div className="flex max-w-[720px] min-w-0 flex-col gap-5">
-      {wizard && <ExportWizard agent={agent} initial={wizard} onClose={() => setWizard(null)} />}
+      {wizardInitial && <ExportWizard agent={agent} initial={wizardInitial} onClose={closeWizard} />}
+      {connectionRepo && <JenkinsConnectionDialog repo={connectionRepo} onClose={() => setConnectionRepo(null)} />}
 
       <div className="flex items-center gap-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -67,7 +82,12 @@ export function CiTab({ agent }: { agent: Agent }) {
       {hasInstallations && (
         <div className="flex flex-col gap-2">
           {installations.map((inst) => (
-            <InstallationRow key={inst.id} installation={inst} onUpdate={(i) => setWizard(toPrefill(i))} />
+            <InstallationRow
+              key={inst.id}
+              installation={inst}
+              onUpdate={(i) => setWizard(installationPrefill(i))}
+              onConnection={setConnectionRepo}
+            />
           ))}
           <button
             type="button"
@@ -83,8 +103,4 @@ export function CiTab({ agent }: { agent: Agent }) {
       {data && <RecentCiRuns runs={data.recent_runs} agentName={agent.name} />}
     </div>
   );
-}
-
-function toPrefill(inst: CiInstallation): NonNullable<ExportWizardProps["initial"]> {
-  return wizardPrefill([inst]);
 }

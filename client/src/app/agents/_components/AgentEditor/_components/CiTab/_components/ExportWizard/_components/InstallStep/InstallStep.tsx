@@ -1,10 +1,13 @@
 "use client";
 
+import type React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { CI_BRANCH, DOCS_URL, PR_TITLE } from "../../constants";
+import type { CiExport } from "@devdigest/shared";
+import { CI_BRANCH, DOCS_URL, JENKINS_DOCS_URL, PR_TITLE, type ExportTarget } from "../../constants";
+import { JenkinsJobOption, JenkinsJobOutcome } from "./_components/JenkinsJob";
 import type { InstallMethod } from "../../helpers";
 
 const card = (selected: boolean) =>
@@ -23,6 +26,9 @@ export function InstallStep({
   prUrl,
   zipDone,
   error,
+  target,
+  jenkinsJob,
+  jenkinsOption,
 }: {
   repo: string;
   fileCount: number;
@@ -32,6 +38,11 @@ export function InstallStep({
   prUrl: string | null;
   zipDone: boolean;
   error: string | null;
+  target: ExportTarget;
+  /** Outcome of the optional Jenkins job creation (done state). */
+  jenkinsJob: CiExport["jenkins_job"];
+  /** Jenkins "also create the job" option (PR install only). */
+  jenkinsOption: React.ComponentProps<typeof JenkinsJobOption> | null;
 }) {
   const t = useTranslations("ci");
 
@@ -46,6 +57,7 @@ export function InstallStep({
         <a href={prUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text">
           {t("exportWizard.installStep.viewPr")} →
         </a>
+        {jenkinsJob && <JenkinsJobOutcome job={jenkinsJob} />}
       </div>
     );
   }
@@ -92,6 +104,8 @@ export function InstallStep({
         </button>
       </div>
 
+      {target === "jenkins" && method === "pr" && jenkinsOption && <JenkinsJobOption {...jenkinsOption} />}
+
       {error && (
         <div role="alert" className="text-sm text-crit wrap-anywhere">
           {error}
@@ -101,8 +115,13 @@ export function InstallStep({
 
       <div className="text-center text-ui text-subtle-foreground">
         {t("exportWizard.installStep.helpLead")}{" "}
-        <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="text-brand-text">
-          {t("exportWizard.installStep.helpLink")} →
+        <a
+          href={target === "jenkins" ? JENKINS_DOCS_URL : DOCS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand-text"
+        >
+          {target === "jenkins" ? t("exportWizard.installStep.jenkins.helpLink") : t("exportWizard.installStep.helpLink")} →
         </a>
       </div>
     </>

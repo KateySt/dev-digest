@@ -1,0 +1,37 @@
+# Jenkins Configuration as Code for the local DevDigest test Jenkins.
+# Values come from docker/jenkins/.env (copy .env.example). Secrets never live in this file.
+jenkins:
+  systemMessage: "DevDigest local Jenkins (docker compose --profile jenkins)"
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID:-admin}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+unclassified:
+  location:
+    url: "http://localhost:${JENKINS_PORT:-8090}/"
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: devdigest-openrouter-api-key
+              description: OpenRouter API key for the DevDigest runner
+              secret: "${OPENROUTER_API_KEY}"
+          - string:
+              scope: GLOBAL
+              id: devdigest-github-token
+              description: GitHub token the runner reads the PR and posts the review with
+              secret: "${GITHUB_TOKEN}"
+          - usernamePassword:
+              scope: GLOBAL
+              id: devdigest-github-scan
+              description: GitHub Branch Source scan credential
+              username: "${GITHUB_USER}"
+              password: "${GITHUB_TOKEN}"

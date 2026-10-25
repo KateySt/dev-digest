@@ -226,6 +226,11 @@ export interface GitHubClient {
    * interface.
    */
   listCommitFiles(repo: RepoRef, sha: string): Promise<string[]>;
+  /**
+   * Head SHAs of every commit on PR `n` (GitHub caps the listing at 250) —
+   * used to check that a CI artifact's `commit_sha` belongs to that PR.
+   */
+  listPullRequestCommitShas(repo: RepoRef, n: number): Promise<string[]>;
   /** GET /user — for "posting as @user". */
   currentLogin(): Promise<string>;
   /**
@@ -392,4 +397,71 @@ export interface SecretsProvider {
    * providers (e.g. the env-only MVP backend) may omit it.
    */
   set?(key: SecretKey, value: string): Promise<void>;
+  /** Remove a stored secret. Optional, like `set`. */
+  delete?(key: SecretKey): Promise<void>;
+}
+
+// ---------- Jenkins (per-repo connection; Export to CI target) ----------
+/** Where and as whom to call one Jenkins server. Built per request. */
+export interface JenkinsConnectionParams {
+  /** Saved base URL (origin + optional path, no trailing slash). */
+  baseUrl: string;
+  username: string;
+  token: string;
+}
+
+/**
+ * Typed failure of a Jenkins call. The message never contains the token.
+ * `jenkins_not_jenkins`: the server answered but is not Jenkins.
+ */
+export type JenkinsErrorCode =
+  | 'jenkins_auth_failed'
+  | 'jenkins_unreachable'
+  | 'jenkins_job_not_found'
+  | 'jenkins_not_jenkins'
+  | 'jenkins_item_exists'
+  | 'jenkins_create_failed'
+  | 'artifact_too_large';
+
+export interface JenkinsBuildInfo {
+  number: number;
+  building: boolean;
+  /** SUCCESS | FAILURE | UNSTABLE | ABORTED | NOT_BUILT | null while running. */
+  result: string | null;
+  /** Build start, epoch ms. */
+  timestamp: number;
+}
+
+export interface JenkinsValidationResult {
+  ok: boolean;
+  errors: string[];
+}
+
+export interface JenkinsClient {
+  /** Authenticated identity + server version (`X-Jenkins` header). */
+  whoAmI(): Promise<{ user: string; version: string }>;
+  /** `_class` of the item at `jobPath`, or null when it does not exist. */
+  itemClass(jobPath: string): Promise<string | null>;
+  /** Names of the child jobs of a multibranch project (e.g. `PR-12`). */
+  listChildJobs(jobPath: string): Promise<string[]>;
+  /** Builds of one branch job, newest first. */
+  listBuilds(jobPath: string, limit: number): Promise<JenkinsBuildInfo[]>;
+  /**
+   * One archived artifact of a build, or null when it is absent. Throws
+   * `artifact_too_large` past `maxBytes`.
+   */
+  getArtifact(
+    jobPath: string,
+    build: number,
+    file: string,
+    maxBytes: number,
+  ): Promise<Uint8Array | null>;
+  /** Short names of the installed plugins. */
+  listPlugins(): Promise<string[]>;
+  /** Create an item from `config.xml` inside `parentPath` ('' = root). */
+  createItem(parentPath: string, name: string, configXml: string): Promise<void>;
+  /** Declarative-pipeline validator (pipeline-model-definition plugin). */
+  validateJenkinsfile(text: string): Promise<JenkinsValidationResult>;
+  /** Browser URL of an item, built from the saved base URL. */
+  jobUrl(jobPath: string, build?: number): string;
 }

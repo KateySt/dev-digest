@@ -19,6 +19,23 @@ services:
       timeout: 5s
       retries: 10
 
+  # Local Jenkins for testing the "Export to CI → Jenkins" target. Opt-in:
+  # `docker compose --profile jenkins up -d jenkins` (plain `up` starts Postgres only).
+  jenkins:
+    profiles: ["jenkins"]
+    build: ./docker/jenkins
+    container_name: devdigest-jenkins
+    restart: unless-stopped
+    ports:
+      - "${JENKINS_PORT:-8090}:8080"
+    env_file:
+      - path: ./docker/jenkins/.env
+        required: false
+    volumes:
+      - devdigest_jenkins_home:/var/jenkins_home
+
 volumes:
   devdigest_pgdata:
     name: devdigest_pgdata
+  devdigest_jenkins_home:
+    name: devdigest_jenkins_home

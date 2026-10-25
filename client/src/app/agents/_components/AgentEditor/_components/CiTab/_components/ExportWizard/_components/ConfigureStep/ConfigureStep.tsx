@@ -5,8 +5,9 @@ import { FilterChip } from "@/components/filter-chip";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import type { CiFailOn, CiPostAs, CiTrigger } from "@devdigest/shared";
-import { ALL_TRIGGERS, EXPECTED_SECRETS, POST_AS_OPTIONS } from "../../constants";
+import { EXPECTED_SECRETS, POST_AS_OPTIONS, triggersFor, type ExportTarget, type JenkinsFields } from "../../constants";
 import { toggleTrigger } from "./helpers";
+import { JenkinsSettings } from "./_components/JenkinsSettings";
 
 const LABEL = "mb-2 text-sm font-semibold text-muted-foreground";
 const HINT = "mt-2 text-xs text-subtle-foreground";
@@ -17,6 +18,11 @@ const TD = "border-b border-border px-2.5 py-2.25 align-top text-sm wrap-anywher
  *  (names only: this UI never reads, asks for or shows a secret value) and how
  *  to block merges. */
 export function ConfigureStep({
+  target,
+  repo,
+  jenkins,
+  onJenkins,
+  onOpenConnection,
   triggers,
   onTriggers,
   postAs,
@@ -32,14 +38,24 @@ export function ConfigureStep({
   failOn: CiFailOn;
   editsDiscarded: boolean;
   error: string | null;
+  target: ExportTarget;
+  repo: string;
+  jenkins: JenkinsFields;
+  onJenkins: (patch: Partial<JenkinsFields>) => void;
+  onOpenConnection: () => void;
 }) {
   const t = useTranslations("ci");
+  const isJenkins = target === "jenkins";
+  const triggerLabel = (trigger: CiTrigger) => {
+    const suffix = `${trigger[0]!.toUpperCase()}${trigger.slice(1)}`;
+    return isJenkins ? t(`exportWizard.configure.jenkinsTrigger${suffix}`) : t(`exportWizard.configure.trigger${suffix}`);
+  };
   return (
     <>
       <div>
         <div className={LABEL}>{t("exportWizard.configure.triggerLabel")}</div>
         <div className="flex flex-wrap gap-2">
-          {ALL_TRIGGERS.map((trigger) => {
+          {triggersFor(target).map((trigger) => {
             const on = triggers.includes(trigger);
             return (
               <FilterChip
@@ -48,13 +64,18 @@ export function ConfigureStep({
                 {...(on ? { icon: "Check" as const } : {})}
                 onClick={() => onTriggers(toggleTrigger(triggers, trigger))}
               >
-                {t(`exportWizard.configure.trigger${trigger[0]!.toUpperCase()}${trigger.slice(1)}`)}
+                {triggerLabel(trigger)}
               </FilterChip>
             );
           })}
         </div>
+        {isJenkins && <div className={HINT}>{t("exportWizard.configure.jenkinsTriggerLimits")}</div>}
         {triggers.length === 0 && <div className={HINT}>{t("exportWizard.configure.triggerNone")}</div>}
-        {editsDiscarded && <div className={HINT}>{t("exportWizard.configure.editsDiscarded")}</div>}
+        {editsDiscarded && (
+          <div className={HINT}>
+            {isJenkins ? t("exportWizard.configure.editsDiscardedJenkins") : t("exportWizard.configure.editsDiscarded")}
+          </div>
+        )}
       </div>
 
       <div>
@@ -80,6 +101,16 @@ export function ConfigureStep({
         </div>
       </div>
 
+      {isJenkins ? (
+        <JenkinsSettings
+          repo={repo}
+          fields={jenkins}
+          onFields={onJenkins}
+          failOn={failOn}
+          onOpenConnection={onOpenConnection}
+        />
+      ) : (
+        <>
       <div>
         <div className={LABEL}>{t("exportWizard.secrets.title")}</div>
         <table className="w-full border-collapse">
@@ -120,6 +151,8 @@ export function ConfigureStep({
           <strong>{t("exportWizard.infoBox.requiredCheck")}</strong> {t("exportWizard.infoBox.tail")}
         </span>
       </div>
+        </>
+      )}
       {error && <div className="text-sm text-crit wrap-anywhere">{t("exportWizard.previewError", { message: error })}</div>}
     </>
   );

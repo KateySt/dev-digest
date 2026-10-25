@@ -89,3 +89,76 @@ export const PERIOD_MS = {
   '7d': 7 * 24 * 60 * 60 * 1000,
   '30d': 30 * 24 * 60 * 60 * 1000,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Jenkins target (S-AC-46..86)
+// ---------------------------------------------------------------------------
+
+export const JENKINSFILE_PATH = 'Jenkinsfile';
+/** Bumped whenever the generated Jenkinsfile's shape changes. */
+export const JENKINSFILE_VERSION = 1;
+
+/** Triggers a Jenkins installation may select (S-AC-49). */
+export const JENKINS_TRIGGERS = ['opened', 'synchronize'] as const;
+
+/** Per-agent result file a Jenkins stage writes and archives (S-AC-58). */
+export function resultFile(agentSlug: string): string {
+  return `devdigest-result-${agentSlug}.json`;
+}
+export const RESULT_GLOB = 'devdigest-result-*.json';
+
+/** Canonical stage name of one agent; lint finds agent stages by it. */
+export function jenkinsStageName(agentSlug: string): string {
+  return `devdigest: ${agentSlug}`;
+}
+export const JENKINS_PREPARE_STAGE = 'devdigest: prepare';
+
+/** Skip non-change-request builds and fork PRs (S-AC-54). */
+export const JENKINS_CHANGE_GUARD = 'expression { env.CHANGE_ID != null && env.CHANGE_FORK == null }';
+
+/**
+ * Trigger guard of one agent stage (S-AC-50): build 1 of a `PR-<n>` job is
+ * `opened`, any later build `synchronize`. Same shape for every selection so
+ * the lint can read the list back.
+ */
+export function jenkinsTriggerGuard(triggers: readonly string[]): string {
+  const list = [...triggers].sort().map((t) => `'${t}'`).join(', ');
+  return `expression { [${list}].contains(env.BUILD_NUMBER == '1' ? 'opened' : 'synchronize') }`;
+}
+
+/** The base-restore line the lint requires before the first agent stage (S-AC-55). */
+export const JENKINS_RESTORE_LINE = 'git checkout "devdigest-base/$CHANGE_TARGET" -- .devdigest';
+
+/** Env names a Jenkinsfile may never set (S-AC-60). */
+export const JENKINS_DANGEROUS_ENV = ['NODE_OPTIONS', 'LD_PRELOAD', 'LD_LIBRARY_PATH', 'BASH_ENV', 'ENV', 'PATH'];
+
+/** Plugins job creation needs (S-AC-69 `jenkins_plugin_missing`). */
+export const JENKINS_REQUIRED_PLUGINS = [
+  'workflow-multibranch',
+  'github-branch-source',
+  'credentials-binding',
+  'pipeline-model-definition',
+];
+
+/** Multibranch project `_class` (S-AC-69 `already_exists` vs `jenkins_job_conflict`). */
+export const JENKINS_MULTIBRANCH_CLASS = 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject';
+
+/** How many recent builds sync lists per `PR-<n>` job. */
+export const JENKINS_BUILDS_PER_JOB = 20;
+/** Max `PR-<n>` jobs sync visits per installation (newest PR numbers first). */
+export const JENKINS_PR_JOBS_PER_SYNC = 50;
+
+/** SecretsProvider key of a repo's Jenkins API token (never stored in the DB). */
+export function jenkinsTokenKey(workspaceId: string, repo: string): string {
+  return `jenkins_api_token:${workspaceId}:${repo.toLowerCase()}`;
+}
+
+/** Human-readable text per sync error code (CiSyncResult.errors[].message). */
+export const CI_SYNC_ERROR_MESSAGES = {
+  jenkins_not_configured: 'This repository has no Jenkins connection.',
+  jenkins_connection_mismatch:
+    "The repository's Jenkins connection points to a different server than the one this agent was exported to.",
+  jenkins_auth_failed: 'Jenkins rejected the saved username or API token.',
+  jenkins_unreachable: 'Jenkins could not be reached.',
+  jenkins_job_not_found: 'The Jenkins job for this agent was not found.',
+} as const;
